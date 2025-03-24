@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konkurransestatus for Ski</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 10px; }
+    table { margin: 10px auto; border-collapse: collapse; width: 100%; max-width: 800px; }
+    th, td { border: 1px solid #ccc; padding: 5px; font-size: 14px; }
+    th { background-color: #f4f4f4; }
+    #liveClock { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+    /* Blinkene vises som sirkler – økt størrelse */
+    .target { font-size: 36px; }
+    .shooting { background-color: gray; }
+    @media (max-width: 600px) {
+      th, td { font-size: 10px; }
+      .target { font-size: 28px; }
+      #liveClock { font-size: 16px; }
+    }
+  </style>
+  <!-- Inkluder Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase – erstatt med dine opplysninger om nødvendig
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", supabaseClient);
+    
+    // Hjelpefunksjoner
+    function formatTime(sec) {
+      const min = Math.floor(sec / 60);
+      const s = (sec % 60).toFixed(1);
+      return min > 0 ? `${min}m ${s}s` : `${s}s`;
+    }
+    function formatClockTimeFull(ms) {
+      const d = new Date(ms);
+      const h = d.getHours().toString().padStart(2, "0");
+      const m = d.getMinutes().toString().padStart(2, "0");
+      const s = d.getSeconds().toString().padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    }
+    function getShootingArray(p) {
+      if (Array.isArray(p.shooting)) return p.shooting;
+      try {
+        return JSON.parse(p.shooting);
+      } catch (e) {
+        return [Array(5).fill(false), Array(5).fill(false)];
+      }
+    }
+    
+    // Oppdaterer live-klokken
+    function updateLiveClock() {
+      document.getElementById("liveClock").innerText = new Date().toLocaleTimeString();
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+    
+    // Henter deltakere fra Supabase og bygger status-tabellen
+    async function updateStatusTable() {
+      const { data, error } = await supabaseClient.from("participants").select("*");
+      if (error) {
+        console.error("Feil ved henting av deltakere:", error);
+        return;
+      }
+      
+      // Omform data til et objekt med snr som nøkkel
+      let participants = {};
+      data.forEach(record => {
+        record.laps = record.laps || [];
+        record.shooting = (typeof record.shooting === "string") ? getShootingArray(record) : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
+        participants[record.snr] = record;
+      });
+      
+      // Beregn rangering per klasse for fullførte deltakere
+      let classPlacements = {};
+      data.forEach(p => {
+        if (p.finish !== null && p.finish !== undefined) {
+          if (!classPlacements[p.class]) classPlacements[p.class] = [];
+          classPlacements[p.class].push({ snr: p.snr, finish: p.finish });
+        }
+      });
+      for (let cls in classPlacements) {
+        classPlacements[cls].sort((a, b) => a.finish - b.finish);
+        classPlacements[cls].forEach((p, index) => {
+          p.rank = index + 1;
+        });
+      }
+      
+      // Bygg HTML-tabell (kun visning – ingen interaksjon)
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Plass</th>
+            <th>Startnummer</th>
+            <th>Navn</th>
+            <th>Klasse</th>
+            <th>Status</th>
+            <th>Tid</th>
+            <th>Rundetid</th>
+            <th>Skyting S1</th>
+            <th>Skyting S2</th>
+            <th>Måltid</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      
+      data.forEach(p => {
+        let rank = "-";
+        if (p.finish !== null && p.finish !== undefined && classPlacements[p.class]) {
+          let found = classPlacements[p.class].find(item => item.snr == p.snr);
+          if (found) rank = found.rank;
+        }
+        // Tid: Dersom deltaker er "I gang", vis løpende tid; hvis fullført, vis finish-tid
+        let tidDisplay = "-";
+        if (p.status === "I gang" && p.start) {
+          tidDisplay = formatTime((Date.now() - Date.parse(p.start)) / 1000);
+        } else if (p.finish !== null && p.finish !== undefined) {
+          tidDisplay = formatTime(p.finish);
+        }
+        // Rundetid: Viser en liste over lapptider (hvis noen)
+        let rundetid = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
+        // Skyting: Vis blinkene for S1 og S2
+        let shootingArr = getShootingArray(p);
+        let renderShooting = function(arr) {
+          return arr.map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'}">&#9679;</span>`).join(" ");
+        };
+        let s1 = renderShooting(shootingArr[0]);
+        let s2 = renderShooting(shootingArr[1]);
+        // Måltid: Viser finish-tid dersom fullført
+        let måltid = (p.finish !== null && p.finish !== undefined) ? formatTime(p.finish) : "-";
+        
+        html += `<tr>
+          <td>${rank}</td>
+          <td>${p.snr}</td>
+          <td>${p.name}</td>
+          <td>${p.class}</td>
+          <td>${p.status}</td>
+          <td>${tidDisplay}</td>
+          <td>${rundetid}</td>
+          <td>${s1}</td>
+          <td>${s2}</td>
+          <td>${måltid}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody></table>`;
+      document.getElementById("statusTable").innerHTML = html;
+    }
+    
+    setInterval(updateStatusTable, 1000);
+    updateStatusTable();
+  </script>
+</body>
+</html>
