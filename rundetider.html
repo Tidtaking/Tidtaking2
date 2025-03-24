@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rundetider for Ski Konkurranse</title>
+  <title>Rundetider og Skyteresultater for Ski Konkurranse</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,7 +14,7 @@
       margin: 10px auto;
       border-collapse: collapse;
       width: 100%;
-      max-width: 800px;
+      max-width: 900px;
     }
     th, td {
       border: 1px solid #ccc;
@@ -33,13 +33,29 @@
       cursor: pointer;
       font-size: 16px;
     }
+    /* Stil for skyte-blinkene */
+    .target {
+      display: inline-block;
+      width: 60px;
+      height: 60px;
+      line-height: 60px;
+      background-color: gray;
+      border-radius: 50%;
+      margin: 2px;
+      font-size: 42px;
+      vertical-align: middle;
+    }
+    .shootingCell {
+      white-space: nowrap;
+    }
     @media (max-width: 600px) {
-      th, td {
-        font-size: 10px;
-      }
-      .btn-lap {
-        font-size: 12px;
-        padding: 6px 8px;
+      th, td { font-size: 10px; }
+      .btn-lap { font-size: 12px; padding: 6px 8px; }
+      .target {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 28px;
       }
     }
   </style>
@@ -55,43 +71,75 @@
     // Globalt deltakerobjekt
     window.participants = {};
 
-    // Hjelpefunksjon for å formatere tid (sekunder -> m/s-format)
+    // Funksjon for å formatere tid (sekunder -> m/s-format)
     function formatTime(sec) {
       const min = Math.floor(sec / 60);
       const s = (sec % 60).toFixed(1);
       return min > 0 ? `${min}m ${s}s` : `${s}s`;
     }
 
-    // Hent deltakerdata fra Supabase og oppdater window.participants
+    // Funksjon for å hente skyte-array fra en deltaker
+    function getShootingArray(p) {
+      if (Array.isArray(p.shooting)) return p.shooting;
+      try {
+        return JSON.parse(p.shooting);
+      } catch (e) {
+        return [Array(5).fill(false), Array(5).fill(false)];
+      }
+    }
+
+    // Funksjon for å bygge HTML for blinkene (skyting S1 og S2)
+    function renderShooting(arr) {
+      // Hver blink har grå bakgrunn (arvet fra .target), og fargen settes til hvit for treff og svart for bom.
+      return arr.map(hit =>
+        `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
+      ).join(" ");
+    }
+
+    // Henter deltakerdata og bygger tabellen for rundetider og skyteresultater
     async function updateLapTable() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
+      
+      // Oppdater globalt deltakerobjekt
       window.participants = {};
       data.forEach(record => {
         record.laps = record.laps || [];
         window.participants[record.snr] = record;
       });
-
-      // Bygg tabellen
+      
+      // Sortering: Deltakere med status "I gang" øverst, resten etter startnummer
+      data.sort((a, b) => {
+        if (a.status === "I gang" && b.status !== "I gang") return -1;
+        if (a.status !== "I gang" && b.status === "I gang") return 1;
+        return a.snr - b.snr;
+      });
+      
+      // Bygg HTML-tabellen
       let html = `<table>
         <thead>
           <tr>
-            <th>Startnummer</th>
+            <th>Startnr</th>
             <th>Navn</th>
             <th>Klasse</th>
             <th>Status</th>
             <th>Rundetider</th>
+            <th>Skyting S1</th>
+            <th>Skyting S2</th>
             <th>Handl.</th>
           </tr>
         </thead>
         <tbody>`;
+      
       data.forEach(p => {
         let lapsDisplay = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
+        let s1 = renderShooting(getShootingArray(p)[0]);
+        let s2 = renderShooting(getShootingArray(p)[1]);
+        // Vis "Rundetid"-knappen kun hvis status er "I gang"
         let button = "";
-        // Kun vis "Rundetid"-knappen hvis deltaker er "I gang"
         if (p.status === "I gang") {
           button = `<button class="btn-lap" onclick="recordLap(${p.snr})">Rundetid</button>`;
         }
@@ -101,9 +149,12 @@
           <td>${p.class}</td>
           <td>${p.status}</td>
           <td>${lapsDisplay}</td>
+          <td class="shootingCell">${s1}</td>
+          <td class="shootingCell">${s2}</td>
           <td>${button}</td>
         </tr>`;
       });
+      
       html += `</tbody></table>`;
       document.getElementById("lapTable").innerHTML = html;
     }
@@ -126,13 +177,13 @@
       }
     }
 
-    // Oppdater tabellen hvert sekund
+    // Oppdaterer tabellen hvert sekund
     setInterval(updateLapTable, 1000);
     document.addEventListener("DOMContentLoaded", updateLapTable);
   </script>
 </head>
 <body>
-  <h2>Rundetider for Ski Konkurranse</h2>
+  <h2>Rundetider og Skyteresultater for Ski Konkurranse</h2>
   <div id="lapTable"></div>
 </body>
 </html>
