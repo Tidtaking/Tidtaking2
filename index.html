@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tidtaking for Ski-konkurranser</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 10px; }
@@ -29,7 +29,7 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD) – denne skal definere window.supabase -->
+  <!-- Last Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – oppdater med dine opplysninger:
@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
+    window.localTimers = {};
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -182,7 +182,7 @@
     };
 
     window.updateLocalDisplay = function() {
-      // For fullførte deltakere oppdateres finish-tiden kontinuerlig
+      // Oppdater finish-tid for fullførte deltakere kontinuerlig
       Object.keys(window.participants).forEach(snr => {
         let p = window.participants[snr];
         if (p.status === "Fullført" && p.rawFinish != null) {
@@ -451,7 +451,6 @@
     document.getElementById("btnResetAll").addEventListener("click", async function() {
       const confirmed = await window.customConfirm("Er du sikker på at du vil nullstille alt?");
       if (confirmed) {
-        // Stopp alle lokale timer
         for (const snr in window.participants) {
           let p = window.participants[snr];
           if (window.localTimers[snr]) {
@@ -460,7 +459,6 @@
           }
         }
         window.participants = {};
-        // Slett alle rader – vi bruker .neq("snr", 0) for å anta at alle gyldige startnumre er > 0
         const { error } = await window.supabaseClient.from("participants").delete().neq("snr", 0);
         if (error) console.error("Feil ved nullstilling:", error);
         window.updateTable();
@@ -469,12 +467,16 @@
     document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
     document.getElementById("btnStartMass").addEventListener("click", window.startMass);
 
+    // Oppdatert CSV-funksjon med ekstra logging
     window.saveCSV = async function() {
-      const { data: finishedData, error } = await window.supabaseClient.from("participants").select("*").neq("finish", null);
+      const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved CSV-export:", error);
         return;
       }
+      console.log("Data hentet for CSV:", data);
+      // Filtrer ferdige deltakere (finish ikke null/undefined)
+      const finishedData = data.filter(p => p.finish !== null && p.finish !== undefined);
       finishedData.sort((a, b) => a.finish - b.finish);
       let csv = "Klasse,Plass,Startnummer,Navn,Tid,Bom\n";
       let groups = {};
@@ -491,13 +493,18 @@
           csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
         });
       }
-      const { data: unfinishedData, error: err2 } = await window.supabaseClient.from("participants").select("*").is("finish", null);
-      if (err2) console.error(err2);
+      // Filtrer uferdige deltakere (finish null/undefined)
+      const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined);
       unfinishedData.sort((a, b) => a.snr - b.snr);
       unfinishedData.forEach(p => {
         const bom = window.getShootingArray(p).flat().filter(hit => !hit).length;
         csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`;
       });
+      console.log("CSV-innhold:\n", csv);
+      if (csv.trim() === "Klasse,Plass,Startnummer,Navn,Tid,Bom") {
+        alert("Ingen data funnet for CSV-export!");
+        return;
+      }
       const link = document.createElement("a");
       link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
       link.download = "resultater.csv";
