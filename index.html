@@ -13,6 +13,7 @@
     .btn-lap { background-color: #3498db; color: white; }
     .btn-finish { background-color: #27ae60; color: white; }
     .btn-start { background-color: #e67e22; color: white; }
+    /* Blinkene – økt størrelse slik at de er lettere å trykke på */
     .target { font-size: 36px; cursor: pointer; }
     .shooting { background-color: gray; }
     #liveClock { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
@@ -29,13 +30,13 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD) – denne skal definere window.supabase -->
+  <!-- Last Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – oppdater med dine opplysninger:
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", window.supabaseClient);
   </script>
 </head>
@@ -44,7 +45,7 @@
   <div id="liveClock"></div>
   
   <div>
-    <!-- Registrering og CSV-import -->
+    <!-- Manuell registrering -->
     <input type="number" id="newStartNumber" placeholder="Startnummer">
     <input type="text" id="newParticipant" placeholder="Navn">
     <select id="newParticipantClass">
@@ -80,9 +81,14 @@
     <label>Tilleggstid pr bom (sek): </label>
     <input type="number" id="penaltyTime" value="30">
     <br>
+    <!-- Starttidsoppsett -->
     <input type="time" id="firstStartTime" placeholder="Første starttid" step="1">
     <input type="number" id="startInterval" placeholder="Intervall (sek)" value="30">
     <button id="btnAssignStartTimes">Tildel starttider</button>
+    <br>
+    <!-- Nye flervalgsoperasjoner -->
+    <button id="btnDeleteSelected" style="background-color: #d9534f; color: white;">Slett markerte</button>
+    <button id="btnToggleSelected" style="background-color: #5bc0de; color: white;">Start/Stop markerte</button>
     <br>
     <button id="btnResetAll" style="background-color: red; color: white;">Nullstill Alt</button>
     <button id="btnSaveCSV" style="background-color: #555; color: white;">Lagre CSV</button>
@@ -93,6 +99,7 @@
     <table>
       <thead>
         <tr>
+          <th>Velg</th>
           <th>Plass</th>
           <th>Start</th>
           <th>#</th>
@@ -121,7 +128,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
+    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -223,6 +230,8 @@
       
       let rows = [];
       for (const [snr, p] of Object.entries(window.participants)) {
+        // Legg til en sjekkboks for å markere deltakeren
+        let checkbox = `<input type="checkbox" class="select-participant" data-snr="${snr}">`;
         let placement = '-';
         if (p.finish != null && classPlacements[p.class]) {
           const found = classPlacements[p.class].find(entry => entry.snr === snr);
@@ -244,6 +253,7 @@
         }).join('<br>');
         const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
         rows.push(`<tr>
+          <td>${checkbox}</td>
           <td>${placement}</td>
           <td>${(p.status === 'Planlagt' || p.timer) ? '-' : `<button class="btn-start" onclick="startIndividual(${snr})">Start</button>`}</td>
           <td>${snr}</td>
@@ -438,12 +448,7 @@
       }).join(" ");
     };
 
-    window.updateLiveClock = async function() {
-      const now = new Date();
-      document.getElementById("liveClock").innerText = now.toLocaleTimeString();
-    };
-
-    // CSV-import-funksjonen: Leser en valgt CSV-fil og setter inn nye deltakere
+    // CSV-import: Leser en CSV-fil med kolonnene snr,name,class og setter inn nye deltakere
     window.importCSV = function() {
       const fileInput = document.getElementById("csvImport");
       if (!fileInput.files || fileInput.files.length === 0) {
@@ -457,7 +462,6 @@
         console.log("CSV-tekst:", text);
         const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
         let startIdx = 0;
-        // Hvis første linje inneholder header (sjekk etter "snr" i første kolonne)
         if (lines[0].toLowerCase().startsWith("snr")) {
           startIdx = 1;
         }
@@ -498,7 +502,7 @@
       reader.readAsText(file);
     };
 
-    // CSV-eksport-funksjonen
+    // CSV-eksport: Henter alle data og eksporterer CSV med ferdige og uferdige deltakere
     window.saveCSV = async function() {
       console.log("CSV-knapp trykket – starter CSV eksport");
       const { data, error } = await window.supabaseClient.from("participants").select("*");
@@ -511,7 +515,6 @@
         alert("Ingen data funnet for CSV-export!");
         return;
       }
-      // Filtrer ferdige deltakere (finish ikke null/undefined)
       const finishedData = data.filter(p => p.finish !== null && p.finish !== undefined);
       finishedData.sort((a, b) => a.finish - b.finish);
       let csv = "Klasse,Plass,Startnummer,Navn,Tid,Bom\n";
@@ -529,7 +532,6 @@
           csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
         });
       }
-      // Uferdige deltakere (finish null/undefined)
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined);
       unfinishedData.sort((a, b) => a.snr - b.snr);
       unfinishedData.forEach(p => {
@@ -547,6 +549,62 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    };
+
+    // Funksjoner for operasjoner på markerte deltakere
+
+    // Hent en liste med snr for alle markerte deltakere
+    window.getSelectedParticipants = function() {
+      const checkboxes = document.querySelectorAll(".select-participant");
+      let selected = [];
+      checkboxes.forEach(cb => {
+        if (cb.checked) {
+          selected.push(parseInt(cb.getAttribute("data-snr")));
+        }
+      });
+      return selected;
+    };
+
+    // Slett alle markerte deltakere
+    window.deleteSelected = async function() {
+      const selected = window.getSelectedParticipants();
+      if (selected.length === 0) {
+        alert("Ingen deltakere er markert.");
+        return;
+      }
+      const confirmed = await window.customConfirm("Er du sikker på at du vil slette de markerte deltakerne?");
+      if (!confirmed) return;
+      for (let snr of selected) {
+        const { error } = await window.supabaseClient.from("participants").delete().eq("snr", snr);
+        if (error) console.error("Feil ved sletting av snr", snr, error);
+      }
+      window.updateTable();
+    };
+
+    // Start/Stop tid for alle markerte deltakere:
+    // Hvis status er "Venter" eller "Planlagt" startes deltakeren.
+    // Hvis status er "I gang" blir tiden stoppet (Mål registreres).
+    window.toggleSelected = async function() {
+      const selected = window.getSelectedParticipants();
+      if (selected.length === 0) {
+        alert("Ingen deltakere er markert.");
+        return;
+      }
+      for (let snr of selected) {
+        let p = window.participants[snr];
+        if (!p) continue;
+        if (p.status === "Venter" || p.status === "Planlagt") {
+          await window.startIndividual(snr);
+        } else if (p.status === "I gang") {
+          await window.recordFinish(snr);
+        }
+      }
+      window.updateTable();
+    };
+
+    window.updateLiveClock = async function() {
+      const now = new Date();
+      document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     };
 
     // Start oppdatering hvert sekund
@@ -577,8 +635,10 @@
     });
     document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
     document.getElementById("btnStartMass").addEventListener("click", window.startMass);
-    // Event listener for CSV-import-knappen
     document.getElementById("btnImportCSV").addEventListener("click", window.importCSV);
+    // Nye operasjonsknapper for markerte deltakere
+    document.getElementById("btnDeleteSelected").addEventListener("click", window.deleteSelected);
+    document.getElementById("btnToggleSelected").addEventListener("click", window.toggleSelected);
   </script>
   <div id="liveClock" style="font-size: 18px; font-weight: bold; margin-top: 10px;"></div>
 </body>
