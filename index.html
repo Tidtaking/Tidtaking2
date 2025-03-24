@@ -44,6 +44,7 @@
   <div id="liveClock"></div>
   
   <div>
+    <!-- Registrering og CSV-import -->
     <input type="number" id="newStartNumber" placeholder="Startnummer">
     <input type="text" id="newParticipant" placeholder="Navn">
     <select id="newParticipantClass">
@@ -71,6 +72,10 @@
       <option value="M17">M17</option>
     </select>
     <button id="btnAddParticipant">Lagre deltaker</button>
+    <br>
+    <!-- CSV-import -->
+    <input type="file" id="csvImport" accept=".csv">
+    <button id="btnImportCSV">Importer CSV</button>
     <br>
     <label>Tilleggstid pr bom (sek): </label>
     <input type="number" id="penaltyTime" value="30">
@@ -116,7 +121,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
+    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -438,14 +443,62 @@
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     };
 
-    // Start oppdatering hvert sekund
-    setInterval(window.updateLiveClock, 1000);
-    window.updateLiveClock();
-    setInterval(window.updateTable, 1000);
-    setInterval(window.updateLocalDisplay, 1000);
-    window.updateTable();
+    // CSV-import-funksjonen: Leser en valgt CSV-fil og setter inn nye deltakere
+    window.importCSV = function() {
+      const fileInput = document.getElementById("csvImport");
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Velg en CSV-fil å importere.");
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const text = e.target.result;
+        console.log("CSV-tekst:", text);
+        const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
+        let startIdx = 0;
+        // Hvis første linje inneholder header (sjekk etter "snr" i første kolonne)
+        if (lines[0].toLowerCase().startsWith("snr")) {
+          startIdx = 1;
+        }
+        let newParticipants = [];
+        for (let i = startIdx; i < lines.length; i++) {
+          const parts = lines[i].split(",");
+          if (parts.length < 3) continue;
+          const snr = parseInt(parts[0].trim());
+          const name = parts[1].trim();
+          const cls = parts[2].trim();
+          if (isNaN(snr) || !name || !cls) continue;
+          newParticipants.push({
+            snr: snr,
+            name: name,
+            class: cls,
+            start: null,
+            status: "Venter",
+            laps: [],
+            finish: null,
+            rawFinish: null,
+            shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
+          });
+        }
+        console.log("Nye deltakere fra CSV:", newParticipants);
+        if (newParticipants.length === 0) {
+          alert("Ingen gyldige deltakere funnet i CSV-filen.");
+          return;
+        }
+        const { error } = await window.supabaseClient.from("participants").insert(newParticipants);
+        if (error) {
+          console.error("Feil ved CSV-import:", error);
+          alert("Feil ved CSV-import – sjekk konsollen.");
+        } else {
+          alert("CSV-import fullført!");
+          window.updateTable();
+        }
+      };
+      reader.readAsText(file);
+    };
 
-    // CSV-funksjonen – definert før event listeners
+    // CSV-eksport-funksjonen
     window.saveCSV = async function() {
       console.log("CSV-knapp trykket – starter CSV eksport");
       const { data, error } = await window.supabaseClient.from("participants").select("*");
@@ -496,6 +549,13 @@
       document.body.removeChild(link);
     };
 
+    // Start oppdatering hvert sekund
+    setInterval(window.updateLiveClock, 1000);
+    window.updateLiveClock();
+    setInterval(window.updateTable, 1000);
+    setInterval(window.updateLocalDisplay, 1000);
+    window.updateTable();
+
     // Event listeners for knappene
     document.getElementById("btnAddParticipant").addEventListener("click", window.addParticipant);
     document.getElementById("btnAssignStartTimes").addEventListener("click", window.assignStartTimes);
@@ -517,6 +577,8 @@
     });
     document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
     document.getElementById("btnStartMass").addEventListener("click", window.startMass);
+    // Event listener for CSV-import-knappen
+    document.getElementById("btnImportCSV").addEventListener("click", window.importCSV);
   </script>
   <div id="liveClock" style="font-size: 18px; font-weight: bold; margin-top: 10px;"></div>
 </body>
