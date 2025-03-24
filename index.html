@@ -29,7 +29,7 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD) – denne skal definere window.supabase -->
+  <!-- Last Supabase SDK (UMD-versjonen) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Oppdater med dine Supabase-opplysninger:
@@ -44,7 +44,6 @@
   <div id="liveClock"></div>
   
   <div>
-    <!-- Registrering av deltaker -->
     <input type="number" id="newStartNumber" placeholder="Startnummer">
     <input type="text" id="newParticipant" placeholder="Navn">
     <select id="newParticipantClass">
@@ -76,7 +75,6 @@
     <label>Tilleggstid pr bom (sek): </label>
     <input type="number" id="penaltyTime" value="30">
     <br>
-    <!-- Automatisk starttidsoppsett -->
     <input type="time" id="firstStartTime" placeholder="Første starttid" step="1">
     <input type="number" id="startInterval" placeholder="Intervall (sek)" value="30">
     <button onclick="assignStartTimes()">Tildel starttider</button>
@@ -118,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
+    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -148,17 +146,61 @@
       return `${h}:${m}:${s}`;
     };
 
-    window.customConfirm = function(message) {
-      return new Promise((resolve) => {
-        const dialog = document.getElementById("confirmDialog");
-        document.getElementById("confirmText").textContent = message;
-        dialog.showModal();
-        window.confirmOk = function() { dialog.close(); resolve(true); }
-        window.confirmCancel = function() { dialog.close(); resolve(false); }
-      });
+    window.resetAll = async function() {
+      if (confirm("Nullstille alt?")) {
+        // Stopp alle lokale timer
+        for (const snr in window.participants) {
+          let p = window.participants[snr];
+          if (window.localTimers[snr]) {
+            clearInterval(window.localTimers[snr]);
+            delete window.localTimers[snr];
+          }
+        }
+        window.participants = {};
+        // Bruk en WHERE-betingelse som fjerner alle rader. Her antar vi at alle gyldige snr er > 0.
+        const { error } = await window.supabaseClient.from("participants").delete().neq("snr", 0);
+        if (error) console.error("Feil ved nullstilling:", error);
+        window.updateTable();
+      }
     };
 
-    // Funksjoner for databaseoperasjoner og visning
+    window.saveCSV = async function() {
+      const { data: finishedData, error } = await window.supabaseClient.from("participants").select("*").not("finish", "is", null);
+      if (error) {
+        console.error("Feil ved CSV-export:", error);
+        return;
+      }
+      finishedData.sort((a, b) => a.finish - b.finish);
+      let csv = "Klasse,Plass,Startnummer,Navn,Tid,Bom\n";
+      let groups = {};
+      finishedData.forEach(p => {
+        if (!groups[p.class]) groups[p.class] = [];
+        groups[p.class].push(p);
+      });
+      for (const cls in groups) {
+        groups[cls].sort((a, b) => a.finish - b.finish);
+        const bestFinish = groups[cls][0].finish;
+        groups[cls].forEach((p, i) => {
+          const bom = window.getShootingArray(p).flat().filter(hit => !hit).length;
+          const diff = p.finish - bestFinish;
+          csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
+        });
+      }
+      const { data: unfinishedData, error: err2 } = await window.supabaseClient.from("participants").select("*").is("finish", null);
+      if (err2) console.error(err2);
+      unfinishedData.sort((a, b) => a.snr - b.snr);
+      unfinishedData.forEach(p => {
+        const bom = window.getShootingArray(p).flat().filter(hit => !hit).length;
+        csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`;
+      });
+      const link = document.createElement("a");
+      link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+      link.download = "resultater.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
     window.fetchParticipants = async function() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
@@ -170,7 +212,6 @@
         record.shooting = (typeof record.shooting === "string")
           ? window.getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Bevar lokale timer hvis de finnes
         if (window.localTimers[record.snr]) {
           record.timer = window.localTimers[record.snr];
         }
@@ -178,181 +219,13 @@
       });
     };
 
-    window.addParticipant = async function() {
-      const snr = document.getElementById("newStartNumber").value;
-      const name = document.getElementById("newParticipant").value;
-      const cls = document.getElementById("newParticipantClass").value;
-      if (!snr || !name || !cls) {
-        alert("Fyll ut alle felt!");
-        return;
-      }
-      let { data: existing } = await window.supabaseClient.from("participants").select("*").eq("snr", snr);
-      if (existing && existing.length > 0) {
-        alert("Startnummer allerede brukt!");
-        return;
-      }
-      const newPart = {
-        snr: snr,
-        name: name,
-        class: cls,
-        start: null,
-        status: "Venter",
-        laps: [],
-        finish: null,
-        rawFinish: null,
-        shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
-      };
-      const { error } = await window.supabaseClient.from("participants").insert([newPart]);
-      if (error) console.error("Feil ved lagring:", error);
-      document.getElementById("newStartNumber").value = "";
-      document.getElementById("newParticipant").value = "";
-      window.updateTable();
-    };
-
-    window.assignStartTimes = async function() {
-      const firstTimeStr = document.getElementById("firstStartTime").value;
-      const intervalSec = parseInt(document.getElementById("startInterval").value);
-      if (!firstTimeStr || isNaN(intervalSec)) {
-        alert("Skriv inn gyldig første starttid og intervall!");
-        return;
-      }
-      const today = new Date();
-      const parts = firstTimeStr.split(":");
-      today.setHours(parseInt(parts[0]), parseInt(parts[1]), parts[2] ? parseInt(parts[2]) : 0, 0);
-      const firstStartMs = today.getTime();
-      const keys = Object.keys(window.participants).sort((a, b) => a - b);
-      for (let index = 0; index < keys.length; index++) {
-        const snr = keys[index];
-        let p = window.participants[snr];
-        if (p.status === "Venter") {
-          p.start = new Date(firstStartMs + index * intervalSec * 1000).toISOString();
-          p.status = "Planlagt";
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ start: p.start, status: p.status })
-            .eq("snr", snr);
-          if (error) console.error("Feil ved oppdatering av starttid for snr", snr, error);
-        }
-      }
-      window.updateTable();
-    };
-
-    window.autoStart = async function() {
-      const now = Date.now();
-      for (const snr in window.participants) {
-        let p = window.participants[snr];
-        if (p.status === "Planlagt" && now >= Date.parse(p.start)) {
-          p.status = "I gang";
-          if (!window.localTimers[snr]) {
-            window.localTimers[snr] = setInterval(window.updateTable, 1000);
-          }
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ status: p.status })
-            .eq("snr", snr);
-          if (error) console.error("Feil ved autoStart for snr", snr, error);
-        }
-      }
-    };
-
-    window.startMass = async function() {
-      const now = new Date().toISOString();
-      for (const snr in window.participants) {
-        let p = window.participants[snr];
-        if (!window.localTimers[snr] && (p.status === "Venter" || p.status === "Planlagt")) {
-          p.start = now;
-          p.status = "I gang";
-          window.localTimers[snr] = setInterval(window.updateTable, 1000);
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ start: p.start, status: p.status })
-            .eq("snr", snr);
-          if (error) console.error("Feil ved startMass for snr", snr, error);
-        }
-      }
-      window.updateTable();
-    };
-
-    window.startIndividual = async function(snr) {
-      let p = window.participants[snr];
-      if (p && !window.localTimers[snr]) {
-        p.start = new Date().toISOString();
-        p.status = "I gang";
-        window.localTimers[snr] = setInterval(window.updateTable, 1000);
-        const { error } = await window.supabaseClient.from("participants")
-          .update({ start: p.start, status: p.status })
-          .eq("snr", snr);
-        if (error) console.error("Feil ved startIndividual for snr", snr, error);
-        window.updateTable();
-      }
-    };
-
-    window.recordLap = async function(snr) {
-      let p = window.participants[snr];
-      if (p && p.start) {
-        const lapTime = (Date.now() - Date.parse(p.start)) / 1000;
-        p.laps.push(lapTime);
-        const { error } = await window.supabaseClient.from("participants")
-          .update({ laps: p.laps })
-          .eq("snr", snr);
-        if (error) console.error("Feil ved recordLap for snr", snr, error);
-        window.updateTable();
-      }
-    };
-
-    window.recordFinish = async function(snr) {
-      let p = window.participants[snr];
-      if (p && p.start) {
-        if (window.localTimers[snr]) {
-          clearInterval(window.localTimers[snr]);
-          delete window.localTimers[snr];
-        }
-        p.rawFinish = (Date.now() - Date.parse(p.start)) / 1000;
-        p.status = "Fullført";
-        window.updateFinalTime(snr);
-        const { error } = await window.supabaseClient.from("participants")
-          .update({ rawFinish: p.rawFinish, status: p.status, finish: p.finish })
-          .eq("snr", snr);
-        if (error) console.error("Feil ved recordFinish for snr", snr, error);
-        window.updateTable();
-      }
-    };
-
-    window.toggleTarget = async function(snr, shootIdx, idx) {
-      let p = window.participants[snr];
-      let shootingArr = window.getShootingArray(p);
-      shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
-      p.shooting = JSON.stringify(shootingArr);
-      if (p.rawFinish !== null) window.updateFinalTime(snr);
-      const { error } = await window.supabaseClient.from("participants")
-        .update({ shooting: p.shooting })
-        .eq("snr", snr);
-      if (error) console.error("Feil ved toggleTarget for snr", snr, error);
-      window.updateTable();
-    };
-
-    window.updateFinalTime = function(snr) {
-      let p = window.participants[snr];
-      const penaltyPerMiss = parseFloat(document.getElementById("penaltyTime").value);
-      let shootingArr = window.getShootingArray(p);
-      const totalMisses = shootingArr.flat().filter(hit => !hit).length;
-      const penalty = totalMisses * penaltyPerMiss;
-      p.finish = p.rawFinish + penalty;
-    };
-
-    window.renderShooting = function(snr, shootIdx) {
-      let p = window.participants[snr];
-      let shootingArr = window.getShootingArray(p);
-      return shootingArr[shootIdx].map((hit, i) => {
-        return `<span class="target" onclick="toggleTarget(${snr},${shootIdx},${i})" style="color:${hit ? 'white' : 'black'}">&#9679;</span>`;
-      }).join(" ");
-    };
-
-    async function updateTable() {
+    window.updateTable = async function() {
       await window.fetchParticipants();
       await window.autoStart();
-      updateLocalDisplay();
-    }
-    window.updateTable = updateTable;
+      window.updateLocalDisplay();
+    };
 
-    function updateLocalDisplay() {
+    window.updateLocalDisplay = function() {
       let overallBestFinish = Infinity;
       Object.values(window.participants).forEach(p => {
         if (p.finish != null && p.finish < overallBestFinish) {
@@ -418,13 +291,205 @@
         </tr>`);
       }
       document.getElementById("results").innerHTML = rows.join("");
-    }
+    };
+
+    window.updateLiveClock = async function() {
+      const now = new Date();
+      document.getElementById("liveClock").innerText = now.toLocaleTimeString();
+    };
+
+    window.autoStart = async function() {
+      const now = Date.now();
+      for (const snr in window.participants) {
+        let p = window.participants[snr];
+        if (p.status === 'Planlagt' && now >= Date.parse(p.start)) {
+          p.status = 'I gang';
+          if (!window.localTimers[snr]) {
+            window.localTimers[snr] = setInterval(window.updateTable, 1000);
+          }
+          const { error } = await window.supabaseClient.from("participants")
+            .update({ status: p.status })
+            .eq("snr", snr);
+          if (error) console.error("Feil ved autoStart for snr", snr, error);
+        }
+      }
+    };
+
+    window.startMass = async function() {
+      const now = new Date().toISOString();
+      for (const snr in window.participants) {
+        let p = window.participants[snr];
+        if (!window.localTimers[snr] && (p.status === 'Venter' || p.status === 'Planlagt')) {
+          p.start = now;
+          p.status = 'I gang';
+          window.localTimers[snr] = setInterval(window.updateTable, 1000);
+          const { error } = await window.supabaseClient.from("participants")
+            .update({ start: p.start, status: p.status })
+            .eq("snr", snr);
+          if (error) console.error("Feil ved startMass for snr", snr, error);
+        }
+      }
+      window.updateTable();
+    };
+    window.startIndividual = async function(snr) {
+      let p = window.participants[snr];
+      if (p && !window.localTimers[snr]) {
+        p.start = new Date().toISOString();
+        p.status = 'I gang';
+        window.localTimers[snr] = setInterval(window.updateTable, 1000);
+        const { error } = await window.supabaseClient.from("participants")
+          .update({ start: p.start, status: p.status })
+          .eq("snr", snr);
+        if (error) console.error("Feil ved startIndividual for snr", snr, error);
+        window.updateTable();
+      }
+    };
+    window.recordLap = async function(snr) {
+      let p = window.participants[snr];
+      if (p && p.start) {
+        const lapTime = (Date.now() - Date.parse(p.start)) / 1000;
+        p.laps.push(lapTime);
+        const { error } = await window.supabaseClient.from("participants")
+          .update({ laps: p.laps })
+          .eq("snr", snr);
+        if (error) console.error("Feil ved recordLap for snr", snr, error);
+        window.updateTable();
+      }
+    };
+    window.recordFinish = async function(snr) {
+      let p = window.participants[snr];
+      if (p && p.start) {
+        if (window.localTimers[snr]) {
+          clearInterval(window.localTimers[snr]);
+          delete window.localTimers[snr];
+        }
+        p.rawFinish = (Date.now() - Date.parse(p.start)) / 1000;
+        p.status = "Fullført";
+        window.updateFinalTime(snr);
+        const { error } = await window.supabaseClient.from("participants")
+          .update({ rawFinish: p.rawFinish, status: p.status, finish: p.finish })
+          .eq("snr", snr);
+        if (error) console.error("Feil ved recordFinish for snr", snr, error);
+        window.updateTable();
+      }
+    };
+    window.toggleTarget = async function(snr, shootIdx, idx) {
+      let p = window.participants[snr];
+      let shootingArr = window.getShootingArray(p);
+      shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
+      p.shooting = JSON.stringify(shootingArr);
+      if (p.rawFinish !== null) window.updateFinalTime(snr);
+      const { error } = await window.supabaseClient.from("participants")
+        .update({ shooting: p.shooting })
+        .eq("snr", snr);
+      if (error) console.error("Feil ved toggleTarget for snr", snr, error);
+      window.updateTable();
+    };
+    window.updateFinalTime = function(snr) {
+      let p = window.participants[snr];
+      const penaltyPerMiss = parseFloat(document.getElementById('penaltyTime').value);
+      let shootingArr = window.getShootingArray(p);
+      const totalMisses = shootingArr.flat().filter(hit => !hit).length;
+      const penalty = totalMisses * penaltyPerMiss;
+      p.finish = p.rawFinish + penalty;
+    };
+    window.renderShooting = function(snr, shootIdx) {
+      let p = window.participants[snr];
+      let shootingArr = window.getShootingArray(p);
+      return shootingArr[shootIdx].map((hit, i) => {
+        return `<span class="target" onclick="toggleTarget(${snr},${shootIdx},${i})" style="color:${hit ? 'white' : 'black'}">&#9679;</span>`;
+      }).join(" ");
+    };
 
     async function updateLiveClock() {
       const now = new Date();
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     }
 
+    // Start oppdatering
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+    setInterval(updateTable, 5000);
+    setInterval(updateLocalDisplay, 1000);
+    updateTable();
+    
+    // Vi definerer updateLocalDisplay slik at den også kan kalles eksternt
+    function updateLocalDisplay() {
+      let overallBestFinish = Infinity;
+      Object.values(window.participants).forEach(p => {
+        if (p.finish != null && p.finish < overallBestFinish) {
+          overallBestFinish = p.finish;
+        }
+      });
+      let maxLaps = 0;
+      Object.values(window.participants).forEach(p => {
+        if (p.laps.length > maxLaps) maxLaps = p.laps.length;
+      });
+      let bestLapTimes = Array(maxLaps).fill(Infinity);
+      Object.values(window.participants).forEach(p => {
+        p.laps.forEach((lap, i) => { if (lap < bestLapTimes[i]) bestLapTimes[i] = lap; });
+      });
+      let classPlacements = {};
+      Object.entries(window.participants).forEach(([snr, p]) => {
+        if (p.finish != null) {
+          if (!classPlacements[p.class]) classPlacements[p.class] = [];
+          classPlacements[p.class].push({ snr: snr, finish: p.finish });
+        }
+      });
+      for (const cls in classPlacements) {
+        classPlacements[cls].sort((a, b) => a.finish - b.finish);
+        classPlacements[cls].forEach((entry, i) => { entry.rank = i + 1; });
+      }
+      
+      let rows = [];
+      for (const [snr, p] of Object.entries(window.participants)) {
+        let placement = '-';
+        if (p.finish != null && classPlacements[p.class]) {
+          const found = classPlacements[p.class].find(entry => entry.snr === snr);
+          placement = found ? found.rank : '-';
+        }
+        let timeDisplay = '-';
+        if (p.status === 'Planlagt') {
+          let remainingSec = (Date.parse(p.start) - Date.now()) / 1000;
+          if (remainingSec < 0) remainingSec = 0;
+          timeDisplay = window.formatClockTimeFull(Date.parse(p.start)) + " (" + window.formatTime(remainingSec) + " til start)";
+        } else if (p.timer) {
+          timeDisplay = window.formatTime((Date.now()-Date.parse(p.start))/1000);
+        } else if (p.finish != null) {
+          timeDisplay = window.formatTime(p.finish);
+        }
+        const lapDiffs = p.laps.map((lap, i) => {
+          let diff = (lap - bestLapTimes[i]).toFixed(1);
+          return `${window.formatTime(lap)} (+${diff}s)`;
+        }).join('<br>');
+        const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
+        rows.push(`<tr>
+          <td>${placement}</td>
+          <td>${(p.status === 'Planlagt' || p.timer) ? '-' : `<button class="btn-start" onclick="startIndividual(${snr})">Start</button>`}</td>
+          <td>${snr}</td>
+          <td>${p.name}</td>
+          <td>${p.class}</td>
+          <td>${p.status}</td>
+          <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
+          <td class="shooting">${window.renderShooting(snr,0)}</td>
+          <td class="shooting">${window.renderShooting(snr,1)}</td>
+          <td>${window.getShootingArray(p).flat().filter(h => !h).length}</td>
+          <td>${p.laps.map(window.formatTime).join('<br>')}</td>
+          <td>${finishDiff}</td>
+          <td>${p.timer ? `<button class="btn-lap" onclick="recordLap(${snr})">Rundetid</button> <button class="btn-finish" onclick="recordFinish(${snr})">Mål</button>` : '-'}</td>
+        </tr>`);
+      }
+      document.getElementById("results").innerHTML = rows.join("");
+    }
+    
+    window.updateLocalDisplay = updateLocalDisplay;
+    
+    async function updateLiveClock() {
+      const now = new Date();
+      document.getElementById("liveClock").innerText = now.toLocaleTimeString();
+    }
+    window.updateLiveClock = updateLiveClock;
+    
     setInterval(updateLiveClock, 1000);
     updateLiveClock();
     setInterval(updateTable, 5000);
