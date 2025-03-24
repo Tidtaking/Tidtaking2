@@ -10,7 +10,7 @@
     th, td { border: 1px solid #ccc; padding: 5px; font-size: 14px; text-align: center; }
     th { background-color: #f4f4f4; }
     #liveClock { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-    /* Blinkene – økt størrelse, med bakgrunn for å gjøre treff tydelig */
+    /* Blinkene med grå bakgrunn og fast størrelse slik at de vises på en linje */
     .target {
       display: inline-block;
       width: 50px;
@@ -21,6 +21,7 @@
       margin: 2px;
       font-size: 36px;
     }
+    .shooting { white-space: nowrap; }
     @media (max-width: 600px) {
       th, td { font-size: 10px; }
       .target { width: 40px; height: 40px; line-height: 40px; font-size: 28px; }
@@ -75,15 +76,15 @@
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-
-      // Sorter data slik at de med status "I gang" vises øverst, deretter etter startnummer
+      
+      // Sorter slik at de med status "I gang" kommer øverst, deretter etter startnummer
       data.sort((a, b) => {
         if (a.status === "I gang" && b.status !== "I gang") return -1;
         if (a.status !== "I gang" && b.status === "I gang") return 1;
         return a.snr - b.snr;
       });
 
-      // Omform data til et objekt med snr som nøkkel
+      // Lag et objekt med deltakerdata
       let participants = {};
       data.forEach(record => {
         record.laps = record.laps || [];
@@ -92,7 +93,7 @@
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
         participants[record.snr] = record;
       });
-
+      
       // Beregn rangering per klasse for fullførte deltakere
       let classPlacements = {};
       data.forEach(p => {
@@ -105,7 +106,7 @@
         classPlacements[cls].sort((a, b) => a.finish - b.finish);
         classPlacements[cls].forEach((p, index) => p.rank = index + 1);
       }
-
+      
       // Bygg HTML-tabell
       let html = `<table>
         <thead>
@@ -130,7 +131,6 @@
           let found = classPlacements[p.class].find(item => item.snr == p.snr);
           if (found) rank = found.rank;
         }
-        // Tid: Dersom deltaker er "I gang", vis løpende tid; hvis fullført, vis finish-tid
         let tidDisplay = "-";
         if (p.status === "I gang" && p.start) {
           tidDisplay = formatTime((Date.now() - Date.parse(p.start)) / 1000);
@@ -138,14 +138,13 @@
           tidDisplay = formatTime(p.finish);
         }
         let rundetid = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
-        // Render skytingen med bakgrunn og farger:
         function renderShooting(arr) {
           return arr.map(hit => `<span class="target" style="background-color: gray; color: ${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
         }
         let s1 = renderShooting(getShootingArray(p)[0]);
         let s2 = renderShooting(getShootingArray(p)[1]);
         let måltid = (p.finish !== null && p.finish !== undefined) ? formatTime(p.finish) : "-";
-        // Rader for fullførte deltakere får svak grønn bakgrunn for bedre lesbarhet
+        // Hvis deltaker er fullført, gi raden en svak grønn bakgrunn
         let rowStyle = p.status === "Fullført" ? ' style="background-color: #d4edda;"' : "";
         
         html += `<tr${rowStyle}>
@@ -170,10 +169,9 @@
         console.error('Element med id "statusTable" finnes ikke.');
       }
     }
-
+    
     // Oppdater status-tabellen hvert sekund
     setInterval(updateStatusTable, 1000);
-
     document.addEventListener("DOMContentLoaded", function() {
       updateLiveClock();
       updateStatusTable();
