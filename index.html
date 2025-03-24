@@ -157,7 +157,8 @@
     };
 
     // Funksjoner for databaseoperasjoner og visning
-    async function fetchParticipants() {
+
+    window.fetchParticipants = async function() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
@@ -168,21 +169,39 @@
         record.shooting = (typeof record.shooting === "string")
           ? window.getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
+        // Bevar lokale timer hvis de finnes
         if (window.localTimers[record.snr]) {
           record.timer = window.localTimers[record.snr];
         }
         window.participants[record.snr] = record;
       });
-    }
+    };
 
-    async function updateTable() {
-      await fetchParticipants();
-      await autoStart();
-      updateLocalDisplay();
-    }
-    window.updateTable = updateTable;
+    // autoStart defineres globalt slik at updateTable kan kalle den
+    window.autoStart = async function() {
+      const now = Date.now();
+      for (const snr in window.participants) {
+        let p = window.participants[snr];
+        if (p.status === 'Planlagt' && now >= Date.parse(p.start)) {
+          p.status = 'I gang';
+          if (!window.localTimers[snr]) {
+            window.localTimers[snr] = setInterval(window.updateTable, 1000);
+          }
+          const { error } = await window.supabaseClient.from("participants")
+            .update({ status: p.status })
+            .eq("snr", snr);
+          if (error) console.error("Feil ved autoStart for snr", snr, error);
+        }
+      }
+    };
 
-    function updateLocalDisplay() {
+    window.updateTable = async function() {
+      await window.fetchParticipants();
+      await window.autoStart();
+      window.updateLocalDisplay();
+    };
+
+    window.updateLocalDisplay = function() {
       let overallBestFinish = Infinity;
       Object.values(window.participants).forEach(p => {
         if (p.finish != null && p.finish < overallBestFinish) {
@@ -248,24 +267,21 @@
         </tr>`);
       }
       document.getElementById("results").innerHTML = rows.join("");
-    }
-    window.updateLocalDisplay = updateLocalDisplay;
+    };
 
-    async function updateLiveClock() {
+    window.updateLiveClock = async function() {
       const now = new Date();
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
-    }
-    window.updateLiveClock = updateLiveClock;
+    };
 
-    // Start oppdatering hvert sekund
+    // Start oppdatering – vi oppdaterer tabellen hvert sekund
     setInterval(window.updateLiveClock, 1000);
     window.updateLiveClock();
-    setInterval(window.updateTable, 1000); // oppdater tabellen hvert sekund
+    setInterval(window.updateTable, 1000);
     setInterval(window.updateLocalDisplay, 1000);
     window.updateTable();
 
     // Databaseoperasjonsfunksjoner
-
     window.addParticipant = async function() {
       const snr = document.getElementById("newStartNumber").value;
       const name = document.getElementById("newParticipant").value;
@@ -422,7 +438,7 @@
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     };
 
-    // Start oppdatering hvert sekund
+    // Start oppdatering
     setInterval(window.updateLiveClock, 1000);
     window.updateLiveClock();
     setInterval(window.updateTable, 1000);
