@@ -1,0 +1,249 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.4">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="no"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;Tidtaking for Ski-konkurranser&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>body { font-family: Arial, sans-serif; text-align: center; padding: 10px; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>button, input, select { font-size: 14px; margin: 5px; padding: 8px; width: 90%; max-width: 400px; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>table { margin: 10px auto; border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>th, td { border: 1px solid #ccc; padding: 4px; font-size: 12px; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>th { background-color: #f4f4f4; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-lap { background-color: #3498db; color: white; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-finish { background-color: #27ae60; color: white; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-start { background-color: #e67e22; color: white; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.target { font-size: 28px; cursor: pointer; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.shooting { background-color: gray; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>#liveClock { font-size: 18px; font-weight: bold; margin-bottom: 10px; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>@media (max-width: 600px) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>table, th, td { font-size: 10px; }</p>
+<p class="p1"><span class="Apple-converted-space">      </span>.target { font-size: 24px; }</p>
+<p class="p1"><span class="Apple-converted-space">      </span>#liveClock { font-size: 14px; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Inkluder Supabase JS SDK --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Oppdater med dine egne Supabase‑opplysninger:</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>const supabase = supabase.createClient(supabaseUrl, supabaseKey);</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/script&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;h2&gt;Tidtaking for Ski-konkurranser&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- Live klokke --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div id="liveClock"&gt;&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Registrering av deltaker --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;input type="number" id="newStartNumber" placeholder="Startnummer"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;input type="text" id="newParticipant" placeholder="Navn"&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Drop-down meny for klasser --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;select id="newParticipantClass"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value=""&gt;Velg klasse...&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G10 Nybeg og yngre"&gt;G10 Nybeg og yngre&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="K19"&gt;K19&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J16"&gt;J16&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="K17"&gt;K17&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="M18"&gt;M18&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="M19"&gt;M19&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="K18"&gt;K18&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G14"&gt;G14&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G11-12 Nybeg"&gt;G11-12 Nybeg&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J11"&gt;J11&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G12"&gt;G12&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G13"&gt;G13&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J10 Nybeg og yngre"&gt;J10 Nybeg og yngre&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J11-12 Nybeg"&gt;J11-12 Nybeg&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G11"&gt;G11&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J12"&gt;J12&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J13"&gt;J13&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="J14"&gt;J14&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G15"&gt;G15&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="G16"&gt;G16&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;option value="M17"&gt;M17&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/select&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button onclick="addParticipant()"&gt;Lagre deltaker&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;br&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;label&gt;Tilleggstid pr bom (sek): &lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;input type="number" id="penaltyTime" value="30"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;br&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Automatisk starttidsoppsett --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;input type="time" id="firstStartTime" placeholder="Første starttid" step="1"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;input type="number" id="startInterval" placeholder="Intervall (sek)" value="30"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button onclick="assignStartTimes()"&gt;Tildel starttider&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;br&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button onclick="resetAll()" style="background-color: red; color: white;"&gt;Nullstill Alt&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button onclick="saveCSV()" style="background-color: #555; color: white;"&gt;Lagre CSV&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button onclick="startMass()" style="background-color: #444; color: white;"&gt;Fellesstart&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;div style="overflow-x:auto;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Plass&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Start&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;#&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Navn&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Kl.&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Status&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Tid&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;S1&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;S2&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Bom&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Rundetider (Diff)&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Mål (Diff)&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Handl.&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;tbody id="results"&gt;&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">  </span></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let participants = {};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Hent deltakere fra Supabase</p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function fetchParticipants() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const { data, error } = await supabase.from("participants").select("*");</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (error) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>console.error("Feil ved henting av deltakere:", error);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>participants = {};</p>
+<p class="p1"><span class="Apple-converted-space">      </span>data.forEach(record =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>record.laps = record.laps || [];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>record.shooting = record.shooting ? JSON.parse(record.shooting) : [Array(5).fill(false), Array(5).fill(false)];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>participants[record.snr] = record;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Legg til deltaker i Supabase</p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function addParticipant() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const snr = document.getElementById('newStartNumber').value;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const name = document.getElementById('newParticipant').value;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const cls = document.getElementById('newParticipantClass').value;</p>
+<p class="p2"><span class="Apple-converted-space">      </span></p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!snr || !name || !cls) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>alert('Fyll ut alle felt!');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>let { data: existing } = await supabase.from("participants").select("*").eq("snr", snr);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (existing &amp;&amp; existing.length &gt; 0) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>alert("Startnummer allerede brukt!");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const newPart = {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>snr: snr,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>name: name,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>class: cls,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>start: null,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>status: "Venter",</p>
+<p class="p1"><span class="Apple-converted-space">        </span>laps: [],</p>
+<p class="p1"><span class="Apple-converted-space">        </span>finish: null,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>rawFinish: null,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])</p>
+<p class="p1"><span class="Apple-converted-space">      </span>};</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const { error } = await supabase.from("participants").insert([newPart]);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (error) console.error("Feil ved lagring:", error);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('newStartNumber').value = '';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('newParticipant').value = '';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.getElementById('newParticipantClass').value = '';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>updateTable();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function formatTime(sec) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const min = Math.floor(sec / 60);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const s = (sec % 60).toFixed(1);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return min &gt; 0 ? `${min}m ${s}s` : `${s}s`;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function formatClockTimeFull(ms) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const d = new Date(ms);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const h = d.getHours().toString().padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const m = d.getMinutes().toString().padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const s = d.getSeconds().toString().padStart(2, '0');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return `${h}:${m}:${s}`;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function assignStartTimes() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const firstTimeStr = document.getElementById('firstStartTime').value;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const intervalSec = parseInt(document.getElementById('startInterval').value);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!firstTimeStr || isNaN(intervalSec)) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>alert("Skriv inn gyldig første starttid og intervall!");</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const today = new Date();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const parts = firstTimeStr.split(":");</p>
+<p class="p1"><span class="Apple-converted-space">      </span>today.setHours(parseInt(parts[0]), parseInt(parts[1]), parts[2] ? parseInt(parts[2]) : 0, 0);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const firstStartMs = today.getTime();</p>
+<p class="p2"><span class="Apple-converted-space">      </span></p>
+<p class="p1"><span class="Apple-converted-space">      </span>const keys = Object.keys(participants).sort((a, b) =&gt; a - b);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>for (let index = 0; index &lt; keys.length; index++) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const snr = keys[index];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let p = participants[snr];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (p.status === 'Venter') {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.start = firstStartMs + index * intervalSec * 1000;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.status = 'Planlagt';</p>
+<p class="p1"><span class="Apple-converted-space">          </span>await supabase.from("participants").update({ start: p.start, status: p.status }).eq("snr", snr);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>updateTable();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Sjekk om en deltaker har nådd planlagt starttid, start i så fall</p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function autoStart() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const now = Date.now();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>for (const snr in participants) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let p = participants[snr];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (p.status === 'Planlagt' &amp;&amp; now &gt;= p.start) {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.status = 'I gang';</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.timer = setInterval(updateTable, 1000);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>await supabase.from("participants").update({ status: p.status }).eq("snr", snr);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// Start alle ventende eller planlagte deltakere med en gang</p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function startMass() {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const now = Date.now();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>for (const snr in participants) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let p = participants[snr];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (!p.timer &amp;&amp; (p.status === 'Venter' || p.status === 'Planlagt')) {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.start = now;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.status = 'I gang';</p>
+<p class="p1"><span class="Apple-converted-space">          </span>p.timer = setInterval(updateTable, 1000);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>await supabase.from("participants").update({ start: p.start, status: p.status }).eq("snr", snr);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>updateTable();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>async function startIndividual(snr) {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>let p = participants[snr];</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (p &amp;&amp; !p.timer) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>p.start = Date.now();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>p.status =</p>
+</body>
+</html>
