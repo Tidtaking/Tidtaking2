@@ -65,11 +65,10 @@
   <!-- Inkluder Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger om nødvendig
+    // Konfigurer Supabase – erstatt med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", supabaseClient);
 
     // Hjelpefunksjoner
     function formatTime(sec) {
@@ -86,7 +85,7 @@
       }
     }
 
-    // Oppdaterer live-klokken
+    // Oppdater live-klokken
     function updateLiveClock() {
       const clockEl = document.getElementById("liveClock");
       if (clockEl) {
@@ -96,14 +95,32 @@
     setInterval(updateLiveClock, 1000);
     updateLiveClock();
 
-    // Hent deltakerdata og bygg status-tabellen (read-only)
+    // Oppdaterer status-tabellen hvert sekund
+    setInterval(updateStatusTable, 1000);
+    document.addEventListener("DOMContentLoaded", function() {
+      updateLiveClock();
+      updateStatusTable();
+    });
+
     async function updateStatusTable() {
-      const { data, error } = await supabaseClient.from("participants").select("*");
+      console.log("Henter data fra Supabase...");
+      const { data, error } = await supabaseClient
+        .from("participants") // Sjekk at tabellnavnet er "participants"
+        .select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-      
+      console.log("Data fra Supabase:", data);
+
+      // Hvis ingen rader, vis en melding i tabellen
+      if (!data || data.length === 0) {
+        document.getElementById("statusTable").innerHTML = `
+          <p>Ingen deltakere funnet i databasen!</p>
+        `;
+        return;
+      }
+
       // 1) Beregn rangering (rank) for fullførte deltakere pr klasse
       let classPlacements = {};
       data.forEach(p => {
@@ -112,7 +129,7 @@
           classPlacements[p.class].push({ snr: p.snr, finish: p.finish });
         }
       });
-      // Sorter fullførte i hver klasse etter finish-tid for å finne rank
+      // Sorter fullførte i hver klasse etter finish-tid
       let rankMap = {};
       for (let cls in classPlacements) {
         classPlacements[cls].sort((a, b) => a.finish - b.finish);
@@ -121,30 +138,27 @@
         });
       }
 
-      // 2) Sorter deltakerne i rekkefølge:
+      // 2) Sortér deltakerne
       //    a) "I gang" øverst (sortert på snr)
-      //    b) "Venter"/"Planlagt"/andre statuser i midten (sortert på snr)
-      //    c) "Fullført" nederst, sortert etter rank (fra rankMap)
+      //    b) "Fullført" nederst, sortert etter rank
+      //    c) ellers på snr
       data.sort((a, b) => {
-        // a) "I gang" øverst
+        // "I gang" øverst
         if (a.status === "I gang" && b.status !== "I gang") return -1;
         if (a.status !== "I gang" && b.status === "I gang") return 1;
-        
-        // b) "Fullført" nederst
+        // "Fullført" nederst
         if (a.status === "Fullført" && b.status !== "Fullført") return 1;
         if (a.status !== "Fullført" && b.status === "Fullført") return -1;
-        
-        // c) Hvis begge er "Fullført", sorter på rank
+        // Hvis begge er "Fullført", sorter på rank
         if (a.status === "Fullført" && b.status === "Fullført") {
           let ra = rankMap[a.snr] || 9999;
           let rb = rankMap[b.snr] || 9999;
-          return ra - rb; 
+          return ra - rb;
         }
         // Ellers sorter på snr
         return a.snr - b.snr;
       });
 
-      // Bygg HTML-tabell
       let html = `
         <table>
           <thead>
@@ -163,13 +177,12 @@
           </thead>
           <tbody>
       `;
+
       data.forEach(p => {
-        // Plassering
         let rank = "-";
         if (p.status === "Fullført" && rankMap[p.snr]) {
           rank = rankMap[p.snr];
         }
-        // Tid: Hvis i gang, vis løpende tid, ellers finish
         let tidDisplay = "-";
         if (p.status === "I gang" && p.start) {
           let elapsedSec = (Date.now() - Date.parse(p.start)) / 1000;
@@ -177,26 +190,24 @@
         } else if (p.finish !== null && p.finish !== undefined) {
           tidDisplay = formatTime(p.finish);
         }
-        // Rundetid
         let lapsDisplay = (p.laps && p.laps.length > 0)
           ? p.laps.map(l => formatTime(l)).join("<br>")
           : "-";
-        // Skyting
+        
         let shootingArr = getShootingArray(p);
         function renderShooting(arr) {
-          // Farger: hvit for treff, svart for bom
-          return arr.map(hit => 
+          return arr.map(hit =>
             `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
           ).join(" ");
         }
         let s1 = renderShooting(shootingArr[0]);
         let s2 = renderShooting(shootingArr[1]);
-        // Måltid
+        
         let måltid = (p.finish !== null && p.finish !== undefined)
           ? formatTime(p.finish)
           : "-";
         
-        // Fullført = svak grønn bakgrunn
+        // Fullført -> grønn rad
         let rowStyle = (p.status === "Fullført") ? ' style="background-color: #d4edda;"' : "";
 
         html += `
@@ -214,6 +225,7 @@
           </tr>
         `;
       });
+
       html += `</tbody></table>`;
 
       const statusEl = document.getElementById("statusTable");
@@ -228,7 +240,6 @@
 <body>
   <h2>Konkurransestatus for Ski (Read-Only)</h2>
   <div id="liveClock"></div>
-  <!-- Her vises status-tabellen -->
   <div id="statusTable"></div>
 </body>
 </html>
