@@ -25,36 +25,49 @@
     th {
       background-color: #f4f4f4;
     }
-    /* For skytekolonnen setter vi bakgrunn til grå */
+    /* Skytekolonnen med grå bakgrunn */
     .shootingCell {
       background-color: gray;
       white-space: nowrap;
     }
-    /* Blinkene: faste dimensjoner, ingen egen bakgrunn (viser cellens grå bakgrunn) */
+    /* Blinkene – fast størrelse, større enn før */
     .target {
       display: inline-block;
-      width: 60px;
-      height: 60px;
-      line-height: 60px;
+      width: 70px;
+      height: 70px;
+      line-height: 70px;
       border-radius: 50%;
-      margin: 2px;
-      font-size: 42px;
+      margin: 3px;
+      font-size: 48px;
       vertical-align: middle;
+    }
+    /* Rundetid-knappen – grønn og større */
+    .btn-lap {
+      background-color: #28a745;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
     }
     @media (max-width: 600px) {
       th, td { font-size: 10px; }
       .target {
-        width: 40px;
-        height: 40px;
-        line-height: 40px;
-        font-size: 28px;
+        width: 50px;
+        height: 50px;
+        line-height: 50px;
+        font-size: 36px;
+      }
+      .btn-lap {
+        font-size: 14px;
+        padding: 8px 12px;
       }
     }
   </style>
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // Konfigurer Supabase – oppdater med dine opplysninger om nødvendig
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -70,7 +83,7 @@
       return min > 0 ? `${min}m ${s}s` : `${s}s`;
     }
 
-    // Funksjon for å hente skyte-array
+    // Funksjon for å hente skyte-array fra en deltaker
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -80,29 +93,27 @@
       }
     }
 
-    // Funksjon for å rendere blinkene (target-elementene)
+    // Funksjon for å rendere blinkene med grå bakgrunn (arvet fra cellen)
     function renderShooting(arr) {
-      // Blinkene vises uten egen bakgrunn – de vises på den grå cellen (shootingCell)
       return arr.map(hit =>
         `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join(" ");
     }
 
-    // Oppdaterer tabellen med rundetider og skyteresultater
+    // Henter deltakerdata og bygger tabellen for rundetider og skyteresultater
     async function updateLapTable() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-      // Oppdater globalt deltakerobjekt
       window.participants = {};
       data.forEach(record => {
         record.laps = record.laps || [];
         window.participants[record.snr] = record;
       });
       
-      // Sorter slik at deltakere med status "I gang" vises øverst, resten etter startnummer
+      // Sorter data: "I gang" øverst, resten sortert på startnummer
       data.sort((a, b) => {
         if (a.status === "I gang" && b.status !== "I gang") return -1;
         if (a.status !== "I gang" && b.status === "I gang") return 1;
@@ -112,7 +123,7 @@
       let html = `<table>
         <thead>
           <tr>
-            <th>Startnummer</th>
+            <th>Startnr</th>
             <th>Navn</th>
             <th>Klasse</th>
             <th>Status</th>
@@ -147,7 +158,7 @@
       document.getElementById("lapTable").innerHTML = html;
     }
 
-    // Registrerer en ny rundetid for en deltaker
+    // Funksjon for å registrere en ny rundetid for en deltaker
     async function recordLap(snr) {
       let p = window.participants[snr];
       if (p && p.start) {
