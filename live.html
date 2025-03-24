@@ -58,23 +58,23 @@
       }
     }
 
-    // Henter deltakerdata og bygger en status-tabell (read-only)
+    // Hent deltakerdata og bygg status-tabellen (read-only)
     async function updateStatusTable() {
       const { data, error } = await supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-      // Bygg et objekt med deltakerdata
+      // Omform data til et objekt med snr som nøkkel
       let participants = {};
       data.forEach(record => {
         record.laps = record.laps || [];
-        record.shooting = (typeof record.shooting === "string")
+        record.shooting = (typeof record.shooting === "string") 
           ? getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
         participants[record.snr] = record;
       });
-
+      
       // Beregn rangering per klasse for fullførte deltakere
       let classPlacements = {};
       data.forEach(p => {
@@ -88,7 +88,7 @@
         classPlacements[cls].forEach((p, index) => p.rank = index + 1);
       }
       
-      // Bygg HTML for status-tabellen
+      // Bygg HTML-tabell (kun for visning)
       let html = `<table>
         <thead>
           <tr>
@@ -105,26 +105,30 @@
           </tr>
         </thead>
         <tbody>`;
+      
       data.forEach(p => {
         let rank = "-";
         if (p.finish !== null && p.finish !== undefined && classPlacements[p.class]) {
           let found = classPlacements[p.class].find(item => item.snr == p.snr);
           if (found) rank = found.rank;
         }
-        // Tid: Hvis "I gang", vis løpende tid; hvis fullført, vis finish-tid
+        // Tid: Dersom deltaker er "I gang", vis løpende tid; hvis fullført, vis finish-tid
         let tidDisplay = "-";
         if (p.status === "I gang" && p.start) {
           tidDisplay = formatTime((Date.now() - Date.parse(p.start)) / 1000);
         } else if (p.finish !== null && p.finish !== undefined) {
           tidDisplay = formatTime(p.finish);
         }
+        // Rundetid: Vis liste over lapptider
         let rundetid = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
-        // Vis skytingen for S1 og S2 som blink (med større font)
-        function renderShooting(arr) {
+        // Skytingen: Vis blinkene for S1 og S2
+        let shootingArr = getShootingArray(p);
+        let renderShooting = function(arr) {
           return arr.map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'}">&#9679;</span>`).join(" ");
-        }
-        let s1 = renderShooting(getShootingArray(p)[0]);
-        let s2 = renderShooting(getShootingArray(p)[1]);
+        };
+        let s1 = renderShooting(shootingArr[0]);
+        let s2 = renderShooting(shootingArr[1]);
+        // Måltid: Vis finish-tid hvis fullført
         let måltid = (p.finish !== null && p.finish !== undefined) ? formatTime(p.finish) : "-";
         
         html += `<tr>
@@ -140,10 +144,17 @@
           <td>${måltid}</td>
         </tr>`;
       });
+      
       html += `</tbody></table>`;
-      document.getElementById("statusTable").innerHTML = html;
+      // Sørg for at elementet med id "statusTable" finnes
+      const statusEl = document.getElementById("statusTable");
+      if (statusEl) {
+        statusEl.innerHTML = html;
+      } else {
+        console.error('Element med id "statusTable" finnes ikke.');
+      }
     }
-
+    
     // Oppdater status-tabellen hvert sekund
     setInterval(updateStatusTable, 1000);
 
@@ -153,5 +164,11 @@
       updateStatusTable();
     });
   </script>
+</head>
+<body>
+  <h2>Konkurransestatus for Ski</h2>
+  <div id="liveClock"></div>
+  <!-- Dette er feltet for statusvisning (read-only) -->
+  <div id="statusTable"></div>
 </body>
 </html>
