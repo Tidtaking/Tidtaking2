@@ -29,7 +29,7 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD-versjonen) -->
+  <!-- Last Supabase SDK (UMD-versjonen) – denne skal definere window.supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – oppdater med dine opplysninger:
@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
+    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -169,30 +169,11 @@
         record.shooting = (typeof record.shooting === "string")
           ? window.getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Bevar lokale timer hvis de finnes
         if (window.localTimers[record.snr]) {
           record.timer = window.localTimers[record.snr];
         }
         window.participants[record.snr] = record;
       });
-    };
-
-    // autoStart defineres globalt slik at updateTable kan kalle den
-    window.autoStart = async function() {
-      const now = Date.now();
-      for (const snr in window.participants) {
-        let p = window.participants[snr];
-        if (p.status === 'Planlagt' && now >= Date.parse(p.start)) {
-          p.status = 'I gang';
-          if (!window.localTimers[snr]) {
-            window.localTimers[snr] = setInterval(window.updateTable, 1000);
-          }
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ status: p.status })
-            .eq("snr", snr);
-          if (error) console.error("Feil ved autoStart for snr", snr, error);
-        }
-      }
     };
 
     window.updateTable = async function() {
@@ -274,14 +255,29 @@
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     };
 
-    // Start oppdatering – vi oppdaterer tabellen hvert sekund
-    setInterval(window.updateLiveClock, 1000);
-    window.updateLiveClock();
-    setInterval(window.updateTable, 1000);
-    setInterval(window.updateLocalDisplay, 1000);
-    window.updateTable();
+    window.autoStart = async function() {
+      const now = Date.now();
+      for (const snr in window.participants) {
+        let p = window.participants[snr];
+        if (p.status === 'Planlagt' && now >= Date.parse(p.start)) {
+          p.status = 'I gang';
+          if (!window.localTimers[snr]) {
+            window.localTimers[snr] = setInterval(window.updateTable, 1000);
+          }
+          const { error } = await window.supabaseClient.from("participants")
+            .update({ status: p.status })
+            .eq("snr", snr);
+          if (error) console.error("Feil ved autoStart for snr", snr, error);
+        }
+      }
+    };
 
-    // Databaseoperasjonsfunksjoner
+    window.updateTable = async function() {
+      await window.fetchParticipants();
+      await window.autoStart();
+      window.updateLocalDisplay();
+    };
+
     window.addParticipant = async function() {
       const snr = document.getElementById("newStartNumber").value;
       const name = document.getElementById("newParticipant").value;
@@ -311,7 +307,8 @@
       else console.log("Ny deltaker lagret:", data);
       document.getElementById("newStartNumber").value = "";
       document.getElementById("newParticipant").value = "";
-      window.updateTable();
+      // Vent litt før vi oppdaterer tabellen
+      setTimeout(window.updateTable, 500);
     };
 
     window.assignStartTimes = async function() {
@@ -408,6 +405,7 @@
       let shootingArr = window.getShootingArray(p);
       shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
       p.shooting = JSON.stringify(shootingArr);
+      // Her oppdateres finish også dersom rawFinish finnes
       if (p.rawFinish !== null) window.updateFinalTime(snr);
       const { error } = await window.supabaseClient.from("participants")
         .update({ shooting: p.shooting })
@@ -438,7 +436,7 @@
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     };
 
-    // Start oppdatering
+    // Start oppdatering hvert sekund
     setInterval(window.updateLiveClock, 1000);
     window.updateLiveClock();
     setInterval(window.updateTable, 1000);
