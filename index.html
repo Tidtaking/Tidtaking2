@@ -29,7 +29,7 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD-versjonen) – denne skal definere window.supabase -->
+  <!-- Last Supabase SDK (UMD) – denne skal definere window.supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – oppdater med dine opplysninger:
@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
+    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -169,6 +169,7 @@
         record.shooting = (typeof record.shooting === "string")
           ? window.getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
+        // Bevar eventuelle lokale timer
         if (window.localTimers[record.snr]) {
           record.timer = window.localTimers[record.snr];
         }
@@ -183,6 +184,14 @@
     };
 
     window.updateLocalDisplay = function() {
+      // Oppdater finish-tid for fullførte deltakere kontinuerlig
+      Object.keys(window.participants).forEach(snr => {
+        let p = window.participants[snr];
+        if (p.status === "Fullført" && p.rawFinish != null) {
+          window.updateFinalTime(snr);
+        }
+      });
+      
       let overallBestFinish = Infinity;
       Object.values(window.participants).forEach(p => {
         if (p.finish != null && p.finish < overallBestFinish) {
@@ -307,7 +316,7 @@
       else console.log("Ny deltaker lagret:", data);
       document.getElementById("newStartNumber").value = "";
       document.getElementById("newParticipant").value = "";
-      // Vent litt før vi oppdaterer tabellen
+      // Vent litt før oppdatering for å sikre at data er skrevet
       setTimeout(window.updateTable, 500);
     };
 
@@ -405,7 +414,7 @@
       let shootingArr = window.getShootingArray(p);
       shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
       p.shooting = JSON.stringify(shootingArr);
-      // Her oppdateres finish også dersom rawFinish finnes
+      // Oppdater finish dersom rawFinish finnes
       if (p.rawFinish !== null) window.updateFinalTime(snr);
       const { error } = await window.supabaseClient.from("participants")
         .update({ shooting: p.shooting })
