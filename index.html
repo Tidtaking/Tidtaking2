@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
+    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -469,6 +469,7 @@
 
     // Oppdatert CSV-funksjon med ekstra logging
     window.saveCSV = async function() {
+      console.log("CSV-knapp trykket – starter CSV eksport");
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved CSV-export:", error);
@@ -497,7 +498,7 @@
           csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
         });
       }
-      // Uferdige deltakere (finish er null/undefined)
+      // Uferdige deltakere (finish null/undefined)
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined);
       unfinishedData.sort((a, b) => a.snr - b.snr);
       unfinishedData.forEach(p => {
@@ -517,7 +518,7 @@
       document.body.removeChild(link);
     };
 
-    window.saveCSV = window.saveCSV; // Eksporter saveCSV for event listener
+    // Fjern ikke nødvendig reassignering
   </script>
   <div id="liveClock" style="font-size: 18px; font-weight: bold; margin-top: 10px;"></div>
 </body>
