@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {};
+    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -475,6 +475,10 @@
         return;
       }
       console.log("Data hentet for CSV:", data);
+      if (!data || data.length === 0) {
+        alert("Ingen data funnet for CSV-export!");
+        return;
+      }
       // Filtrer ferdige deltakere (finish ikke null/undefined)
       const finishedData = data.filter(p => p.finish !== null && p.finish !== undefined);
       finishedData.sort((a, b) => a.finish - b.finish);
@@ -493,7 +497,7 @@
           csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
         });
       }
-      // Filtrer uferdige deltakere (finish null/undefined)
+      // Uferdige deltakere (finish er null/undefined)
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined);
       unfinishedData.sort((a, b) => a.snr - b.snr);
       unfinishedData.forEach(p => {
