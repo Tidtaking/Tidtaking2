@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
+    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -157,7 +157,6 @@
     };
 
     // Funksjoner for databaseoperasjoner og visning
-
     window.fetchParticipants = async function() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
@@ -183,7 +182,7 @@
     };
 
     window.updateLocalDisplay = function() {
-      // Oppdater finish-tiden for fullførte deltakere kontinuerlig
+      // For fullførte deltakere oppdateres finish-tiden kontinuerlig
       Object.keys(window.participants).forEach(snr => {
         let p = window.participants[snr];
         if (p.status === "Fullført" && p.rawFinish != null) {
@@ -280,14 +279,7 @@
       }
     };
 
-    window.updateTable = async function() {
-      await window.fetchParticipants();
-      await window.autoStart();
-      window.updateLocalDisplay();
-    };
-
     window.addParticipant = async function() {
-      // Konverter startnummer til heltall (dersom kolonnen forventer et tall)
       const snrStr = document.getElementById("newStartNumber").value;
       const snr = parseInt(snrStr);
       const name = document.getElementById("newParticipant").value;
@@ -319,7 +311,6 @@
       else console.log("Ny deltaker lagret:", data);
       document.getElementById("newStartNumber").value = "";
       document.getElementById("newParticipant").value = "";
-      // Vent litt før oppdatering for å gi tid til at data er skrevet
       setTimeout(window.updateTable, 500);
     };
 
@@ -457,9 +448,65 @@
     // Event listeners for knappene
     document.getElementById("btnAddParticipant").addEventListener("click", window.addParticipant);
     document.getElementById("btnAssignStartTimes").addEventListener("click", window.assignStartTimes);
-    document.getElementById("btnResetAll").addEventListener("click", window.resetAll);
+    document.getElementById("btnResetAll").addEventListener("click", async function() {
+      const confirmed = await window.customConfirm("Er du sikker på at du vil nullstille alt?");
+      if (confirmed) {
+        // Stopp alle lokale timer
+        for (const snr in window.participants) {
+          let p = window.participants[snr];
+          if (window.localTimers[snr]) {
+            clearInterval(window.localTimers[snr]);
+            delete window.localTimers[snr];
+          }
+        }
+        window.participants = {};
+        // Slett alle rader – vi bruker .neq("snr", 0) for å anta at alle gyldige startnumre er > 0
+        const { error } = await window.supabaseClient.from("participants").delete().neq("snr", 0);
+        if (error) console.error("Feil ved nullstilling:", error);
+        window.updateTable();
+      }
+    });
     document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
     document.getElementById("btnStartMass").addEventListener("click", window.startMass);
+
+    window.saveCSV = async function() {
+      const { data: finishedData, error } = await window.supabaseClient.from("participants").select("*").neq("finish", null);
+      if (error) {
+        console.error("Feil ved CSV-export:", error);
+        return;
+      }
+      finishedData.sort((a, b) => a.finish - b.finish);
+      let csv = "Klasse,Plass,Startnummer,Navn,Tid,Bom\n";
+      let groups = {};
+      finishedData.forEach(p => {
+        if (!groups[p.class]) groups[p.class] = [];
+        groups[p.class].push(p);
+      });
+      for (const cls in groups) {
+        groups[cls].sort((a, b) => a.finish - b.finish);
+        const bestFinish = groups[cls][0].finish;
+        groups[cls].forEach((p, i) => {
+          const bom = window.getShootingArray(p).flat().filter(hit => !hit).length;
+          const diff = p.finish - bestFinish;
+          csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
+        });
+      }
+      const { data: unfinishedData, error: err2 } = await window.supabaseClient.from("participants").select("*").is("finish", null);
+      if (err2) console.error(err2);
+      unfinishedData.sort((a, b) => a.snr - b.snr);
+      unfinishedData.forEach(p => {
+        const bom = window.getShootingArray(p).flat().filter(hit => !hit).length;
+        csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`;
+      });
+      const link = document.createElement("a");
+      link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+      link.download = "resultater.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    window.saveCSV = window.saveCSV; // Eksporter saveCSV for event listener
   </script>
   <div id="liveClock" style="font-size: 18px; font-weight: bold; margin-top: 10px;"></div>
 </body>
