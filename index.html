@@ -169,7 +169,6 @@
         record.shooting = (typeof record.shooting === "string")
           ? window.getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Bevar eventuelle lokale timer
         if (window.localTimers[record.snr]) {
           record.timer = window.localTimers[record.snr];
         }
@@ -184,7 +183,7 @@
     };
 
     window.updateLocalDisplay = function() {
-      // Oppdater finish-tid for fullførte deltakere kontinuerlig
+      // Oppdater finish-tiden for fullførte deltakere kontinuerlig
       Object.keys(window.participants).forEach(snr => {
         let p = window.participants[snr];
         if (p.status === "Fullført" && p.rawFinish != null) {
@@ -288,13 +287,16 @@
     };
 
     window.addParticipant = async function() {
-      const snr = document.getElementById("newStartNumber").value;
+      // Konverter startnummer til heltall (dersom kolonnen forventer et tall)
+      const snrStr = document.getElementById("newStartNumber").value;
+      const snr = parseInt(snrStr);
       const name = document.getElementById("newParticipant").value;
       const cls = document.getElementById("newParticipantClass").value;
-      if (!snr || !name || !cls) {
+      if (!snrStr || !name || !cls) {
         alert("Fyll ut alle felt!");
         return;
       }
+      console.log("Legger til deltaker:", snr, name, cls);
       let { data: existing } = await window.supabaseClient.from("participants").select("*").eq("snr", snr);
       if (existing && existing.length > 0) {
         alert("Startnummer allerede brukt!");
@@ -311,12 +313,13 @@
         rawFinish: null,
         shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
       };
+      console.log("Nytt deltakerobjekt:", newPart);
       const { error, data } = await window.supabaseClient.from("participants").insert([newPart]);
       if (error) console.error("Feil ved lagring:", error);
       else console.log("Ny deltaker lagret:", data);
       document.getElementById("newStartNumber").value = "";
       document.getElementById("newParticipant").value = "";
-      // Vent litt før oppdatering for å sikre at data er skrevet
+      // Vent litt før oppdatering for å gi tid til at data er skrevet
       setTimeout(window.updateTable, 500);
     };
 
@@ -414,7 +417,6 @@
       let shootingArr = window.getShootingArray(p);
       shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
       p.shooting = JSON.stringify(shootingArr);
-      // Oppdater finish dersom rawFinish finnes
       if (p.rawFinish !== null) window.updateFinalTime(snr);
       const { error } = await window.supabaseClient.from("participants")
         .update({ shooting: p.shooting })
@@ -451,6 +453,13 @@
     setInterval(window.updateTable, 1000);
     setInterval(window.updateLocalDisplay, 1000);
     window.updateTable();
+
+    // Event listeners for knappene
+    document.getElementById("btnAddParticipant").addEventListener("click", window.addParticipant);
+    document.getElementById("btnAssignStartTimes").addEventListener("click", window.assignStartTimes);
+    document.getElementById("btnResetAll").addEventListener("click", window.resetAll);
+    document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
+    document.getElementById("btnStartMass").addEventListener("click", window.startMass);
   </script>
   <div id="liveClock" style="font-size: 18px; font-weight: bold; margin-top: 10px;"></div>
 </body>
