@@ -29,7 +29,7 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD) -->
+  <!-- Last Supabase SDK (UMD) – denne skal definere window.supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – oppdater med dine opplysninger:
@@ -116,7 +116,7 @@
   <script>
     // Globalt deltakerobjekt og timerbevaring
     window.participants = {};
-    window.localTimers = {}; // bruker snr som nøkkel for timer-IDer
+    window.localTimers = {}; // Bruk snr som nøkkel for timer-IDer
 
     // Hjelpefunksjoner
     window.getShootingArray = function(p) {
@@ -445,29 +445,7 @@
     setInterval(window.updateLocalDisplay, 1000);
     window.updateTable();
 
-    // Event listeners for knappene
-    document.getElementById("btnAddParticipant").addEventListener("click", window.addParticipant);
-    document.getElementById("btnAssignStartTimes").addEventListener("click", window.assignStartTimes);
-    document.getElementById("btnResetAll").addEventListener("click", async function() {
-      const confirmed = await window.customConfirm("Er du sikker på at du vil nullstille alt?");
-      if (confirmed) {
-        for (const snr in window.participants) {
-          let p = window.participants[snr];
-          if (window.localTimers[snr]) {
-            clearInterval(window.localTimers[snr]);
-            delete window.localTimers[snr];
-          }
-        }
-        window.participants = {};
-        const { error } = await window.supabaseClient.from("participants").delete().neq("snr", 0);
-        if (error) console.error("Feil ved nullstilling:", error);
-        window.updateTable();
-      }
-    });
-    document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
-    document.getElementById("btnStartMass").addEventListener("click", window.startMass);
-
-    // Oppdatert CSV-funksjon med ekstra logging
+    // CSV-funksjonen – definert før event listeners
     window.saveCSV = async function() {
       console.log("CSV-knapp trykket – starter CSV eksport");
       const { data, error } = await window.supabaseClient.from("participants").select("*");
@@ -518,7 +496,27 @@
       document.body.removeChild(link);
     };
 
-    // Fjern ikke nødvendig reassignering
+    // Event listeners for knappene
+    document.getElementById("btnAddParticipant").addEventListener("click", window.addParticipant);
+    document.getElementById("btnAssignStartTimes").addEventListener("click", window.assignStartTimes);
+    document.getElementById("btnResetAll").addEventListener("click", async function() {
+      const confirmed = await window.customConfirm("Er du sikker på at du vil nullstille alt?");
+      if (confirmed) {
+        for (const snr in window.participants) {
+          let p = window.participants[snr];
+          if (window.localTimers[snr]) {
+            clearInterval(window.localTimers[snr]);
+            delete window.localTimers[snr];
+          }
+        }
+        window.participants = {};
+        const { error } = await window.supabaseClient.from("participants").delete().neq("snr", 0);
+        if (error) console.error("Feil ved nullstilling:", error);
+        window.updateTable();
+      }
+    });
+    document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
+    document.getElementById("btnStartMass").addEventListener("click", window.startMass);
   </script>
   <div id="liveClock" style="font-size: 18px; font-weight: bold; margin-top: 10px;"></div>
 </body>
