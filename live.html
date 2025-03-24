@@ -35,16 +35,16 @@
       background-color: #666 !important;
       white-space: nowrap;
     }
-    /* Blinkene – fast størrelse og grå bakgrunn */
+    /* Blinkene – større størrelse (60x60) og font-size 42px */
     .target {
       display: inline-block;
-      width: 50px;
-      height: 50px;
-      line-height: 50px;
-      background-color: inherit;  /* Arver fra shootingCell */
+      width: 60px;
+      height: 60px;
+      line-height: 60px;
+      background-color: inherit; /* Arver fra shootingCell (grå) */
       border-radius: 50%;
       margin: 2px;
-      font-size: 36px;
+      font-size: 42px;
       vertical-align: middle;
     }
     @media (max-width: 600px) {
@@ -77,7 +77,6 @@
       const s = (sec % 60).toFixed(1);
       return min > 0 ? `${min}m ${s}s` : `${s}s`;
     }
-
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -87,7 +86,7 @@
       }
     }
 
-    // Oppdater live-klokken
+    // Oppdaterer live-klokken
     function updateLiveClock() {
       const clockEl = document.getElementById("liveClock");
       if (clockEl) {
@@ -95,38 +94,17 @@
       }
     }
     setInterval(updateLiveClock, 1000);
+    updateLiveClock();
 
-    // Oppdaterer status-tabellen (read-only) hvert sekund
-    setInterval(updateStatusTable, 1000);
-
-    document.addEventListener("DOMContentLoaded", function() {
-      updateLiveClock();
-      updateStatusTable();
-    });
-
+    // Hent deltakerdata og bygg status-tabellen (read-only)
     async function updateStatusTable() {
       const { data, error } = await supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-
-      // Sorter data:
-      //  1) "I gang" øverst
-      //  2) "Fullført" nederst
-      //  3) Ellers etter startnummer
-      data.sort((a, b) => {
-        // "I gang" først
-        if (a.status === "I gang" && b.status !== "I gang") return -1;
-        if (a.status !== "I gang" && b.status === "I gang") return 1;
-        // "Fullført" nederst
-        if (a.status === "Fullført" && b.status !== "Fullført") return 1;
-        if (a.status !== "Fullført" && b.status === "Fullført") return -1;
-        // Ellers sortér på startnummer
-        return a.snr - b.snr;
-      });
-
-      // Beregn rangering per klasse for fullførte deltakere
+      
+      // 1) Beregn rangering (rank) for fullførte deltakere pr klasse
       let classPlacements = {};
       data.forEach(p => {
         if (p.finish !== null && p.finish !== undefined) {
@@ -134,13 +112,39 @@
           classPlacements[p.class].push({ snr: p.snr, finish: p.finish });
         }
       });
+      // Sorter fullførte i hver klasse etter finish-tid for å finne rank
+      let rankMap = {};
       for (let cls in classPlacements) {
         classPlacements[cls].sort((a, b) => a.finish - b.finish);
         classPlacements[cls].forEach((obj, idx) => {
-          obj.rank = idx + 1;
+          rankMap[obj.snr] = idx + 1; // rank starter på 1
         });
       }
 
+      // 2) Sorter deltakerne i rekkefølge:
+      //    a) "I gang" øverst (sortert på snr)
+      //    b) "Venter"/"Planlagt"/andre statuser i midten (sortert på snr)
+      //    c) "Fullført" nederst, sortert etter rank (fra rankMap)
+      data.sort((a, b) => {
+        // a) "I gang" øverst
+        if (a.status === "I gang" && b.status !== "I gang") return -1;
+        if (a.status !== "I gang" && b.status === "I gang") return 1;
+        
+        // b) "Fullført" nederst
+        if (a.status === "Fullført" && b.status !== "Fullført") return 1;
+        if (a.status !== "Fullført" && b.status === "Fullført") return -1;
+        
+        // c) Hvis begge er "Fullført", sorter på rank
+        if (a.status === "Fullført" && b.status === "Fullført") {
+          let ra = rankMap[a.snr] || 9999;
+          let rb = rankMap[b.snr] || 9999;
+          return ra - rb; 
+        }
+        // Ellers sorter på snr
+        return a.snr - b.snr;
+      });
+
+      // Bygg HTML-tabell
       let html = `
         <table>
           <thead>
@@ -152,51 +156,47 @@
               <th>Status</th>
               <th>Tid</th>
               <th>Rundetid</th>
-              <th>S1</th>
-              <th>S2</th>
+              <th class="shootingCell">S1</th>
+              <th class="shootingCell">S2</th>
               <th>Måltid</th>
             </tr>
           </thead>
           <tbody>
       `;
-
       data.forEach(p => {
-        // Finn rangering i klassen hvis fullført
+        // Plassering
         let rank = "-";
-        if (p.finish !== null && p.finish !== undefined && classPlacements[p.class]) {
-          let found = classPlacements[p.class].find(obj => obj.snr === p.snr);
-          if (found) rank = found.rank;
+        if (p.status === "Fullført" && rankMap[p.snr]) {
+          rank = rankMap[p.snr];
         }
-
-        // Tid: Hvis "I gang", vis løpende tid. Hvis fullført, vis finish-tid
+        // Tid: Hvis i gang, vis løpende tid, ellers finish
         let tidDisplay = "-";
         if (p.status === "I gang" && p.start) {
-          tidDisplay = formatTime((Date.now() - Date.parse(p.start)) / 1000);
+          let elapsedSec = (Date.now() - Date.parse(p.start)) / 1000;
+          tidDisplay = formatTime(elapsedSec);
         } else if (p.finish !== null && p.finish !== undefined) {
           tidDisplay = formatTime(p.finish);
         }
-
         // Rundetid
         let lapsDisplay = (p.laps && p.laps.length > 0)
           ? p.laps.map(l => formatTime(l)).join("<br>")
           : "-";
-
-        // Render skytingen i to kolonner
+        // Skyting
         let shootingArr = getShootingArray(p);
         function renderShooting(arr) {
-          // Hver blink har grå bakgrunn og hvit for treff, svart for bom
-          return arr.map(hit =>
+          // Farger: hvit for treff, svart for bom
+          return arr.map(hit => 
             `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
           ).join(" ");
         }
         let s1 = renderShooting(shootingArr[0]);
         let s2 = renderShooting(shootingArr[1]);
-
+        // Måltid
         let måltid = (p.finish !== null && p.finish !== undefined)
           ? formatTime(p.finish)
           : "-";
-
-        // Fullførte rader får en svak grønn bakgrunn
+        
+        // Fullført = svak grønn bakgrunn
         let rowStyle = (p.status === "Fullført") ? ' style="background-color: #d4edda;"' : "";
 
         html += `
@@ -214,14 +214,13 @@
           </tr>
         `;
       });
-
       html += `</tbody></table>`;
 
       const statusEl = document.getElementById("statusTable");
       if (statusEl) {
         statusEl.innerHTML = html;
       } else {
-        console.error('Element med id="statusTable" finnes ikke i DOM-en.');
+        console.error('Element med id="statusTable" finnes ikke.');
       }
     }
   </script>
