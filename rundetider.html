@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rundetider for Ski Konkurranse</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 10px;
+    }
+    table {
+      margin: 10px auto;
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 800px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      font-size: 14px;
+      text-align: center;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    .btn-lap {
+      background-color: #3498db;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 10px;
+      }
+      .btn-lap {
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+    }
+  </style>
+  <!-- Last Supabase SDK (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase – oppdater med dine opplysninger om nødvendig
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", window.supabaseClient);
+
+    // Globalt deltakerobjekt
+    window.participants = {};
+
+    // Hjelpefunksjon for å formatere tid (sekunder -> m/s-format)
+    function formatTime(sec) {
+      const min = Math.floor(sec / 60);
+      const s = (sec % 60).toFixed(1);
+      return min > 0 ? `${min}m ${s}s` : `${s}s`;
+    }
+
+    // Hent deltakerdata fra Supabase og oppdater window.participants
+    async function updateLapTable() {
+      const { data, error } = await window.supabaseClient.from("participants").select("*");
+      if (error) {
+        console.error("Feil ved henting av deltakere:", error);
+        return;
+      }
+      window.participants = {};
+      data.forEach(record => {
+        record.laps = record.laps || [];
+        window.participants[record.snr] = record;
+      });
+
+      // Bygg tabellen
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Startnummer</th>
+            <th>Navn</th>
+            <th>Klasse</th>
+            <th>Status</th>
+            <th>Rundetider</th>
+            <th>Handl.</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      data.forEach(p => {
+        let lapsDisplay = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
+        let button = "";
+        // Kun vis "Rundetid"-knappen hvis deltaker er "I gang"
+        if (p.status === "I gang") {
+          button = `<button class="btn-lap" onclick="recordLap(${p.snr})">Rundetid</button>`;
+        }
+        html += `<tr>
+          <td>${p.snr}</td>
+          <td>${p.name}</td>
+          <td>${p.class}</td>
+          <td>${p.status}</td>
+          <td>${lapsDisplay}</td>
+          <td>${button}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById("lapTable").innerHTML = html;
+    }
+
+    // Funksjon for å registrere en ny rundetid for en deltaker
+    async function recordLap(snr) {
+      let p = window.participants[snr];
+      if (p && p.start) {
+        const lapTime = (Date.now() - Date.parse(p.start)) / 1000;
+        p.laps.push(lapTime);
+        const { error } = await window.supabaseClient.from("participants")
+          .update({ laps: p.laps })
+          .eq("snr", snr);
+        if (error) {
+          console.error("Feil ved recordLap for snr", snr, error);
+        }
+        updateLapTable();
+      } else {
+        alert("Deltakeren har ikke startet enda.");
+      }
+    }
+
+    // Oppdater tabellen hvert sekund
+    setInterval(updateLapTable, 1000);
+    document.addEventListener("DOMContentLoaded", updateLapTable);
+  </script>
+</head>
+<body>
+  <h2>Rundetider for Ski Konkurranse</h2>
+  <div id="lapTable"></div>
+</body>
+</html>
