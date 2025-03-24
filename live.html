@@ -7,15 +7,23 @@
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 10px; }
     table { margin: 10px auto; border-collapse: collapse; width: 100%; max-width: 800px; }
-    th, td { border: 1px solid #ccc; padding: 5px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 5px; font-size: 14px; text-align: center; }
     th { background-color: #f4f4f4; }
     #liveClock { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-    /* Blinkene – økt størrelse for å gjøre dem tydeligere */
-    .target { font-size: 36px; }
-    .shooting { background-color: gray; }
+    /* Blinkene – økt størrelse, med bakgrunn for å gjøre treff tydelig */
+    .target {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
+      background-color: gray;
+      border-radius: 50%;
+      margin: 2px;
+      font-size: 36px;
+    }
     @media (max-width: 600px) {
       th, td { font-size: 10px; }
-      .target { font-size: 28px; }
+      .target { width: 40px; height: 40px; line-height: 40px; font-size: 28px; }
       #liveClock { font-size: 16px; }
     }
   </style>
@@ -57,6 +65,8 @@
         clockEl.innerText = new Date().toLocaleTimeString();
       }
     }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
 
     // Hent deltakerdata og bygg status-tabellen (read-only)
     async function updateStatusTable() {
@@ -65,16 +75,24 @@
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
+
+      // Sorter data slik at de med status "I gang" vises øverst, deretter etter startnummer
+      data.sort((a, b) => {
+        if (a.status === "I gang" && b.status !== "I gang") return -1;
+        if (a.status !== "I gang" && b.status === "I gang") return 1;
+        return a.snr - b.snr;
+      });
+
       // Omform data til et objekt med snr som nøkkel
       let participants = {};
       data.forEach(record => {
         record.laps = record.laps || [];
-        record.shooting = (typeof record.shooting === "string") 
+        record.shooting = (typeof record.shooting === "string")
           ? getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
         participants[record.snr] = record;
       });
-      
+
       // Beregn rangering per klasse for fullførte deltakere
       let classPlacements = {};
       data.forEach(p => {
@@ -87,8 +105,8 @@
         classPlacements[cls].sort((a, b) => a.finish - b.finish);
         classPlacements[cls].forEach((p, index) => p.rank = index + 1);
       }
-      
-      // Bygg HTML-tabell (kun for visning)
+
+      // Bygg HTML-tabell
       let html = `<table>
         <thead>
           <tr>
@@ -119,19 +137,18 @@
         } else if (p.finish !== null && p.finish !== undefined) {
           tidDisplay = formatTime(p.finish);
         }
-        // Rundetid: Vis liste over lapptider
         let rundetid = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
-        // Skytingen: Vis blinkene for S1 og S2
-        let shootingArr = getShootingArray(p);
-        let renderShooting = function(arr) {
-          return arr.map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'}">&#9679;</span>`).join(" ");
-        };
-        let s1 = renderShooting(shootingArr[0]);
-        let s2 = renderShooting(shootingArr[1]);
-        // Måltid: Vis finish-tid hvis fullført
+        // Render skytingen med bakgrunn og farger:
+        function renderShooting(arr) {
+          return arr.map(hit => `<span class="target" style="background-color: gray; color: ${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
+        }
+        let s1 = renderShooting(getShootingArray(p)[0]);
+        let s2 = renderShooting(getShootingArray(p)[1]);
         let måltid = (p.finish !== null && p.finish !== undefined) ? formatTime(p.finish) : "-";
+        // Rader for fullførte deltakere får svak grønn bakgrunn for bedre lesbarhet
+        let rowStyle = p.status === "Fullført" ? ' style="background-color: #d4edda;"' : "";
         
-        html += `<tr>
+        html += `<tr${rowStyle}>
           <td>${rank}</td>
           <td>${p.snr}</td>
           <td>${p.name}</td>
@@ -146,7 +163,6 @@
       });
       
       html += `</tbody></table>`;
-      // Sørg for at elementet med id "statusTable" finnes
       const statusEl = document.getElementById("statusTable");
       if (statusEl) {
         statusEl.innerHTML = html;
@@ -154,11 +170,10 @@
         console.error('Element med id "statusTable" finnes ikke.');
       }
     }
-    
+
     // Oppdater status-tabellen hvert sekund
     setInterval(updateStatusTable, 1000);
 
-    // Sørg for at DOM er lastet før vi kaller funksjonene
     document.addEventListener("DOMContentLoaded", function() {
       updateLiveClock();
       updateStatusTable();
@@ -168,7 +183,6 @@
 <body>
   <h2>Konkurransestatus for Ski</h2>
   <div id="liveClock"></div>
-  <!-- Dette er feltet for statusvisning (read-only) -->
   <div id="statusTable"></div>
 </body>
 </html>
