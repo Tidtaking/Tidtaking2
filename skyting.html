@@ -31,27 +31,26 @@
     th {
       background-color: #f4f4f4;
     }
-    /* Statuskolonnen */
     .statusCell {
       min-width: 80px;
     }
-    /* Skytekolonnen: fast bredde, grå bakgrunn, overflow hidden */
+    /* Skytekolonnen med grå bakgrunn, fast bredde for å holde blinkene innenfor */
     .shootingCell {
       background-color: gray;
       white-space: nowrap;
-      width: 100px;
-      max-width: 100px;
+      width: 80px;
+      max-width: 80px;
       overflow: hidden;
     }
-    /* Blinkene – sirkler med fast størrelse (90x90px, font-size 54px) */
+    /* Blinkene – sirkler med fast størrelse: 70x70px, font-size 48px */
     .target {
       display: inline-block;
-      width: 90px;
-      height: 90px;
-      line-height: 90px;
+      width: 70px;
+      height: 70px;
+      line-height: 70px;
       border-radius: 50%;
       margin: 3px;
-      font-size: 54px;
+      font-size: 48px;
       cursor: pointer;
       vertical-align: middle;
     }
@@ -75,62 +74,66 @@
       cursor: default;
     }
     @media (max-width: 480px) {
-      th, td {
-        font-size: 16px;
-        padding: 6px;
-      }
+      th, td { font-size: 16px; padding: 6px; }
       .target {
-        width: 70px;
-        height: 70px;
-        line-height: 70px;
+        width: 60px;
+        height: 60px;
+        line-height: 60px;
         font-size: 42px;
       }
-      .skive-input {
-        width: 60px;
-        font-size: 16px;
-      }
-      .send-button {
-        font-size: 16px;
-        padding: 8px 12px;
-      }
-      .shootingCell {
-        width: 80px;
-        max-width: 80px;
-      }
+      .skive-input { width: 60px; font-size: 16px; }
+      .send-button { font-size: 16px; padding: 8px 12px; }
+      .shootingCell { width: 70px; max-width: 70px; }
     }
   </style>
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger
+    // Konfigurer Supabase – erstatt med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", window.supabaseClient);
 
-    // Globalt deltakerobjekt – her lagres deltakerdata lokalt (inkludert usendte endringer)
+    // Globalt deltakerobjekt – lagrer deltakerdata lokalt (inkludert eventuelle usendte endringer)
     window.participants = {};
 
-    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
+    // Funksjon for å sikre at shooting er en 2x5-matrise (to runder med 5 blink hver)
     function getShootingArray(p) {
-      if (Array.isArray(p.shooting)) return p.shooting;
-      try {
-        return JSON.parse(p.shooting);
-      } catch (e) {
-        return [Array(5).fill(false), Array(5).fill(false)];
+      let arr;
+      if (Array.isArray(p.shooting)) {
+        arr = p.shooting;
+      } else if (typeof p.shooting === "string") {
+        try {
+          arr = JSON.parse(p.shooting);
+        } catch (e) {
+          arr = null;
+        }
       }
+      if (!arr || !Array.isArray(arr) || arr.length !== 2) {
+        arr = [Array(5).fill(false), Array(5).fill(false)];
+      } else {
+        arr = arr.map(round => {
+          if (!Array.isArray(round) || round.length !== 5) {
+            return Array(5).fill(false);
+          }
+          return round;
+        });
+      }
+      return arr;
     }
 
     // Renderer blinkene (uten tall) for en deltaker og skyterunde (0 for S1, 1 for S2)
     function renderShootingWithoutNumbers(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
+      // Skal returnere fem blink
       return arr.map((hit, i) =>
         `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
-      ).join(" ");
+      ).join("");
     }
 
-    // Toggle-funksjon: Når en blink trykkes, toggles den lokale tilstanden og fargen endres umiddelbart
+    // Toggle-funksjon: Oppdaterer lokal tilstand og endrer blinkens farge umiddelbart
     window.toggleTarget = function(event, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
@@ -162,7 +165,7 @@
     // Renderer skyteresultat-tabellen med kolonner: Startnr, Navn, Status, Skive, Skyting S1, Send S1, Skyting S2, Send S2
     function renderShootingTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med begge sendte skyterunder flyttes nederst
+      // Sorter slik at de med begge sendte skyterunder (s1sent && s2sent) flyttes nederst
       data.sort((a, b) => {
         let aSent = (a.s1sent && a.s2sent) ? 1 : 0;
         let bSent = (b.s1sent && b.s2sent) ? 1 : 0;
@@ -204,6 +207,7 @@
       document.getElementById("shootingTable").innerHTML = html;
     }
 
+    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
@@ -221,33 +225,11 @@
         .eq("snr", snr);
       if (error) {
         console.error("Feil ved sending av skyteresultat for snr", snr, error);
-        alert("Feil ved sending av resultat. Sjekk konsollen.");
-      } else {
-        alert("Resultat sendt for deltaker " + snr + " (S" + (shootIdx + 1) + ")");
       }
       fetchShootingData();
     }
 
-    function fetchShootingData() {
-      window.supabaseClient.from("participants").select("*").then(({ data, error }) => {
-        if (error) {
-          console.error("Feil ved henting av deltakere:", error);
-          return;
-        }
-        data.forEach(record => {
-          record.shooting = (typeof record.shooting === "string")
-            ? getShootingArray(record)
-            : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-          record.s1sent = record.s1sent || false;
-          record.s2sent = record.s2sent || false;
-          record.skive = record.skive || "";
-          record.status = record.status || "";
-          window.participants[record.snr] = record;
-        });
-        renderShootingTable();
-      });
-    }
-
+    // Oppdater skyteresultat-tabellen ved lasting og periodisk
     document.addEventListener("DOMContentLoaded", fetchShootingData);
     setInterval(fetchShootingData, 1000);
   </script>
