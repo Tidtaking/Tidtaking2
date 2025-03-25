@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registrer Måltid</title>
+  <title>Målregistrering for Ski Konkurranse</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,7 +16,7 @@
       margin-bottom: 20px;
       color: #333;
     }
-    /* Hver deltaker vises som et kort */
+    /* Deltakerkort for aktive løpere */
     .participant-card {
       border: 2px solid #007bff;
       border-radius: 8px;
@@ -62,12 +62,12 @@
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger
+    // Konfigurer Supabase – erstatt med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Funksjon for å hente alle deltakere med status "I gang"
+    // Henter alle deltakere med status "I gang"
     async function fetchActiveParticipants() {
       const { data, error } = await supabaseClient
         .from("participants")
@@ -80,23 +80,7 @@
       return data;
     }
 
-    // Funksjon for å merke en deltaker som fullført (måltid)
-    async function markAsFinished(snr) {
-      const now = new Date().toISOString();
-      const { error } = await supabaseClient
-        .from("participants")
-        .update({ status: "Fullført", finish: now })
-        .eq("snr", snr);
-      if (error) {
-        console.error("Feil ved registrering av måltid for snr", snr, error);
-        alert("Feil ved registrering av måltid. Sjekk konsollen.");
-      } else {
-        alert("Måltid registrert for deltaker " + snr);
-      }
-      updateParticipantCards();
-    }
-
-    // Funksjon for å oppdatere visningen med alle aktive deltakere
+    // Oppdaterer visningen med aktive deltakerkort
     async function updateParticipantCards() {
       const participants = await fetchActiveParticipants();
       const container = document.getElementById("participantContainer");
@@ -104,8 +88,9 @@
         container.innerHTML = "<p>Ingen aktive deltakere.</p>";
         return;
       }
-      let html = "";
+      // Sorter deltakerne etter startnummer
       participants.sort((a, b) => a.snr - b.snr);
+      let html = "";
       participants.forEach(p => {
         html += `<div class="participant-card">
                    <h2>Startnr: ${p.snr}</h2>
@@ -116,9 +101,43 @@
       container.innerHTML = html;
     }
 
+    // Registrerer måltid for en deltaker ved å beregne finish-tiden (sekunder siden start)
+    async function markAsFinished(snr) {
+      // Hent deltakerdata for den aktuelle deltakeren
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("*")
+        .eq("snr", snr)
+        .single();
+      if (error) {
+        console.error("Feil ved henting av deltaker for snr", snr, error);
+        alert("Feil ved henting av deltaker. Sjekk konsollen.");
+        return;
+      }
+      let p = data;
+      if (!p.start) {
+        alert("Deltakeren har ikke startet enda.");
+        return;
+      }
+      // Beregn finish-tid i sekunder
+      const finishTime = (Date.now() - Date.parse(p.start)) / 1000;
+      // Oppdater deltakeren med status "Fullført" og finish-tid
+      const { error: updateError } = await supabaseClient
+        .from("participants")
+        .update({ status: "Fullført", finish: finishTime })
+        .eq("snr", snr);
+      if (updateError) {
+        console.error("Feil ved registrering av måltid for snr", snr, updateError);
+        alert("Feil ved registrering av måltid. Sjekk konsollen.");
+      } else {
+        alert("Måltid registrert for deltaker " + snr);
+      }
+      updateParticipantCards();
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
       updateParticipantCards();
-      // Oppdater visningen hvert sekund for å fjerne de som er fullført
+      // Oppdater visningen hvert sekund for å fjerne fullførte deltakere
       setInterval(updateParticipantCards, 1000);
     });
   </script>
