@@ -31,18 +31,19 @@
     th {
       background-color: #f4f4f4;
     }
-    /* Legg til en egen kolonne for status */
+    /* Statuskolonnen */
     .statusCell {
       min-width: 80px;
     }
-    /* Skytekolonnen har grå bakgrunn; vi setter max-bredde for å gjøre den smalere */
+    /* Skytekolonnen: fast bredde, grå bakgrunn, overflow hidden */
     .shootingCell {
       background-color: gray;
       white-space: nowrap;
-      max-width: 80px;
+      width: 100px;
+      max-width: 100px;
+      overflow: hidden;
     }
-    /* Blinkene – sirkler med fast størrelse (90x90 px, font-size 54px),
-       men med redusert bredde (cellene er smalere) for bedre oversikt */
+    /* Blinkene – sirkler med fast størrelse (90x90px, font-size 54px) */
     .target {
       display: inline-block;
       width: 90px;
@@ -92,12 +93,16 @@
         font-size: 16px;
         padding: 8px 12px;
       }
+      .shootingCell {
+        width: 80px;
+        max-width: 80px;
+      }
     }
   </style>
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // Konfigurer Supabase – oppdater med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -116,7 +121,7 @@
       }
     }
 
-    // Funksjon: Renderer blinkene (uten tall) for en deltaker og skyterunde (0 for S1, 1 for S2)
+    // Renderer blinkene (uten tall) for en deltaker og skyterunde (0 for S1, 1 for S2)
     function renderShootingWithoutNumbers(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
@@ -132,7 +137,6 @@
       arr[shootIdx][idx] = !arr[shootIdx][idx];
       p.shooting = JSON.stringify(arr);
       event.target.style.color = arr[shootIdx][idx] ? "white" : "black";
-      // Merk: Vi sender ikke til databasen før "Send"-knappen trykkes.
     };
 
     // Henter deltakerdata fra Supabase og oppdaterer det globale objektet
@@ -149,7 +153,6 @@
         record.s1sent = record.s1sent || false;
         record.s2sent = record.s2sent || false;
         record.skive = record.skive || "";
-        // Oppdater status dersom den ikke finnes (men den skal ligge der)
         record.status = record.status || "";
         window.participants[record.snr] = record;
       });
@@ -159,14 +162,13 @@
     // Renderer skyteresultat-tabellen med kolonner: Startnr, Navn, Status, Skive, Skyting S1, Send S1, Skyting S2, Send S2
     function renderShootingTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med begge sendte skyterunder (s1sent && s2sent) flyttes nederst
+      // Sorter slik at de med begge sendte skyterunder flyttes nederst
       data.sort((a, b) => {
         let aSent = (a.s1sent && a.s2sent) ? 1 : 0;
         let bSent = (b.s1sent && b.s2sent) ? 1 : 0;
         if (aSent !== bSent) return aSent - bSent;
         return a.snr - b.snr;
       });
-
       let html = `<table>
         <thead>
           <tr>
@@ -192,9 +194,9 @@
           <td>${p.name}</td>
           <td>${p.status}</td>
           <td>${inputSkive}</td>
-          <td class="shootingCell">${renderShootingWithoutNumbers(p.snr, 0)}</td>
+          <td class="shootingCell">${s1}</td>
           <td>${btnS1}</td>
-          <td class="shootingCell">${renderShootingWithoutNumbers(p.snr, 1)}</td>
+          <td class="shootingCell">${s2}</td>
           <td>${btnS2}</td>
         </tr>`;
       });
