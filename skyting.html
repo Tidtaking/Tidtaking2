@@ -31,26 +31,28 @@
     th {
       background-color: #f4f4f4;
     }
+    /* Kolonne for status */
     .statusCell {
       min-width: 80px;
     }
-    /* Skytekolonnen med grå bakgrunn, fast bredde for å holde blinkene innenfor */
+    /* Kolonner for skyting – bakgrå, 250px bred for å få plass til 5 blink side om side */
     .shootingCell {
       background-color: gray;
+      width: 250px;
+      max-width: 250px;
       white-space: nowrap;
-      width: 80px;
-      max-width: 80px;
       overflow: hidden;
+      text-align: center;
     }
-    /* Blinkene – sirkler med fast størrelse: 70x70px, font-size 48px */
+    /* Blinkene – 40×40 px, font-size 28px, med litt margin */
     .target {
       display: inline-block;
-      width: 70px;
-      height: 70px;
-      line-height: 70px;
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
       border-radius: 50%;
-      margin: 3px;
-      font-size: 48px;
+      margin: 2px;
+      font-size: 28px;
       cursor: pointer;
       vertical-align: middle;
     }
@@ -74,102 +76,122 @@
       cursor: default;
     }
     @media (max-width: 480px) {
-      th, td { font-size: 16px; padding: 6px; }
-      .target {
-        width: 60px;
-        height: 60px;
-        line-height: 60px;
-        font-size: 42px;
+      th, td {
+        font-size: 16px;
+        padding: 6px;
       }
-      .skive-input { width: 60px; font-size: 16px; }
-      .send-button { font-size: 16px; padding: 8px 12px; }
-      .shootingCell { width: 70px; max-width: 70px; }
+      .shootingCell {
+        width: 200px;
+        max-width: 200px;
+      }
+      .target {
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        font-size: 24px;
+      }
+      .skive-input {
+        width: 60px;
+        font-size: 16px;
+      }
+      .send-button {
+        font-size: 16px;
+        padding: 8px 12px;
+      }
     }
   </style>
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // Konfigurer Supabase – oppdater med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", window.supabaseClient);
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Globalt deltakerobjekt – lagrer deltakerdata lokalt (inkludert eventuelle usendte endringer)
+    // Globalt deltakerobjekt – lagrer deltakerdata lokalt (inkl. usendte toggles)
     window.participants = {};
 
-    // Funksjon for å sikre at shooting er en 2x5-matrise (to runder med 5 blink hver)
+    // Sikrer at shooting er en 2×5 matrise
+    function ensureShootingFormat(arr) {
+      if (!Array.isArray(arr) || arr.length !== 2) {
+        return [Array(5).fill(false), Array(5).fill(false)];
+      }
+      return arr.map(round => {
+        if (!Array.isArray(round) || round.length !== 5) {
+          return Array(5).fill(false);
+        }
+        return round;
+      });
+    }
+
     function getShootingArray(p) {
       let arr;
-      if (Array.isArray(p.shooting)) {
-        arr = p.shooting;
-      } else if (typeof p.shooting === "string") {
+      if (typeof p.shooting === "string") {
         try {
           arr = JSON.parse(p.shooting);
         } catch (e) {
           arr = null;
         }
+      } else if (Array.isArray(p.shooting)) {
+        arr = p.shooting;
       }
-      if (!arr || !Array.isArray(arr) || arr.length !== 2) {
+      if (!arr) {
         arr = [Array(5).fill(false), Array(5).fill(false)];
-      } else {
-        arr = arr.map(round => {
-          if (!Array.isArray(round) || round.length !== 5) {
-            return Array(5).fill(false);
-          }
-          return round;
-        });
       }
-      return arr;
+      return ensureShootingFormat(arr);
     }
 
-    // Renderer blinkene (uten tall) for en deltaker og skyterunde (0 for S1, 1 for S2)
-    function renderShootingWithoutNumbers(snr, shootIdx) {
+    // Render 5 blink side ved side
+    function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
-      // Skal returnere fem blink
       return arr.map((hit, i) =>
         `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join("");
     }
 
-    // Toggle-funksjon: Oppdaterer lokal tilstand og endrer blinkens farge umiddelbart
-    window.toggleTarget = function(event, snr, shootIdx, idx) {
+    // Toggle blink lokalt
+    window.toggleTarget = function(e, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
       arr[shootIdx][idx] = !arr[shootIdx][idx];
       p.shooting = JSON.stringify(arr);
-      event.target.style.color = arr[shootIdx][idx] ? "white" : "black";
+      e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
-    // Henter deltakerdata fra Supabase og oppdaterer det globale objektet
-    async function fetchShootingData() {
-      const { data, error } = await window.supabaseClient.from("participants").select("*");
+    // Henter deltakere fra Supabase
+    async function fetchParticipants() {
+      const { data, error } = await supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
-        return;
+        return [];
       }
+      return data;
+    }
+
+    // Oppdaterer local state og kaller render
+    async function updateTable() {
+      const data = await fetchParticipants();
       data.forEach(record => {
-        record.shooting = (typeof record.shooting === "string")
-          ? getShootingArray(record)
-          : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
+        record.shooting = getShootingArray(record);
         record.s1sent = record.s1sent || false;
         record.s2sent = record.s2sent || false;
         record.skive = record.skive || "";
         record.status = record.status || "";
         window.participants[record.snr] = record;
       });
-      renderShootingTable();
+      renderTable();
     }
 
-    // Renderer skyteresultat-tabellen med kolonner: Startnr, Navn, Status, Skive, Skyting S1, Send S1, Skyting S2, Send S2
-    function renderShootingTable() {
+    // Sorterer og viser tabellen
+    function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med begge sendte skyterunder (s1sent && s2sent) flyttes nederst
+      // De som har sendt S1 og S2 (begge true) nederst
       data.sort((a, b) => {
-        let aSent = (a.s1sent && a.s2sent) ? 1 : 0;
-        let bSent = (b.s1sent && b.s2sent) ? 1 : 0;
-        if (aSent !== bSent) return aSent - bSent;
+        let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
+        let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
         return a.snr - b.snr;
       });
       let html = `<table>
@@ -179,19 +201,23 @@
             <th>Navn</th>
             <th>Status</th>
             <th>Skive</th>
-            <th>Skyting S1</th>
+            <th class="shootingCell">Skyting S1</th>
             <th>Send S1</th>
-            <th>Skyting S2</th>
+            <th class="shootingCell">Skyting S2</th>
             <th>Send S2</th>
           </tr>
         </thead>
         <tbody>`;
       data.forEach(p => {
-        let s1 = renderShootingWithoutNumbers(p.snr, 0);
-        let s2 = renderShootingWithoutNumbers(p.snr, 1);
+        let s1 = renderShooting(p.snr, 0);
+        let s2 = renderShooting(p.snr, 1);
         let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive" onchange="window.participants[${p.snr}].skive=this.value">`;
-        let btnS1 = p.s1sent ? `<button class="send-button sent" disabled>Sendt</button>` : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
-        let btnS2 = p.s2sent ? `<button class="send-button sent" disabled>Sendt</button>` : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
+        let btnS1 = p.s1sent
+          ? `<button class="send-button sent" disabled>Sendt</button>`
+          : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
+        let btnS2 = p.s2sent
+          ? `<button class="send-button sent" disabled>Sendt</button>`
+          : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
         html += `<tr>
           <td>${p.snr}</td>
           <td>${p.name}</td>
@@ -207,31 +233,33 @@
       document.getElementById("shootingTable").innerHTML = html;
     }
 
-    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
+    // Sender skyteresultat for en av rundene
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
+      // Oppdater skyte og skive i databasen
       let skiveVal = document.getElementById("skive-" + snr).value.trim();
       let updateData = { shooting: p.shooting, skive: skiveVal };
       if (shootIdx === 0) {
         updateData.s1sent = true;
         p.s1sent = true;
-      } else if (shootIdx === 1) {
+      } else {
         updateData.s2sent = true;
         p.s2sent = true;
       }
-      const { error } = await window.supabaseClient.from("participants")
+      const { error } = await supabaseClient.from("participants")
         .update(updateData)
         .eq("snr", snr);
       if (error) {
         console.error("Feil ved sending av skyteresultat for snr", snr, error);
+        // Ingen bekreftelsesboks
       }
-      fetchShootingData();
+      // Oppdater tabellen
+      updateTable();
     }
 
-    // Oppdater skyteresultat-tabellen ved lasting og periodisk
-    document.addEventListener("DOMContentLoaded", fetchShootingData);
-    setInterval(fetchShootingData, 1000);
+    document.addEventListener("DOMContentLoaded", updateTable);
+    setInterval(updateTable, 1000);
   </script>
 </head>
 <body>
