@@ -87,10 +87,10 @@
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", window.supabaseClient);
 
-    // Globalt deltakerobjekt – her lagres alle deltakere for skyting
+    // Globalt deltakerobjekt – lagrer deltakerdata lokalt
     window.participants = {};
 
-    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
+    // Hjelpefunksjon: Henter skyte-array fra deltakerobjektet
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -118,20 +118,20 @@
       updateShootingTable();
     };
 
-    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde (0 for S1, 1 for S2)
+    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
+      // Bruk små bokstaver i oppdatering (s1sent og s2sent)
       let updateData = { shooting: p.shooting };
       if (shootIdx === 0) {
-        updateData.s1Sent = true;
-        p.s1Sent = true;
+        updateData.s1sent = true;
+        p.s1sent = true;
       } else if (shootIdx === 1) {
-        updateData.s2Sent = true;
-        p.s2Sent = true;
+        updateData.s2sent = true;
+        p.s2sent = true;
       }
-      const { error } = await window.supabaseClient
-        .from("participants")
+      const { error } = await window.supabaseClient.from("participants")
         .update(updateData)
         .eq("snr", snr);
       if (error) {
@@ -155,9 +155,9 @@
         record.shooting = (typeof record.shooting === "string")
           ? getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Sørg for at s1Sent og s2Sent er definert (default false)
-        record.s1Sent = record.s1Sent || false;
-        record.s2Sent = record.s2Sent || false;
+        // Sørg for at s1sent og s2sent er definert (default false)
+        record.s1sent = record.s1sent || false;
+        record.s2sent = record.s2sent || false;
         window.participants[record.snr] = record;
       });
       
@@ -173,17 +173,18 @@
           </tr>
         </thead>
         <tbody>`;
+      
       data.forEach(p => {
         let s1 = renderShootingWithoutNumbers(p.snr, 0);
         let s2 = renderShootingWithoutNumbers(p.snr, 1);
         let btnS1 = "";
-        if (p.s1Sent) {
+        if (p.s1sent) {
           btnS1 = `<button class="send-button sent" disabled>Sendt</button>`;
         } else {
           btnS1 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
         }
         let btnS2 = "";
-        if (p.s2Sent) {
+        if (p.s2sent) {
           btnS2 = `<button class="send-button sent" disabled>Sendt</button>`;
         } else {
           btnS2 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
