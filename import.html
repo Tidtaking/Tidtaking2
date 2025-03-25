@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Import CSV Deltakere</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    input[type="file"] {
+      font-size: 18px;
+      margin: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 28px; }
+      input[type="file"], button { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Import CSV Deltakere</h1>
+  <input type="file" id="csvImport" accept=".csv">
+  <button id="btnImportCSV">Importer CSV</button>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase – erstatt med dine opplysninger
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", supabaseClient);
+
+    // Funksjon for å lese CSV-filen og importere data
+    function parseCSVAndImport(file) {
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const text = e.target.result;
+        console.log("CSV-tekst:", text);
+        // Del opp i linjer og fjern tomme linjer
+        const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
+        if (lines.length < 2) {
+          alert("CSV-filen mangler data.");
+          return;
+        }
+        // Anta at første linje er header
+        const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, "").toLowerCase());
+        const allowedFields = ["snr", "name", "class"];
+        let newParticipants = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",").map(val => val.trim().replace(/"/g, ""));
+          let row = {};
+          headers.forEach((header, index) => {
+            if (allowedFields.includes(header)) {
+              row[header] = values[index];
+            }
+          });
+          // Legg kun til raden dersom alle nødvendige felter finnes
+          if (row.snr && row.name && row.class) {
+            newParticipants.push({
+              snr: parseInt(row.snr),
+              name: row.name,
+              class: row.class,
+              status: "Venter",
+              start: null,
+              laps: [],
+              finish: null,
+              rawFinish: null,
+              shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
+            });
+          }
+        }
+        console.log("Nye deltakere fra CSV:", newParticipants);
+        if (newParticipants.length === 0) {
+          alert("Ingen gyldige deltakere funnet i CSV-filen.");
+          return;
+        }
+        const { error } = await supabaseClient.from("participants").insert(newParticipants);
+        if (error) {
+          console.error("Feil ved CSV-import:", error);
+          alert("CSV-import feilet – sjekk konsollen.");
+        } else {
+          alert("CSV-import fullført!");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById("btnImportCSV").addEventListener("click", function() {
+      const fileInput = document.getElementById("csvImport");
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Velg en CSV-fil å importere.");
+        return;
+      }
+      parseCSVAndImport(fileInput.files[0]);
+    });
+  </script>
+</body>
+</html>
