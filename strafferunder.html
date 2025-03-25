@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrering av Strafferunder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #fff;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 95%;
+      max-width: 600px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-size: 20px;
+      text-align: center;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    /* Skytekolonnen med grå bakgrunn */
+    .shootingCell {
+      background-color: gray;
+      white-space: nowrap;
+    }
+    /* Blinkene – store sirkler uten tall (90x90px, font-size 54px) */
+    .target {
+      display: inline-block;
+      width: 90px;
+      height: 90px;
+      line-height: 90px;
+      border-radius: 50%;
+      margin: 4px;
+      font-size: 54px;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+    /* Strafferunder-knappen – stor grønn knapp */
+    .penalty-button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    /* Dersom registrert strafferunder ikke stemmer med antall bom, vis tallet i rødt */
+    .penalty-error {
+      color: red;
+      font-weight: bold;
+    }
+    @media (max-width: 480px) {
+      th, td { font-size: 16px; padding: 8px; }
+      .target {
+        width: 70px;
+        height: 70px;
+        line-height: 70px;
+        font-size: 42px;
+      }
+      .penalty-button {
+        font-size: 18px;
+        padding: 10px 16px;
+      }
+    }
+  </style>
+  <!-- Inkluder Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase – erstatt med dine opplysninger
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", window.supabaseClient);
+
+    // Globalt deltakerobjekt – her lagres deltakerdata med eventuelle usendte endringer
+    window.participants = {};
+
+    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
+    function getShootingArray(p) {
+      if (Array.isArray(p.shooting)) return p.shooting;
+      try {
+        return JSON.parse(p.shooting);
+      } catch (e) {
+        return [Array(5).fill(false), Array(5).fill(false)];
+      }
+    }
+
+    // Teller antall bom (false) i skyte-arrayen
+    function countMisses(p) {
+      let arr = getShootingArray(p);
+      let count = 0;
+      arr.forEach(round => {
+        round.forEach(hit => {
+          if (!hit) count++;
+        });
+      });
+      return count;
+    }
+
+    // Henter deltakerdata for de aktive (status "I gang")
+    async function fetchActiveParticipants() {
+      const { data, error } = await window.supabaseClient
+        .from("participants")
+        .select("*")
+        .eq("status", "I gang");
+      if (error) {
+        console.error("Feil ved henting av aktive deltakere:", error);
+        return [];
+      }
+      return data;
+    }
+
+    // Oppdaterer visningen med aktive deltakere for strafferunder
+    async function updatePenaltyTable() {
+      const participants = await fetchActiveParticipants();
+      // Oppdater det globale objektet
+      participants.forEach(p => {
+        // Sørg for at shooting er korrekt og penalty er definert (default 0)
+        p.shooting = (typeof p.shooting === "string") ? getShootingArray(p) : p.shooting || [Array(5).fill(false), Array(5).fill(false)];
+        p.penalty = p.penalty || 0;
+        window.participants[p.snr] = p;
+      });
+      
+      // Bygg tabellen
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Skyting S1</th>
+            <th>Skyting S2</th>
+            <th>Bom</th>
+            <th>Strafferunder</th>
+            <th>Handling</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      participants.sort((a, b) => a.snr - b.snr).forEach(p => {
+        let s1 = ""; 
+        let s2 = "";
+        // Vi kan vise blinkene slik som tidligere – her er de enkle og uten tall
+        let arr = getShootingArray(p);
+        s1 = arr[0].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
+        s2 = arr[1].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
+        // Teller bom (antall false i begge runder)
+        let misses = countMisses(p);
+        // Vis strafferunder (penalty) – hvis penalty != misses, vis i rødt
+        let penaltyDisplay = p.penalty;
+        if (p.penalty !== misses) {
+          penaltyDisplay = `<span class="penalty-error">${p.penalty}</span>`;
+        }
+        html += `<tr>
+          <td>${p.snr}</td>
+          <td style="font-size:22px;">${p.name}</td>
+          <td class="shootingCell">${s1}</td>
+          <td class="shootingCell">${s2}</td>
+          <td style="font-size:20px;">${misses}</td>
+          <td style="font-size:20px;">${penaltyDisplay}</td>
+          <td><button class="penalty-button" onclick="addPenalty(${p.snr})">Legg til strafferunde</button></td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById("penaltyTable").innerHTML = html;
+    }
+
+    // Funksjon for å legge til en strafferunde for en deltaker
+    async function addPenalty(snr) {
+      let p = window.participants[snr];
+      if (!p) return;
+      // Øk lokal verdi
+      p.penalty = (p.penalty || 0) + 1;
+      // Oppdater databasen
+      const { error } = await window.supabaseClient.from("participants")
+        .update({ penalty: p.penalty })
+        .eq("snr", snr);
+      if (error) {
+        console.error("Feil ved oppdatering av penalty for snr", snr, error);
+        alert("Feil ved oppdatering. Sjekk konsollen.");
+      }
+      updatePenaltyTable();
+    }
+
+    // Oppdater strafferunde-tabellen ved lasting og hvert sekund
+    document.addEventListener("DOMContentLoaded", updatePenaltyTable);
+    setInterval(updatePenaltyTable, 1000);
+  </script>
+</head>
+<body>
+  <h1>Registrering av Strafferunder</h1>
+  <div id="penaltyTable"></div>
+</body>
+</html>
