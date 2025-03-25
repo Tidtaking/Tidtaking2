@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registrering av Skyteresultat med Skive</title>
+  <title>Registrering av Skyteresultat</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -31,35 +31,41 @@
     th {
       background-color: #f4f4f4;
     }
-    /* Skytekolonnen har grå bakgrunn */
+    /* Legg til en egen kolonne for status */
+    .statusCell {
+      min-width: 80px;
+    }
+    /* Skytekolonnen har grå bakgrunn; vi setter max-bredde for å gjøre den smalere */
     .shootingCell {
       background-color: gray;
       white-space: nowrap;
+      max-width: 80px;
     }
-    /* Blinkene – store sirkler uten tall (90x90 px, font-size 54px) */
+    /* Blinkene – sirkler med fast størrelse (90x90 px, font-size 54px),
+       men med redusert bredde (cellene er smalere) for bedre oversikt */
     .target {
       display: inline-block;
       width: 90px;
       height: 90px;
       line-height: 90px;
       border-radius: 50%;
-      margin: 4px;
+      margin: 3px;
       font-size: 54px;
       cursor: pointer;
       vertical-align: middle;
     }
     /* Inputfelt for skive */
     .skive-input {
-      width: 80px;
+      width: 70px;
       font-size: 18px;
       text-align: center;
     }
-    /* Send-knapper – standard grønn, bytter til grå etter sending */
+    /* Send-knapper – grønn standard, bytter til grå etter sending */
     .send-button {
       background-color: #28a745;
       color: white;
       border: none;
-      padding: 10px 16px;
+      padding: 10px 14px;
       font-size: 18px;
       cursor: pointer;
     }
@@ -69,7 +75,7 @@
     }
     @media (max-width: 480px) {
       th, td {
-        font-size: 14px;
+        font-size: 16px;
         padding: 6px;
       }
       .target {
@@ -129,8 +135,7 @@
       // Merk: Vi sender ikke til databasen før "Send"-knappen trykkes.
     };
 
-    // Henter deltakerdata fra Supabase og oppdaterer det globale objektet,
-    // samtidig som vi merger med lokale endringer for å bevare usendte toggles og input
+    // Henter deltakerdata fra Supabase og oppdaterer det globale objektet
     async function fetchShootingData() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
@@ -143,36 +148,31 @@
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
         record.s1sent = record.s1sent || false;
         record.s2sent = record.s2sent || false;
-        record.skive = (record.skive !== undefined && record.skive !== null) ? record.skive : "";
-        // Hvis vi allerede har lokale endringer, behold dem
-        if (window.participants[record.snr]) {
-          const local = window.participants[record.snr];
-          record.shooting = local.shooting || record.shooting;
-          record.s1sent = local.s1sent || record.s1sent;
-          record.s2sent = local.s2sent || record.s2sent;
-          record.skive = local.skive || record.skive;
-        }
+        record.skive = record.skive || "";
+        // Oppdater status dersom den ikke finnes (men den skal ligge der)
+        record.status = record.status || "";
         window.participants[record.snr] = record;
       });
       renderShootingTable();
     }
 
-    // Renderer skyteresultat-tabellen med inputfelt for skive
+    // Renderer skyteresultat-tabellen med kolonner: Startnr, Navn, Status, Skive, Skyting S1, Send S1, Skyting S2, Send S2
     function renderShootingTable() {
       let data = Object.values(window.participants);
-      // Sorter: Deltakere med begge sendte (s1sent && s2sent) flyttes nederst
+      // Sorter slik at de med begge sendte skyterunder (s1sent && s2sent) flyttes nederst
       data.sort((a, b) => {
         let aSent = (a.s1sent && a.s2sent) ? 1 : 0;
         let bSent = (b.s1sent && b.s2sent) ? 1 : 0;
         if (aSent !== bSent) return aSent - bSent;
         return a.snr - b.snr;
       });
-      
+
       let html = `<table>
         <thead>
           <tr>
             <th>Startnr</th>
             <th>Navn</th>
+            <th>Status</th>
             <th>Skive</th>
             <th>Skyting S1</th>
             <th>Send S1</th>
@@ -184,23 +184,13 @@
       data.forEach(p => {
         let s1 = renderShootingWithoutNumbers(p.snr, 0);
         let s2 = renderShootingWithoutNumbers(p.snr, 1);
-        // Inputfelt for skive – med id "skive-{snr}"
         let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive" onchange="window.participants[${p.snr}].skive=this.value">`;
-        let btnS1 = "";
-        if (p.s1sent) {
-          btnS1 = `<button class="send-button sent" disabled>Sendt</button>`;
-        } else {
-          btnS1 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
-        }
-        let btnS2 = "";
-        if (p.s2sent) {
-          btnS2 = `<button class="send-button sent" disabled>Sendt</button>`;
-        } else {
-          btnS2 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
-        }
+        let btnS1 = p.s1sent ? `<button class="send-button sent" disabled>Sendt</button>` : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
+        let btnS2 = p.s2sent ? `<button class="send-button sent" disabled>Sendt</button>` : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
         html += `<tr>
           <td>${p.snr}</td>
           <td>${p.name}</td>
+          <td>${p.status}</td>
           <td>${inputSkive}</td>
           <td class="shootingCell">${renderShootingWithoutNumbers(p.snr, 0)}</td>
           <td>${btnS1}</td>
@@ -212,11 +202,9 @@
       document.getElementById("shootingTable").innerHTML = html;
     }
 
-    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
-      // Før sending, hent skiveverdien fra inputfeltet
       let skiveVal = document.getElementById("skive-" + snr).value.trim();
       let updateData = { shooting: p.shooting, skive: skiveVal };
       if (shootIdx === 0) {
@@ -235,17 +223,35 @@
       } else {
         alert("Resultat sendt for deltaker " + snr + " (S" + (shootIdx + 1) + ")");
       }
-      // Etter sending, oppdater data fra databasen
       fetchShootingData();
     }
 
-    // Oppdater skyteresultat-tabellen ved lasting og periodisk
+    function fetchShootingData() {
+      window.supabaseClient.from("participants").select("*").then(({ data, error }) => {
+        if (error) {
+          console.error("Feil ved henting av deltakere:", error);
+          return;
+        }
+        data.forEach(record => {
+          record.shooting = (typeof record.shooting === "string")
+            ? getShootingArray(record)
+            : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
+          record.s1sent = record.s1sent || false;
+          record.s2sent = record.s2sent || false;
+          record.skive = record.skive || "";
+          record.status = record.status || "";
+          window.participants[record.snr] = record;
+        });
+        renderShootingTable();
+      });
+    }
+
     document.addEventListener("DOMContentLoaded", fetchShootingData);
     setInterval(fetchShootingData, 1000);
   </script>
 </head>
 <body>
-  <h2>Registrering av Skyteresultat med Skive</h2>
+  <h2>Registrering av Skyteresultat</h2>
   <div id="shootingTable"></div>
 </body>
 </html>
