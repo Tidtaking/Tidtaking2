@@ -16,7 +16,7 @@
       margin-bottom: 20px;
       color: #333;
     }
-    /* Deltakerkort for aktive løpere */
+    /* Hver deltaker vises som et kort */
     .participant-card {
       border: 2px solid #007bff;
       border-radius: 8px;
@@ -67,7 +67,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Henter alle deltakere med status "I gang"
+    // Funksjon for å hente alle deltakere med status "I gang"
     async function fetchActiveParticipants() {
       const { data, error } = await supabaseClient
         .from("participants")
@@ -88,9 +88,9 @@
         container.innerHTML = "<p>Ingen aktive deltakere.</p>";
         return;
       }
+      let html = "";
       // Sorter deltakerne etter startnummer
       participants.sort((a, b) => a.snr - b.snr);
-      let html = "";
       participants.forEach(p => {
         html += `<div class="participant-card">
                    <h2>Startnr: ${p.snr}</h2>
@@ -101,9 +101,8 @@
       container.innerHTML = html;
     }
 
-    // Registrerer måltid for en deltaker ved å beregne finish-tiden (sekunder siden start)
+    // Registrerer måltid for en deltaker uten bekreftelsesboks
     async function markAsFinished(snr) {
-      // Hent deltakerdata for den aktuelle deltakeren
       const { data, error } = await supabaseClient
         .from("participants")
         .select("*")
@@ -111,33 +110,28 @@
         .single();
       if (error) {
         console.error("Feil ved henting av deltaker for snr", snr, error);
-        alert("Feil ved henting av deltaker. Sjekk konsollen.");
         return;
       }
       let p = data;
       if (!p.start) {
-        alert("Deltakeren har ikke startet enda.");
+        // Deltakeren har ikke startet enda
         return;
       }
       // Beregn finish-tid i sekunder
       const finishTime = (Date.now() - Date.parse(p.start)) / 1000;
-      // Oppdater deltakeren med status "Fullført" og finish-tid
       const { error: updateError } = await supabaseClient
         .from("participants")
         .update({ status: "Fullført", finish: finishTime })
         .eq("snr", snr);
       if (updateError) {
         console.error("Feil ved registrering av måltid for snr", snr, updateError);
-        alert("Feil ved registrering av måltid. Sjekk konsollen.");
-      } else {
-        alert("Måltid registrert for deltaker " + snr);
       }
       updateParticipantCards();
     }
 
     document.addEventListener("DOMContentLoaded", function() {
       updateParticipantCards();
-      // Oppdater visningen hvert sekund for å fjerne fullførte deltakere
+      // Oppdater deltakerkortene hvert sekund for å fjerne fullførte
       setInterval(updateParticipantCards, 1000);
     });
   </script>
