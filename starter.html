@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Startliste for Løpere</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #fff;
+    }
+    #liveClock {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    /* Seksjon for neste løper */
+    .next-runner {
+      border: 2px solid #333;
+      padding: 20px;
+      margin-bottom: 20px;
+      background-color: #f9f9f9;
+    }
+    .next-runner h3 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .next-runner p {
+      font-size: 22px;
+      margin: 5px 0;
+    }
+    .start-button {
+      background-color: #e67e22;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 26px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    /* Tabell for de neste løperne */
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 600px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-size: 18px;
+      text-align: center;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    @media (max-width: 600px) {
+      #liveClock { font-size: 20px; }
+      .next-runner h3 { font-size: 24px; }
+      .next-runner p { font-size: 18px; }
+      .start-button { font-size: 22px; padding: 12px 24px; }
+      th, td { font-size: 14px; padding: 5px; }
+    }
+  </style>
+  <!-- Inkluder Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase – oppdater med dine opplysninger om nødvendig
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", supabaseClient);
+
+    // Globalt array for kommende deltakere (de som ikke har startet)
+    let participants = [];
+
+    // Oppdaterer live-klokken
+    function updateLiveClock() {
+      const clockEl = document.getElementById("liveClock");
+      if (clockEl) {
+        clockEl.innerText = new Date().toLocaleTimeString();
+      }
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+
+    // Henter deltakere med status "Venter" eller "Planlagt"
+    async function fetchUpcomingRunners() {
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("*")
+        .in("status", ["Venter", "Planlagt"]);
+      if (error) {
+        console.error("Feil ved henting av kommende deltakere:", error);
+        return [];
+      }
+      return data;
+    }
+
+    // Oppdaterer startlisten
+    async function updateStartList() {
+      let upcoming = await fetchUpcomingRunners();
+      // Sorter: de med tildelt starttid først (ascendant), deretter de uten starttid (ascendant på snr)
+      upcoming.sort((a, b) => {
+        const aTime = a.start ? Date.parse(a.start) : Infinity;
+        const bTime = b.start ? Date.parse(b.start) : Infinity;
+        if (aTime !== bTime) return aTime - bTime;
+        return a.snr - b.snr;
+      });
+      participants = upcoming;
+      
+      // Finn neste løper (første i sortert liste)
+      let nextRunner = upcoming.length > 0 ? upcoming[0] : null;
+      const nextRunnerEl = document.getElementById("nextRunner");
+      if (nextRunner) {
+        let startTimeStr = nextRunner.start ? new Date(nextRunner.start).toLocaleTimeString() : "Ikke tildelt";
+        nextRunnerEl.innerHTML = `
+          <h3>Neste løper</h3>
+          <p><strong>Startnr:</strong> ${nextRunner.snr}</p>
+          <p><strong>Navn:</strong> ${nextRunner.name}</p>
+          <p><strong>Starttid:</strong> ${startTimeStr}</p>
+          <button class="start-button" onclick="startNextRunner()">Start løper</button>
+        `;
+      } else {
+        nextRunnerEl.innerHTML = `<h3>Ingen løpere å starte</h3>`;
+      }
+      
+      // Bygg tabell for de resterende løpere (fra indeks 1 og utover)
+      let tableHtml = `<table>
+        <thead>
+          <tr>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Starttid</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      for (let i = 1; i < upcoming.length; i++) {
+        let runner = upcoming[i];
+        let startTimeStr = runner.start ? new Date(runner.start).toLocaleTimeString() : "Ikke tildelt";
+        tableHtml += `
+          <tr>
+            <td>${runner.snr}</td>
+            <td>${runner.name}</td>
+            <td>${startTimeStr}</td>
+          </tr>
+        `;
+      }
+      tableHtml += `</tbody></table>`;
+      document.getElementById("upcomingTable").innerHTML = tableHtml;
+    }
+
+    // Funksjon for å starte neste løper
+    async function startNextRunner() {
+      if (participants.length === 0) {
+        alert("Ingen løpere å starte.");
+        return;
+      }
+      const nextRunner = participants[0];
+      const now = new Date().toISOString();
+      const { error } = await supabaseClient
+        .from("participants")
+        .update({ status: "I gang", start: now })
+        .eq("snr", nextRunner.snr);
+      if (error) {
+        console.error("Feil ved start av løper:", error);
+        return;
+      }
+      updateStartList();
+    }
+
+    // Oppdater startlisten hvert sekund
+    setInterval(updateStartList, 1000);
+    document.addEventListener("DOMContentLoaded", updateStartList);
+  </script>
+</head>
+<body>
+  <h2>Startliste for Løpere</h2>
+  <div id="liveClock"></div>
+  <!-- Neste løper visning -->
+  <div id="nextRunner" class="next-runner"></div>
+  <!-- Tabell for de neste løpere -->
+  <div id="upcomingTable"></div>
+</body>
+</html>
