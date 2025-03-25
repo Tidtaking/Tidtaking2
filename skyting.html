@@ -62,10 +62,7 @@
       cursor: default;
     }
     @media (max-width: 480px) {
-      th, td {
-        font-size: 14px;
-        padding: 6px;
-      }
+      th, td { font-size: 14px; padding: 6px; }
       .target {
         width: 60px;
         height: 60px;
@@ -109,7 +106,7 @@
       ).join(" ");
     }
 
-    // Toggle-funksjon for blinkene – oppdaterer lokalt
+    // Toggle-funksjon for blinkene – oppdaterer lokalt og re-renderer tabellen
     window.toggleTarget = function(snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
@@ -118,12 +115,12 @@
       updateShootingTable();
     };
 
-    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
+    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde (0 for S1, 1 for S2)
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
-      // Bruk små bokstaver i oppdatering (s1sent og s2sent)
       let updateData = { shooting: p.shooting };
+      // Bruk små bokstaver for kolonnenavn: s1sent og s2sent
       if (shootIdx === 0) {
         updateData.s1sent = true;
         p.s1sent = true;
