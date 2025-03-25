@@ -86,7 +86,7 @@
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", window.supabaseClient);
 
-    // Globalt deltakerobjekt – her lagres deltakerdata med eventuelle usendte endringer
+    // Globalt deltakerobjekt – her lagres data for de aktive deltakerne
     window.participants = {};
 
     // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
@@ -99,7 +99,7 @@
       }
     }
 
-    // Teller antall bom (false) i skyte-arrayen
+    // Teller antall bom (false) i skyte-arrayen for en deltaker
     function countMisses(p) {
       let arr = getShootingArray(p);
       let count = 0;
@@ -111,7 +111,7 @@
       return count;
     }
 
-    // Henter deltakerdata for de aktive (status "I gang")
+    // Henter aktive deltakere (status "I gang")
     async function fetchActiveParticipants() {
       const { data, error } = await window.supabaseClient
         .from("participants")
@@ -124,14 +124,14 @@
       return data;
     }
 
-    // Oppdaterer visningen med aktive deltakere for strafferunder
+    // Oppdaterer visningen for strafferunder
     async function updatePenaltyTable() {
       const participants = await fetchActiveParticipants();
       // Oppdater det globale objektet
       participants.forEach(p => {
-        // Sørg for at shooting er korrekt og penalty er definert (default 0)
         p.shooting = (typeof p.shooting === "string") ? getShootingArray(p) : p.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        p.penalty = p.penalty || 0;
+        // Sett standardverdi for penalty (om ikke definert)
+        p.penalty = (p.penalty !== undefined && p.penalty !== null) ? p.penalty : 0;
         window.participants[p.snr] = p;
       });
       
@@ -150,15 +150,10 @@
         </thead>
         <tbody>`;
       participants.sort((a, b) => a.snr - b.snr).forEach(p => {
-        let s1 = ""; 
-        let s2 = "";
-        // Vi kan vise blinkene slik som tidligere – her er de enkle og uten tall
-        let arr = getShootingArray(p);
-        s1 = arr[0].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
-        s2 = arr[1].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
-        // Teller bom (antall false i begge runder)
+        let s1 = p.shooting[0].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
+        let s2 = p.shooting[1].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
         let misses = countMisses(p);
-        // Vis strafferunder (penalty) – hvis penalty != misses, vis i rødt
+        // Hvis antall registrerte strafferunder (p.penalty) ikke er lik antall bom (misses), vis i rødt
         let penaltyDisplay = p.penalty;
         if (p.penalty !== misses) {
           penaltyDisplay = `<span class="penalty-error">${p.penalty}</span>`;
@@ -181,11 +176,10 @@
     async function addPenalty(snr) {
       let p = window.participants[snr];
       if (!p) return;
-      // Øk lokal verdi
-      p.penalty = (p.penalty || 0) + 1;
-      // Oppdater databasen
+      p.penalty = Number(p.penalty) + 1;
+      console.log("Oppdaterer penalty for snr", snr, "med verdi", p.penalty);
       const { error } = await window.supabaseClient.from("participants")
-        .update({ penalty: p.penalty })
+        .update({ penalty: Number(p.penalty) })
         .eq("snr", snr);
       if (error) {
         console.error("Feil ved oppdatering av penalty for snr", snr, error);
@@ -194,7 +188,7 @@
       updatePenaltyTable();
     }
 
-    // Oppdater strafferunde-tabellen ved lasting og hvert sekund
+    // Oppdater strafferunde-tabellen ved lasting og periodisk
     document.addEventListener("DOMContentLoaded", updatePenaltyTable);
     setInterval(updatePenaltyTable, 1000);
   </script>
