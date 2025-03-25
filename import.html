@@ -39,14 +39,13 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – bruk din gyldige anon-nøkkel
+    // Konfigurer Supabase – erstatt med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Funksjon for å lese CSV-filen og importere rader som har et ikke-tomt "status" felt.
-    // Kun feltene "name" og "class" blir tatt med, og vi setter standardverdier for de andre feltene.
+    // Funksjon for å lese CSV-filen og importere data med semikolon som skilletegn
     function parseCSVAndImport(file) {
       const reader = new FileReader();
       reader.onload = async function(e) {
@@ -58,16 +57,16 @@
           alert("CSV-filen mangler data.");
           return;
         }
-        // Forventer header: status,name,class
-        const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, "").toLowerCase());
+        // Anta at første linje er header, bruk semikolon som skilletegn
+        const headers = lines[0].split(";").map(h => h.trim().replace(/"/g, "").toLowerCase());
         const allowedFields = ["status", "name", "class"];
         let newParticipants = [];
         for (let i = 1; i < lines.length; i++) {
-          const parts = lines[i].split(",").map(val => val.trim());
+          const values = lines[i].split(";").map(val => val.trim().replace(/"/g, ""));
           let row = {};
           headers.forEach((header, index) => {
             if (allowedFields.includes(header)) {
-              row[header] = parts[index];
+              row[header] = values[index];
             }
           });
           // Importer bare rader der status ikke er tom
@@ -92,7 +91,7 @@
         const { error } = await supabaseClient.from("participants").insert(newParticipants);
         if (error) {
           console.error("Feil ved CSV-import:", error);
-          alert("CSV-import feilet. Se konsollen for detaljer.");
+          alert("CSV-import feilet – sjekk konsollen.");
         } else {
           alert("CSV-import fullført!");
         }
