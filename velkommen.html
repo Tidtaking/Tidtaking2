@@ -64,12 +64,11 @@
   <!-- Inkluder Supabase SDK (hvis du ønsker å hente data fra databasen) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger om nødvendig
+    // Konfigurer Supabase – oppdater med dine opplysninger om nødvendig
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Hent deltakere fra Supabase (her vises alle, men du kan filtrere for dagens deltakere om ønskelig)
+    
     async function fetchParticipants() {
       const { data, error } = await supabaseClient.from("participants").select("*");
       if (error) {
@@ -81,8 +80,6 @@
     
     async function updateParticipantTable() {
       const participants = await fetchParticipants();
-      
-      // Eventuelt filtrer for dagens deltakere – hvis du har en tidsstempelkolonne
       let html = `<table>
         <thead>
           <tr>
@@ -110,7 +107,6 @@
     
     document.addEventListener("DOMContentLoaded", function() {
       updateParticipantTable();
-      // Oppdater tabellen hvert 30. sekund
       setInterval(updateParticipantTable, 30000);
     });
   </script>
@@ -124,6 +120,7 @@
     <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
     <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
     <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
   </div>
 </body>
 </html>
