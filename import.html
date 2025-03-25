@@ -45,8 +45,24 @@
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
+    // Funksjon for å hente maks snr fra databasen
+    async function fetchMaxSNR() {
+      // Bruker en SQL-spørring via RPC om nødvendig – her bruker vi aggregatfunksjonen.
+      // Supabase støtter direkte aggregate funksjoner i .select() dersom du spesifiserer head:true og count:'exact'
+      const { data, error, count } = await supabaseClient
+        .from("participants")
+        .select("snr", { head: false, count: "exact" });
+      if (error) {
+        console.error("Feil ved henting av eksisterende snr:", error);
+        return 0;
+      }
+      // Finn maks snr fra de hentede radene
+      if (!data || data.length === 0) return 0;
+      return data.reduce((max, row) => (row.snr > max ? row.snr : max), 0);
+    }
+
     // Funksjon for å lese CSV-filen og importere data med semikolon som skilletegn
-    function parseCSVAndImport(file) {
+    async function parseCSVAndImport(file) {
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
@@ -57,10 +73,11 @@
           alert("CSV-filen mangler data.");
           return;
         }
-        // Anta at første linje er header, bruk semikolon som skilletegn
+        // Forvent header med semikolon som skilletegn, f.eks. "status;name;class"
         const headers = lines[0].split(";").map(h => h.trim().replace(/"/g, "").toLowerCase());
+        // Vi tar kun med feltene "name" og "class". Vi sjekker at det finnes en verdi i statusfeltet (eventuelt for filtrering).
         const allowedFields = ["status", "name", "class"];
-        let newParticipants = [];
+        let rows = [];
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(";").map(val => val.trim().replace(/"/g, ""));
           let row = {};
@@ -69,25 +86,29 @@
               row[header] = values[index];
             }
           });
-          // Importer bare rader der status ikke er tom
+          // Vi importerer kun rader der feltet status ikke er tom og både name og class finnes
           if (row.status && row.status !== "" && row.name && row.class) {
-            newParticipants.push({
-              name: row.name,
-              class: row.class,
-              status: "Venter", // Standard status for nye deltakere
-              start: null,
-              laps: [],
-              finish: null,
-              rawFinish: null,
-              shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
-            });
+            rows.push(row);
           }
         }
-        console.log("Nye deltakere fra CSV:", newParticipants);
-        if (newParticipants.length === 0) {
-          alert("Ingen gyldige deltakere funnet med status i CSV-filen.");
+        if (rows.length === 0) {
+          alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
+        // Hent maks snr fra DB for å generere nye snr-verdier
+        const maxSNR = await fetchMaxSNR();
+        let newParticipants = rows.map((row, index) => ({
+          snr: maxSNR + index + 1,
+          name: row.name,
+          class: row.class,
+          status: "Venter", // Standard status for nye deltakere
+          start: null,
+          laps: [],
+          finish: null,
+          rawFinish: null,
+          shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
+        }));
+        console.log("Nye deltakere fra CSV:", newParticipants);
         const { error } = await supabaseClient.from("participants").insert(newParticipants);
         if (error) {
           console.error("Feil ved CSV-import:", error);
