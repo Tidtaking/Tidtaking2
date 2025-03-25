@@ -36,7 +36,7 @@
       background-color: gray;
       white-space: nowrap;
     }
-    /* Blinkene – store sirkler uten tall (90x90px, font-size 54px) */
+    /* Blinkene – større sirkler (90x90px, font-size 54px) */
     .target {
       display: inline-block;
       width: 90px;
@@ -48,13 +48,13 @@
       cursor: pointer;
       vertical-align: middle;
     }
-    /* Inputfelt for skive – felles for begge runder */
+    /* Inputfelt for skive */
     .skive-input {
       width: 80px;
       font-size: 18px;
       text-align: center;
     }
-    /* Send-knapper – standard grønn, bytter til grå etter sending */
+    /* Send-knapper – grønn standard, bytter til grå etter sending */
     .send-button {
       background-color: #28a745;
       color: white;
@@ -68,10 +68,7 @@
       cursor: default;
     }
     @media (max-width: 480px) {
-      th, td {
-        font-size: 14px;
-        padding: 6px;
-      }
+      th, td { font-size: 14px; padding: 6px; }
       .target {
         width: 70px;
         height: 70px;
@@ -88,7 +85,7 @@
       }
     }
   </style>
-  <!-- Inkluder Supabase SDK (UMD) -->
+  <!-- Inkluder Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – erstatt med dine opplysninger
@@ -97,10 +94,10 @@
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", window.supabaseClient);
 
-    // Globalt deltakerobjekt – lagrer deltakerdata lokalt
+    // Globalt deltakerobjekt – lagrer deltakerdata lokalt med usendte endringer
     window.participants = {};
 
-    // Hjelpefunksjon: Henter skyte-array fra deltakerobjektet
+    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -110,58 +107,46 @@
       }
     }
 
-    // Renderer blinkene (uten tall) for en gitt deltaker og skyterunde (0 for S1, 1 for S2)
-    function renderShootingWithoutNumbers(snr, shootIdx) {
-      let p = window.participants[snr];
-      let arr = getShootingArray(p)[shootIdx];
-      return arr.map((hit, i) =>
-        `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
-      ).join(" ");
-    }
-
-    // Toggle-funksjon for blinkene – oppdaterer lokal tilstand og endrer farge umiddelbart
-    window.toggleTarget = function(event, snr, shootIdx, idx) {
-      let p = window.participants[snr];
-      let arr = getShootingArray(p);
-      arr[shootIdx][idx] = !arr[shootIdx][idx];
-      p.shooting = JSON.stringify(arr);
-      event.target.style.color = arr[shootIdx][idx] ? "white" : "black";
-      // Merk: Vi oppdaterer ikke databasen før "send" trykkes
-    };
-
-    // Henter deltakerdata fra Supabase og oppdaterer det globale objektet
+    // Henter deltakerdata fra Supabase og merger med lokale unsendte endringer
     async function fetchShootingData() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-      window.participants = {};
+      // Oppdater (eller merge) i window.participants slik at usendte endringer bevares
       data.forEach(record => {
         record.shooting = (typeof record.shooting === "string")
           ? getShootingArray(record)
           : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Sørg for at s1sent og s2sent er definert (default false)
         record.s1sent = record.s1sent || false;
         record.s2sent = record.s2sent || false;
-        // Sørg for at feltet "skive" er definert (default tom streng)
-        record.skive = record.skive || "";
+        record.skive = (record.skive !== undefined && record.skive !== null) ? record.skive : "";
+        // Hvis det finnes en lokal versjon, merge usendte endringer
+        if (window.participants[record.snr]) {
+          const local = window.participants[record.snr];
+          // Hvis det er endret lokalt, behold de
+          record.shooting = local.shooting || record.shooting;
+          record.s1sent = local.s1sent || record.s1sent;
+          record.s2sent = local.s2sent || record.s2sent;
+          record.skive = local.skive || record.skive;
+        }
         window.participants[record.snr] = record;
       });
       renderShootingTable();
     }
 
-    // Renderer skyteresultat-tabellen med et inputfelt for skive
+    // Renderer skyteresultat-tabellen med inputfelt for skive
     function renderShootingTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med begge sendte skyterunder (s1sent & s2sent) flyttes nederst
+      // Sorter slik at de med begge sendte skyterunder (s1sent && s2sent) flyttes nederst
       data.sort((a, b) => {
         let aSent = (a.s1sent && a.s2sent) ? 1 : 0;
         let bSent = (b.s1sent && b.s2sent) ? 1 : 0;
         if (aSent !== bSent) return aSent - bSent;
         return a.snr - b.snr;
       });
-      
+
       let html = `<table>
         <thead>
           <tr>
@@ -178,8 +163,8 @@
       data.forEach(p => {
         let s1 = renderShootingWithoutNumbers(p.snr, 0);
         let s2 = renderShootingWithoutNumbers(p.snr, 1);
-        // Inputfelt for skive – viser det lagrede skivenummeret (kan endres)
-        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive">`;
+        // Inputfelt for skive – bruk den lokale verdien
+        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive" onchange="window.participants[${p.snr}].skive=this.value">`;
         let btnS1 = "";
         if (p.s1sent) {
           btnS1 = `<button class="send-button sent" disabled>Sendt</button>`;
@@ -196,9 +181,9 @@
           <td>${p.snr}</td>
           <td>${p.name}</td>
           <td>${inputSkive}</td>
-          <td class="shootingCell">${s1}</td>
+          <td class="shootingCell">${renderShootingWithoutNumbers(p.snr, 0)}</td>
           <td>${btnS1}</td>
-          <td class="shootingCell">${s2}</td>
+          <td class="shootingCell">${renderShootingWithoutNumbers(p.snr, 1)}</td>
           <td>${btnS2}</td>
         </tr>`;
       });
@@ -206,11 +191,20 @@
       document.getElementById("shootingTable").innerHTML = html;
     }
 
+    // Funksjon for toggle av blink – med event for umiddelbar visuell respons
+    window.toggleTarget = function(event, snr, shootIdx, idx) {
+      let p = window.participants[snr];
+      let arr = getShootingArray(p);
+      arr[shootIdx][idx] = !arr[shootIdx][idx];
+      p.shooting = JSON.stringify(arr);
+      event.target.style.color = arr[shootIdx][idx] ? "white" : "black";
+    };
+
     // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
-      // Før sending hentes skive-verdien fra inputfeltet
+      // Før sending hentes den nyeste skiveverdien fra inputfeltet
       let skiveVal = document.getElementById("skive-" + snr).value.trim();
       let updateData = { shooting: p.shooting, skive: skiveVal };
       if (shootIdx === 0) {
@@ -229,18 +223,17 @@
       } else {
         alert("Resultat sendt for deltaker " + snr + " (S" + (shootIdx + 1) + ")");
       }
-      // Etter sending, hent oppdatert data fra DB
+      // Etter sending, hent oppdatert data fra DB (som vil merge med lokale unsendte endringer)
       fetchShootingData();
     }
 
-    // Oppdater skyteresultat-tabellen ved lasting
+    // Oppdater skyteresultat-tabellen ved lasting og periodisk
     document.addEventListener("DOMContentLoaded", fetchShootingData);
-    // Du kan også oppdatere tabellen periodisk:
     setInterval(fetchShootingData, 1000);
   </script>
 </head>
 <body>
-  <h2>Registrering av Skyteresultat</h2>
+  <h2>Registrering av Skyteresultat med Skive</h2>
   <div id="shootingTable"></div>
 </body>
 </html>
