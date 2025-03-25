@@ -16,11 +16,6 @@
       margin-bottom: 20px;
       color: #333;
     }
-    h2 {
-      font-size: 28px;
-      margin-top: 40px;
-      color: #555;
-    }
     table {
       margin: 0 auto;
       border-collapse: collapse;
@@ -56,9 +51,6 @@
       h1 {
         font-size: 28px;
       }
-      h2 {
-        font-size: 24px;
-      }
       th, td {
         font-size: 16px;
         padding: 8px;
@@ -69,14 +61,15 @@
       }
     }
   </style>
-  <!-- Inkluder Supabase SDK -->
+  <!-- Inkluder Supabase SDK (hvis du ønsker å hente data fra databasen) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger
+    // Konfigurer Supabase – erstatt med dine opplysninger om nødvendig
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    
+
+    // Hent deltakere fra Supabase (her vises alle, men du kan filtrere for dagens deltakere om ønskelig)
     async function fetchParticipants() {
       const { data, error } = await supabaseClient.from("participants").select("*");
       if (error) {
@@ -89,10 +82,7 @@
     async function updateParticipantTable() {
       const participants = await fetchParticipants();
       
-      // Her kan du eventuelt filtrere for dagens deltakere hvis databasen inneholder flere dager.
-      // For eksempel, hvis du har en "start" timestamp, kan du filtrere der:
-      // participants = participants.filter(p => new Date(p.start).toDateString() === new Date().toDateString());
-      
+      // Eventuelt filtrer for dagens deltakere – hvis du har en tidsstempelkolonne
       let html = `<table>
         <thead>
           <tr>
@@ -133,6 +123,7 @@
     <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
     <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
     <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
   </div>
 </body>
 </html>
