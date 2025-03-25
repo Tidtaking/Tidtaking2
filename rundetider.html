@@ -1,122 +1,102 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rundetider og Skyteresultater for Ski Konkurranse</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rundetider for Ski Konkurranse</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin: 10px;
+      padding: 20px;
+      background: #fff;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: #333;
     }
     table {
-      margin: 10px auto;
+      margin: 0 auto;
       border-collapse: collapse;
-      width: 100%;
-      max-width: 900px;
+      width: 95%;
+      max-width: 600px;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 5px;
-      font-size: 14px;
+      padding: 10px;
+      font-size: 20px;
       text-align: center;
     }
     th {
       background-color: #f4f4f4;
     }
-    /* Skytekolonnen med grå bakgrunn */
-    .shootingCell {
-      background-color: gray;
-      white-space: nowrap;
-    }
-    /* Blinkene – fast størrelse, større enn før */
-    .target {
-      display: inline-block;
-      width: 70px;
-      height: 70px;
-      line-height: 70px;
-      border-radius: 50%;
-      margin: 3px;
-      font-size: 48px;
-      vertical-align: middle;
-    }
-    /* Rundetid-knappen – grønn og større */
-    .btn-lap {
+    /* Store knapp for registrering av rundetid */
+    .lap-button {
       background-color: #28a745;
       color: white;
-      padding: 10px 16px;
       border: none;
+      padding: 15px 30px;
+      font-size: 22px;
       cursor: pointer;
-      font-size: 18px;
+      border-radius: 5px;
     }
-    @media (max-width: 600px) {
-      th, td { font-size: 10px; }
-      .target {
-        width: 50px;
-        height: 50px;
-        line-height: 50px;
-        font-size: 36px;
-      }
-      .btn-lap {
-        font-size: 14px;
-        padding: 8px 12px;
-      }
+    @media (max-width: 480px) {
+      h1 { font-size: 28px; }
+      th, td { font-size: 16px; padding: 8px; }
+      .lap-button { font-size: 18px; padding: 12px 24px; }
     }
   </style>
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger om nødvendig
+    // Konfigurer Supabase – erstatt med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", window.supabaseClient);
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     // Globalt deltakerobjekt
-    window.participants = {};
+    let participants = {};
 
-    // Funksjon for å formatere tid (sekunder -> m/s-format)
-    function formatTime(sec) {
-      const min = Math.floor(sec / 60);
-      const s = (sec % 60).toFixed(1);
-      return min > 0 ? `${min}m ${s}s` : `${s}s`;
-    }
-
-    // Funksjon for å hente skyte-array fra en deltaker
-    function getShootingArray(p) {
-      if (Array.isArray(p.shooting)) return p.shooting;
-      try {
-        return JSON.parse(p.shooting);
-      } catch (e) {
-        return [Array(5).fill(false), Array(5).fill(false)];
-      }
-    }
-
-    // Funksjon for å rendere blinkene med grå bakgrunn (arvet fra cellen)
-    function renderShooting(arr) {
-      return arr.map(hit =>
-        `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
-      ).join(" ");
-    }
-
-    // Henter deltakerdata og bygger tabellen for rundetider og skyteresultater
-    async function updateLapTable() {
-      const { data, error } = await window.supabaseClient.from("participants").select("*");
+    // Henter deltakere med status "I gang" eller "Fullført"
+    async function fetchLapData() {
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("*")
+        .in("status", ["I gang", "Fullført"]);
       if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        return;
+        console.error("Feil ved henting av deltakerdata:", error);
+        return [];
       }
-      window.participants = {};
-      data.forEach(record => {
-        record.laps = record.laps || [];
-        window.participants[record.snr] = record;
+      return data;
+    }
+
+    // Oppdaterer det globale deltakerobjektet og runder (lapptider)
+    async function updateLapTable() {
+      const data = await fetchLapData();
+      data.forEach(p => {
+        p.laps = p.laps || [];
+        participants[p.snr] = p;
       });
-      
-      // Sorter data: "I gang" øverst, resten sortert på startnummer
+      renderLapTable();
+    }
+
+    // Formatterer tid (sekunder til "m/s")
+    function formatTime(sec) {
+      const minutes = Math.floor(sec / 60);
+      const seconds = (sec % 60).toFixed(1);
+      return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    }
+
+    // Renderer tabellen med kolonnene snr, name, class, status og rundetider.
+    // Viser en stor "Rundetid"-knapp for de med status "I gang".
+    function renderLapTable() {
+      let data = Object.values(participants);
+      // Sorter: de med status "I gang" først, deretter andre, og "Fullført" nederst.
       data.sort((a, b) => {
-        if (a.status === "I gang" && b.status !== "I gang") return -1;
-        if (a.status !== "I gang" && b.status === "I gang") return 1;
+        const rankA = (a.status === "I gang") ? 0 : (a.status === "Fullført" ? 2 : 1);
+        const rankB = (b.status === "I gang") ? 0 : (b.status === "Fullført" ? 2 : 1);
+        if (rankA !== rankB) return rankA - rankB;
         return a.snr - b.snr;
       });
       
@@ -128,29 +108,22 @@
             <th>Klasse</th>
             <th>Status</th>
             <th>Rundetider</th>
-            <th class="shootingCell">Skyting S1</th>
-            <th class="shootingCell">Skyting S2</th>
-            <th>Handl.</th>
+            <th>Handling</th>
           </tr>
         </thead>
         <tbody>`;
-      
       data.forEach(p => {
-        let lapsDisplay = p.laps.length > 0 ? p.laps.map(lap => formatTime(lap)).join("<br>") : "-";
-        let s1 = renderShooting(getShootingArray(p)[0]);
-        let s2 = renderShooting(getShootingArray(p)[1]);
+        let lapsDisplay = p.laps.length > 0 ? p.laps.map(l => formatTime(l)).join("<br>") : "-";
         let button = "";
         if (p.status === "I gang") {
-          button = `<button class="btn-lap" onclick="recordLap(${p.snr})">Rundetid</button>`;
+          button = `<button class="lap-button" onclick="recordLap(${p.snr})">Rundetid</button>`;
         }
         html += `<tr>
           <td>${p.snr}</td>
-          <td>${p.name}</td>
+          <td style="font-size:22px;">${p.name}</td>
           <td>${p.class}</td>
           <td>${p.status}</td>
           <td>${lapsDisplay}</td>
-          <td class="shootingCell">${s1}</td>
-          <td class="shootingCell">${s2}</td>
           <td>${button}</td>
         </tr>`;
       });
@@ -158,31 +131,35 @@
       document.getElementById("lapTable").innerHTML = html;
     }
 
-    // Funksjon for å registrere en ny rundetid for en deltaker
+    // Funksjon for å registrere en ny rundetid for en deltaker med status "I gang"
     async function recordLap(snr) {
-      let p = window.participants[snr];
-      if (p && p.start) {
-        const lapTime = (Date.now() - Date.parse(p.start)) / 1000;
-        p.laps.push(lapTime);
-        const { error } = await window.supabaseClient.from("participants")
-          .update({ laps: p.laps })
-          .eq("snr", snr);
-        if (error) {
-          console.error("Feil ved recordLap for snr", snr, error);
-        }
-        updateLapTable();
-      } else {
+      let p = participants[snr];
+      if (!p || !p.start) {
         alert("Deltakeren har ikke startet enda.");
+        return;
       }
+      const lapTime = (Date.now() - Date.parse(p.start)) / 1000;
+      p.laps.push(lapTime);
+      const { error } = await supabaseClient
+        .from("participants")
+        .update({ laps: p.laps })
+        .eq("snr", snr);
+      if (error) {
+        console.error("Feil ved registrering av rundetid for snr", snr, error);
+        alert("Feil ved registrering av rundetid.");
+      }
+      updateLapTable();
     }
 
-    // Oppdater tabellen hvert sekund
-    setInterval(updateLapTable, 1000);
-    document.addEventListener("DOMContentLoaded", updateLapTable);
+    document.addEventListener("DOMContentLoaded", function() {
+      updateLapTable();
+      // Oppdater tabellen hvert sekund
+      setInterval(updateLapTable, 1000);
+    });
   </script>
 </head>
 <body>
-  <h2>Rundetider og Skyteresultater for Ski Konkurranse</h2>
+  <h1>Rundetider for Ski Konkurranse</h1>
   <div id="lapTable"></div>
 </body>
 </html>
