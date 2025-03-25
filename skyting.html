@@ -36,15 +36,15 @@
       background-color: gray;
       white-space: nowrap;
     }
-    /* Blinkene – store sirkler uten tall */
+    /* Blinkene – økt størrelse for mobil: 90x90 px, font-size 54px */
     .target {
       display: inline-block;
-      width: 80px;
-      height: 80px;
-      line-height: 80px;
+      width: 90px;
+      height: 90px;
+      line-height: 90px;
       border-radius: 50%;
       margin: 4px;
-      font-size: 48px;
+      font-size: 54px;
       cursor: pointer;
       vertical-align: middle;
     }
@@ -62,12 +62,15 @@
       cursor: default;
     }
     @media (max-width: 480px) {
-      th, td { font-size: 14px; padding: 6px; }
+      th, td {
+        font-size: 14px;
+        padding: 6px;
+      }
       .target {
-        width: 60px;
-        height: 60px;
-        line-height: 60px;
-        font-size: 36px;
+        width: 70px;
+        height: 70px;
+        line-height: 70px;
+        font-size: 42px;
       }
       .send-button {
         font-size: 16px;
@@ -87,7 +90,7 @@
     // Globalt deltakerobjekt – lagrer deltakerdata lokalt
     window.participants = {};
 
-    // Hjelpefunksjon: Henter skyte-array fra deltakerobjektet
+    // Hjelpefunksjon for å hente skyte-array fra deltakerobjektet
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -101,47 +104,25 @@
     function renderShootingWithoutNumbers(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
+      // Legg til inline onclick med event for å få tilgang til target-elementet
       return arr.map((hit, i) =>
-        `<span class="target" onclick="toggleTarget(${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
+        `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join(" ");
     }
 
-    // Toggle-funksjon for blinkene – oppdaterer lokalt og re-renderer tabellen
-    window.toggleTarget = function(snr, shootIdx, idx) {
+    // Toggle-funksjon for blinkene – oppdaterer den lokale tilstanden og fargen direkte
+    window.toggleTarget = function(event, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
       arr[shootIdx][idx] = !arr[shootIdx][idx];
       p.shooting = JSON.stringify(arr);
-      updateShootingTable();
+      // Oppdater den klikkede blinkens farge umiddelbart
+      event.target.style.color = arr[shootIdx][idx] ? "white" : "black";
+      // Ikke kall full refresh for å beholde lokale toggles før sending
     };
 
-    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde (0 for S1, 1 for S2)
-    async function sendShootingResult(snr, shootIdx) {
-      let p = window.participants[snr];
-      if (!p) return;
-      let updateData = { shooting: p.shooting };
-      // Bruk små bokstaver for kolonnenavn: s1sent og s2sent
-      if (shootIdx === 0) {
-        updateData.s1sent = true;
-        p.s1sent = true;
-      } else if (shootIdx === 1) {
-        updateData.s2sent = true;
-        p.s2sent = true;
-      }
-      const { error } = await window.supabaseClient.from("participants")
-        .update(updateData)
-        .eq("snr", snr);
-      if (error) {
-        console.error("Feil ved sending av skyteresultat for snr", snr, error);
-        alert("Feil ved sending av resultat. Sjekk konsollen.");
-      } else {
-        alert("Resultat sendt for deltaker " + snr + " (S" + (shootIdx + 1) + ")");
-      }
-      updateShootingTable();
-    }
-
-    // Oppdaterer skyteresultat-tabellen
-    async function updateShootingTable() {
+    // Funksjon for å hente deltakerdata fra Supabase og oppdatere det globale objektet
+    async function fetchShootingData() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
@@ -157,7 +138,12 @@
         record.s2sent = record.s2sent || false;
         window.participants[record.snr] = record;
       });
-      
+      renderShootingTable();
+    }
+
+    // Funksjon for å render tabellen fra det globale objektet (uten å hente fra DB)
+    function renderShootingTable() {
+      let data = Object.values(window.participants);
       let html = `<table>
         <thead>
           <tr>
@@ -170,7 +156,6 @@
           </tr>
         </thead>
         <tbody>`;
-      
       data.forEach(p => {
         let s1 = renderShootingWithoutNumbers(p.snr, 0);
         let s2 = renderShootingWithoutNumbers(p.snr, 1);
@@ -199,9 +184,33 @@
       document.getElementById("shootingTable").innerHTML = html;
     }
 
-    // Oppdater skyteresultat-tabellen hvert sekund
-    setInterval(updateShootingTable, 1000);
-    document.addEventListener("DOMContentLoaded", updateShootingTable);
+    // Funksjon for å sende (lagre) skyteresultat for en deltaker for en gitt skyterunde
+    async function sendShootingResult(snr, shootIdx) {
+      let p = window.participants[snr];
+      if (!p) return;
+      let updateData = { shooting: p.shooting };
+      if (shootIdx === 0) {
+        updateData.s1sent = true;
+        p.s1sent = true;
+      } else if (shootIdx === 1) {
+        updateData.s2sent = true;
+        p.s2sent = true;
+      }
+      const { error } = await window.supabaseClient.from("participants")
+        .update(updateData)
+        .eq("snr", snr);
+      if (error) {
+        console.error("Feil ved sending av skyteresultat for snr", snr, error);
+        alert("Feil ved sending av resultat. Sjekk konsollen.");
+      } else {
+        alert("Resultat sendt for deltaker " + snr + " (S" + (shootIdx + 1) + ")");
+      }
+      // Etter sending, hentes oppdatert data fra DB
+      fetchShootingData();
+    }
+
+    // Oppdaterer skyteresultat-tabellen ved lasting
+    document.addEventListener("DOMContentLoaded", fetchShootingData);
   </script>
 </head>
 <body>
