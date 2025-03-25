@@ -39,43 +39,43 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // Konfigurer Supabase – bruk din gyldige anon-nøkkel
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Funksjon for å lese CSV-filen og importere data
+    // Funksjon for å lese CSV-filen og importere rader som har et ikke-tomt "status" felt.
+    // Kun feltene "name" og "class" blir tatt med, og vi setter standardverdier for de andre feltene.
     function parseCSVAndImport(file) {
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
         console.log("CSV-tekst:", text);
-        // Del opp i linjer og fjern tomme linjer
+        // Del opp teksten i linjer og fjern tomme linjer
         const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
         if (lines.length < 2) {
           alert("CSV-filen mangler data.");
           return;
         }
-        // Anta at første linje er header
+        // Forventer header: status,name,class
         const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, "").toLowerCase());
-        const allowedFields = ["snr", "name", "class"];
+        const allowedFields = ["status", "name", "class"];
         let newParticipants = [];
         for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(",").map(val => val.trim().replace(/"/g, ""));
+          const parts = lines[i].split(",").map(val => val.trim());
           let row = {};
           headers.forEach((header, index) => {
             if (allowedFields.includes(header)) {
-              row[header] = values[index];
+              row[header] = parts[index];
             }
           });
-          // Legg kun til raden dersom alle nødvendige felter finnes
-          if (row.snr && row.name && row.class) {
+          // Importer bare rader der status ikke er tom
+          if (row.status && row.status !== "" && row.name && row.class) {
             newParticipants.push({
-              snr: parseInt(row.snr),
               name: row.name,
               class: row.class,
-              status: "Venter",
+              status: "Venter", // Standard status for nye deltakere
               start: null,
               laps: [],
               finish: null,
@@ -86,20 +86,20 @@
         }
         console.log("Nye deltakere fra CSV:", newParticipants);
         if (newParticipants.length === 0) {
-          alert("Ingen gyldige deltakere funnet i CSV-filen.");
+          alert("Ingen gyldige deltakere funnet med status i CSV-filen.");
           return;
         }
         const { error } = await supabaseClient.from("participants").insert(newParticipants);
         if (error) {
           console.error("Feil ved CSV-import:", error);
-          alert("CSV-import feilet – sjekk konsollen.");
+          alert("CSV-import feilet. Se konsollen for detaljer.");
         } else {
           alert("CSV-import fullført!");
         }
       };
       reader.readAsText(file);
     }
-
+    
     document.getElementById("btnImportCSV").addEventListener("click", function() {
       const fileInput = document.getElementById("csvImport");
       if (!fileInput.files || fileInput.files.length === 0) {
