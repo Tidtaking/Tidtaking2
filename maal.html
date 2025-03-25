@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrer Måltid</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #fff;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    /* Hver deltaker vises som et kort */
+    .participant-card {
+      border: 2px solid #007bff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 10px auto;
+      max-width: 500px;
+      background-color: #e9f5ff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .participant-card h2 {
+      font-size: 32px;
+      margin: 0;
+      color: #007bff;
+    }
+    .participant-card p {
+      font-size: 28px;
+      margin: 10px 0;
+      color: #333;
+    }
+    .finish-button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 26px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 15px;
+    }
+    @media (max-width: 480px) {
+      .participant-card h2 {
+        font-size: 28px;
+      }
+      .participant-card p {
+        font-size: 22px;
+      }
+      .finish-button {
+        font-size: 22px;
+        padding: 12px 24px;
+      }
+    }
+  </style>
+  <!-- Inkluder Supabase SDK (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase – oppdater med dine opplysninger
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Funksjon for å hente alle deltakere med status "I gang"
+    async function fetchActiveParticipants() {
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("*")
+        .eq("status", "I gang");
+      if (error) {
+        console.error("Feil ved henting av aktive deltakere:", error);
+        return [];
+      }
+      return data;
+    }
+
+    // Funksjon for å merke en deltaker som fullført (måltid)
+    async function markAsFinished(snr) {
+      const now = new Date().toISOString();
+      const { error } = await supabaseClient
+        .from("participants")
+        .update({ status: "Fullført", finish: now })
+        .eq("snr", snr);
+      if (error) {
+        console.error("Feil ved registrering av måltid for snr", snr, error);
+        alert("Feil ved registrering av måltid. Sjekk konsollen.");
+      } else {
+        alert("Måltid registrert for deltaker " + snr);
+      }
+      updateParticipantCards();
+    }
+
+    // Funksjon for å oppdatere visningen med alle aktive deltakere
+    async function updateParticipantCards() {
+      const participants = await fetchActiveParticipants();
+      const container = document.getElementById("participantContainer");
+      if (participants.length === 0) {
+        container.innerHTML = "<p>Ingen aktive deltakere.</p>";
+        return;
+      }
+      let html = "";
+      participants.sort((a, b) => a.snr - b.snr);
+      participants.forEach(p => {
+        html += `<div class="participant-card">
+                   <h2>Startnr: ${p.snr}</h2>
+                   <p>${p.name}</p>
+                   <button class="finish-button" onclick="markAsFinished(${p.snr})">Mål</button>
+                 </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      updateParticipantCards();
+      // Oppdater visningen hvert sekund for å fjerne de som er fullført
+      setInterval(updateParticipantCards, 1000);
+    });
+  </script>
+</head>
+<body>
+  <h1>Registrer Måltid</h1>
+  <div id="participantContainer"></div>
+</body>
+</html>
