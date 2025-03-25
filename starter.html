@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Startliste for Løpere</title>
+  <title>Startliste for Løpere (Mobilvennlig)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 20px;
+      padding: 10px;
+      margin: 0;
       background: #fff;
     }
     #liveClock {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: bold;
       margin-bottom: 20px;
     }
@@ -24,11 +25,11 @@
       background-color: #f9f9f9;
     }
     .next-runner h3 {
-      font-size: 28px;
+      font-size: 32px;
       margin-bottom: 10px;
     }
     .next-runner p {
-      font-size: 22px;
+      font-size: 24px;
       margin: 5px 0;
     }
     .start-button {
@@ -36,32 +37,46 @@
       color: white;
       border: none;
       padding: 15px 30px;
-      font-size: 26px;
+      font-size: 28px;
       cursor: pointer;
       margin-top: 15px;
+      width: 100%;
+      max-width: 300px;
     }
-    /* Tabell for de neste løperne */
+    /* Tabell for kommende løpere */
     table {
       margin: 0 auto;
       border-collapse: collapse;
       width: 90%;
-      max-width: 600px;
+      max-width: 400px;
     }
     th, td {
       border: 1px solid #ccc;
       padding: 10px;
-      font-size: 18px;
+      font-size: 20px;
       text-align: center;
     }
     th {
       background-color: #f4f4f4;
     }
-    @media (max-width: 600px) {
-      #liveClock { font-size: 20px; }
-      .next-runner h3 { font-size: 24px; }
-      .next-runner p { font-size: 18px; }
-      .start-button { font-size: 22px; padding: 12px 24px; }
-      th, td { font-size: 14px; padding: 5px; }
+    @media (max-width: 480px) {
+      #liveClock {
+        font-size: 24px;
+      }
+      .next-runner h3 {
+        font-size: 28px;
+      }
+      .next-runner p {
+        font-size: 20px;
+      }
+      .start-button {
+        font-size: 24px;
+        padding: 12px 24px;
+      }
+      th, td {
+        font-size: 18px;
+        padding: 8px;
+      }
     }
   </style>
   <!-- Inkluder Supabase SDK -->
@@ -73,7 +88,7 @@
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Globalt array for kommende deltakere (de som ikke har startet)
+    // Globalt array for kommende deltakere
     let participants = [];
 
     // Oppdaterer live-klokken
@@ -102,7 +117,7 @@
     // Oppdaterer startlisten
     async function updateStartList() {
       let upcoming = await fetchUpcomingRunners();
-      // Sorter: de med tildelt starttid først (ascendant), deretter de uten starttid (ascendant på snr)
+      // Sorter: de med tildelt starttid først, ellers etter startnummer
       upcoming.sort((a, b) => {
         const aTime = a.start ? Date.parse(a.start) : Infinity;
         const bTime = b.start ? Date.parse(b.start) : Infinity;
@@ -111,7 +126,7 @@
       });
       participants = upcoming;
       
-      // Finn neste løper (første i sortert liste)
+      // Neste løper (øverst)
       let nextRunner = upcoming.length > 0 ? upcoming[0] : null;
       const nextRunnerEl = document.getElementById("nextRunner");
       if (nextRunner) {
@@ -127,7 +142,7 @@
         nextRunnerEl.innerHTML = `<h3>Ingen løpere å starte</h3>`;
       }
       
-      // Bygg tabell for de resterende løpere (fra indeks 1 og utover)
+      // Bygg tabellen for de neste løperne (fra indeks 1)
       let tableHtml = `<table>
         <thead>
           <tr>
@@ -152,7 +167,7 @@
       document.getElementById("upcomingTable").innerHTML = tableHtml;
     }
 
-    // Funksjon for å starte neste løper
+    // Starter neste løper (oppdaterer status til "I gang" og setter starttid til nå)
     async function startNextRunner() {
       if (participants.length === 0) {
         alert("Ingen løpere å starte.");
@@ -171,17 +186,17 @@
       updateStartList();
     }
 
-    // Oppdater startlisten hvert sekund
+    // Oppdater listen hvert sekund
     setInterval(updateStartList, 1000);
     document.addEventListener("DOMContentLoaded", updateStartList);
   </script>
 </head>
 <body>
-  <h2>Startliste for Løpere</h2>
+  <h2>Startliste for Løpere (Mobilvennlig)</h2>
   <div id="liveClock"></div>
-  <!-- Neste løper visning -->
+  <!-- Visning av neste løper med stor knapp -->
   <div id="nextRunner" class="next-runner"></div>
-  <!-- Tabell for de neste løpere -->
+  <!-- Tabell for de resterende kommende løpere -->
   <div id="upcomingTable"></div>
 </body>
 </html>
