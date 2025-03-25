@@ -31,11 +31,10 @@
     th {
       background-color: #f4f4f4;
     }
-    /* Kolonne for status */
     .statusCell {
       min-width: 80px;
     }
-    /* Kolonner for skyting – bakgrå, 250px bred for å få plass til 5 blink side om side */
+    /* Skytekolonner: 250px bredde for å få plass til 5 blink side om side */
     .shootingCell {
       background-color: gray;
       width: 250px;
@@ -44,7 +43,7 @@
       overflow: hidden;
       text-align: center;
     }
-    /* Blinkene – 40×40 px, font-size 28px, med litt margin */
+    /* Blinkene – 40×40 px, font-size 28px */
     .target {
       display: inline-block;
       width: 40px;
@@ -62,7 +61,7 @@
       font-size: 18px;
       text-align: center;
     }
-    /* Send-knapper – grønn standard, bytter til grå etter sending */
+    /* Send-knapper */
     .send-button {
       background-color: #28a745;
       color: white;
@@ -103,13 +102,12 @@
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger
+    // KONFIGURER SUPABASE
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Globalt deltakerobjekt – lagrer deltakerdata lokalt (inkl. usendte toggles)
+    // GLOBALT OBJEKT: LOKAL LAGRING AV DELTAKERE
     window.participants = {};
 
     // Sikrer at shooting er en 2×5 matrise
@@ -125,16 +123,17 @@
       });
     }
 
-    function getShootingArray(p) {
+    function parseShooting(record) {
+      let val = record.shooting;
       let arr;
-      if (typeof p.shooting === "string") {
+      if (typeof val === "string") {
         try {
-          arr = JSON.parse(p.shooting);
+          arr = JSON.parse(val);
         } catch (e) {
           arr = null;
         }
-      } else if (Array.isArray(p.shooting)) {
-        arr = p.shooting;
+      } else if (Array.isArray(val)) {
+        arr = val;
       }
       if (!arr) {
         arr = [Array(5).fill(false), Array(5).fill(false)];
@@ -142,7 +141,16 @@
       return ensureShootingFormat(arr);
     }
 
-    // Render 5 blink side ved side
+    // Henter skyte-array lokalt
+    function getShootingArray(p) {
+      if (!p.shootingLocal) {
+        // fallback
+        p.shootingLocal = parseShooting(p);
+      }
+      return p.shootingLocal;
+    }
+
+    // Renderer 5 blink for en skyterunde (shootIdx)
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
@@ -151,17 +159,42 @@
       ).join("");
     }
 
-    // Toggle blink lokalt
+    // Toggling av blink: endre p.shootingLocal
     window.toggleTarget = function(e, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
       arr[shootIdx][idx] = !arr[shootIdx][idx];
-      p.shooting = JSON.stringify(arr);
+      p.shootingLocal = arr;  // oppdater lokalt
       e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
-    // Henter deltakere fra Supabase
-    async function fetchParticipants() {
+    // Fletter data fra DB med lokale toggles
+    function mergeDbRecordIntoLocal(dbRec) {
+      const snr = dbRec.snr;
+      let local = window.participants[snr];
+      if (!local) {
+        // Ingen lokal data, opprett
+        dbRec.shootingLocal = parseShooting(dbRec);
+        dbRec.s1sent = dbRec.s1sent || false;
+        dbRec.s2sent = dbRec.s2sent || false;
+        dbRec.skive = dbRec.skive || "";
+        dbRec.status = dbRec.status || "";
+        window.participants[snr] = dbRec;
+      } else {
+        // Behold local toggles (shootingLocal) men oppdater alt annet
+        local.status = dbRec.status || local.status;
+        local.s1sent = local.s1sent || dbRec.s1sent;
+        local.s2sent = local.s2sent || dbRec.s2sent;
+        // Oppdater skive bare hvis local er tom
+        if (!local.skive) {
+          local.skive = dbRec.skive || "";
+        }
+        // shootingLocal beholdes, overskriver IKKE
+      }
+    }
+
+    // Henter alle deltakere, merker i local state
+    async function fetchAllParticipants() {
       const { data, error } = await supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
@@ -170,24 +203,28 @@
       return data;
     }
 
-    // Oppdaterer local state og kaller render
-    async function updateTable() {
-      const data = await fetchParticipants();
-      data.forEach(record => {
-        record.shooting = getShootingArray(record);
-        record.s1sent = record.s1sent || false;
-        record.s2sent = record.s2sent || false;
-        record.skive = record.skive || "";
-        record.status = record.status || "";
-        window.participants[record.snr] = record;
+    // Oppdaterer local state med DB-data
+    async function updateDataFromDb() {
+      let dbData = await fetchAllParticipants();
+      // Flette inn i participants
+      let existingSnrs = {};
+      dbData.forEach(dbRec => {
+        mergeDbRecordIntoLocal(dbRec);
+        existingSnrs[dbRec.snr] = true;
       });
+      // Fjern deltakere som ikke lenger finnes i DB
+      for (let snr in window.participants) {
+        if (!existingSnrs[snr]) {
+          delete window.participants[snr];
+        }
+      }
       renderTable();
     }
 
-    // Sorterer og viser tabellen
+    // Renderer tabellen
     function renderTable() {
       let data = Object.values(window.participants);
-      // De som har sendt S1 og S2 (begge true) nederst
+      // Sorter: de med s1sent og s2sent nederst
       data.sort((a, b) => {
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
@@ -211,7 +248,7 @@
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
-        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive" onchange="window.participants[${p.snr}].skive=this.value">`;
+        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" onchange="window.participants[${p.snr}].skive=this.value">`;
         let btnS1 = p.s1sent
           ? `<button class="send-button sent" disabled>Sendt</button>`
           : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
@@ -233,13 +270,15 @@
       document.getElementById("shootingTable").innerHTML = html;
     }
 
-    // Sender skyteresultat for en av rundene
+    // Sender skyteresultat for S1 eller S2
     async function sendShootingResult(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
-      // Oppdater skyte og skive i databasen
       let skiveVal = document.getElementById("skive-" + snr).value.trim();
-      let updateData = { shooting: p.shooting, skive: skiveVal };
+      let updateData = { skive: skiveVal };
+      // Legg til local toggles
+      let arr = p.shootingLocal || ensureShootingFormat([[], []]);
+      updateData.shooting = JSON.stringify(arr);
       if (shootIdx === 0) {
         updateData.s1sent = true;
         p.s1sent = true;
@@ -247,19 +286,21 @@
         updateData.s2sent = true;
         p.s2sent = true;
       }
-      const { error } = await supabaseClient.from("participants")
+      const { error } = await supabaseClient
+        .from("participants")
         .update(updateData)
         .eq("snr", snr);
       if (error) {
         console.error("Feil ved sending av skyteresultat for snr", snr, error);
-        // Ingen bekreftelsesboks
       }
-      // Oppdater tabellen
-      updateTable();
+      // Hent data fra DB på nytt (for ev. å oppdatere status)
+      updateDataFromDb();
     }
 
-    document.addEventListener("DOMContentLoaded", updateTable);
-    setInterval(updateTable, 1000);
+    document.addEventListener("DOMContentLoaded", () => {
+      updateDataFromDb();
+      setInterval(updateDataFromDb, 1000);
+    });
   </script>
 </head>
 <body>
