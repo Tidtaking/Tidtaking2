@@ -48,7 +48,7 @@
       cursor: pointer;
       vertical-align: middle;
     }
-    /* Send-knapper – standard grønn, men med annen farge etter at resultat er sendt */
+    /* Send-knapper – standard grønn, bytter til grå etter sending */
     .send-button {
       background-color: #28a745;
       color: white;
@@ -81,16 +81,16 @@
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger om nødvendig
+    // Konfigurer Supabase – oppdater med dine opplysninger
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", window.supabaseClient);
 
-    // Globalt deltakerobjekt – her lagres alle deltakerdata lokalt
+    // Globalt deltakerobjekt – her lagres alle deltakere for skyting
     window.participants = {};
 
-    // Hjelpefunksjon for å hente skyte-array fra deltakerobjektet
+    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -107,68 +107,6 @@
       return arr.map((hit, i) =>
         `<span class="target" onclick="toggleTarget(${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join(" ");
-    }
-
-    // Oppdaterer skyteresultat-tabellen
-    async function updateShootingTable() {
-      const { data, error } = await window.supabaseClient.from("participants").select("*");
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        return;
-      }
-      window.participants = {};
-      data.forEach(record => {
-        // Konverter shooting til et array hvis det er en streng
-        record.shooting = (typeof record.shooting === "string")
-          ? getShootingArray(record)
-          : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Sørg for at s1Sent og s2Sent er definert (default false)
-        record.s1Sent = record.s1Sent || false;
-        record.s2Sent = record.s2Sent || false;
-        window.participants[record.snr] = record;
-      });
-      
-      let html = `<table>
-        <thead>
-          <tr>
-            <th>Startnr</th>
-            <th>Navn</th>
-            <th>Skyting S1</th>
-            <th>Send S1</th>
-            <th>Skyting S2</th>
-            <th>Send S2</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      
-      data.forEach(p => {
-        let s1 = renderShootingWithoutNumbers(p.snr, 0);
-        let s2 = renderShootingWithoutNumbers(p.snr, 1);
-        // Knapp for S1: hvis s1Sent er true, vis knappen i en grå farge og deaktiver den.
-        let btnS1 = "";
-        if (p.s1Sent) {
-          btnS1 = `<button class="send-button sent" disabled>Sendt</button>`;
-        } else {
-          btnS1 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
-        }
-        let btnS2 = "";
-        if (p.s2Sent) {
-          btnS2 = `<button class="send-button sent" disabled>Sendt</button>`;
-        } else {
-          btnS2 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
-        }
-        html += `<tr>
-          <td>${p.snr}</td>
-          <td>${p.name}</td>
-          <td class="shootingCell">${s1}</td>
-          <td>${btnS1}</td>
-          <td class="shootingCell">${s2}</td>
-          <td>${btnS2}</td>
-        </tr>`;
-      });
-      
-      html += `</tbody></table>`;
-      document.getElementById("shootingTable").innerHTML = html;
     }
 
     // Toggle-funksjon for blinkene – oppdaterer lokalt
@@ -192,7 +130,8 @@
         updateData.s2Sent = true;
         p.s2Sent = true;
       }
-      const { error } = await window.supabaseClient.from("participants")
+      const { error } = await window.supabaseClient
+        .from("participants")
         .update(updateData)
         .eq("snr", snr);
       if (error) {
@@ -202,6 +141,64 @@
         alert("Resultat sendt for deltaker " + snr + " (S" + (shootIdx + 1) + ")");
       }
       updateShootingTable();
+    }
+
+    // Oppdaterer skyteresultat-tabellen
+    async function updateShootingTable() {
+      const { data, error } = await window.supabaseClient.from("participants").select("*");
+      if (error) {
+        console.error("Feil ved henting av deltakere:", error);
+        return;
+      }
+      window.participants = {};
+      data.forEach(record => {
+        record.shooting = (typeof record.shooting === "string")
+          ? getShootingArray(record)
+          : record.shooting || [Array(5).fill(false), Array(5).fill(false)];
+        // Sørg for at s1Sent og s2Sent er definert (default false)
+        record.s1Sent = record.s1Sent || false;
+        record.s2Sent = record.s2Sent || false;
+        window.participants[record.snr] = record;
+      });
+      
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Skyting S1</th>
+            <th>Send S1</th>
+            <th>Skyting S2</th>
+            <th>Send S2</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      data.forEach(p => {
+        let s1 = renderShootingWithoutNumbers(p.snr, 0);
+        let s2 = renderShootingWithoutNumbers(p.snr, 1);
+        let btnS1 = "";
+        if (p.s1Sent) {
+          btnS1 = `<button class="send-button sent" disabled>Sendt</button>`;
+        } else {
+          btnS1 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
+        }
+        let btnS2 = "";
+        if (p.s2Sent) {
+          btnS2 = `<button class="send-button sent" disabled>Sendt</button>`;
+        } else {
+          btnS2 = `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
+        }
+        html += `<tr>
+          <td>${p.snr}</td>
+          <td>${p.name}</td>
+          <td class="shootingCell">${s1}</td>
+          <td>${btnS1}</td>
+          <td class="shootingCell">${s2}</td>
+          <td>${btnS2}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById("shootingTable").innerHTML = html;
     }
 
     // Oppdater skyteresultat-tabellen hvert sekund
