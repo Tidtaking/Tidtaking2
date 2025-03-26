@@ -23,7 +23,7 @@
       border: 2px solid #333;
       display: block;
       margin: 0 auto;
-      /* Sikrer at canvas er stor på mobil */
+      /* Gjør canvas stor for mobil */
       width: 90vw;
       height: 90vw;
       max-width: 600px;
@@ -65,51 +65,64 @@
     const canvas = document.getElementById('targetCanvas');
     const ctx = canvas.getContext('2d');
     const resultsBody = document.getElementById('resultsBody');
-    const canvasSize = canvas.width; // forutsatt at canvas er kvadratisk
+    const canvasSize = canvas.width; // antar kvadratisk canvas
     const centerX = canvasSize / 2;
     const centerY = canvasSize / 2;
-    const R = canvasSize / 2;
+    const R = canvasSize / 2;            // Total radius (10 ringer)
     const numRings = 10;
-    const ringWidth = R / numRings;
+    const ringWidth = R / numRings;      // Tykkelse per ring
     let shotCount = 0;
 
-    // Funksjon for å tegne poengskiven med 10 konsentriske ringer
+    // Funksjon for å tegne poengskiven med poengmarkering på hver ring.
     function drawTarget() {
-      // Rens canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Tegn ringer fra ytterst til inderst
-      for (let i = 0; i < numRings; i++) {
+      // Vi tegner fra ytre (j=10) til innerste (j=1)
+      for (let j = numRings; j >= 1; j--) {
+        const radius = j * ringWidth;
         ctx.beginPath();
-        let radius = R - i * ringWidth;
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        // Valgfritt: Alterner farge for tydelighet
-        ctx.fillStyle = i % 2 === 0 ? '#ddd' : '#fff';
+        // Veksle farge for bedre synlighet – ytre ringer blir litt mørkere
+        ctx.fillStyle = (j % 2 === 0) ? '#ddd' : '#fff';
         ctx.fill();
         ctx.strokeStyle = '#333';
         ctx.stroke();
+        
+        // Tegn poengsummen på ringen.
+        // For ringen med nummer j (1 er innerste, 10 ytre) gis poeng = 11 - j.
+        const score = 11 - j;
+        // Plasser teksten horisontalt på høyre side i midten av ringen
+        const textRadius = ( (j - 1) * ringWidth + j * ringWidth ) / 2; 
+        const textX = centerX + textRadius;
+        const textY = centerY;
+        ctx.fillStyle = '#000';
+        ctx.font = "bold " + (ringWidth * 0.8) + "px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(score, textX, textY);
       }
-      // Tegn et lite rødt punkt i midten
+      
+      // Tegn et lite rødt punkt i midten (bullseye)
       ctx.beginPath();
       ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
       ctx.fillStyle = 'red';
       ctx.fill();
     }
 
-    // Funksjon som beregner poeng basert på avstand fra midten
+    // Beregn poeng basert på avstanden fra midten.
+    // Dersom skuddet havner nøyaktig på en grense, gis høyere (indre) poeng.
     function computeScore(x, y) {
       const dx = x - centerX;
       const dy = y - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance > R) {
-        return 0; // utenfor skiven
-      }
-      const ringIndex = Math.floor(distance / ringWidth);
-      // Ring 0 (midt) gir 10 poeng, ring 1 gir 9 poeng osv.
-      return 10 - ringIndex;
+      if (distance > R) return 0; // utenfor skiven
+      // Bruk Math.ceil slik at en skudd som havner på grensen (d/ringWidth er heltall)
+      // regnes inn i den innerste ringen.
+      const ring = Math.max(1, Math.ceil(distance / ringWidth));
+      return 11 - ring;
     }
 
-    // Tegn en markør for skuddet på canvas
+    // Tegn en markør for skuddet på canvas.
     function drawShot(x, y) {
       ctx.beginPath();
       ctx.arc(x, y, 5, 0, 2 * Math.PI);
@@ -119,7 +132,7 @@
       ctx.stroke();
     }
 
-    // Håndter klikk (eller trykk) på canvas
+    // Håndter skudd ved klikk/trykk på canvas.
     function handleShot(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const x = clientX - rect.left;
@@ -128,13 +141,12 @@
       shotCount++;
       drawShot(x, y);
       
-      // Legg til resultat i tabellen
+      // Legg til resultat i tabellen.
       const row = document.createElement('tr');
       row.innerHTML = `<td>${shotCount}</td><td>${score}</td><td>(${Math.round(x)}, ${Math.round(y)})</td>`;
       resultsBody.appendChild(row);
     }
 
-    // Klikk- og touch-hendelser
     canvas.addEventListener('click', function(event) {
       handleShot(event.clientX, event.clientY);
     });
