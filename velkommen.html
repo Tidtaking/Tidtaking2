@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Velkommen til Tidtaking (Flere Konkurranser)</title>
   <style>
-    /* CSS-stiler */
     body {
       font-family: Arial, sans-serif;
       text-align: center;
@@ -93,8 +92,8 @@
       }
     }
   </style>
-  <!-- Last inn Supabase-biblioteket med defer -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.umd.min.js" defer></script>
+  <!-- Inkluder Supabase SDK (UMD-versjon) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.umd.min.js"></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -122,8 +121,8 @@
     <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   </div>
   
-  <!-- Inline-skriptet lastes med defer slik at det kjøres etter at biblioteket er lastet -->
-  <script defer>
+  <!-- Flytt inline-skriptet til bunnen, rett før </body> -->
+  <script>
     // Dine Supabase-verdier
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
@@ -133,11 +132,11 @@
       const comp = document.getElementById("competitionInput").value.trim();
       const date = document.getElementById("dateInput").value;
       
-      // Lagre verdiene for videre bruk
+      // Lagre valgte verdier for videre bruk
       sessionStorage.setItem("selectedCompetition", comp);
       sessionStorage.setItem("selectedDate", date);
       
-      // Bygg spørringen basert på dato (og konkurranse om oppgitt)
+      // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
       let query = supabaseClient.from('participants').select('*').eq('date', date);
       if (comp !== "") {
         query = query.eq('competition', comp);
