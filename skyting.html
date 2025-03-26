@@ -24,33 +24,30 @@
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 4px; /* redusert for å spare plass */
       font-size: 18px;
       text-align: center;
     }
     th {
       background-color: #f4f4f4;
     }
-    .statusCell {
-      min-width: 80px;
-    }
-    /* Shooting cell med fast bredde slik at alle blinkene får plass */
+    /* Faste kolonner for skyting */
     .shootingCell {
       background-color: gray;
-      width: 250px;
-      max-width: 250px;
+      width: 320px;
+      max-width: 320px;
       white-space: nowrap;
       overflow: hidden;
       text-align: center;
     }
-    /* Blinkene – vi setter dem til 60x60px for å øke berøringsflaten, men holder cellen bred nok for 5 blink side om side */
+    /* Blinkene – 60x60 px, 1 px margin, font-size 36px */
     .target {
       display: inline-block;
       width: 60px;
       height: 60px;
       line-height: 60px;
       border-radius: 50%;
-      margin: 2px;
+      margin: 1px;
       font-size: 36px;
       cursor: pointer;
       vertical-align: middle;
@@ -77,11 +74,11 @@
     @media (max-width: 480px) {
       th, td {
         font-size: 16px;
-        padding: 6px;
+        padding: 3px;
       }
       .shootingCell {
-        width: 200px;
-        max-width: 200px;
+        width: 280px;
+        max-width: 280px;
       }
       .target {
         width: 55px;
@@ -99,18 +96,19 @@
       }
     }
   </style>
+
+  <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger
+    // Konfigurer Supabase
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseKey = "SETT_INN_GYLDIG_ANON_NOKKEL_HER";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", window.supabaseClient);
 
-    // Globalt deltakerobjekt med lokal usendt state
+    // Globalt deltaker-objekt for lokal toggling
     window.participants = {};
 
-    // Sikrer at shooting er en 2x5 matrise
+    // Sikrer at shooting er en 2×5 matrise
     function ensureShootingFormat(arr) {
       if (!Array.isArray(arr) || arr.length !== 2) {
         return [Array(5).fill(false), Array(5).fill(false)];
@@ -123,6 +121,7 @@
       });
     }
 
+    // Parser en deltakers shooting-felt
     function parseShooting(record) {
       let val = record.shooting;
       let arr;
@@ -141,14 +140,15 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer local toggles hvis finnes, ellers setter standardverdi
+    // Returnerer deltakerens local toggles, eller setter standard
     function getShootingArray(p) {
-      if (p.shootingLocal) return p.shootingLocal;
-      p.shootingLocal = parseShooting(p);
+      if (!p.shootingLocal) {
+        p.shootingLocal = parseShooting(p);
+      }
       return p.shootingLocal;
     }
 
-    // Renderer 5 blink for en skyterunde (shootIdx: 0 for S1, 1 for S2)
+    // Rendrer 5 blink for en skyterunde (shootIdx)
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
@@ -157,20 +157,21 @@
       ).join("");
     }
 
-    // Toggle-funksjon: Endrer den lokale tilstanden og blinkens farge
+    // Toggling av blink
     window.toggleTarget = function(e, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
       arr[shootIdx][idx] = !arr[shootIdx][idx];
-      p.shootingLocal = arr;
+      p.shootingLocal = arr;  // Oppdater lokal tilstand
       e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
-    // Merging: Oppdaterer lokal state med DB-data uten å overskrive usendte toggles
+    // Merge DB-record med lokal toggling
     function mergeDbRecordIntoLocal(dbRec) {
       const snr = dbRec.snr;
       let local = window.participants[snr];
       if (!local) {
+        // Ingen lokal data
         dbRec.shootingLocal = parseShooting(dbRec);
         dbRec.s1sent = dbRec.s1sent || false;
         dbRec.s2sent = dbRec.s2sent || false;
@@ -178,7 +179,7 @@
         dbRec.status = dbRec.status || "";
         window.participants[snr] = dbRec;
       } else {
-        // Behold lokale toggles hvis de finnes
+        // Behold local toggles
         local.status = dbRec.status || local.status;
         local.s1sent = local.s1sent || dbRec.s1sent;
         local.s2sent = local.s2sent || dbRec.s2sent;
@@ -188,8 +189,11 @@
       }
     }
 
+    // Henter deltakere fra DB
     async function fetchAllParticipants() {
-      const { data, error } = await window.supabaseClient.from("participants").select("*");
+      const { data, error } = await window.supabaseClient
+        .from("participants")
+        .select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return [];
@@ -204,7 +208,7 @@
         mergeDbRecordIntoLocal(dbRec);
         existingSnrs[dbRec.snr] = true;
       });
-      // Fjern eventuelle deltakere som ikke lenger finnes
+      // Fjern deltakere som ikke lenger finnes
       for (let snr in window.participants) {
         if (!existingSnrs[snr]) {
           delete window.participants[snr];
@@ -213,10 +217,9 @@
       renderTable();
     }
 
-    // Renderer tabellen med kolonner: Startnr, Navn, Status, Skive, Skyting S1, Send S1, Skyting S2, Send S2
     function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter: de med begge sendte (s1sent og s2sent) nederst
+      // Sorter: de med s1sent & s2sent nederst
       data.sort((a, b) => {
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
@@ -266,18 +269,20 @@
       let p = window.participants[snr];
       if (!p) return;
       let skiveVal = document.getElementById("skive-" + snr).value.trim();
-      let updateData = { skive: skiveVal };
-      // Bruk local toggles fra shootingLocal
-      let arr = p.shootingLocal || ensureShootingFormat([[], []]);
-      updateData.shooting = JSON.stringify(arr);
+      let arr = p.shootingLocal;
+      let updateData = {
+        skive: skiveVal,
+        shooting: JSON.stringify(arr)
+      };
       if (shootIdx === 0) {
         updateData.s1sent = true;
         p.s1sent = true;
-      } else if (shootIdx === 1) {
+      } else {
         updateData.s2sent = true;
         p.s2sent = true;
       }
-      const { error } = await supabaseClient.from("participants")
+      const { error } = await window.supabaseClient
+        .from("participants")
         .update(updateData)
         .eq("snr", snr);
       if (error) {
@@ -286,8 +291,11 @@
       updateDataFromDb();
     }
 
-    document.addEventListener("DOMContentLoaded", updateDataFromDb);
-    setInterval(updateDataFromDb, 1000);
+    document.addEventListener("DOMContentLoaded", () => {
+      updateDataFromDb();
+      // Oppdaterer data hvert sekund
+      setInterval(updateDataFromDb, 1000);
+    });
   </script>
 </head>
 <body>
