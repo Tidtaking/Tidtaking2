@@ -3,18 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Velkommen til Tidtaking</title>
+  <title>Velkommen til Tidtaking (Flere Konkurranser)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
       background-color: #f9f9f9;
+      margin: 0;
     }
     h1 {
       font-size: 36px;
       margin-bottom: 20px;
       color: #333;
+    }
+    .filter-container {
+      margin: 0 auto 20px;
+      max-width: 600px;
+      text-align: left;
+      background: #eee;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .filter-container label {
+      font-size: 18px;
+      margin: 5px 0;
+      display: block;
+    }
+    .filter-container input {
+      font-size: 16px;
+      padding: 8px;
+      margin-bottom: 10px;
+      width: 90%;
+      max-width: 300px;
+    }
+    .filter-container button {
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-top: 5px;
     }
     table {
       margin: 0 auto;
@@ -31,46 +58,55 @@
     th {
       background-color: #e9e9e9;
     }
-    .nav-links {
-      margin-top: 40px;
-    }
-    .nav-links a {
-      display: inline-block;
-      margin: 10px;
-      padding: 12px 20px;
-      background-color: #007bff;
-      color: #fff;
-      text-decoration: none;
-      font-size: 20px;
-      border-radius: 5px;
-    }
-    .nav-links a:hover {
-      background-color: #0056b3;
-    }
     @media (max-width: 480px) {
       h1 {
         font-size: 28px;
       }
       th, td {
-        font-size: 16px;
+        font-size: 14px;
         padding: 8px;
       }
-      .nav-links a {
-        font-size: 18px;
-        padding: 10px 16px;
+      .filter-container input,
+      .filter-container button {
+        font-size: 14px;
       }
     }
   </style>
-  <!-- Inkluder Supabase SDK (hvis du ønsker å hente data fra databasen) -->
+  <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+  <h1>Velkommen til Tidtaking</h1>
+  
+  <div class="filter-container">
+    <label for="competitionInput">Konkurransenavn:</label>
+    <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
+    
+    <label for="dateInput">Dato (yyyy-mm-dd):</label>
+    <input type="date" id="dateInput">
+    
+    <button id="filterBtn">Vis deltakere</button>
+  </div>
+  
+  <div id="participantTable"></div>
+  
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger om nødvendig
+    // KONFIGURER SUPABASE
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseKey = "SETT_INN_GYLDIG_ANON_NOKKEL_HER";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    async function fetchParticipants() {
-      const { data, error } = await supabaseClient.from("participants").select("*");
+    
+    // Henter deltakere som matcher competition + comp_date
+    async function fetchParticipantsByCompetitionAndDate(competition, compDate) {
+      // Her forutsetter vi at tabellen "participants" har to kolonner: "competition" (TEXT) og "comp_date" (DATE/tekst)
+      let query = supabaseClient.from("participants").select("*");
+      if (competition) {
+        query = query.eq("competition", competition);
+      }
+      if (compDate) {
+        query = query.eq("comp_date", compDate);
+      }
+      const { data, error } = await query;
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return [];
@@ -79,27 +115,36 @@
     }
     
     async function updateParticipantTable() {
-      const participants = await fetchParticipants();
+      const competitionVal = document.getElementById("competitionInput").value.trim();
+      const dateVal = document.getElementById("dateInput").value.trim();
+      const participants = await fetchParticipantsByCompetitionAndDate(competitionVal, dateVal);
       
-      // Eventuelt filtrer for dagens deltakere – hvis du har en tidsstempelkolonne
       let html = `<table>
         <thead>
           <tr>
             <th>Startnr</th>
             <th>Navn</th>
             <th>Klasse</th>
+            <th>Status</th>
+            <th>Konkurranse</th>
+            <th>Dato</th>
           </tr>
         </thead>
         <tbody>`;
-      if (participants.length === 0) {
-        html += "<tr><td colspan='3'>Ingen deltakere registrert i dag.</td></tr>";
+      
+      if (!participants || participants.length === 0) {
+        html += "<tr><td colspan='6'>Ingen deltakere funnet for valgt konkurranse/dato.</td></tr>";
       } else {
+        // Sortér f.eks. etter startnummer
         participants.sort((a, b) => a.snr - b.snr);
         participants.forEach(p => {
           html += `<tr>
-            <td>${p.snr}</td>
-            <td>${p.name}</td>
-            <td>${p.class}</td>
+            <td>${p.snr ?? "-"}</td>
+            <td>${p.name ?? "-"}</td>
+            <td>${p.class ?? "-"}</td>
+            <td>${p.status ?? "-"}</td>
+            <td>${p.competition ?? "-"}</td>
+            <td>${p.comp_date ?? "-"}</td>
           </tr>`;
         });
       }
@@ -107,24 +152,10 @@
       document.getElementById("participantTable").innerHTML = html;
     }
     
-    document.addEventListener("DOMContentLoaded", function() {
-      updateParticipantTable();
-      // Oppdater tabellen hvert 30. sekund
-      setInterval(updateParticipantTable, 30000);
-    });
+    document.getElementById("filterBtn").addEventListener("click", updateParticipantTable);
+    
+    // Du kan evt. oppdatere tabellen ved lasting
+    // document.addEventListener("DOMContentLoaded", updateParticipantTable);
   </script>
-</head>
-<body>
-  <h1>Velkommen til Tidtaking</h1>
-  <div id="participantTable"></div>
-  <div class="nav-links">
-    <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
-  </div>
 </body>
 </html>
