@@ -92,8 +92,65 @@
       }
     }
   </style>
-  <!-- Inkluder Supabase SDK hvis nødvendig -->
+  <!-- Inkluder Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Konfigurer Supabase-klienten – erstatt med dine egne verdier!
+    const SUPABASE_URL = 'https://your-supabase-url.supabase.co';
+    const SUPABASE_KEY = 'your-anon-key';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Funksjon for å hente deltakere basert på valgt dato (og eventuelt konkurranse)
+    async function fetchParticipants(comp, date) {
+      // Eksempel: filtrer kun på dato. Hvis du ønsker å filtrere på konkurranse også, kan du legge til .eq('competition', comp)
+      const { data, error } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('date', date);
+      
+      if (error) {
+        console.error('Error fetching participants:', error);
+        return [];
+      }
+      return data;
+    }
+
+    // Legger til event listener når DOM-en er lastet
+    document.addEventListener("DOMContentLoaded", function() {
+      document.getElementById("filterBtn").addEventListener("click", async function() {
+        // Hent verdiene fra inputfeltene
+        const comp = document.getElementById("competitionInput").value.trim();
+        const date = document.getElementById("dateInput").value;
+        
+        // Lagre verdiene i sessionStorage for bruk på andre sider
+        sessionStorage.setItem("selectedCompetition", comp);
+        sessionStorage.setItem("selectedDate", date);
+        
+        // Hent deltakere fra databasen for den valgte datoen (og konkurransen om ønskelig)
+        const participants = await fetchParticipants(comp, date);
+        
+        // Opprett HTML for tabellen med deltakere
+        let tableHtml = '';
+        if (participants.length > 0) {
+          tableHtml += '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th></tr></thead><tbody>';
+          participants.forEach(function(participant) {
+            tableHtml += `<tr>
+                            <td>${participant.id}</td>
+                            <td>${participant.name}</td>
+                            <td>${participant.competition}</td>
+                            <td>${participant.date}</td>
+                          </tr>`;
+          });
+          tableHtml += '</tbody></table>';
+        } else {
+          tableHtml = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
+        }
+        
+        // Vis tabellen i den definerte div-en
+        document.getElementById("participantTable").innerHTML = tableHtml;
+      });
+    });
+  </script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -120,24 +177,5 @@
     <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
     <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   </div>
-  
-  <script>
-    document.getElementById("filterBtn").addEventListener("click", function() {
-      // Hent verdiene fra inputfeltene
-      const comp = document.getElementById("competitionInput").value.trim();
-      const date = document.getElementById("dateInput").value;
-      
-      // Lagre i sessionStorage slik at andre sider kan hente opp valgene
-      sessionStorage.setItem("selectedCompetition", comp);
-      sessionStorage.setItem("selectedDate", date);
-      
-      // Oppdater tabell-visningen med valgt info
-      document.getElementById("participantTable").innerHTML =
-        `<p>Viser deltakere for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
-      
-      // Om ønskelig kan du omdirigere til en annen side her:
-      // window.location.href = "registrering.html";
-    });
-  </script>
 </body>
 </html>
