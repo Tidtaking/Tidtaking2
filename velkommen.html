@@ -96,9 +96,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase-klienten – erstatt med dine egne verdier!
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log("Supabase-klient opprettet:", window.supabaseClient);
 
     // Funksjon for å hente deltakere basert på valgt dato (og eventuelt konkurranse)
     async function fetchParticipants(comp, date) {
