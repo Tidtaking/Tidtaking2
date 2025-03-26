@@ -16,6 +16,17 @@
       margin-bottom: 20px;
       color: #333;
     }
+    .instructions {
+      background: #e9e9e9;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      text-align: left;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      font-size: 18px;
+    }
     input[type="file"] {
       font-size: 18px;
       margin: 10px;
@@ -28,12 +39,32 @@
     }
     @media (max-width: 480px) {
       h1 { font-size: 28px; }
+      .instructions { font-size: 16px; }
       input[type="file"], button { font-size: 16px; }
     }
   </style>
 </head>
 <body>
   <h1>Import CSV Deltakere</h1>
+  <div class="instructions">
+    <p>
+      For å importere deltakere må CSV-filen din ha følgende format:
+    </p>
+    <p>
+      <strong>Header:</strong><br>
+      status;name;class
+    </p>
+    <p>
+      <strong>Eksempel:</strong><br>
+      Aktiv;Ola Nordmann;G10 Nybeg og yngre<br>
+      Aktiv;Kari Hansen;G14<br>
+      Inaktiv;Per Olsen;G11
+    </p>
+    <p>
+      Kun rader der <strong>status</strong> er fylt ut vil bli importert. Feltet <strong>status</strong> brukes kun til å filtrere hvilke rader som skal importeres. Resten av feltene settes til standardverdier.
+    </p>
+  </div>
+  
   <input type="file" id="csvImport" accept=".csv">
   <button id="btnImportCSV">Importer CSV</button>
   
@@ -45,24 +76,8 @@
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Funksjon for å hente maks snr fra databasen
-    async function fetchMaxSNR() {
-      // Bruker en SQL-spørring via RPC om nødvendig – her bruker vi aggregatfunksjonen.
-      // Supabase støtter direkte aggregate funksjoner i .select() dersom du spesifiserer head:true og count:'exact'
-      const { data, error, count } = await supabaseClient
-        .from("participants")
-        .select("snr", { head: false, count: "exact" });
-      if (error) {
-        console.error("Feil ved henting av eksisterende snr:", error);
-        return 0;
-      }
-      // Finn maks snr fra de hentede radene
-      if (!data || data.length === 0) return 0;
-      return data.reduce((max, row) => (row.snr > max ? row.snr : max), 0);
-    }
-
     // Funksjon for å lese CSV-filen og importere data med semikolon som skilletegn
-    async function parseCSVAndImport(file) {
+    function parseCSVAndImport(file) {
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
@@ -73,9 +88,8 @@
           alert("CSV-filen mangler data.");
           return;
         }
-        // Forvent header med semikolon som skilletegn, f.eks. "status;name;class"
+        // Forvent header med semikolon som skilletegn, f.eks.: status;name;class
         const headers = lines[0].split(";").map(h => h.trim().replace(/"/g, "").toLowerCase());
-        // Vi tar kun med feltene "name" og "class". Vi sjekker at det finnes en verdi i statusfeltet (eventuelt for filtrering).
         const allowedFields = ["status", "name", "class"];
         let rows = [];
         for (let i = 1; i < lines.length; i++) {
@@ -86,7 +100,7 @@
               row[header] = values[index];
             }
           });
-          // Vi importerer kun rader der feltet status ikke er tom og både name og class finnes
+          // Importer kun rader der status ikke er tom, og både name og class finnes
           if (row.status && row.status !== "" && row.name && row.class) {
             rows.push(row);
           }
@@ -95,10 +109,12 @@
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
-        // Hent maks snr fra DB for å generere nye snr-verdier
-        const maxSNR = await fetchMaxSNR();
-        let newParticipants = rows.map((row, index) => ({
-          snr: maxSNR + index + 1,
+        // Her kan du velge å beholde eventuelle eksisterende deltakere og sette inn nye,
+        // eller slette eksisterende data før import. Her setter vi inn nye rader uten snr.
+        // Hvis du vil auto-generere snr, må du kanskje hente maks snr fra databasen først.
+        // For nå setter vi ikke snr (forutsetter at databasen genererer det automatisk),
+        // men dersom snr er et NOT NULL-felt uten default, må du generere det.
+        const newParticipants = rows.map(row => ({
           name: row.name,
           class: row.class,
           status: "Venter", // Standard status for nye deltakere
