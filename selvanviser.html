@@ -15,6 +15,10 @@
     h1 {
       margin-top: 20px;
     }
+    #totalScore {
+      font-size: 24px;
+      margin: 10px 0;
+    }
     p {
       margin: 10px 0 20px;
     }
@@ -45,6 +49,8 @@
 </head>
 <body>
   <h1>Analyse av skyting på poengskive</h1>
+  <!-- Totalpoeng vises her -->
+  <div id="totalScore">Total: 0</div>
   <p>Klikk eller trykk på skiven for å plassere et skudd.</p>
   <canvas id="targetCanvas" width="600" height="600"></canvas>
   <div id="shotResults">
@@ -65,34 +71,34 @@
     const canvas = document.getElementById('targetCanvas');
     const ctx = canvas.getContext('2d');
     const resultsBody = document.getElementById('resultsBody');
-    const canvasSize = canvas.width; // antar kvadratisk canvas
+    const totalScoreEl = document.getElementById('totalScore');
+    const canvasSize = canvas.width; // forutsatt at canvas er kvadratisk
     const centerX = canvasSize / 2;
     const centerY = canvasSize / 2;
-    const R = canvasSize / 2;            // Total radius (10 ringer)
+    const R = canvasSize / 2;
     const numRings = 10;
-    const ringWidth = R / numRings;      // Tykkelse per ring
+    const ringWidth = R / numRings;
     let shotCount = 0;
+    let totalScore = 0;
 
-    // Funksjon for å tegne poengskiven med poengmarkering på hver ring.
+    // Funksjon for å tegne poengskiven med 10 konsentriske ringer og poeng på hver ring.
     function drawTarget() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Vi tegner fra ytre (j=10) til innerste (j=1)
+      // Tegn fra ytre (j=10) til innerste (j=1)
       for (let j = numRings; j >= 1; j--) {
         const radius = j * ringWidth;
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-        // Veksle farge for bedre synlighet – ytre ringer blir litt mørkere
         ctx.fillStyle = (j % 2 === 0) ? '#ddd' : '#fff';
         ctx.fill();
         ctx.strokeStyle = '#333';
         ctx.stroke();
         
-        // Tegn poengsummen på ringen.
-        // For ringen med nummer j (1 er innerste, 10 ytre) gis poeng = 11 - j.
+        // Poeng: 10 for innerste, 1 for ytre
         const score = 11 - j;
-        // Plasser teksten horisontalt på høyre side i midten av ringen
-        const textRadius = ( (j - 1) * ringWidth + j * ringWidth ) / 2; 
+        // Plasser teksten horisontalt på høyre side av midten i hver ring
+        const textRadius = ((j - 1) * ringWidth + j * ringWidth) / 2;
         const textX = centerX + textRadius;
         const textY = centerY;
         ctx.fillStyle = '#000';
@@ -109,15 +115,14 @@
       ctx.fill();
     }
 
-    // Beregn poeng basert på avstanden fra midten.
-    // Dersom skuddet havner nøyaktig på en grense, gis høyere (indre) poeng.
+    // Funksjon som beregner poeng basert på avstanden fra midten.
+    // Hvis skuddet havner nøyaktig på grensen, gis den høyeste (indre) poengsummen.
     function computeScore(x, y) {
       const dx = x - centerX;
       const dy = y - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
       if (distance > R) return 0; // utenfor skiven
-      // Bruk Math.ceil slik at en skudd som havner på grensen (d/ringWidth er heltall)
-      // regnes inn i den innerste ringen.
+      // Math.ceil gir høyeste (indre) ring hvis på grensen
       const ring = Math.max(1, Math.ceil(distance / ringWidth));
       return 11 - ring;
     }
@@ -132,14 +137,18 @@
       ctx.stroke();
     }
 
-    // Håndter skudd ved klikk/trykk på canvas.
+    // Håndter et skudd (klikk/trykk) på canvas.
     function handleShot(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const x = clientX - rect.left;
       const y = clientY - rect.top;
       const score = computeScore(x, y);
       shotCount++;
+      totalScore += score;
       drawShot(x, y);
+      
+      // Oppdater totalpoengvisning
+      totalScoreEl.innerText = "Total: " + totalScore;
       
       // Legg til resultat i tabellen.
       const row = document.createElement('tr');
@@ -157,7 +166,7 @@
       handleShot(touch.clientX, touch.clientY);
     });
 
-    // Tegn målet ved oppstart
+    // Tegn skiven ved oppstart.
     drawTarget();
   </script>
 </body>
