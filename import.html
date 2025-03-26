@@ -27,57 +27,61 @@
       margin-right: auto;
       font-size: 18px;
     }
-    input[type="file"] {
+    label {
       font-size: 18px;
-      margin: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 18px;
-      cursor: pointer;
       margin-top: 10px;
+      display: block;
+    }
+    input, button {
+      font-size: 18px;
+      padding: 8px;
+      margin: 10px;
+      max-width: 300px;
     }
     @media (max-width: 480px) {
       h1 { font-size: 28px; }
       .instructions { font-size: 16px; }
-      input[type="file"], button { font-size: 16px; }
+      input, button { font-size: 16px; }
     }
   </style>
 </head>
 <body>
   <h1>Import CSV Deltakere</h1>
   <div class="instructions">
-    <p>
-      For å importere deltakere må CSV-filen din ha følgende format:
-    </p>
-    <p>
-      <strong>Header:</strong><br>
-      status;name;class
-    </p>
-    <p>
-      <strong>Eksempel:</strong><br>
-      Aktiv;Ola Nordmann;G10 Nybeg og yngre<br>
-      Aktiv;Kari Hansen;G14<br>
-      Inaktiv;Per Olsen;G11
-    </p>
-    <p>
-      Kun rader der <strong>status</strong> er fylt ut vil bli importert. Feltet <strong>status</strong> brukes kun til å filtrere hvilke rader som skal importeres. Resten av feltene settes til standardverdier.
-    </p>
+    <p><strong>CSV-format:</strong></p>
+    <p>Filen skal ha følgende header (bruk semikolon som skilletegn):</p>
+    <p><strong>name;class</strong></p>
+    <p><strong>Eksempel:</strong><br>
+       Ola Nordmann;G10 Nybeg og yngre<br>
+       Kari Hansen;G14</p>
+    <p>Fyll deretter inn konkurransenavn og dato nedenfor – disse verdiene legges til alle importerte rader.</p>
   </div>
   
+  <label for="competitionInput">Konkurranse:</label>
+  <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
+  <br>
+  <label for="dateInput">Dato:</label>
+  <input type="date" id="dateInput">
+  <br>
   <input type="file" id="csvImport" accept=".csv">
+  <br>
   <button id="btnImportCSV">Importer CSV</button>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // Konfigurer Supabase – lim inn din gyldige anon-nøkkel her:
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Funksjon for å lese CSV-filen og importere data med semikolon som skilletegn
-    function parseCSVAndImport(file) {
+    async function parseCSVAndImport(file) {
+      const competitionVal = document.getElementById("competitionInput").value.trim();
+      const dateVal = document.getElementById("dateInput").value.trim();
+      if (!competitionVal || !dateVal) {
+        alert("Fyll ut konkurranse og dato før import!");
+        return;
+      }
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
@@ -88,10 +92,10 @@
           alert("CSV-filen mangler data.");
           return;
         }
-        // Forvent header med semikolon som skilletegn, f.eks.: status;name;class
+        // Forvent header med semikolon som skilletegn, f.eks. "name;class"
         const headers = lines[0].split(";").map(h => h.trim().replace(/"/g, "").toLowerCase());
-        const allowedFields = ["status", "name", "class"];
-        let rows = [];
+        const allowedFields = ["name", "class"];
+        let newRows = [];
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(";").map(val => val.trim().replace(/"/g, ""));
           let row = {};
@@ -100,24 +104,22 @@
               row[header] = values[index];
             }
           });
-          // Importer kun rader der status ikke er tom, og både name og class finnes
-          if (row.status && row.status !== "" && row.name && row.class) {
-            rows.push(row);
+          // Legg kun til raden dersom både name og class finnes
+          if (row.name && row.class) {
+            newRows.push(row);
           }
         }
-        if (rows.length === 0) {
+        if (newRows.length === 0) {
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
-        // Her kan du velge å beholde eventuelle eksisterende deltakere og sette inn nye,
-        // eller slette eksisterende data før import. Her setter vi inn nye rader uten snr.
-        // Hvis du vil auto-generere snr, må du kanskje hente maks snr fra databasen først.
-        // For nå setter vi ikke snr (forutsetter at databasen genererer det automatisk),
-        // men dersom snr er et NOT NULL-felt uten default, må du generere det.
-        const newParticipants = rows.map(row => ({
+        // Bygg nye deltakerobjekter med standardverdier og tilleggsfeltene
+        const newParticipants = newRows.map(row => ({
           name: row.name,
           class: row.class,
-          status: "Venter", // Standard status for nye deltakere
+          competition: competitionVal,
+          comp_date: dateVal,
+          status: "Venter", // Standardstatus for nye deltakere
           start: null,
           laps: [],
           finish: null,
@@ -135,7 +137,7 @@
       };
       reader.readAsText(file);
     }
-    
+
     document.getElementById("btnImportCSV").addEventListener("click", function() {
       const fileInput = document.getElementById("csvImport");
       if (!fileInput.files || fileInput.files.length === 0) {
