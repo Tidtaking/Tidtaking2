@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Velkommen til Tidtaking (Flere Konkurranser)</title>
   <style>
+    /* CSS-stiler */
     body {
       font-family: Arial, sans-serif;
       text-align: center;
@@ -92,14 +93,8 @@
       }
     }
   </style>
-  <!-- Bruk UMD-versjonen av Supabase-biblioteket -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.umd.min.js"></script>
-  <script>
-    // Dine Supabase-verdier
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-  </script>
+  <!-- Last inn Supabase-biblioteket med defer -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.umd.min.js" defer></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -127,16 +122,22 @@
     <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   </div>
   
-  <script>
+  <!-- Inline-skriptet lastes med defer slik at det kjøres etter at biblioteket er lastet -->
+  <script defer>
+    // Dine Supabase-verdier
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    
     document.getElementById("filterBtn").addEventListener("click", async function() {
       const comp = document.getElementById("competitionInput").value.trim();
       const date = document.getElementById("dateInput").value;
       
-      // Lagre valgte verdier for videre bruk
+      // Lagre verdiene for videre bruk
       sessionStorage.setItem("selectedCompetition", comp);
       sessionStorage.setItem("selectedDate", date);
       
-      // Bygg spørringen basert på valgt dato (og konkurranse hvis oppgitt)
+      // Bygg spørringen basert på dato (og konkurranse om oppgitt)
       let query = supabaseClient.from('participants').select('*').eq('date', date);
       if (comp !== "") {
         query = query.eq('competition', comp);
@@ -155,7 +156,7 @@
         return;
       }
       
-      // Håndter duplikate navn for å legge på +100 per duplikat
+      // Håndter duplikate navn: legg til +100 per ekstra forekomst
       let nameCounts = {};
       let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
       
@@ -167,9 +168,7 @@
           nameCounts[currentName]++;
         }
         
-        // Bruk feltet "startnummer" fra databasen hvis det finnes, ellers 0
         const baseStartNum = participant.startnummer || 0;
-        // Legg til 100 for hver duplikat (første forekomst får +0, andre +100 osv.)
         const startNum = baseStartNum + (nameCounts[currentName] * 100);
         
         tableHtml += `<tr>
