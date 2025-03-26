@@ -5,60 +5,107 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Velkommen til Tidtaking (Flere Konkurranser)</title>
   <style>
-    /* Dine CSS-stiler her */
-  </style>
-  <!-- Inkluder Supabase SDK (UMD-versjon) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
-  <script>
-    // Erstatt med dine egne Supabase-verdier
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    // Opprett en Supabase-klient og lagre den i en variabel
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    async function fetchParticipants(comp, date) {
-      // Bruk supabaseClient i stedet for supabase direkte
-      const { data, error } = await supabaseClient
-        .from('participants')
-        .select('*')
-        .eq('date', date); // Om du vil filtrere på konkurranse også, legg til: .eq('competition', comp)
-      
-      if (error) {
-        console.error('Error fetching participants:', error);
-        return [];
-      }
-      return data;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f9f9f9;
+      margin: 0;
     }
-
-    document.addEventListener("DOMContentLoaded", function() {
-      document.getElementById("filterBtn").addEventListener("click", async function() {
-        const comp = document.getElementById("competitionInput").value.trim();
-        const date = document.getElementById("dateInput").value;
-        
-        sessionStorage.setItem("selectedCompetition", comp);
-        sessionStorage.setItem("selectedDate", date);
-        
-        const participants = await fetchParticipants(comp, date);
-        
-        let tableHtml = '';
-        if (participants.length > 0) {
-          tableHtml += '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th></tr></thead><tbody>';
-          participants.forEach(function(participant) {
-            tableHtml += `<tr>
-                            <td>${participant.id}</td>
-                            <td>${participant.name}</td>
-                            <td>${participant.competition}</td>
-                            <td>${participant.date}</td>
-                          </tr>`;
-          });
-          tableHtml += '</tbody></table>';
-        } else {
-          tableHtml = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
-        }
-        
-        document.getElementById("participantTable").innerHTML = tableHtml;
-      });
-    });
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .filter-container {
+      margin: 0 auto 20px;
+      max-width: 600px;
+      text-align: left;
+      background: #eee;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .filter-container label {
+      font-size: 18px;
+      margin: 5px 0;
+      display: block;
+    }
+    .filter-container input {
+      font-size: 16px;
+      padding: 8px;
+      margin-bottom: 10px;
+      width: 90%;
+      max-width: 300px;
+    }
+    .filter-container button {
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 800px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-size: 18px;
+      text-align: center;
+    }
+    th {
+      background-color: #e9e9e9;
+    }
+    .nav-links {
+      margin-top: 40px;
+    }
+    .nav-links a {
+      display: inline-block;
+      margin: 10px;
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      font-size: 20px;
+      border-radius: 5px;
+    }
+    .nav-links a:hover {
+      background-color: #0056b3;
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 28px;
+      }
+      th, td {
+        font-size: 16px;
+        padding: 8px;
+      }
+      .filter-container input,
+      .filter-container button {
+        font-size: 14px;
+      }
+      .nav-links a {
+        font-size: 18px;
+        padding: 10px 16px;
+      }
+    }
+  </style>
+  <!-- Inkluder Supabase SDK hvis nødvendig -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Du kan bruke denne for å hente deltakere dersom du ønsker å vise en deltaker-tabell.
+    // Eksempelvis:
+    async function fetchParticipants() {
+      // Konfigurer Supabase her om ønskelig...
+      return []; // For nå er tabellen kun for visning av info
+    }
+    async function updateParticipantTable() {
+      // Her kan du legge inn kode for å vise dagens deltakere om du ønsker.
+      document.getElementById("participantTable").innerHTML = "<p>Dagens deltakere vises her...</p>";
+    }
+    document.addEventListener("DOMContentLoaded", updateParticipantTable);
   </script>
 </head>
 <body>
@@ -77,7 +124,25 @@
   <div id="participantTable"></div>
   
   <div class="nav-links">
-    <!-- Dine navigasjonslenker her -->
+    <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   </div>
+  
+  <script>
+    document.getElementById("filterBtn").addEventListener("click", async function() {
+      // Denne funksjonen kan f.eks. hente og vise deltakere for en spesifikk konkurranse/dato
+      // For eksempel:
+      const comp = document.getElementById("competitionInput").value.trim();
+      const date = document.getElementById("dateInput").value;
+      document.getElementById("participantTable").innerHTML = <p>Viser deltakere for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>;
+      // Du kan legge til fetch-kode for å hente og vise deltakerdata basert på disse verdiene.
+    });
+  </script>
 </body>
 </html>
