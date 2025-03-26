@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import og Analyse av Blink</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    canvas { border: 1px solid #333; }
+  </style>
+  <!-- Last inn OpenCV.js -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" ></script>
+</head>
+<body>
+  <h1>Analyser blinkbilde</h1>
+  <input type="file" id="fileInput" accept="image/*">
+  <br><br>
+  <canvas id="canvasOutput" width="600" height="600"></canvas>
+  <div id="result"></div>
+  
+  <script>
+    function onOpenCvReady() {
+      document.getElementById('result').innerHTML = 'OpenCV.js er lastet.';
+    }
+    
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      let file = e.target.files[0];
+      let reader = new FileReader();
+      reader.onload = function(event) {
+        let img = new Image();
+        img.onload = function() {
+          let canvas = document.getElementById('canvasOutput');
+          let ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          // Her kan du starte med OpenCV-bildebehandlingen:
+          let src = cv.imread(canvas);
+          let gray = new cv.Mat();
+          cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+          
+          // Eksempel: Bruk HoughCircles for å finne sirkler (dette må tilpasses blinkens utseende)
+          let circles = new cv.Mat();
+          cv.HoughCircles(gray, circles, cv.HOUGH_GRADIENT, 1, gray.rows/8, 100, 30, 0, 0);
+          
+          // Tegn de funne sirklene:
+          for (let i = 0; i < circles.cols; ++i) {
+              let x = circles.data32F[i * 3];
+              let y = circles.data32F[i * 3 + 1];
+              let radius = circles.data32F[i * 3 + 2];
+              cv.circle(src, new cv.Point(x, y), radius, [255, 0, 0, 255], 3);
+          }
+          cv.imshow('canvasOutput', src);
+          
+          // Her må du legge til algoritme for å finne skuddsår og beregne poeng basert på posisjon.
+          
+          src.delete(); gray.delete(); circles.delete();
+        }
+        img.src = event.target.result;
+      }
+      reader.readAsDataURL(file);
+    });
+  </script>
+</body>
+</html>
