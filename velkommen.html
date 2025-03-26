@@ -92,8 +92,8 @@
       }
     }
   </style>
-  <!-- Inkluder Supabase SDK (UMD-versjon) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js"></script>
+  <!-- Bruk UMD-versjonen av Supabase-biblioteket -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.umd.min.js"></script>
   <script>
     // Dine Supabase-verdier
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -132,11 +132,11 @@
       const comp = document.getElementById("competitionInput").value.trim();
       const date = document.getElementById("dateInput").value;
       
-      // Lagre de valgte verdiene for bruk på andre sider om ønskelig
+      // Lagre valgte verdier for videre bruk
       sessionStorage.setItem("selectedCompetition", comp);
       sessionStorage.setItem("selectedDate", date);
       
-      // Bygg opp spørringen: filtrer på dato, og om konkurransenavn er oppgitt, legg til filter
+      // Bygg spørringen basert på valgt dato (og konkurranse hvis oppgitt)
       let query = supabaseClient.from('participants').select('*').eq('date', date);
       if (comp !== "") {
         query = query.eq('competition', comp);
@@ -155,7 +155,7 @@
         return;
       }
       
-      // Håndter duplikate navn for å legge til +100 per duplikat
+      // Håndter duplikate navn for å legge på +100 per duplikat
       let nameCounts = {};
       let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
       
@@ -169,7 +169,7 @@
         
         // Bruk feltet "startnummer" fra databasen hvis det finnes, ellers 0
         const baseStartNum = participant.startnummer || 0;
-        // Legg til 100 for hver duplikat (første forekomst får +0, andre +100, osv.)
+        // Legg til 100 for hver duplikat (første forekomst får +0, andre +100 osv.)
         const startNum = baseStartNum + (nameCounts[currentName] * 100);
         
         tableHtml += `<tr>
