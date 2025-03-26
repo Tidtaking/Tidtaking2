@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyse av skyting på poengskive</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background: #f5f5f5;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    p {
+      margin: 10px 0 20px;
+    }
+    #targetCanvas {
+      background: #fff;
+      border: 2px solid #333;
+      display: block;
+      margin: 0 auto;
+      /* Sikrer at canvas er stor på mobil */
+      width: 90vw;
+      height: 90vw;
+      max-width: 600px;
+      max-height: 600px;
+    }
+    #shotResults {
+      margin-top: 20px;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      font-size: 1.1em;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Analyse av skyting på poengskive</h1>
+  <p>Klikk eller trykk på skiven for å plassere et skudd.</p>
+  <canvas id="targetCanvas" width="600" height="600"></canvas>
+  <div id="shotResults">
+    <h2>Skuddresultater</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Poeng</th>
+          <th>Koordinater (x, y)</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('targetCanvas');
+    const ctx = canvas.getContext('2d');
+    const resultsBody = document.getElementById('resultsBody');
+    const canvasSize = canvas.width; // forutsatt at canvas er kvadratisk
+    const centerX = canvasSize / 2;
+    const centerY = canvasSize / 2;
+    const R = canvasSize / 2;
+    const numRings = 10;
+    const ringWidth = R / numRings;
+    let shotCount = 0;
+
+    // Funksjon for å tegne poengskiven med 10 konsentriske ringer
+    function drawTarget() {
+      // Rens canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Tegn ringer fra ytterst til inderst
+      for (let i = 0; i < numRings; i++) {
+        ctx.beginPath();
+        let radius = R - i * ringWidth;
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        // Valgfritt: Alterner farge for tydelighet
+        ctx.fillStyle = i % 2 === 0 ? '#ddd' : '#fff';
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.stroke();
+      }
+      // Tegn et lite rødt punkt i midten
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = 'red';
+      ctx.fill();
+    }
+
+    // Funksjon som beregner poeng basert på avstand fra midten
+    function computeScore(x, y) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > R) {
+        return 0; // utenfor skiven
+      }
+      const ringIndex = Math.floor(distance / ringWidth);
+      // Ring 0 (midt) gir 10 poeng, ring 1 gir 9 poeng osv.
+      return 10 - ringIndex;
+    }
+
+    // Tegn en markør for skuddet på canvas
+    function drawShot(x, y) {
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = 'red';
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.stroke();
+    }
+
+    // Håndter klikk (eller trykk) på canvas
+    function handleShot(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const score = computeScore(x, y);
+      shotCount++;
+      drawShot(x, y);
+      
+      // Legg til resultat i tabellen
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${shotCount}</td><td>${score}</td><td>(${Math.round(x)}, ${Math.round(y)})</td>`;
+      resultsBody.appendChild(row);
+    }
+
+    // Klikk- og touch-hendelser
+    canvas.addEventListener('click', function(event) {
+      handleShot(event.clientX, event.clientY);
+    });
+
+    canvas.addEventListener('touchend', function(event) {
+      event.preventDefault();
+      const touch = event.changedTouches[0];
+      handleShot(touch.clientX, touch.clientY);
+    });
+
+    // Tegn målet ved oppstart
+    drawTarget();
+  </script>
+</body>
+</html>
