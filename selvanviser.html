@@ -15,12 +15,8 @@
     h1 {
       margin-top: 20px;
     }
-    #totalCurrent {
+    #currentStatus {
       font-size: 24px;
-      margin: 10px 0;
-    }
-    #seriesTotal {
-      font-size: 20px;
       margin: 10px 0;
     }
     #targetCanvas {
@@ -41,6 +37,7 @@
       font-size: 18px;
       padding: 10px 16px;
       cursor: pointer;
+      margin: 5px;
     }
     #seriesTableContainer {
       margin-top: 20px;
@@ -54,18 +51,25 @@
       padding: 8px 12px;
       border: 1px solid #ccc;
     }
+    #totalSeriesScore {
+      font-size: 20px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Analyse av skyting på poengskive</h1>
-  <!-- Viser total score for den gjeldende serien -->
-  <div id="totalCurrent">Serie 0 - Skudd: 0, Total: 0</div>
+  <!-- Viser status for aktuell serie -->
+  <div id="currentStatus">Serie 0 – Skudd: 0, Total: 0</div>
   <!-- Canvas med poengskive -->
   <canvas id="targetCanvas" width="600" height="600"></canvas>
   <div id="controls">
-    <!-- Knapp for å lagre serien (skjules/disablet inntil 10 skudd er registrert) -->
+    <!-- Knapp for angre siste skudd -->
+    <button id="undoShotBtn" disabled>Angre skudd</button>
+    <!-- Knapp for å lagre serien (kun aktiv når 10 skudd er fullført) -->
     <button id="saveSeriesBtn" disabled>Lagre serie</button>
   </div>
+  
   <!-- Tabell som viser de siste 3 seriene -->
   <div id="seriesTableContainer">
     <h2>Siste 3 serier (10 skudd hver)</h2>
@@ -78,29 +82,34 @@
       </thead>
       <tbody id="seriesTableBody"></tbody>
     </table>
+    <!-- Viser totalsum for alle lagrede serier -->
+    <div id="totalSeriesScore">Total for alle serier: 0</div>
   </div>
-
+  
   <script>
-    // Variabler for canvas og kontekst
+    // Canvasvariabler
     const canvas = document.getElementById('targetCanvas');
     const ctx = canvas.getContext('2d');
-    const canvasSize = canvas.width; // Forutsatt at canvas er kvadratisk
+    const canvasSize = canvas.width; // antar kvadratisk canvas
     const centerX = canvasSize / 2;
     const centerY = canvasSize / 2;
-    const R = canvasSize / 2;      // Total radius (10 ringer)
+    const R = canvasSize / 2;      // Total radius for 10 ringer
     const numRings = 10;
     const ringWidth = R / numRings;
-
-    // Variabler for skudd i aktuell serie
-    let currentShots = [];  // Array med poeng for hvert skudd i den gjeldende serien
+    
+    // Variabler for aktuell serie
+    // Nå lagres hvert skudd som et objekt: { score, x, y }
+    let currentShots = [];
     let seriesCount = 0;    // Antall fullførte serier
 
     // Referanser til DOM-elementer
-    const totalCurrentEl = document.getElementById('totalCurrent');
+    const currentStatusEl = document.getElementById('currentStatus');
     const saveSeriesBtn = document.getElementById('saveSeriesBtn');
+    const undoShotBtn = document.getElementById('undoShotBtn');
     const seriesTableBody = document.getElementById('seriesTableBody');
+    const totalSeriesScoreEl = document.getElementById('totalSeriesScore');
 
-    // Array for å lagre de siste seriene (objekter med {serie, total})
+    // Historikk for fullførte serier (array av objekter { serie, total })
     let seriesHistory = [];
 
     // Funksjon for å tegne poengskiven med poeng på hver ring
@@ -119,7 +128,7 @@
         
         // Poeng: 11 - j (innerste gir 10, ytterste gir 1)
         const score = 11 - j;
-        // Plasser teksten horisontalt på høyre side i midten av ringen
+        // Plasser teksten på høyre side, midt i ringen
         const textRadius = ((j - 1) * ringWidth + j * ringWidth) / 2;
         const textX = centerX + textRadius;
         const textY = centerY;
@@ -137,8 +146,8 @@
       ctx.fill();
     }
 
-    // Funksjon for å beregne poeng for et skudd
-    // Hvis skuddet havner på grensen, gis den høyeste (indre) poengsummen
+    // Funksjon for å beregne poeng for et skudd.
+    // Treffer på grensen gis høyere (indre) poeng.
     function computeScore(x, y) {
       const dx = x - centerX;
       const dy = y - centerY;
@@ -148,66 +157,88 @@
       return 11 - ring;
     }
 
-    // Tegn markør for skudd
-    function drawShot(x, y) {
+    // Tegn en markør for et enkelt skudd
+    function drawShot(shot) {
       ctx.beginPath();
-      ctx.arc(x, y, 5, 0, 2 * Math.PI);
+      ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
       ctx.fillStyle = 'red';
       ctx.fill();
       ctx.strokeStyle = '#000';
       ctx.stroke();
     }
 
-    // Oppdater visning av gjeldende serie (antall skudd og total)
+    // Tegn alle skudd i den gjeldende serien
+    function redrawShots() {
+      // Tegn først skiven
+      drawTarget();
+      // Tegn deretter hvert skudd fra currentShots
+      currentShots.forEach(shot => {
+        drawShot(shot);
+      });
+    }
+
+    // Oppdater visning for aktuell serie: antall skudd og totalsum
     function updateCurrentDisplay() {
-      totalCurrentEl.innerText = `Serie ${seriesCount + 1} - Skudd: ${currentShots.length}, Total: ${currentShots.reduce((a,b) => a+b, 0)}`;
-      // Aktiver lagreknapp dersom 10 skudd er fullført
+      const seriesTotal = currentShots.reduce((sum, shot) => sum + shot.score, 0);
+      currentStatusEl.innerText = `Serie ${seriesCount + 1} – Skudd: ${currentShots.length}, Total: ${seriesTotal}`;
+      // Knappene aktiveres hvis det finnes minst ett skudd eller nøyaktig 10 skudd
+      undoShotBtn.disabled = currentShots.length === 0;
       saveSeriesBtn.disabled = currentShots.length !== 10;
     }
 
-    // Håndter et skudd på canvas
+    // Håndter et skudd (klikk/trykk) på canvas
     function handleShot(clientX, clientY) {
+      if (currentShots.length >= 10) return; // ignorer skudd hvis serien er full
       const rect = canvas.getBoundingClientRect();
       const x = clientX - rect.left;
       const y = clientY - rect.top;
-      // Hvis serien allerede har 10 skudd, ignorer flere skudd
-      if (currentShots.length >= 10) return;
       const score = computeScore(x, y);
-      currentShots.push(score);
-      drawShot(x, y);
+      // Legg til skuddet som et objekt
+      currentShots.push({ score, x, y });
+      // Tegn skuddet ved å tegne hele serien på nytt
+      redrawShots();
       updateCurrentDisplay();
     }
 
-    // Lagre den fullførte serien (10 skudd) i historikken og oppdater tabellen.
+    // Angre siste skudd i den gjeldende serien
+    function undoShot() {
+      if (currentShots.length > 0) {
+        currentShots.pop();
+        redrawShots();
+        updateCurrentDisplay();
+      }
+    }
+
+    // Lagre den fullførte serien (når 10 skudd er tatt) og oppdater historikken
     function saveSeries() {
       if (currentShots.length !== 10) return;
-      const seriesTotal = currentShots.reduce((a, b) => a + b, 0);
+      const seriesTotal = currentShots.reduce((sum, shot) => sum + shot.score, 0);
       seriesCount++;
-      // Lagre serieobjekt
       const seriesObj = { serie: seriesCount, total: seriesTotal };
       seriesHistory.push(seriesObj);
-      // Hvis det er mer enn 3 serier, fjern den eldste
+      // Hold kun de 3 siste seriene
       if (seriesHistory.length > 3) {
         seriesHistory.shift();
       }
       updateSeriesTable();
-      // Nullstill den gjeldende serien og tegn på nytt
+      // Nullstill den gjeldende serien
       currentShots = [];
       updateCurrentDisplay();
-      drawTarget();
+      redrawShots();
     }
 
-    // Oppdater tabellen med de siste 3 seriene
+    // Oppdater tabellen som viser de siste 3 seriene
     function updateSeriesTable() {
-      // Rens tabellen
       seriesTableBody.innerHTML = "";
-      // Vis seriene i rekkefølge med nyeste øverst
       const reversed = [...seriesHistory].reverse();
       reversed.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `<td>${item.serie}</td><td>${item.total}</td>`;
         seriesTableBody.appendChild(row);
       });
+      // Oppdater totalsummen for alle lagrede serier
+      const totalSeriesSum = seriesHistory.reduce((sum, s) => sum + s.total, 0);
+      totalSeriesScoreEl.innerText = `Total for alle serier: ${totalSeriesSum}`;
     }
 
     // Event listeners for klikk og touch på canvas
@@ -220,10 +251,12 @@
       handleShot(touch.clientX, touch.clientY);
     });
 
-    // Lagringsknapp for serien
+    // Lytter for angre-knapp
+    undoShotBtn.addEventListener('click', undoShot);
+    // Lytter for lagre-serie-knapp
     saveSeriesBtn.addEventListener('click', saveSeries);
 
-    // Tegn skiven ved oppstart og oppdater visning
+    // Tegn skiven ved oppstart og oppdater visningen
     drawTarget();
     updateCurrentDisplay();
   </script>
