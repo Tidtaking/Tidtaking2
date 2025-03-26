@@ -134,15 +134,14 @@
     <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   </div>
   
-  <script>
-    document.getElementById("filterBtn").addEventListener("click", async function() {
-      // Denne funksjonen kan f.eks. hente og vise deltakere for en spesifikk konkurranse/dato
-      // For eksempel:
-      const comp = document.getElementById("competitionInput").value.trim();
-      const date = document.getElementById("dateInput").value;
-      document.getElementById("participantTable").innerHTML = <p>Viser deltakere for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>;
-      // Du kan legge til fetch-kode for å hente og vise deltakerdata basert på disse verdiene.
-    });
-  </script>
+<script>
+  document.getElementById("filterBtn").addEventListener("click", async function() {
+    const comp = document.getElementById("competitionInput").value.trim();
+    const date = document.getElementById("dateInput").value;
+    document.getElementById("participantTable").innerHTML = `<p>Viser deltakere for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
+    // Du kan legge til fetch-kode for å hente og vise deltakerdata basert på disse verdiene.
+  });
+</script>
+
 </body>
 </html>
