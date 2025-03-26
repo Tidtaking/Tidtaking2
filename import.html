@@ -54,7 +54,7 @@
     <p><strong>Eksempel:</strong><br>
        Ola Nordmann;G10 Nybeg og yngre<br>
        Kari Hansen;G14</p>
-    <p>Fyll deretter inn konkurransenavn og dato nedenfor – disse verdiene legges til alle importerte rader.</p>
+    <p>Alle importerte rader vil få status "Venter" og standardverdier for de andre feltene, og de vil bli knyttet til den valgte konkurransen og datoen.</p>
   </div>
   
   <label for="competitionInput">Konkurranse:</label>
@@ -69,12 +69,26 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – lim inn din gyldige anon-nøkkel her:
+    // Konfigurer Supabase – lim inn din gyldige anon-nøkkel:
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
+    // Hent maks snr fra databasen for å generere nye snr-verdier
+    async function fetchMaxSNR() {
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("snr", { count: "exact" });
+      if (error) {
+        console.error("Feil ved henting av snr:", error);
+        return 0;
+      }
+      if (!data || data.length === 0) return 0;
+      return data.reduce((max, row) => (row.snr > max ? row.snr : max), 0);
+    }
+
+    // Funksjon for å lese CSV-filen og importere data med semikolon som skilletegn
     async function parseCSVAndImport(file) {
       const competitionVal = document.getElementById("competitionInput").value.trim();
       const dateVal = document.getElementById("dateInput").value.trim();
@@ -86,16 +100,16 @@
       reader.onload = async function(e) {
         const text = e.target.result;
         console.log("CSV-tekst:", text);
-        // Del opp teksten i linjer og fjern tomme linjer
+        // Del opp teksten i linjer
         const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
         if (lines.length < 2) {
           alert("CSV-filen mangler data.");
           return;
         }
-        // Forvent header med semikolon som skilletegn, f.eks. "name;class"
+        // Forvent header med semikolon som skilletegn, f.eks.: "name;class"
         const headers = lines[0].split(";").map(h => h.trim().replace(/"/g, "").toLowerCase());
         const allowedFields = ["name", "class"];
-        let newRows = [];
+        let rows = [];
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(";").map(val => val.trim().replace(/"/g, ""));
           let row = {};
@@ -104,17 +118,19 @@
               row[header] = values[index];
             }
           });
-          // Legg kun til raden dersom både name og class finnes
+          // Importer kun rader der både name og class finnes
           if (row.name && row.class) {
-            newRows.push(row);
+            rows.push(row);
           }
         }
-        if (newRows.length === 0) {
+        if (rows.length === 0) {
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
-        // Bygg nye deltakerobjekter med standardverdier og tilleggsfeltene
-        const newParticipants = newRows.map(row => ({
+        // Hent maks snr fra DB og generer nye snr for de nye radene
+        const maxSNR = await fetchMaxSNR();
+        const newParticipants = rows.map((row, index) => ({
+          snr: maxSNR + index + 1,
           name: row.name,
           class: row.class,
           competition: competitionVal,
@@ -137,7 +153,7 @@
       };
       reader.readAsText(file);
     }
-
+    
     document.getElementById("btnImportCSV").addEventListener("click", function() {
       const fileInput = document.getElementById("csvImport");
       if (!fileInput.files || fileInput.files.length === 0) {
