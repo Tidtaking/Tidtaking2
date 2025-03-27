@@ -16,7 +16,7 @@
       margin-top: 10px;
     }
   </style>
-  <!-- Last inn en spesifikk versjon av OpenCV.js med defer -->
+  <!-- Last inn OpenCV.js med defer -->
   <script src="https://docs.opencv.org/4.5.5/opencv.js" defer></script>
 </head>
 <body>
@@ -27,57 +27,64 @@
   <canvas id="canvasOutput" width="600" height="600"></canvas>
   <div id="result"></div>
   
-  <!-- Plasser koden som bruker cv etter at OpenCV er lastet -->
   <script defer>
-    // Denne funksjonen kalles når OpenCV er initialisert
-    cv.onRuntimeInitialized = () => {
-      document.getElementById('result').innerHTML = 'OpenCV.js er lastet.';
-      
-      document.getElementById('fileInput').addEventListener('change', function(e) {
-        let file = e.target.files[0];
-        let reader = new FileReader();
-        reader.onload = function(event) {
-          let img = new Image();
-          img.onload = function() {
-            let canvas = document.getElementById('canvasOutput');
-            let ctx = canvas.getContext('2d');
-            // Tegn bildet i canvas
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            
-            try {
-              // Les bildet fra canvas med OpenCV
-              let src = cv.imread(canvas);
-              let gray = new cv.Mat();
-              // Konverter til gråskala
-              cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+    // Vent til hele siden er lastet
+    window.addEventListener("load", function() {
+      // Sjekk om cv er definert
+      if (typeof cv === 'undefined') {
+        document.getElementById('result').innerHTML = 'OpenCV.js kunne ikke lastes. Se konsollen for detaljer.';
+        console.error('cv is undefined');
+        return;
+      }
+      // Når OpenCV.js er initialisert, kjør koden
+      cv.onRuntimeInitialized = () => {
+        document.getElementById('result').innerHTML = 'OpenCV.js er lastet.';
+        
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+          let file = e.target.files[0];
+          let reader = new FileReader();
+          reader.onload = function(event) {
+            let img = new Image();
+            img.onload = function() {
+              let canvas = document.getElementById('canvasOutput');
+              let ctx = canvas.getContext('2d');
+              // Tegn bildet i canvas – du kan eventuelt justere størrelsen
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
               
-              // Eksempel: Finn sirkler med HoughCircles
-              let circles = new cv.Mat();
-              cv.HoughCircles(gray, circles, cv.HOUGH_GRADIENT, 1, gray.rows/8, 100, 30, 0, 0);
-              
-              // Tegn de funne sirklene:
-              for (let i = 0; i < circles.cols; ++i) {
+              try {
+                // Les bildet fra canvas med OpenCV
+                let src = cv.imread(canvas);
+                let gray = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                
+                // Eksempel: Finn sirkler med HoughCircles (parameterne må finjusteres)
+                let circles = new cv.Mat();
+                cv.HoughCircles(gray, circles, cv.HOUGH_GRADIENT, 1, gray.rows/8, 100, 30, 0, 0);
+                
+                // Tegn de funne sirklene
+                for (let i = 0; i < circles.cols; ++i) {
                   let x = circles.data32F[i * 3];
                   let y = circles.data32F[i * 3 + 1];
                   let radius = circles.data32F[i * 3 + 2];
                   cv.circle(src, new cv.Point(x, y), radius, [255, 0, 0, 255], 3);
+                }
+                
+                // Vis resultatet i canvas
+                cv.imshow('canvasOutput', src);
+                
+                // Rydd opp
+                src.delete(); gray.delete(); circles.delete();
+              } catch (err) {
+                console.error("Feil under bildeprosessering: ", err);
+                document.getElementById('result').innerHTML = 'Feil under bildeprosessering. Se konsollen for detaljer.';
               }
-              
-              // Vis resultatet i canvas
-              cv.imshow('canvasOutput', src);
-              
-              // Rydd opp
-              src.delete(); gray.delete(); circles.delete();
-            } catch (err) {
-              console.error("Feil under bildeprosessering: ", err);
-              document.getElementById('result').innerHTML = 'Feil under bildeprosessering. Se konsollen for detaljer.';
             }
+            img.src = event.target.result;
           }
-          img.src = event.target.result;
-        }
-        reader.readAsDataURL(file);
-      });
-    };
+          reader.readAsDataURL(file);
+        });
+      };
+    });
   </script>
 </body>
 </html>
