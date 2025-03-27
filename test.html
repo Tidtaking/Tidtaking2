@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analyser blinkbilde</title>
+  <title>Analyser blinkbilde med hvite treff</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,76 +15,117 @@
       border: 1px solid #333;
       margin-top: 10px;
     }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+    }
   </style>
-  <!-- Last inn OpenCV.js med defer -->
-  <script src="https://docs.opencv.org/4.5.5/opencv.js" defer></script>
+  <!-- Last inn en spesifikk versjon av OpenCV.js -->
+  <script async src="https://docs.opencv.org/4.5.5/opencv.js"></script>
 </head>
 <body>
-  <h1>Analyser blinkbilde</h1>
-  <p>Last opp et bilde av blinken med skudd:</p>
+  <h1>Analyser blinkbilde med hvite treff</h1>
+  <p>Last opp et bilde av blinken med hvite treff:</p>
   <input type="file" id="fileInput" accept="image/*">
   <br>
   <canvas id="canvasOutput" width="600" height="600"></canvas>
   <div id="result"></div>
   
-  <script defer>
-    // Vent til hele siden er lastet
-    window.addEventListener("load", function() {
-      // Sjekk om cv er definert
-      if (typeof cv === 'undefined') {
-        document.getElementById('result').innerHTML = 'OpenCV.js kunne ikke lastes. Se konsollen for detaljer.';
-        console.error('cv is undefined');
-        return;
-      }
-      // Når OpenCV.js er initialisert, kjør koden
-      cv.onRuntimeInitialized = () => {
-        document.getElementById('result').innerHTML = 'OpenCV.js er lastet.';
-        
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-          let file = e.target.files[0];
-          let reader = new FileReader();
-          reader.onload = function(event) {
-            let img = new Image();
-            img.onload = function() {
-              let canvas = document.getElementById('canvasOutput');
-              let ctx = canvas.getContext('2d');
-              // Tegn bildet i canvas – du kan eventuelt justere størrelsen
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  <script>
+    // Vent til OpenCV.js er initialisert
+    cv.onRuntimeInitialized = () => {
+      document.getElementById('result').innerHTML = 'OpenCV.js er lastet. Last opp et bilde.';
+      
+      document.getElementById('fileInput').addEventListener('change', function(e) {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+        reader.onload = function(event) {
+          let img = new Image();
+          img.onload = function() {
+            let canvas = document.getElementById('canvasOutput');
+            let ctx = canvas.getContext('2d');
+            // Tegn bildet på canvas (her skaleres bildet til canvasstørrelse)
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            try {
+              // Les bildet fra canvas med OpenCV
+              let src = cv.imread(canvas);
               
-              try {
-                // Les bildet fra canvas med OpenCV
-                let src = cv.imread(canvas);
-                let gray = new cv.Mat();
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-                
-                // Eksempel: Finn sirkler med HoughCircles (parameterne må finjusteres)
-                let circles = new cv.Mat();
-                cv.HoughCircles(gray, circles, cv.HOUGH_GRADIENT, 1, gray.rows/8, 100, 30, 0, 0);
-                
-                // Tegn de funne sirklene
-                for (let i = 0; i < circles.cols; ++i) {
-                  let x = circles.data32F[i * 3];
-                  let y = circles.data32F[i * 3 + 1];
-                  let radius = circles.data32F[i * 3 + 2];
-                  cv.circle(src, new cv.Point(x, y), radius, [255, 0, 0, 255], 3);
+              // Forutsetter at blinken er sentrert i bildet.
+              let centerX = src.cols / 2;
+              let centerY = src.rows / 2;
+              // Definerer en "targetradius" – her tar vi den minste halvparten av bildet
+              let R = Math.min(centerX, centerY);
+              // Del inn i 10 ringer
+              let ringWidth = R / 10;
+              
+              // Lag en maske for hvite områder (treffer). Juster terskelverdiene om nødvendig.
+              let mask = new cv.Mat();
+              let low = new cv.Mat(src.rows, src.cols, src.type(), [200, 200, 200, 0]);
+              let high = new cv.Mat(src.rows, src.cols, src.type(), [255, 255, 255, 255]);
+              cv.inRange(src, low, high, mask);
+              
+              // Finn konturer i masken – disse representerer de hvite treffene.
+              let contours = new cv.MatVector();
+              let hierarchy = new cv.Mat();
+              cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+              
+              let totalScore = 0;
+              let hitCount = 0;
+              // For hver kontur, beregn senter og poeng (filterer ut støy med liten areal)
+              for (let i = 0; i < contours.size(); i++) {
+                let cnt = contours.get(i);
+                let area = cv.contourArea(cnt);
+                if (area < 10) { // ignorer små konturer
+                  continue;
                 }
+                // Beregn senter med moments
+                let moments = cv.moments(cnt);
+                let cx = moments.m10 / moments.m00;
+                let cy = moments.m01 / moments.m00;
                 
-                // Vis resultatet i canvas
-                cv.imshow('canvasOutput', src);
+                // Beregn avstand fra midten
+                let dx = cx - centerX;
+                let dy = cy - centerY;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > R) continue; // ignorer treff utenfor blinken
                 
-                // Rydd opp
-                src.delete(); gray.delete(); circles.delete();
-              } catch (err) {
-                console.error("Feil under bildeprosessering: ", err);
-                document.getElementById('result').innerHTML = 'Feil under bildeprosessering. Se konsollen for detaljer.';
+                // Bestem hvilken ring treffet faller i – bruk Math.ceil slik at treff på grensen regnes inn i den indre (høyere poeng) ringen
+                let ring = Math.max(1, Math.ceil(distance / ringWidth));
+                let score = 11 - ring; // Innerste ring gir 10, ytterste 1
+                totalScore += score;
+                hitCount++;
+                
+                // Tegn en sirkel ved senter for å markere treffet og skriv ut poengsummen
+                let centerPoint = new cv.Point(cx, cy);
+                cv.circle(src, centerPoint, 5, [0, 0, 255, 255], -1);
+                cv.putText(src, score.toString(), new cv.Point(cx + 10, cy), cv.FONT_HERSHEY_SIMPLEX, 1, [0, 0, 255, 255], 2);
               }
+              
+              // Vis resultatene
+              let resultText = `Antall treff: ${hitCount}, Total poeng: ${totalScore}`;
+              document.getElementById('result').innerText = resultText;
+              
+              // Vis det behandlede bildet
+              cv.imshow('canvasOutput', src);
+              
+              // Rydd opp
+              src.delete();
+              mask.delete();
+              low.delete();
+              high.delete();
+              contours.delete();
+              hierarchy.delete();
+            } catch (err) {
+              console.error("Feil under bildeprosessering: ", err);
+              document.getElementById('result').innerText = 'Feil under bildeprosessering. Se konsollen for detaljer.';
             }
-            img.src = event.target.result;
           }
-          reader.readAsDataURL(file);
-        });
-      };
-    });
+          img.src = event.target.result;
+        }
+        reader.readAsDataURL(file);
+      });
+    };
   </script>
 </body>
 </html>
