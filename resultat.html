@@ -97,6 +97,14 @@
 
 <!-- Navigasjonslenker -->
 <div class="nav-links">
+  <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
@@ -185,4 +193,115 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        //
+        // Hent laps, parse hvis streng
+        let lapsArr = parseJSONIfString(participant.laps);
+        let lap1 = "", lap2 = "";
+        if (Array.isArray(lapsArr) && lapsArr.length > 0) {
+          lap1 = formatTime(parseFloat(lapsArr[0]) || 0);
+        }
+        if (Array.isArray(lapsArr) && lapsArr.length > 1) {
+          lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
+        }
+
+        // Hent skyteresultat, parse hvis streng
+        const shootingArr = parseJSONIfString(participant.shooting);
+        const shootingStr = parseShootingArray(shootingArr);
+
+        html += `
+          <tr>
+            <td class="rank-cell">${rank}</td>
+            <td>${participant.name || ""}</td>
+            <td>${lap1}</td>
+            <td>${lap2}</td>
+            <td>${finishStr}</td>
+            <td class="diff-cell">${diffStr}</td>
+            <td>${shootingStr}</td>
+          </tr>
+        `;
+      });
+
+      html += "</tbody></table>";
+    }
+
+    container.innerHTML = html;
+  }
+
+  // Parse JSON hvis streng
+  function parseJSONIfString(val) {
+    if (!val) return null;
+    if (typeof val === "string") {
+      try {
+        return JSON.parse(val);
+      } catch (err) {
+        console.warn("Kunne ikke parse streng:", val);
+        return null;
+      }
+    }
+    return val; 
+  }
+
+  // Formatere tid (sekunder) til mm:ss.x
+  function formatTime(timeSec) {
+    if (!timeSec || isNaN(timeSec)) return "";
+    const totalSec = Math.floor(timeSec);
+    const ms = Math.round((timeSec - totalSec) * 1000);
+    const mm = Math.floor(totalSec / 60);
+    const ss = totalSec % 60;
+    return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
+  }
+
+  // Skyteresultat: forutsetter en 2D-array av booleans, f.eks. [[true,false],[false,true]]
+  function parseShootingArray(arr) {
+    if (!arr || !Array.isArray(arr)) return "";
+    return arr.map(serie => {
+      if (!Array.isArray(serie)) return "";
+      const hits = serie.filter(x => x === true).length;
+      return `${hits}/${serie.length}`;
+    }).join(", ");
+  }
+
+  // Kalles når siden er lastet
+  document.addEventListener("DOMContentLoaded", () => {
+    fetchAndDisplayResults();
+
+    // Sett opp PDF-knappen
+    const pdfBtn = document.getElementById("pdfBtn");
+    if (pdfBtn) {
+      pdfBtn.addEventListener("click", saveAsPDF);
+    }
+  });
+
+  // Funksjon for å lagre som PDF ved hjelp av jsPDF og autoTable
+  async function saveAsPDF() {
+    const { jsPDF } = window.jspdf; // Henter jsPDF fra window.jspdf
+    const doc = new jsPDF('p', 'pt'); // Opprett PDF-dokument (portrait, points)
+    
+    let yOffset = 20; // Startposisjon for tabeller
+
+    // Hent alle tabeller i .results-container
+    const tables = document.querySelectorAll('.results-container table');
+    if (tables.length === 0) {
+      alert("Ingen tabeller å eksportere.");
+      return;
+    }
+
+    // For hver tabell, bruk autoTable
+    tables.forEach((table, idx) => {
+      doc.autoTable({
+        html: table,
+        startY: yOffset,
+        theme: 'grid',
+        headStyles: { fillColor: [233, 233, 233] },
+        margin: { left: 20, right: 20 },
+      });
+      yOffset = doc.lastAutoTable.finalY + 30; // litt luft mellom tabellene
+    });
+
+    doc.save('resultater.pdf');
+  }
+</script>
+<!-- Legg til disse script-tagene NEDERST, slik at jspdf og autotable er tilgjengelig -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+</body>
+</html>
