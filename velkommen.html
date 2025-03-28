@@ -120,10 +120,10 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Last inn Supabase‑SDK (v2.7.0) fra jsDelivr -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.7.0/dist/supabase.min.js"></script>
+  <!-- Last inn Supabase‑SDK fra unpkg -->
+  <script src="https://unpkg.com/@supabase/supabase-js/dist/supabase.min.js"></script>
   
-  <!-- Inline-skriptet som bruker supabase -->
+  <!-- Inline-skriptet -->
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
       if (typeof supabase === 'undefined') {
@@ -141,9 +141,11 @@
         const comp = document.getElementById("competitionInput").value.trim();
         const date = document.getElementById("dateInput").value;
         
+        // Lagre verdiene
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
+        // Bygg spørringen
         let query = supabaseClient.from('participants').select('*').eq('date', date);
         if (comp !== "") {
           query = query.eq('competition', comp);
