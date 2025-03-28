@@ -92,8 +92,8 @@
       }
     }
   </style>
-  <!-- Bruk en eldre, stabil versjon som setter opp den globale variabelen "supabase" -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js"></script>
+  <!-- Last inn Supabase-biblioteket med defer -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js" defer></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -122,66 +122,68 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Inline-skriptet plasseres nederst i body -->
-  <script>
-    // Dine Supabase-verdier
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    
-    document.getElementById("filterBtn").addEventListener("click", async function() {
-      const comp = document.getElementById("competitionInput").value.trim();
-      const date = document.getElementById("dateInput").value;
+  <!-- Inline-skriptet plasseres nederst og venter til DOMContentLoaded -->
+  <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Nå skal "supabase" være definert
+      const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+      const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
       
-      // Lagre de valgte verdiene for videre bruk
-      sessionStorage.setItem("selectedCompetition", comp);
-      sessionStorage.setItem("selectedDate", date);
-      
-      // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
-      let query = supabaseClient.from('participants').select('*').eq('date', date);
-      if (comp !== "") {
-        query = query.eq('competition', comp);
-      }
-      
-      const { data: participants, error } = await query;
-      
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
-        return;
-      }
-      
-      if (!participants || participants.length === 0) {
-        document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
-        return;
-      }
-      
-      // Håndter duplikate navn: legg til +100 per ekstra forekomst
-      let nameCounts = {};
-      let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
-      
-      participants.forEach(function(participant) {
-        const currentName = participant.name;
-        if (nameCounts[currentName] === undefined) {
-          nameCounts[currentName] = 0;
-        } else {
-          nameCounts[currentName]++;
+      document.getElementById("filterBtn").addEventListener("click", async function() {
+        const comp = document.getElementById("competitionInput").value.trim();
+        const date = document.getElementById("dateInput").value;
+        
+        // Lagre de valgte verdiene for videre bruk
+        sessionStorage.setItem("selectedCompetition", comp);
+        sessionStorage.setItem("selectedDate", date);
+        
+        // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
+        let query = supabaseClient.from('participants').select('*').eq('date', date);
+        if (comp !== "") {
+          query = query.eq('competition', comp);
         }
         
-        const baseStartNum = participant.startnummer || 0;
-        const startNum = baseStartNum + (nameCounts[currentName] * 100);
+        const { data: participants, error } = await query;
         
-        tableHtml += `<tr>
-                        <td>${participant.id}</td>
-                        <td>${participant.name}</td>
-                        <td>${participant.competition}</td>
-                        <td>${participant.date}</td>
-                        <td>${startNum}</td>
-                      </tr>`;
+        if (error) {
+          console.error("Feil ved henting av deltakere:", error);
+          document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
+          return;
+        }
+        
+        if (!participants || participants.length === 0) {
+          document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
+          return;
+        }
+        
+        // Håndter duplikate navn: legg til +100 per ekstra forekomst
+        let nameCounts = {};
+        let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
+        
+        participants.forEach(function(participant) {
+          const currentName = participant.name;
+          if (nameCounts[currentName] === undefined) {
+            nameCounts[currentName] = 0;
+          } else {
+            nameCounts[currentName]++;
+          }
+          
+          const baseStartNum = participant.startnummer || 0;
+          const startNum = baseStartNum + (nameCounts[currentName] * 100);
+          
+          tableHtml += `<tr>
+                          <td>${participant.id}</td>
+                          <td>${participant.name}</td>
+                          <td>${participant.competition}</td>
+                          <td>${participant.date}</td>
+                          <td>${startNum}</td>
+                        </tr>`;
+        });
+        
+        tableHtml += '</tbody></table>';
+        document.getElementById("participantTable").innerHTML = tableHtml;
       });
-      
-      tableHtml += '</tbody></table>';
-      document.getElementById("participantTable").innerHTML = tableHtml;
     });
   </script>
 </body>
