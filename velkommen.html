@@ -120,8 +120,8 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Last inn Supabase‑SDK v1.35.6 UMD-bygg fra unpkg -->
-  <script src="https://unpkg.com/@supabase/supabase-js@1.35.6/dist/supabase.umd.js"></script>
+  <!-- Last inn Supabase SDK v1.35.6 UMD‑build fra unpkg -->
+  <script src="https://unpkg.com/@supabase/supabase-js@1.35.6/dist/supabase.min.js"></script>
   
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
@@ -153,7 +153,7 @@
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
-        // Bygg spørringen: bruk "comp_date" for dato og "competition" for konkurranse
+        // Bygg spørringen: bruk kolonnenavnet "comp_date" for dato og "competition" for konkurranse
         let query = supabaseClient
           .from('participants')
           .select('*')
