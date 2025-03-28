@@ -120,11 +120,12 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Last inn Supabase‑SDK fra unpkg (v2) -->
-  <script src="https://unpkg.com/@supabase/supabase-js/dist/supabase.min.js"></script>
+  <!-- Last inn Supabase‑SDK v1.35.6 UMD-bygg fra unpkg -->
+  <script src="https://unpkg.com/@supabase/supabase-js@1.35.6/dist/supabase.umd.js"></script>
   
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
+      // Sjekk at supabase er definert
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Kjør siden via en webserver og sjekk CDN-URL.");
         document.getElementById("participantTable").innerHTML = "<p>Kunne ikke laste supabase.</p>";
@@ -132,7 +133,7 @@
       }
       console.log("supabase er definert:", supabase);
       
-      // Opprett Supabase-klienten (v2-syntaks fungerer likt for å opprette klient)
+      // Opprett Supabase-klienten
       const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
       const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
       const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
