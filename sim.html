@@ -61,7 +61,6 @@
   <h1>Simulering av Skiskytterløp</h1>
   
   <div id="controls">
-    <!-- Velg filtertype -->
     <label>
       <input type="radio" name="filterType" value="class" checked>
       Filter etter Klasse
@@ -71,7 +70,6 @@
       Filter etter Startnummer
     </label>
     <br>
-    <!-- Container for klassevalg -->
     <div id="classContainer">
       <label for="classSelect">Velg klasse:</label>
       <select id="classSelect">
@@ -85,7 +83,6 @@
         <option value="J15">J15</option>
       </select>
     </div>
-    <!-- Container for startnummer (kommaseparert) -->
     <div id="snrContainer" style="display: none;">
       <label for="snrInput">Startnumre (kommaseparert):</label>
       <input type="text" id="snrInput" placeholder="F.eks. 1,2,3">
@@ -96,10 +93,10 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="800" height="400"></canvas>
-    <!-- Marker for start og mål (disse vises alltid) -->
+    <!-- Marker for start og mål (vises alltid) -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører med konstanter -->
+    <!-- MT1 og MT2-markører med konstante tidspunkter -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -145,7 +142,7 @@
     let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
-    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
+    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2 (konstante)
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
@@ -190,7 +187,7 @@
         comp.finish = comp.finish ? parseFloat(comp.finish) : defaultFinish;
       });
 
-      // Sorter konkurrentene etter finish-tid
+      // Sorter konkurrentene etter finish-tid (lavest først)
       competitors.sort((a, b) => a.finish - b.finish);
 
       // Juster canvas høyde basert på antall konkurrenter
@@ -256,6 +253,7 @@
     }
 
     // Animerer løpet med skyting underveis:
+    // Vinneren markeres IKKE før simuleringen er fullført
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -282,16 +280,16 @@
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
 
-        // Hvis denne konkurrenten er vinneren (første i sortert rekkefølge), gi en tydelig markering
-        if (idx === 0) {
+        // Hvis simuleringen er fullført, marker vinneren tydelig
+        if (progress === 1 && idx === 0) {
           ctx.beginPath();
-          ctx.arc(posX, laneY, 14, 0, 2 * Math.PI); // Større sirkel for vinneren
-          ctx.fillStyle = "#FFD700"; // Gullfarge
+          ctx.arc(posX, laneY, 14, 0, 2 * Math.PI);
+          ctx.fillStyle = "#FFD700";
           ctx.fill();
           ctx.strokeStyle = "#DAA520";
           ctx.lineWidth = 3;
           ctx.stroke();
-          ctx.lineWidth = 1; // Resett linjebredden
+          ctx.lineWidth = 1;
           ctx.font = "16px Arial";
           ctx.fillStyle = "#333";
           ctx.textAlign = "left";
@@ -312,7 +310,7 @@
 
         // Hent deltakerens personlige mellomtider
         let lapsArr = parseJSONIfString(comp.laps);
-        // Vis skyteresultat for runde 1 når deltakeren passerer sin personlige MT1
+        // For MT1: hvis deltaker har minst 1 mellomtid
         if (Array.isArray(lapsArr) && lapsArr.length >= 1) {
           const compMT1 = trackStartX + (parseFloat(lapsArr[0]) / comp.finish) * trackLength;
           if (posX >= compMT1) {
@@ -327,7 +325,7 @@
             ctx.fillText(result1, posX, laneY - 15);
           }
         }
-        // Vis skyteresultat for runde 2 når deltakeren passerer sin personlige MT2
+        // For MT2: hvis deltaker har minst 2 mellomtider
         if (Array.isArray(lapsArr) && lapsArr.length >= 2) {
           const compMT2 = trackStartX + (parseFloat(lapsArr[1]) / comp.finish) * trackLength;
           if (posX >= compMT2) {
