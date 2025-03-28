@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skiskyting Øvelse – Sikt & Skyt!</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 28px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    #controls {
+      margin-bottom: 10px;
+    }
+    #controls label, #controls input, #controls select, #controls button {
+      font-size: 16px;
+      padding: 6px 10px;
+      margin: 4px;
+    }
+    #canvasContainer {
+      position: relative;
+      margin: 0 auto;
+      background: #fff;
+      border: 2px solid #333;
+      width: 600px;
+      height: 600px;
+    }
+    canvas {
+      display: block;
+      background: #eee;
+      cursor: crosshair;
+    }
+    /* Kryss-sikte */
+    .crosshair {
+      position: absolute;
+      pointer-events: none;
+      width: 20px;
+      height: 20px;
+    }
+    .crosshair:before, .crosshair:after {
+      content: "";
+      position: absolute;
+      background: black;
+    }
+    .crosshair:before {
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      transform: translateY(-50%);
+    }
+    .crosshair:after {
+      left: 50%;
+      top: 0;
+      width: 1px;
+      height: 100%;
+      transform: translateX(-50%);
+    }
+    /* Scorepanel */
+    #scorePanel {
+      margin-top: 20px;
+      font-size: 16px;
+    }
+    #shotsTable {
+      margin: 10px auto;
+      border-collapse: collapse;
+      width: 90%;
+    }
+    #shotsTable th, #shotsTable td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    button {
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    @media (max-width: 640px) {
+      #canvasContainer {
+        width: 90vw;
+        height: 90vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Skiskyting Øvelse – Sikt & Skyt!</h1>
+  
+  <div id="controls">
+    <!-- Velg filtertype (valgfritt, her for å kunne filtrere deltakere fra en database om ønskelig) -->
+    <label>
+      <input type="radio" name="filterType" value="class" checked>
+      Filter etter Klasse
+    </label>
+    <label>
+      <input type="radio" name="filterType" value="snr">
+      Filter etter Startnummer
+    </label>
+    <br>
+    <div id="classContainer">
+      <label for="classSelect">Velg klasse:</label>
+      <select id="classSelect">
+        <option value="">-- Velg klasse --</option>
+        <option value="G11">G11</option>
+        <option value="G12">G12</option>
+        <option value="G13">G13</option>
+        <option value="G14">G14</option>
+        <option value="G15">G15</option>
+        <option value="J14">J14</option>
+        <option value="J15">J15</option>
+      </select>
+    </div>
+    <div id="snrContainer" style="display: none;">
+      <label for="snrInput">Startnumre (kommaseparert):</label>
+      <input type="text" id="snrInput" placeholder="F.eks. 1,2,3">
+    </div>
+    <br>
+    <button id="startSimBtn">Start Simulering</button>
+  </div>
+  
+  <div id="canvasContainer">
+    <canvas id="raceCanvas" width="600" height="600"></canvas>
+    <!-- Kryss-sikte følger musepekeren -->
+    <div id="crosshair" class="crosshair" style="display: none;"></div>
+  </div>
+  
+  <div id="scorePanel">
+    <p>Antall skudd: <span id="shotsCount">0</span> / 5</p>
+    <p>Poeng for siste skudd: <span id="lastShotScore">–</span></p>
+    <p>Total poengsum: <span id="totalScore">0</span></p>
+    <p>Tid igjen: <span id="timeLeft">10.0</span> sekunder</p>
+    <table id="shotsTable">
+      <thead>
+        <tr>
+          <th>Skudd #</th>
+          <th>Poeng</th>
+        </tr>
+      </thead>
+      <tbody id="shotsBody"></tbody>
+    </table>
+    <button id="resetBtn">Nullstill</button>
+  </div>
+  
+  <!-- Inkluder Supabase hvis du skal hente deltakerdata fra en database -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  
+  <script>
+    // Variabler for spilllogikk
+    const maxShots = 5;
+    const gameDuration = 10000; // 10 sekunder i ms
+
+    let shotsCount = 0;
+    let totalScore = 0;
+    let shotsResults = [];
+
+    // Timer-variabler
+    let gameStartTime = null;
+    let timerInterval = null;
+
+    // Canvas- og målvariabler for blinken
+    const canvas = document.getElementById("raceCanvas");
+    const ctx = canvas.getContext("2d");
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const maxRadius = 280; // litt margin til kantene
+    const ringCount = 10;
+    const ringWidth = maxRadius / ringCount;
+
+    // Kryss-sikte element (for å vise sikt)
+    const crosshairEl = document.getElementById("crosshair");
+
+    // Resultatvisning
+    const shotsCountEl = document.getElementById("shotsCount");
+    const lastShotScoreEl = document.getElementById("lastShotScore");
+    const totalScoreEl = document.getElementById("totalScore");
+    const timeLeftEl = document.getElementById("timeLeft");
+    const shotsBodyEl = document.getElementById("shotsBody");
+    const resetBtn = document.getElementById("resetBtn");
+
+    // Tegn blink med 10 ringer
+    function drawTarget() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < ringCount; i++) {
+        let radius = maxRadius - i * ringWidth;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = (i % 2 === 0) ? "#fff" : "#ddd";
+        ctx.fill();
+        ctx.strokeStyle = "#333";
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "red";
+      ctx.fill();
+    }
+
+    // Beregn poeng basert på avstand fra midten
+    function computeScore(dist) {
+      const ringIndex = Math.floor(dist / ringWidth);
+      let score = 10 - ringIndex;
+      if (score < 1) score = 1;
+      if (score > 10) score = 10;
+      return score;
+    }
+
+    // Tegn et skudd på canvas (rød prikk)
+    function drawShot(x, y) {
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.strokeStyle = "#000";
+      ctx.stroke();
+    }
+
+    // Oppdater resultat-tabellen
+    function updateScorePanel(shotScore) {
+      shotsCount++;
+      totalScore += shotScore;
+      shotsResults.push(shotScore);
+      shotsCountEl.textContent = shotsCount;
+      lastShotScoreEl.textContent = shotScore;
+      totalScoreEl.textContent = totalScore;
+      // Oppdater tabellen med nye skudd
+      const row = document.createElement("tr");
+      const cellNum = document.createElement("td");
+      const cellScore = document.createElement("td");
+      cellNum.textContent = shotsCount;
+      cellScore.textContent = shotScore;
+      row.appendChild(cellNum);
+      row.appendChild(cellScore);
+      shotsBodyEl.appendChild(row);
+    }
+
+    // Nullstill alt
+    function resetGame() {
+      shotsCount = 0;
+      totalScore = 0;
+      shotsResults = [];
+      shotsCountEl.textContent = "0";
+      lastShotScoreEl.textContent = "–";
+      totalScoreEl.textContent = "0";
+      timeLeftEl.textContent = (gameDuration / 1000).toFixed(1);
+      shotsBodyEl.innerHTML = "";
+      gameStartTime = null;
+      clearInterval(timerInterval);
+      drawTarget();
+    }
+
+    // Spill-logikk: Håndter klikk på canvas for å skyte
+    canvas.addEventListener("click", (e) => {
+      // Hvis tiden er ute eller maks antall skudd er nådd, ignorer klikk
+      if (!gameStartTime) return;
+      const currentTime = Date.now();
+      if (currentTime - gameStartTime >= gameDuration || shotsCount >= maxShots) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const dx = mouseX - centerX;
+      const dy = mouseY - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      let shotScore = 0;
+      if (dist <= maxRadius) {
+        shotScore = computeScore(dist);
+      } else {
+        shotScore = 0;
+      }
+      updateScorePanel(shotScore);
+      drawShot(mouseX, mouseY);
+      // Hvis maks antall skudd er nådd, avslutt spillet
+      if (shotsCount >= maxShots) {
+        endGame();
+      }
+    });
+
+    // Kryss-sikte: Vis kryss der musepekeren er
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      crosshairEl.style.left = (mouseX - crosshairEl.offsetWidth / 2) + "px";
+      crosshairEl.style.top = (mouseY - crosshairEl.offsetHeight / 2) + "px";
+      crosshairEl.style.display = "block";
+    });
+    canvas.addEventListener("mouseleave", () => {
+      crosshairEl.style.display = "none";
+    });
+
+    // Start en nedtelling når spillet starter
+    function startTimer() {
+      gameStartTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = Date.now() - gameStartTime;
+        const remaining = Math.max(gameDuration - elapsed, 0);
+        timeLeftEl.textContent = (remaining / 1000).toFixed(1);
+        if (remaining <= 0) {
+          endGame();
+        }
+      }, 100);
+    }
+
+    // Spill-slutt: Avslutt spillet og stopp timer
+    function endGame() {
+      clearInterval(timerInterval);
+      // Her kan du eventuelt vise en melding eller deaktivere videre klikk
+      document.getElementById("info").innerHTML = "<em>Spillet er over!</em>";
+    }
+
+    // Tegn bakgrunn (evt. blink) og initialiser
+    drawTarget();
+
+    // Start simuleringen når "Start Simulering" trykkes
+    document.getElementById("startSimBtn").addEventListener("click", () => {
+      resetGame();
+      startTimer();
+    });
+  </script>
+</body>
+</html>
