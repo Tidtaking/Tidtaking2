@@ -61,6 +61,7 @@
   <h1>Simulering av Skiskytterløp</h1>
   
   <div id="controls">
+    <!-- Velg filtertype -->
     <label>
       <input type="radio" name="filterType" value="class" checked>
       Filter etter Klasse
@@ -70,6 +71,7 @@
       Filter etter Startnummer
     </label>
     <br>
+    <!-- Container for klassevalg -->
     <div id="classContainer">
       <label for="classSelect">Velg klasse:</label>
       <select id="classSelect">
@@ -83,6 +85,7 @@
         <option value="J15">J15</option>
       </select>
     </div>
+    <!-- Container for startnummer (kommaseparert) -->
     <div id="snrContainer" style="display: none;">
       <label for="snrInput">Startnumre (kommaseparert):</label>
       <input type="text" id="snrInput" placeholder="F.eks. 1,2,3">
@@ -96,7 +99,7 @@
     <!-- Marker for start og mål (disse vises alltid) -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører vises alltid med konstanter -->
+    <!-- MT1 og MT2-markører med konstanter -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -142,7 +145,7 @@
     let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
-    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2 (faste)
+    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
@@ -187,17 +190,16 @@
         comp.finish = comp.finish ? parseFloat(comp.finish) : defaultFinish;
       });
 
-      // Sorter konkurrentene etter finish-tid (lavest først)
+      // Sorter konkurrentene etter finish-tid
       competitors.sort((a, b) => a.finish - b.finish);
 
       // Juster canvas høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
 
-      // Bruk den raskeste deltakerens laps for globale MT-verdier
+      // Beregn globale MT1 og MT2 posisjoner basert på den raskeste deltakerens laps
       const fastest = competitors[0];
       const fastestLaps = parseJSONIfString(fastest.laps);
-      // MT1: Hvis finnes, bruk den; ellers fallback til 33% av finish-tiden (f.eks.)
-      let mt1Time = (Array.isArray(fastestLaps) && fastestLaps.length >= 1) 
+      let mt1Time = (Array.isArray(fastestLaps) && fastestLaps.length >= 1)
                     ? parseFloat(fastestLaps[0])
                     : fastest.finish * 0.33;
       mt1PosGlobal = trackStartX + (mt1Time / fastest.finish) * trackLength;
@@ -207,8 +209,7 @@
       document.getElementById("mt1Label").style.left = (mt1PosGlobal - 15) + "px";
       document.getElementById("mt1Label").innerText = "MT1: " + formatTime(mt1Time);
 
-      // MT2: Hvis finnes, bruk den; ellers fallback til 66% av finish-tiden
-      let mt2Time = (Array.isArray(fastestLaps) && fastestLaps.length >= 2) 
+      let mt2Time = (Array.isArray(fastestLaps) && fastestLaps.length >= 2)
                     ? parseFloat(fastestLaps[1])
                     : fastest.finish * 0.66;
       mt2PosGlobal = trackStartX + (mt2Time / fastest.finish) * trackLength;
@@ -281,20 +282,37 @@
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
 
-        // Tegn deltaker (sirkel)
-        ctx.beginPath();
-        ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
-        ctx.fillStyle = "#007bff";
-        ctx.fill();
-        ctx.strokeStyle = "#0056b3";
-        ctx.stroke();
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#333";
-        ctx.textAlign = "left";
-        ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
+        // Hvis denne konkurrenten er vinneren (første i sortert rekkefølge), gi en tydelig markering
+        if (idx === 0) {
+          ctx.beginPath();
+          ctx.arc(posX, laneY, 14, 0, 2 * Math.PI); // Større sirkel for vinneren
+          ctx.fillStyle = "#FFD700"; // Gullfarge
+          ctx.fill();
+          ctx.strokeStyle = "#DAA520";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.lineWidth = 1; // Resett linjebredden
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "#333";
+          ctx.textAlign = "left";
+          ctx.fillText(`${comp.name} (snr: ${comp.snr}) - Vinner`, posX + 20, laneY + 5);
+        } else {
+          // Tegn normal deltaker
+          ctx.beginPath();
+          ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
+          ctx.fillStyle = "#007bff";
+          ctx.fill();
+          ctx.strokeStyle = "#0056b3";
+          ctx.stroke();
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "#333";
+          ctx.textAlign = "left";
+          ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
+        }
 
-        // Vis skyteresultat for runde 1 når deltakeren passerer sin personlige MT1
+        // Hent deltakerens personlige mellomtider
         let lapsArr = parseJSONIfString(comp.laps);
+        // Vis skyteresultat for runde 1 når deltakeren passerer sin personlige MT1
         if (Array.isArray(lapsArr) && lapsArr.length >= 1) {
           const compMT1 = trackStartX + (parseFloat(lapsArr[0]) / comp.finish) * trackLength;
           if (posX >= compMT1) {
