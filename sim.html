@@ -93,7 +93,7 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="800" height="400"></canvas>
-    <!-- Marker for start og mål (vises alltid) -->
+    <!-- Marker for start og mål -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
     <!-- MT1 og MT2-markører med faste tidspunkter -->
@@ -144,7 +144,6 @@
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
       const filterType = document.querySelector('input[name="filterType"]:checked').value;
       if (filterType === "class") {
@@ -228,7 +227,6 @@
       requestAnimationFrame(animateRace);
     });
 
-    // Hjelpefunksjon: Parse JSON hvis verdi er en streng
     function parseJSONIfString(val) {
       if (!val) return [];
       if (typeof val === "string") {
@@ -242,7 +240,6 @@
       return val;
     }
 
-    // Formatere tid (sekunder) til mm:ss.x
     function formatTime(timeSec) {
       if (!timeSec || isNaN(timeSec)) return "";
       const totalSec = Math.floor(timeSec);
@@ -252,15 +249,13 @@
       return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
     }
 
-    // Animerer løpet med skyting underveis:
-    // Skyteresultat vises når deltaker passerer sin personlige MT1 og MT2
-    // Vinneren merkes ved å bytte ut sin markør med en gullkrone (i stedet for en sirkel) når simuleringen er fullført.
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / simulationDuration, 1);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       // Tegn horisontale linjer for hver bane
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2 + 10;
@@ -281,18 +276,19 @@
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
 
-        // Dersom simuleringen er fullført og dette er vinneren, erstatt markøren med en gullkrone
+        // Hvis simuleringen er fullført og dette er vinneren (idx=0), bruk krone istedenfor sirkel
         if (progress === 1 && idx === 0) {
+          // Tegn krone (emoji) i stedet for sirkel
           ctx.font = "32px Arial";
-          ctx.fillStyle = "gold";
           ctx.textAlign = "center";
-          // Tegn krone midt på posisjonen (juster vertikalt slik at den erstatter sirkelen)
           ctx.fillText("👑", posX, laneY + 10);
-          // Tegn navnet til vinneren
+
+          // Tegn navnet ved siden av
           ctx.font = "16px Arial";
           ctx.fillStyle = "#333";
           ctx.textAlign = "left";
           ctx.fillText(`${comp.name} (snr: ${comp.snr}) - Vinner`, posX + 20, laneY + 5);
+
         } else {
           // Tegn normal deltaker (sirkel)
           ctx.beginPath();
@@ -354,7 +350,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Venter på brukerinput for å starte simuleringen
+      // Ingen spesiell handling ved lasting; venter på brukerinput
     });
   </script>
 </body>
