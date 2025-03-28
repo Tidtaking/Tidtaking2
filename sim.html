@@ -61,7 +61,6 @@
   <h1>Simulering av Skiskytterløp</h1>
   
   <div id="controls">
-    <!-- Velg filtertype -->
     <label>
       <input type="radio" name="filterType" value="class" checked>
       Filter etter Klasse
@@ -71,7 +70,6 @@
       Filter etter Startnummer
     </label>
     <br>
-    <!-- Container for klassevalg -->
     <div id="classContainer">
       <label for="classSelect">Velg klasse:</label>
       <select id="classSelect">
@@ -85,7 +83,6 @@
         <option value="J15">J15</option>
       </select>
     </div>
-    <!-- Container for startnummer (kommaseparert) -->
     <div id="snrContainer" style="display: none;">
       <label for="snrInput">Startnumre (kommaseparert):</label>
       <input type="text" id="snrInput" placeholder="F.eks. 1,2,3">
@@ -96,10 +93,10 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="800" height="400"></canvas>
-    <!-- Marker for start og mål (disse vises alltid) -->
+    <!-- Marker for start og mål (vises alltid) -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører med konstante tidspunkter -->
+    <!-- MT1 og MT2-markører med faste tidspunkter -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -110,7 +107,7 @@
   
   <div id="info"></div>
   
-  <!-- Supabase JS (bruk samme versjon som de andre sidene) -->
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase-klient
@@ -190,7 +187,7 @@
         comp.finish = comp.finish ? parseFloat(comp.finish) : defaultFinish;
       });
 
-      // Sorter konkurrentene etter finish-tid
+      // Sorter konkurrentene etter finish-tid (lavest først)
       competitors.sort((a, b) => a.finish - b.finish);
 
       // Juster canvas høyde basert på antall konkurrenter
@@ -255,8 +252,7 @@
       return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
     }
 
-    // Animerer løpet med skyting underveis:
-    // Skyting vises kun når deltaker passerer sin personlige MT1 og MT2
+    // Animerer løpet med skyting underveis
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -325,6 +321,13 @@
             ctx.fillStyle = "red";
             ctx.fillText(result2, posX, laneY - 30);
           }
+        }
+        
+        // Dersom simuleringen er fullført, vis gullkrone for vinneren (deltaker med index 0)
+        if (progress === 1 && idx === 0) {
+          ctx.font = "24px Arial";
+          ctx.fillStyle = "gold";
+          ctx.fillText("👑", posX - 20, laneY - 30);
         }
       });
 
