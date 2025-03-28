@@ -92,6 +92,8 @@
       }
     }
   </style>
+  <!-- Last inn Supabase SDK v1.35.6 UMD-bygg fra unpkg -->
+  <script src="https://unpkg.com/@supabase/supabase-js@1.35.6/dist/supabase.umd.js"></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -120,10 +122,7 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Last inn Supabase‑SDK fra unpkg -->
-  <script src="https://unpkg.com/@supabase/supabase-js/dist/supabase.min.js"></script>
-  
-  <!-- Inline-skriptet -->
+  <!-- Inline-skript som bruker supabase. Kjør siden via en webserver. -->
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
       if (typeof supabase === 'undefined') {
@@ -145,7 +144,7 @@
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
-        // Bygg spørringen
+        // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
         let query = supabaseClient.from('participants').select('*').eq('date', date);
         if (comp !== "") {
           query = query.eq('competition', comp);
@@ -164,6 +163,7 @@
           return;
         }
         
+        // Håndter duplikate navn: legg til +100 per ekstra forekomst
         let nameCounts = {};
         let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
         
@@ -181,16 +181,4 @@
           tableHtml += `<tr>
                           <td>${participant.id}</td>
                           <td>${participant.name}</td>
-                          <td>${participant.competition}</td>
-                          <td>${participant.date}</td>
-                          <td>${startNum}</td>
-                        </tr>`;
-        });
-        
-        tableHtml += '</tbody></table>';
-        document.getElementById("participantTable").innerHTML = tableHtml;
-      });
-    });
-  </script>
-</body>
-</html>
+                          <td>${participant.competition}</
