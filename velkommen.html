@@ -92,6 +92,8 @@
       }
     }
   </style>
+  <!-- Last inn Supabase‑SDK (v2) med defer -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js" defer></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -120,12 +122,10 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Last inn Supabase‑SDK (versjon 1.35.6, uminifisert) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/supabase.min.js"></script>
-  
-  <!-- Inline-skript som bruker supabase. Sørg for at siden kjøres via en webserver -->
+  <!-- Inline-skriptet kjører etter DOMContentLoaded -->
   <script>
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Sjekk at supabase er definert
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Kjør siden via en webserver og sjekk CDN-URL.");
         return;
@@ -141,7 +141,7 @@
         const comp = document.getElementById("competitionInput").value.trim();
         const date = document.getElementById("dateInput").value;
         
-        // Lagre valgte verdier for videre bruk
+        // Lagre valgte verdier
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
@@ -191,7 +191,7 @@
         tableHtml += '</tbody></table>';
         document.getElementById("participantTable").innerHTML = tableHtml;
       });
-    };
+    });
   </script>
 </body>
 </html>
