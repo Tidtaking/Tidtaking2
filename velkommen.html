@@ -163,6 +163,13 @@
         return;
       }
 
+      // Sorter deltakerne etter startnummer (snr), numerisk
+      participants.sort((a, b) => {
+        const snrA = parseInt(a.snr, 10) || 0;  // fallback 0 om snr er ugyldig
+        const snrB = parseInt(b.snr, 10) || 0;
+        return snrA - snrB;
+      });
+
       // Bygg en tabell med kun startnummer (snr) og navn (name)
       let tableHtml = `
         <table>
