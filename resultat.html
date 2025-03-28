@@ -73,7 +73,6 @@
 <body>
 
 <header>
-  <!-- Bytt ut "lsk_logo.jpg" med korrekt filnavn for logoen -->
   <img src="lsk_logo.jpg" alt="LSK Logo">
   <h1>Resultater</h1>
 </header>
@@ -107,7 +106,7 @@
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent ALLE deltakere (tilpass spørringen om ønskelig, f.eks. .eq("competition","...").eq("comp_date","..."))
+    // Hent ALLE deltakere (tilpass spørringen om ønskelig)
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -165,7 +164,6 @@
 
       classMap[cls].forEach((participant, index) => {
         const rank = index + 1;
-
         // Tolk finish som sekunder
         let finishSec = parseFloat(participant.finish) || 0;
         const finishStr = formatTime(finishSec);
@@ -176,24 +174,21 @@
         }
 
         // Hent laps, parse hvis streng
-        let lapsArr = [];
-        if (participant.laps) {
-          if (typeof participant.laps === "string") {
-            try {
-              lapsArr = JSON.parse(participant.laps);
-            } catch {}
-          } else if (Array.isArray(participant.laps)) {
-            lapsArr = participant.laps;
-          }
-        }
+        let lapsArr = parseJSONIfString(participant.laps);
+        // Opp til to mellomtider
         let lap1 = "", lap2 = "";
-        if (Array.isArray(lapsArr) && lapsArr.length >= 2) {
+        if (Array.isArray(lapsArr) && lapsArr.length > 0) {
+          // Mellomtid 1
           lap1 = formatTime(parseFloat(lapsArr[0]) || 0);
+        }
+        if (Array.isArray(lapsArr) && lapsArr.length > 1) {
+          // Mellomtid 2
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
         // Hent skyteresultat, parse hvis streng
-        const shootingStr = parseShooting(participant.shooting);
+        const shootingArr = parseJSONIfString(participant.shooting);
+        const shootingStr = parseShootingArray(shootingArr);
 
         html += `
           <tr>
@@ -214,33 +209,38 @@
     container.innerHTML = html;
   }
 
+  // Hjelpefunksjon: parse JSON hvis det er streng
+  function parseJSONIfString(val) {
+    if (!val) return null;
+    if (typeof val === "string") {
+      try {
+        return JSON.parse(val);
+      } catch (err) {
+        console.warn("Kunne ikke parse streng:", val);
+        return null;
+      }
+    }
+    return val; // antagelig et array eller objekt allerede
+  }
+
   // Formatere tid (sekunder) til mm:ss.x
   function formatTime(timeSec) {
     if (!timeSec || isNaN(timeSec)) return "";
     const totalSec = Math.floor(timeSec);
-    const ms = Math.round((timeSec - totalSec) * 1000); // millisekunder
+    const ms = Math.round((timeSec - totalSec) * 1000);
     const mm = Math.floor(totalSec / 60);
     const ss = totalSec % 60;
-    // f.eks. "2:03.4"
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
-  // Parse skyteresultat, f.eks. "[[true,false],[false,true]]" -> "1/2, 1/2"
-  function parseShooting(shootingData) {
-    if (!shootingData) return "";
-    try {
-      if (typeof shootingData === "string") {
-        shootingData = JSON.parse(shootingData);
-      }
-      if (!Array.isArray(shootingData)) return "";
-      return shootingData.map(serie => {
-        if (!Array.isArray(serie)) return "";
-        const hits = serie.filter(x => x === true).length;
-        return `${hits}/${serie.length}`;
-      }).join(", ");
-    } catch (err) {
-      return "";
-    }
+  // Skyteresultat: forutsetter en 2D-array av booleans, f.eks. [[true,false],[false,true]]
+  function parseShootingArray(arr) {
+    if (!arr || !Array.isArray(arr)) return "";
+    return arr.map(serie => {
+      if (!Array.isArray(serie)) return "";
+      const hits = serie.filter(x => x === true).length;
+      return `${hits}/${serie.length}`;
+    }).join(", ");
   }
 
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
