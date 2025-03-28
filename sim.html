@@ -9,7 +9,7 @@
       font-family: Arial, sans-serif;
       background: #f9f9f9;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       text-align: center;
     }
     h1 {
@@ -30,10 +30,15 @@
       margin: 0 auto;
       background: #fff;
       border: 2px solid #333;
+      /* Gjør container responsiv */
+      width: 100%;
+      max-width: 1000px;
     }
     canvas {
       display: block;
       background: #fff;
+      width: 100%;
+      height: auto;
     }
     /* Marker-stiler */
     .marker {
@@ -92,11 +97,11 @@
   </div>
   
   <div id="canvasContainer">
-    <canvas id="raceCanvas" width="800" height="400"></canvas>
-    <!-- Marker for start og mål (vises alltid) -->
+    <canvas id="raceCanvas"></canvas>
+    <!-- Marker for start og mål -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører med konstante tidspunkter -->
+    <!-- MT1 og MT2-markører -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -115,6 +120,18 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+    // Responsiv canvas: oppdater dimensjoner basert på tilgjengelig plass
+    function updateCanvasSize() {
+      const container = document.getElementById("canvasContainer");
+      const canvas = document.getElementById("raceCanvas");
+      // Sett canvas bredde til 100% av containeren, og beregn høyde basert på antall konkurrenter senere
+      canvas.width = container.clientWidth;
+      // Høyden settes senere etter at vi vet antall konkurrenter
+    }
+
+    window.addEventListener("resize", updateCanvasSize);
+    updateCanvasSize();
+
     // Filtertype-håndtering
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
@@ -129,12 +146,12 @@
     });
 
     // Simuleringskonfigurasjon
-    const canvas = document.getElementById("raceCanvas");
-    const ctx = canvas.getContext("2d");
-    const trackMargin = 50;
-    const trackStartX = trackMargin;
-    const trackEndX = canvas.width - trackMargin;
-    const trackLength = trackEndX - trackStartX;
+    let canvas = document.getElementById("raceCanvas");
+    let ctx = canvas.getContext("2d");
+    let trackMargin = 50;
+    let trackStartX = trackMargin;
+    let trackEndX = canvas.width - trackMargin;
+    let trackLength = trackEndX - trackStartX;
     const laneHeight = 60;
     const simulationDuration = 10000; // 10 sekunder
     const defaultFinish = 120; // Standard finish-tid (sekunder)
@@ -142,10 +159,15 @@
     let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
-    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2 (konstante)
+    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
+      // Først oppdater canvas-dimensjonene
+      updateCanvasSize();
+      trackEndX = canvas.width - trackMargin;
+      trackLength = trackEndX - trackStartX;
+      
       const filterType = document.querySelector('input[name="filterType"]:checked').value;
       if (filterType === "class") {
         const selectedClass = document.getElementById("classSelect").value;
@@ -192,7 +214,7 @@
 
       // Juster canvas høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
-
+      
       // Beregn globale MT1 og MT2 posisjoner basert på den raskeste deltakerens laps
       const fastest = competitors[0];
       const fastestLaps = parseJSONIfString(fastest.laps);
@@ -252,8 +274,8 @@
       return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
     }
 
-    // Animerer løpet med skyting underveis:
-    // Vinneren markeres IKKE før simuleringen er fullført
+    // Animerer løpet med skyting underveis
+    // Skyting vises kun når en deltaker passerer sin personlige MT1 og MT2
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -280,37 +302,21 @@
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
 
-        // Hvis simuleringen er fullført, marker vinneren tydelig
-        if (progress === 1 && idx === 0) {
-          ctx.beginPath();
-          ctx.arc(posX, laneY, 14, 0, 2 * Math.PI);
-          ctx.fillStyle = "#FFD700";
-          ctx.fill();
-          ctx.strokeStyle = "#DAA520";
-          ctx.lineWidth = 3;
-          ctx.stroke();
-          ctx.lineWidth = 1;
-          ctx.font = "16px Arial";
-          ctx.fillStyle = "#333";
-          ctx.textAlign = "left";
-          ctx.fillText(`${comp.name} (snr: ${comp.snr}) - Vinner`, posX + 20, laneY + 5);
-        } else {
-          // Tegn normal deltaker
-          ctx.beginPath();
-          ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
-          ctx.fillStyle = "#007bff";
-          ctx.fill();
-          ctx.strokeStyle = "#0056b3";
-          ctx.stroke();
-          ctx.font = "16px Arial";
-          ctx.fillStyle = "#333";
-          ctx.textAlign = "left";
-          ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
-        }
+        // Tegn deltaker (sirkel)
+        ctx.beginPath();
+        ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = "#007bff";
+        ctx.fill();
+        ctx.strokeStyle = "#0056b3";
+        ctx.stroke();
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#333";
+        ctx.textAlign = "left";
+        ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
 
-        // Hent deltakerens personlige mellomtider
+        // Beregn deltakerens egne mellomtider
         let lapsArr = parseJSONIfString(comp.laps);
-        // For MT1: hvis deltaker har minst 1 mellomtid
+        // Sjekk og vis skyteresultat for runde 1 hvis deltaker har en personlig MT1
         if (Array.isArray(lapsArr) && lapsArr.length >= 1) {
           const compMT1 = trackStartX + (parseFloat(lapsArr[0]) / comp.finish) * trackLength;
           if (posX >= compMT1) {
@@ -325,7 +331,7 @@
             ctx.fillText(result1, posX, laneY - 15);
           }
         }
-        // For MT2: hvis deltaker har minst 2 mellomtider
+        // Sjekk og vis skyteresultat for runde 2 hvis deltaker har en personlig MT2
         if (Array.isArray(lapsArr) && lapsArr.length >= 2) {
           const compMT2 = trackStartX + (parseFloat(lapsArr[1]) / comp.finish) * trackLength;
           if (posX >= compMT2) {
