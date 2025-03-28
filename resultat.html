@@ -73,7 +73,6 @@
 <body>
 
 <header>
-  <!-- LSK-logo – sørg for at "lsk_logo.jpg" finnes i samme mappe -->
   <img src="lsk_logo.jpg" alt="LSK Logo">
   <h1>Resultater</h1>
 </header>
@@ -84,15 +83,7 @@
 
 <!-- Navigasjonslenker -->
 <div class="nav-links">
-  <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
+ 
 </div>
 
 <!-- Last inn Supabase (v1.x) -->
@@ -103,12 +94,11 @@
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
   const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-  // Henter data og viser dem i tabellform
   async function fetchAndDisplayResults() {
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent ALLE deltakere (tilpass eventuelt spørringen)
+    // Hent ALLE deltakere (tilpass spørringen om ønskelig)
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -139,13 +129,12 @@
       classMap[cls].push(p);
     }
 
-    // Bygg HTML for hver klasse
     let html = "";
     for (const cls of Object.keys(classMap)) {
-      // Sorter deltakerne i klassen etter finish (stigende)
+      // Sorter stigende på finish
       classMap[cls].sort((a, b) => (a.finish || 9999999) - (b.finish || 9999999));
 
-      // Finn beste tid for differanse
+      // Finn beste tid
       const bestTime = classMap[cls][0].finish;
 
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
@@ -159,7 +148,6 @@
               <th>Mellomtid 2</th>
               <th>Sluttid</th>
               <th>Differanse</th>
-              <th>Skyteresultat</th>
             </tr>
           </thead>
           <tbody>
@@ -168,29 +156,31 @@
       classMap[cls].forEach((participant, index) => {
         const rank = index + 1;
 
-        // Tolk finish som sekunder (f.eks. 123.456 -> 2:03.4).
-        // Hvis du lagrer i millisekunder, bruk: let finishSec = (participant.finish / 1000).
+        // Tolk finish som sekunder
         let finishSec = parseFloat(participant.finish) || 0;
+        const finishStr = formatTime(finishSec);
 
-        // Mellomtider i laps (JSON). Forutsetter laps = [12.2, 23.45] i sekunder
-        let lap1 = "", lap2 = "";
-        if (participant.laps && Array.isArray(participant.laps) && participant.laps.length >= 2) {
-          lap1 = formatTime(parseFloat(participant.laps[0]) || 0);
-          lap2 = formatTime(parseFloat(participant.laps[1]) || 0);
-        }
-
-        // Formatert sluttid
-        const finishTimeStr = formatTime(finishSec);
-
-        // Differanse
         let diffStr = "–";
         if (rank > 1) {
-          const diffSec = finishSec - parseFloat(bestTime);
-          diffStr = "+" + formatTime(diffSec);
+          diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Skyteresultat (JSON, f.eks. [[true,false],[false,true]])
-        const shootingStr = parseShooting(participant.shooting);
+        // Hent laps. Siden laps er JSONB, parse hvis det er en streng
+        let lapsArr = [];
+        if (participant.laps) {
+          if (typeof participant.laps === "string") {
+            try {
+              lapsArr = JSON.parse(participant.laps);
+            } catch {}
+          } else if (Array.isArray(participant.laps)) {
+            lapsArr = participant.laps;
+          }
+        }
+        let lap1 = "", lap2 = "";
+        if (Array.isArray(lapsArr) && lapsArr.length >= 2) {
+          lap1 = formatTime(parseFloat(lapsArr[0]) || 0);
+          lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
+        }
 
         html += `
           <tr>
@@ -198,9 +188,8 @@
             <td>${participant.name || ""}</td>
             <td>${lap1}</td>
             <td>${lap2}</td>
-            <td>${finishTimeStr}</td>
+            <td>${finishStr}</td>
             <td class="diff-cell">${diffStr}</td>
-            <td>${shootingStr}</td>
           </tr>
         `;
       });
@@ -220,22 +209,6 @@
     const ss = totalSec % 60;
     // f.eks. "2:03.4"
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
-  }
-
-  // Parse skyteresultat, f.eks. "[[true,false],[false,true]]" -> "1/2, 1/2"
-  function parseShooting(shootingData) {
-    if (!shootingData) return "";
-    try {
-      const arr = JSON.parse(shootingData);
-      if (!Array.isArray(arr)) return "";
-      return arr.map(serie => {
-        if (!Array.isArray(serie)) return "";
-        const hits = serie.filter(x => x === true).length;
-        return `${hits}/${serie.length}`;
-      }).join(", ");
-    } catch (err) {
-      return "";
-    }
   }
 
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
