@@ -61,7 +61,6 @@
   <h1>Simulering av Skiskytterløp</h1>
   
   <div id="controls">
-    <!-- Velg filtertype -->
     <label>
       <input type="radio" name="filterType" value="class" checked>
       Filter etter Klasse
@@ -71,7 +70,6 @@
       Filter etter Startnummer
     </label>
     <br>
-    <!-- Container for klassevalg -->
     <div id="classContainer">
       <label for="classSelect">Velg klasse:</label>
       <select id="classSelect">
@@ -85,7 +83,6 @@
         <option value="J15">J15</option>
       </select>
     </div>
-    <!-- Container for startnummer (kommaseparert) -->
     <div id="snrContainer" style="display: none;">
       <label for="snrInput">Startnumre (kommaseparert):</label>
       <input type="text" id="snrInput" placeholder="F.eks. 1,2,3">
@@ -96,10 +93,10 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="800" height="400"></canvas>
-    <!-- Marker for start og mål (vises alltid) -->
+    <!-- Marker for start og mål (disse vises alltid) -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- Marker-etiketter for MT1 og MT2 – disse oppdateres med konstante tidverdier -->
+    <!-- MT1 og MT2-markører vises alltid med konstanter -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -110,7 +107,7 @@
   
   <div id="info"></div>
   
-  <!-- Supabase JS (bruk samme versjon som de andre sidene) -->
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase-klient
@@ -131,7 +128,7 @@
       });
     });
 
-    // Konfigurasjon for simuleringen
+    // Simuleringskonfigurasjon
     const canvas = document.getElementById("raceCanvas");
     const ctx = canvas.getContext("2d");
     const trackMargin = 50;
@@ -145,7 +142,7 @@
     let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
-    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2 (beregnet fra den raskeste deltaker)
+    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2 (faste)
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
@@ -185,7 +182,7 @@
         competitors = data;
       }
 
-      // Sørg for at finish-tiden konverteres til tall
+      // Konverter finish-tider til tall
       competitors.forEach(comp => {
         comp.finish = comp.finish ? parseFloat(comp.finish) : defaultFinish;
       });
@@ -196,34 +193,31 @@
       // Juster canvas høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
 
-      // Bruk den raskeste deltakerens mellomtider for globale marker-posisjoner (MT1 og MT2)
+      // Bruk den raskeste deltakerens laps for globale MT-verdier
       const fastest = competitors[0];
       const fastestLaps = parseJSONIfString(fastest.laps);
-      if (Array.isArray(fastestLaps) && fastestLaps.length >= 1) {
-        const mt1Time = parseFloat(fastestLaps[0]);
-        mt1PosGlobal = trackStartX + (mt1Time / fastest.finish) * trackLength;
-        document.getElementById("mt1Marker").style.display = "block";
-        // Oppdater MT1-etiketten med konstant tid
-        document.getElementById("mt1Label").style.display = "block";
-        document.getElementById("mt1Marker").style.left = mt1PosGlobal + "px";
-        document.getElementById("mt1Label").style.left = (mt1PosGlobal - 15) + "px";
-        document.getElementById("mt1Label").innerText = "MT1: " + formatTime(mt1Time);
-      } else {
-        document.getElementById("mt1Marker").style.display = "none";
-        document.getElementById("mt1Label").style.display = "none";
-      }
-      if (Array.isArray(fastestLaps) && fastestLaps.length >= 2) {
-        const mt2Time = parseFloat(fastestLaps[1]);
-        mt2PosGlobal = trackStartX + (mt2Time / fastest.finish) * trackLength;
-        document.getElementById("mt2Marker").style.display = "block";
-        document.getElementById("mt2Label").style.display = "block";
-        document.getElementById("mt2Marker").style.left = mt2PosGlobal + "px";
-        document.getElementById("mt2Label").style.left = (mt2PosGlobal - 15) + "px";
-        document.getElementById("mt2Label").innerText = "MT2: " + formatTime(mt2Time);
-      } else {
-        document.getElementById("mt2Marker").style.display = "none";
-        document.getElementById("mt2Label").style.display = "none";
-      }
+      // MT1: Hvis finnes, bruk den; ellers fallback til 33% av finish-tiden (f.eks.)
+      let mt1Time = (Array.isArray(fastestLaps) && fastestLaps.length >= 1) 
+                    ? parseFloat(fastestLaps[0])
+                    : fastest.finish * 0.33;
+      mt1PosGlobal = trackStartX + (mt1Time / fastest.finish) * trackLength;
+      document.getElementById("mt1Marker").style.display = "block";
+      document.getElementById("mt1Label").style.display = "block";
+      document.getElementById("mt1Marker").style.left = mt1PosGlobal + "px";
+      document.getElementById("mt1Label").style.left = (mt1PosGlobal - 15) + "px";
+      document.getElementById("mt1Label").innerText = "MT1: " + formatTime(mt1Time);
+
+      // MT2: Hvis finnes, bruk den; ellers fallback til 66% av finish-tiden
+      let mt2Time = (Array.isArray(fastestLaps) && fastestLaps.length >= 2) 
+                    ? parseFloat(fastestLaps[1])
+                    : fastest.finish * 0.66;
+      mt2PosGlobal = trackStartX + (mt2Time / fastest.finish) * trackLength;
+      document.getElementById("mt2Marker").style.display = "block";
+      document.getElementById("mt2Label").style.display = "block";
+      document.getElementById("mt2Marker").style.left = mt2PosGlobal + "px";
+      document.getElementById("mt2Label").style.left = (mt2PosGlobal - 15) + "px";
+      document.getElementById("mt2Label").innerText = "MT2: " + formatTime(mt2Time);
+
       // Plasser start- og målmarkører og etiketter
       document.getElementById("startMarker").style.left = trackStartX + "px";
       document.getElementById("finishMarker").style.left = trackEndX + "px";
@@ -280,7 +274,7 @@
 
       const minFinish = competitors[0].finish;
 
-      // Tegn hver konkurrent og vis skyteresultat underveis basert på deres egne mellomtider
+      // Tegn hver konkurrent
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2 + 10;
         const compFinish = comp.finish;
@@ -299,9 +293,8 @@
         ctx.textAlign = "left";
         ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
 
-        // Beregn deltakerens egne mellomtider basert på deres laps (hvis tilgjengelig)
+        // Vis skyteresultat for runde 1 når deltakeren passerer sin personlige MT1
         let lapsArr = parseJSONIfString(comp.laps);
-        // Beregn deltakerens personlige MT1-posisjon
         if (Array.isArray(lapsArr) && lapsArr.length >= 1) {
           const compMT1 = trackStartX + (parseFloat(lapsArr[0]) / comp.finish) * trackLength;
           if (posX >= compMT1) {
@@ -316,7 +309,7 @@
             ctx.fillText(result1, posX, laneY - 15);
           }
         }
-        // Beregn deltakerens personlige MT2-posisjon
+        // Vis skyteresultat for runde 2 når deltakeren passerer sin personlige MT2
         if (Array.isArray(lapsArr) && lapsArr.length >= 2) {
           const compMT2 = trackStartX + (parseFloat(lapsArr[1]) / comp.finish) * trackLength;
           if (posX >= compMT2) {
