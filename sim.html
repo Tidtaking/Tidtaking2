@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resultat - Skiskytterløp</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulering av Skiskytterløp</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -20,196 +20,253 @@
     #controls {
       margin-bottom: 20px;
     }
-    #controls input, #controls button {
+    #controls select, #controls button {
       font-size: 18px;
       padding: 8px 12px;
       margin: 5px;
+    }
+    #description {
+      font-size: 18px;
+      margin: 10px 0 20px;
+      color: #444;
     }
     #canvasContainer {
       position: relative;
       margin: 0 auto;
       background: #fff;
       border: 2px solid #333;
+      width: 800px;
+      height: 400px;
     }
     canvas {
+      width: 100%;
+      height: 100%;
       display: block;
-      background: #fff;
     }
-    /* Stil for banemarkører */
     .marker {
       position: absolute;
       top: 0;
-      bottom: 0;
       width: 2px;
-      background: #ff0000;
-      opacity: 0.5;
+      background: rgba(255,0,0,0.5);
     }
     .marker-label {
       position: absolute;
       top: -20px;
       font-size: 14px;
-      color: #ff0000;
+      color: rgba(255,0,0,0.8);
+    }
+    #info {
+      margin-top: 10px;
+      font-size: 18px;
+      color: #333;
+    }
+    @media (max-width: 600px) {
+      #canvasContainer {
+        width: 100%;
+        height: 300px;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      #controls select, #controls button {
+        font-size: 16px;
+        padding: 6px 10px;
+      }
     }
   </style>
 </head>
 <body>
   <h1>Simulering av Skiskytterløp</h1>
   <div id="controls">
-    <label for="snrInput">Startnumre (kommaseparert):</label>
-    <input type="text" id="snrInput" placeholder="F.eks. 1,2,3">
+    <label for="classDropdown">Velg klasse:</label>
+    <select id="classDropdown">
+      <option value="">-- Velg klasse --</option>
+    </select>
     <button id="startSimBtn">Start Simulering</button>
+  </div>
+  
+  <div id="description">
+    <strong>Løpsbeskrivelse:</strong> Start – Mellomtid 1 – Mål
   </div>
   
   <div id="canvasContainer">
     <canvas id="raceCanvas"></canvas>
-    <!-- Marker: Start, Shooting 1, Shooting 2, Mål -->
+    <!-- Marker for banens soner: Start, Mellomtid 1 og Mål -->
     <div class="marker" id="startMarker"></div>
-    <div class="marker" id="shooting1Marker"></div>
-    <div class="marker" id="shooting2Marker"></div>
+    <div class="marker" id="midMarker"></div>
     <div class="marker" id="finishMarker"></div>
+    <div class="marker-label" id="startLabel">Start</div>
+    <div class="marker-label" id="midLabel">Mellomtid 1</div>
+    <div class="marker-label" id="finishLabel">Mål</div>
   </div>
   
   <div id="info"></div>
-  
-  <!-- Supabase JS (brukes på samme måte som på de andre sidene) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
-    // Konfigurasjon av Supabase
+
+  <!-- Last inn Supabase JS som ES-modul og jsDelivr (v2) via +esm -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
+
+    // Konfigurasjon
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // Konfigurasjon for banen
-    const laneHeight = 60; // Høyde per løpebane
-    const trackMargin = 50; // Margin til venstre og høyre
-    const simulationDuration = 10000; // Simuleringen varer 10 sekunder (10 000 ms)
-
-    let competitors = []; // Array med data for de valgte deltakerne
-
+    // Elementer
+    const classDropdown = document.getElementById("classDropdown");
+    const startSimBtn = document.getElementById("startSimBtn");
     const canvas = document.getElementById("raceCanvas");
     const ctx = canvas.getContext("2d");
-    const canvasContainer = document.getElementById("canvasContainer");
     const infoDiv = document.getElementById("info");
+    const canvasContainer = document.getElementById("canvasContainer");
 
-    // Når du trykker "Start Simulering", hentes deltakerdata for de oppgitte startnumrene
-    document.getElementById("startSimBtn").addEventListener("click", async function() {
-      const snrInput = document.getElementById("snrInput").value.trim();
-      if (!snrInput) {
-        alert("Oppgi ett eller flere startnumre (kommaseparert).");
+    // Marker-elementer
+    const startMarker = document.getElementById("startMarker");
+    const midMarker = document.getElementById("midMarker");
+    const finishMarker = document.getElementById("finishMarker");
+    const startLabel = document.getElementById("startLabel");
+    const midLabel = document.getElementById("midLabel");
+    const finishLabel = document.getElementById("finishLabel");
+
+    // Simuleringsparametere
+    const simulationDuration = 15000; // 15 sekunder simuleringstid
+    const laneHeight = 60; // Høyde per bane
+
+    let competitors = []; // Konkurrentene i valgt klasse
+    let animationStartTime = null;
+    let animationFrameId = null;
+
+    // Funksjon for å hente distinkte klasser og fylle drop-down
+    async function populateClassDropdown() {
+      // Hent alle deltakere med kolonnen "class"
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("class");
+      if (error) {
+        console.error("Feil ved henting av klasser:", error);
         return;
       }
-      const snrArr = snrInput.split(",").map(s => s.trim()).filter(s => s !== "");
-      // Hent alle de oppgitte deltakerne fra Supabase
+      // Ekstraher distinkte klasser
+      const classes = [...new Set(data.map(row => row.class).filter(cls => cls))];
+      // Sorter alfabetisk
+      classes.sort();
+      classes.forEach(cls => {
+        const option = document.createElement("option");
+        option.value = cls;
+        option.textContent = cls;
+        classDropdown.appendChild(option);
+      });
+    }
+
+    // Kjør populateClassDropdown ved oppstart
+    populateClassDropdown();
+
+    // Funksjon for å starte simuleringen for valgt klasse
+    async function startSimulation() {
+      const selectedClass = classDropdown.value;
+      if (!selectedClass) {
+        alert("Velg en klasse fra menyen.");
+        return;
+      }
+      // Hent deltakere for den valgte klassen
       const { data, error } = await supabaseClient
         .from("participants")
         .select("*")
-        .in("snr", snrArr);
+        .eq("class", selectedClass)
+        .order("finish", { ascending: true });
       if (error || !data || data.length === 0) {
-        alert("Fant ingen deltakere for oppgitte startnumre.");
+        alert("Fant ingen deltakere for denne klassen.");
         return;
       }
       competitors = data;
-      // Sorter etter finish-tid (lavest først – raskeste)
+      // Sorter etter finish-tid (laveste først)
       competitors.sort((a, b) => parseFloat(a.finish || 9999999) - parseFloat(b.finish || 9999999));
-      startSimulation();
-    });
 
-    let startTime = null;
-    let animationFrameIds = [];
-
-    function startSimulation() {
-      // Antall konkurrenter
-      const n = competitors.length;
-      // Sett canvas-størrelse basert på antall baner
+      // Sett canvas-størrelse basert på antall konkurrenter
       canvas.width = 800;
-      canvas.height = n * laneHeight;
+      canvas.height = competitors.length * laneHeight;
       canvasContainer.style.width = canvas.width + "px";
       canvasContainer.style.height = canvas.height + "px";
 
-      // Plasser markerne for banens soner
-      const trackStartX = trackMargin;
-      const trackEndX = canvas.width - trackMargin;
-      const trackLength = trackEndX - trackMargin;
-      // For eksempel: startlinje ved trackMargin, Shooting 1 ved 1/3, Shooting 2 ved 2/3, Mål ved trackEndX
-      document.getElementById("startMarker").style.left = trackMargin + "px";
-      document.getElementById("shooting1Marker").style.left = (trackMargin + trackLength * 0.33) + "px";
-      document.getElementById("shooting2Marker").style.left = (trackMargin + trackLength * 0.66) + "px";
-      document.getElementById("finishMarker").style.left = (canvas.width - trackMargin) + "px";
+      // Plasser banemarkører: Start, Mellomtid 1 og Mål
+      const trackStartX = 50;
+      const trackEndX = canvas.width - 50;
+      const trackLength = trackEndX - trackStartX;
+      // For eksempel: Start ved trackStartX, Mellomtid 1 ved 1/3 av banen, Mål ved trackEndX
+      startMarker.style.left = trackStartX + "px";
+      midMarker.style.left = (trackStartX + trackLength * 0.33) + "px";
+      finishMarker.style.left = trackEndX + "px";
 
-      // Tegn markerne (sett høyde og top for markerne)
-      document.querySelectorAll(".marker").forEach(marker => {
+      // Plasser marker-etiketter
+      startLabel.style.left = (trackStartX - 10) + "px";
+      midLabel.style.left = (trackStartX + trackLength * 0.33 - 20) + "px";
+      finishLabel.style.left = (trackEndX - 20) + "px";
+
+      // Marker høyde
+      [startMarker, midMarker, finishMarker].forEach(marker => {
         marker.style.top = "0px";
         marker.style.height = canvas.height + "px";
       });
 
-      startTime = null;
-      // Start animasjonen
-      requestAnimationFrame(drawFrame);
+      animationStartTime = null;
+      cancelAnimationFrame(animationFrameId);
+      animateRace();
     }
 
-    function drawFrame(timestamp) {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      // Klart: vi stopper etter simulationDuration
+    // Animasjonsfunksjon for å simulere løpet
+    function animateRace(timestamp) {
+      if (!animationStartTime) animationStartTime = timestamp;
+      const elapsed = timestamp - animationStartTime;
       const progress = Math.min(elapsed / simulationDuration, 1);
 
-      // Tegn bakgrunn (baner) og konkurrenter
+      // Tegn bakgrunn: for hver konkurrent tegnes en bane (linje)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Tegn bane-linjer for hver deltaker
+      const trackStartX = 50;
+      const trackEndX = canvas.width - 50;
+      const trackLength = trackEndX - trackStartX;
+
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2;
-        // Tegn en horisontal linje for banen
+        // Tegn bane-linje
         ctx.beginPath();
-        ctx.moveTo(trackMargin, laneY);
-        ctx.lineTo(canvas.width - trackMargin, laneY);
+        ctx.moveTo(trackStartX, laneY);
+        ctx.lineTo(trackEndX, laneY);
         ctx.strokeStyle = "#aaa";
         ctx.lineWidth = 1;
         ctx.stroke();
-        // Tegn deltakerikon (sirkel) og navn
-        // Bruk finish-tiden for å beregne hastighet: den raskeste (min finish) skal nå mål (x = canvas.width - trackMargin) ved simulationDuration.
-        const finishSec = parseFloat(comp.finish) || 120; // standard 120 sek hvis null
-        // Best finn finish-tid blant de valgte deltakerne
+
+        // Beregn hastighetsfaktor basert på finish-tid (raskere løpere får høyere faktor)
+        const finishSec = parseFloat(comp.finish) || 120;
+        // Den raskeste løperen får faktor 1, de andre får faktor = (minFinish/finishSec)
         const minFinish = Math.min(...competitors.map(c => parseFloat(c.finish) || 120));
-        // Definer hastighetsfaktor: raskeste (minFinish) har faktor 1, de andre har faktor = minFinish/finishSec (<1)
         const speedFactor = minFinish / finishSec;
-        const trackStartX = trackMargin;
-        const trackEndX = canvas.width - trackMargin;
-        const trackLength = trackEndX - trackStartX;
-        // Beregn posisjon: ved progress=1 skal den raskeste ha x=trackEndX, de andre x = trackStartX + progress * trackLength * speedFactor
+
+        // Beregn posisjon langs banen: ved progress=1 skal alle ha nådd mål (trackEndX)
         const posX = trackStartX + progress * trackLength * speedFactor;
-        // Tegn deltakerens sirkel
+        // Tegn deltaker-ikon (sirkel)
         ctx.beginPath();
         ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
         ctx.fill();
         ctx.strokeStyle = "#0056b3";
         ctx.stroke();
-        // Skriv navn og snr ved siden av
+        // Skriv ut navn og snr ved siden av
         ctx.font = "16px Arial";
         ctx.fillStyle = "#333";
         ctx.textAlign = "left";
         ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
       });
 
-      // Oppdater info
-      infoDiv.innerHTML = `Simulering: ${formatTime(progress * Math.min(...competitors.map(c => parseFloat(c.finish) || 120)))} / ${formatTime(Math.min(...competitors.map(c => parseFloat(c.finish) || 120)))} (progress: ${(progress*100).toFixed(0)}%)`;
+      // Oppdater infofelt med progress
+      infoDiv.innerHTML = `Simulering: ${(progress * 100).toFixed(0)}%`;
 
       if (progress < 1) {
-        requestAnimationFrame(drawFrame);
+        animationFrameId = requestAnimationFrame(animateRace);
       } else {
         infoDiv.innerHTML += "<br><em>Løpet er fullført!</em>";
       }
     }
 
-    // Formatere tid (sekunder) til mm:ss.x
-    function formatTime(timeSec) {
-      if (!timeSec || isNaN(timeSec)) return "";
-      const totalSec = Math.floor(timeSec);
-      const ms = Math.round((timeSec - totalSec) * 1000);
-      const mm = Math.floor(totalSec / 60);
-      const ss = totalSec % 60;
-      return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
-    }
+    document.getElementById("startSimBtn").addEventListener("click", startSimulation);
   </script>
 </body>
 </html>
