@@ -73,6 +73,7 @@
 <body>
 
 <header>
+  <!-- Bytt ut "lsk_logo.jpg" med korrekt filnavn for logoen -->
   <img src="lsk_logo.jpg" alt="LSK Logo">
   <h1>Resultater</h1>
 </header>
@@ -83,7 +84,15 @@
 
 <!-- Navigasjonslenker -->
 <div class="nav-links">
- 
+  <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
 <!-- Last inn Supabase (v1.x) -->
@@ -98,7 +107,7 @@
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent ALLE deltakere (tilpass spørringen om ønskelig)
+    // Hent ALLE deltakere (tilpass spørringen om ønskelig, f.eks. .eq("competition","...").eq("comp_date","..."))
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -132,10 +141,10 @@
     let html = "";
     for (const cls of Object.keys(classMap)) {
       // Sorter stigende på finish
-      classMap[cls].sort((a, b) => (a.finish || 9999999) - (b.finish || 9999999));
+      classMap[cls].sort((a, b) => (parseFloat(a.finish) || 9999999) - (parseFloat(b.finish) || 9999999));
 
       // Finn beste tid
-      const bestTime = classMap[cls][0].finish;
+      const bestTime = parseFloat(classMap[cls][0].finish) || 0;
 
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
       html += `
@@ -148,6 +157,7 @@
               <th>Mellomtid 2</th>
               <th>Sluttid</th>
               <th>Differanse</th>
+              <th>Skyteresultat</th>
             </tr>
           </thead>
           <tbody>
@@ -165,7 +175,7 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Hent laps. Siden laps er JSONB, parse hvis det er en streng
+        // Hent laps, parse hvis streng
         let lapsArr = [];
         if (participant.laps) {
           if (typeof participant.laps === "string") {
@@ -182,6 +192,9 @@
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
+        // Hent skyteresultat, parse hvis streng
+        const shootingStr = parseShooting(participant.shooting);
+
         html += `
           <tr>
             <td class="rank-cell">${rank}</td>
@@ -190,6 +203,7 @@
             <td>${lap2}</td>
             <td>${finishStr}</td>
             <td class="diff-cell">${diffStr}</td>
+            <td>${shootingStr}</td>
           </tr>
         `;
       });
@@ -209,6 +223,24 @@
     const ss = totalSec % 60;
     // f.eks. "2:03.4"
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
+  }
+
+  // Parse skyteresultat, f.eks. "[[true,false],[false,true]]" -> "1/2, 1/2"
+  function parseShooting(shootingData) {
+    if (!shootingData) return "";
+    try {
+      if (typeof shootingData === "string") {
+        shootingData = JSON.parse(shootingData);
+      }
+      if (!Array.isArray(shootingData)) return "";
+      return shootingData.map(serie => {
+        if (!Array.isArray(serie)) return "";
+        const hits = serie.filter(x => x === true).length;
+        return `${hits}/${serie.length}`;
+      }).join(", ");
+    } catch (err) {
+      return "";
+    }
   }
 
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
