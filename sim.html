@@ -96,15 +96,11 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="800" height="400"></canvas>
-    <!-- Marker for start, mellomtid1, mellomtid2 og mål -->
+    <!-- Marker for start og mål (disse vises alltid) -->
     <div id="startMarker" class="marker"></div>
-    <div id="mt1Marker" class="marker"></div>
-    <div id="mt2Marker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
     <!-- Marker-etiketter -->
     <div id="startLabel" class="marker-label">Start</div>
-    <div id="mt1Label" class="marker-label">MT1</div>
-    <div id="mt2Label" class="marker-label">MT2</div>
     <div id="finishLabel" class="marker-label">Mål</div>
   </div>
   
@@ -118,7 +114,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Filtertype-håndtering
+    // Håndter filtertype
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
         if (this.value === "class") {
@@ -145,7 +141,6 @@
     let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
-    let mt1Pos, mt2Pos; // Globale posisjoner for mellomtider
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
@@ -160,7 +155,7 @@
           .from("participants")
           .select("*")
           .eq("class", selectedClass)
-          .not("finish", "is", null);  // Bruk "not(...is null)" for å filtrere finish
+          .not("finish", "is", null);
         if (error || !data || data.length === 0) {
           alert("Ingen deltakere funnet for den valgte klassen.");
           return;
@@ -196,29 +191,6 @@
       // Juster canvas høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
 
-      // Beregn markerposisjoner basert på den raskeste deltakerens mellomtider
-      const fastest = competitors[0];
-      const fastestLaps = parseJSONIfString(fastest.laps);
-      if (Array.isArray(fastestLaps) && fastestLaps.length >= 1) {
-        mt1Pos = trackStartX + (parseFloat(fastestLaps[0]) / fastest.finish) * trackLength;
-        document.getElementById("mt1Marker").style.display = "block";
-        document.getElementById("mt1Label").style.display = "block";
-        document.getElementById("mt1Marker").style.left = mt1Pos + "px";
-        document.getElementById("mt1Label").style.left = (mt1Pos - 15) + "px";
-      } else {
-        document.getElementById("mt1Marker").style.display = "none";
-        document.getElementById("mt1Label").style.display = "none";
-      }
-      if (Array.isArray(fastestLaps) && fastestLaps.length >= 2) {
-        mt2Pos = trackStartX + (parseFloat(fastestLaps[1]) / fastest.finish) * trackLength;
-        document.getElementById("mt2Marker").style.display = "block";
-        document.getElementById("mt2Label").style.display = "block";
-        document.getElementById("mt2Marker").style.left = mt2Pos + "px";
-        document.getElementById("mt2Label").style.left = (mt2Pos - 15) + "px";
-      } else {
-        document.getElementById("mt2Marker").style.display = "none";
-        document.getElementById("mt2Label").style.display = "none";
-      }
       // Plasser start- og målmarkører og etiketter
       document.getElementById("startMarker").style.left = trackStartX + "px";
       document.getElementById("finishMarker").style.left = trackEndX + "px";
@@ -256,7 +228,6 @@
     }
 
     // Animerer løpet med skyting underveis:
-    // Nå vises ikke lenger bare "S1"/"S2", men resultatet fra skytingen (antall treff/5)
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -295,32 +266,37 @@
         ctx.textAlign = "left";
         ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
 
-        // Vis skyteresultat for runde 1 når løperen passerer MT1
-        if (mt1Pos !== undefined && posX >= mt1Pos) {
-          let shootingData = parseJSONIfString(comp.shooting);
-          let result1 = "";
-          if (Array.isArray(shootingData) && shootingData.length >= 1) {
-            const hits1 = shootingData[0].filter(x => x === true).length;
-            result1 = `${hits1}/${shootingData[0].length}`;
+        // Beregn deltakerens egne mellomtid-posisjoner, hvis tilgjengelig
+        let lapsArr = parseJSONIfString(comp.laps);
+        // For MT1: hvis deltaker har minst 1 mellomtid
+        if (Array.isArray(lapsArr) && lapsArr.length >= 1) {
+          const compMT1 = trackStartX + (parseFloat(lapsArr[0]) / comp.finish) * trackLength;
+          if (posX >= compMT1) {
+            let shootingData = parseJSONIfString(comp.shooting);
+            let result1 = "";
+            if (Array.isArray(shootingData) && shootingData.length >= 1) {
+              const hits1 = shootingData[0].filter(x => x === true).length;
+              result1 = `${hits1}/${shootingData[0].length}`;
+            }
+            ctx.font = "14px Arial";
+            ctx.fillStyle = "red";
+            ctx.fillText(result1, posX, laneY - 15);
           }
-          ctx.font = "14px Arial";
-          ctx.fillStyle = "red";
-          // Vis resultatet litt over løperen
-          ctx.fillText(result1, posX, laneY - 15);
         }
-
-        // Vis skyteresultat for runde 2 når løperen passerer MT2
-        if (mt2Pos !== undefined && posX >= mt2Pos) {
-          let shootingData = parseJSONIfString(comp.shooting);
-          let result2 = "";
-          if (Array.isArray(shootingData) && shootingData.length >= 2) {
-            const hits2 = shootingData[1].filter(x => x === true).length;
-            result2 = `${hits2}/${shootingData[1].length}`;
+        // For MT2: hvis deltaker har minst 2 mellomtider
+        if (Array.isArray(lapsArr) && lapsArr.length >= 2) {
+          const compMT2 = trackStartX + (parseFloat(lapsArr[1]) / comp.finish) * trackLength;
+          if (posX >= compMT2) {
+            let shootingData = parseJSONIfString(comp.shooting);
+            let result2 = "";
+            if (Array.isArray(shootingData) && shootingData.length >= 2) {
+              const hits2 = shootingData[1].filter(x => x === true).length;
+              result2 = `${hits2}/${shootingData[1].length}`;
+            }
+            ctx.font = "14px Arial";
+            ctx.fillStyle = "red";
+            ctx.fillText(result2, posX, laneY - 30);
           }
-          ctx.font = "14px Arial";
-          ctx.fillStyle = "red";
-          // Vis resultatet litt over løperen, med litt mer vertikal offset
-          ctx.fillText(result2, posX, laneY - 30);
         }
       });
 
