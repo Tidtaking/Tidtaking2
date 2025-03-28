@@ -118,7 +118,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Håndter filtertype
+    // Filtertype-håndtering
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
         if (this.value === "class") {
@@ -131,7 +131,7 @@
       });
     });
 
-    // Konfigurasjon for simuleringen
+    // Simuleringskonfigurasjon
     const canvas = document.getElementById("raceCanvas");
     const ctx = canvas.getContext("2d");
     const trackMargin = 50;
@@ -160,7 +160,7 @@
           .from("participants")
           .select("*")
           .eq("class", selectedClass)
-          .neq("finish", null);
+          .not("finish", "is", null);  // Bruk "not(...is null)" for å filtrere finish
         if (error || !data || data.length === 0) {
           alert("Ingen deltakere funnet for den valgte klassen.");
           return;
@@ -177,7 +177,7 @@
           .from("participants")
           .select("*")
           .in("snr", snrArr)
-          .neq("finish", null);
+          .not("finish", "is", null);
         if (error || !data || data.length === 0) {
           alert("Ingen deltakere funnet for oppgitte startnumre.");
           return;
@@ -256,6 +256,7 @@
     }
 
     // Animerer løpet med skyting underveis:
+    // Nå vises ikke lenger bare "S1"/"S2", men resultatet fra skytingen (antall treff/5)
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -273,17 +274,16 @@
         ctx.stroke();
       });
 
-      // Referanse: raskeste deltakerens finish-tid
       const minFinish = competitors[0].finish;
 
-      // Tegn hver konkurrent og vis skyteresultat underveis
+      // Tegn hver konkurrent
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2 + 10;
         const compFinish = comp.finish;
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
 
-        // Tegn løperen
+        // Tegn deltaker som sirkel
         ctx.beginPath();
         ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
@@ -295,7 +295,7 @@
         ctx.textAlign = "left";
         ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
 
-        // Vis skyteresultat for runde 1 når løperen passerer mellomtid1
+        // Vis skyteresultat for runde 1 når løperen passerer MT1
         if (mt1Pos !== undefined && posX >= mt1Pos) {
           let shootingData = parseJSONIfString(comp.shooting);
           let result1 = "";
@@ -305,10 +305,11 @@
           }
           ctx.font = "14px Arial";
           ctx.fillStyle = "red";
+          // Vis resultatet litt over løperen
           ctx.fillText(result1, posX, laneY - 15);
         }
 
-        // Vis skyteresultat for runde 2 når løperen passerer mellomtid2
+        // Vis skyteresultat for runde 2 når løperen passerer MT2
         if (mt2Pos !== undefined && posX >= mt2Pos) {
           let shootingData = parseJSONIfString(comp.shooting);
           let result2 = "";
@@ -318,6 +319,7 @@
           }
           ctx.font = "14px Arial";
           ctx.fillStyle = "red";
+          // Vis resultatet litt over løperen, med litt mer vertikal offset
           ctx.fillText(result2, posX, laneY - 30);
         }
       });
@@ -337,7 +339,6 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       // Venter på brukerinput for å starte simuleringen
-      console.log("Deltaker:", comp.name, "finish:", comp.finish, "progress:", progress);
     });
   </script>
 </body>
