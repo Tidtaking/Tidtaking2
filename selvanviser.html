@@ -90,7 +90,7 @@
     // Canvasvariabler
     const canvas = document.getElementById('targetCanvas');
     const ctx = canvas.getContext('2d');
-    const canvasSize = canvas.width; // antar kvadratisk canvas
+    const canvasSize = canvas.width; // Antar at canvasens interne størrelse er 600×600
     const centerX = canvasSize / 2;
     const centerY = canvasSize / 2;
     const R = canvasSize / 2;      // Total radius for 10 ringer
@@ -98,7 +98,7 @@
     const ringWidth = R / numRings;
     
     // Variabler for aktuell serie
-    // Nå lagres hvert skudd som et objekt: { score, x, y }
+    // Hvert skudd lagres som et objekt: { score, x, y }
     let currentShots = [];
     let seriesCount = 0;    // Antall fullførte serier
 
@@ -109,7 +109,7 @@
     const seriesTableBody = document.getElementById('seriesTableBody');
     const totalSeriesScoreEl = document.getElementById('totalSeriesScore');
 
-    // Historikk for fullførte serier (array av objekter { serie, total })
+    // Historikk for fullførte serier (array med objekter { serie, total })
     let seriesHistory = [];
 
     // Funksjon for å tegne poengskiven med poeng på hver ring
@@ -152,7 +152,7 @@
       const dx = x - centerX;
       const dy = y - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance > R) return 0; // utenfor skiven
+      if (distance > R) return 0; // Utenfor skiven
       const ring = Math.max(1, Math.ceil(distance / ringWidth));
       return 11 - ring;
     }
@@ -181,21 +181,23 @@
     function updateCurrentDisplay() {
       const seriesTotal = currentShots.reduce((sum, shot) => sum + shot.score, 0);
       currentStatusEl.innerText = `Serie ${seriesCount + 1} – Skudd: ${currentShots.length}, Total: ${seriesTotal}`;
-      // Knappene aktiveres hvis det finnes minst ett skudd eller nøyaktig 10 skudd
+      // Angre-knappen aktiveres hvis det finnes minst ett skudd, lagre-knappen kun når 10 skudd
       undoShotBtn.disabled = currentShots.length === 0;
       saveSeriesBtn.disabled = currentShots.length !== 10;
     }
 
-    // Håndter et skudd (klikk/trykk) på canvas
+    // Oppdatert handleShot for å justere koordinatene på mobil:
     function handleShot(clientX, clientY) {
       if (currentShots.length >= 10) return; // ignorer skudd hvis serien er full
       const rect = canvas.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
+      // Beregn skaleringsfaktor mellom canvas intern størrelse og visningsstørrelse
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      // Juster koordinatene
+      const x = (clientX - rect.left) * scaleX;
+      const y = (clientY - rect.top) * scaleY;
       const score = computeScore(x, y);
-      // Legg til skuddet som et objekt
       currentShots.push({ score, x, y });
-      // Tegn skuddet ved å tegne hele serien på nytt
       redrawShots();
       updateCurrentDisplay();
     }
