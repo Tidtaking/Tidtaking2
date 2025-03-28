@@ -120,12 +120,11 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Last inn Supabase SDK v1.35.6 UMD‑build fra unpkg -->
-  <script src="https://unpkg.com/@supabase/supabase-js@1.35.6/dist/supabase.min.js"></script>
+  <!-- Last inn Supabase‑SDK v1.35.7 UMD‑build fra unpkg -->
+  <script src="https://unpkg.com/@supabase/supabase-js@1.35.7/dist/supabase.umd.js"></script>
   
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
-      // Sjekk at supabase er definert
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Kjør siden via en webserver og sjekk CDN-URL.");
         document.getElementById("participantTable").innerHTML = "<p>Kunne ikke laste supabase.</p>";
@@ -138,7 +137,7 @@
       const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
       const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
       
-      // Debug: Hent alle deltakere uten filter for å se tilgjengelige kolonner
+      // Debug: Hent alle deltakere uten filter for å se hvilke kolonner som finnes
       let { data: allParticipants, error: errorAll } = await supabaseClient
         .from('participants')
         .select('*');
@@ -153,7 +152,7 @@
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
-        // Bygg spørringen: bruk kolonnenavnet "comp_date" for dato og "competition" for konkurranse
+        // Bygg spørringen: bruk "comp_date" for dato og "competition" for konkurranse
         let query = supabaseClient
           .from('participants')
           .select('*')
