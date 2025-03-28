@@ -31,11 +31,11 @@
       background: #fff;
       padding: 20px;
       border-radius: 6px;
+      text-align: left; /* så tabellene ser bedre ut */
     }
     .class-title {
       font-size: 24px;
       margin: 20px 0 10px;
-      text-align: left;
       color: #444;
     }
     table {
@@ -58,6 +58,20 @@
     .diff-cell {
       color: #777;
       font-size: 0.9em;
+    }
+    .pdf-button {
+      display: inline-block;
+      margin: 20px auto 0;
+      font-size: 18px;
+      padding: 10px 16px;
+      background: #007bff;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .pdf-button:hover {
+      background: #0056b3;
     }
     @media (max-width: 600px) {
       th, td {
@@ -83,19 +97,17 @@
 
 <!-- Navigasjonslenker -->
 <div class="nav-links">
-  <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
-  <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
+<!-- Knapp for å lagre som PDF -->
+<button class="pdf-button" id="pdfBtn">Lagre som PDF</button>
+
 <!-- Last inn Supabase (v1.x) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Last inn jsPDF og autoTable -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
   // Opprett Supabase-klient med dine verdier
   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -173,77 +185,4 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Hent laps, parse hvis streng
-        let lapsArr = parseJSONIfString(participant.laps);
-        // Opp til to mellomtider
-        let lap1 = "", lap2 = "";
-        if (Array.isArray(lapsArr) && lapsArr.length > 0) {
-          // Mellomtid 1
-          lap1 = formatTime(parseFloat(lapsArr[0]) || 0);
-        }
-        if (Array.isArray(lapsArr) && lapsArr.length > 1) {
-          // Mellomtid 2
-          lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
-        }
-
-        // Hent skyteresultat, parse hvis streng
-        const shootingArr = parseJSONIfString(participant.shooting);
-        const shootingStr = parseShootingArray(shootingArr);
-
-        html += `
-          <tr>
-            <td class="rank-cell">${rank}</td>
-            <td>${participant.name || ""}</td>
-            <td>${lap1}</td>
-            <td>${lap2}</td>
-            <td>${finishStr}</td>
-            <td class="diff-cell">${diffStr}</td>
-            <td>${shootingStr}</td>
-          </tr>
-        `;
-      });
-
-      html += "</tbody></table>";
-    }
-
-    container.innerHTML = html;
-  }
-
-  // Hjelpefunksjon: parse JSON hvis det er streng
-  function parseJSONIfString(val) {
-    if (!val) return null;
-    if (typeof val === "string") {
-      try {
-        return JSON.parse(val);
-      } catch (err) {
-        console.warn("Kunne ikke parse streng:", val);
-        return null;
-      }
-    }
-    return val; // antagelig et array eller objekt allerede
-  }
-
-  // Formatere tid (sekunder) til mm:ss.x
-  function formatTime(timeSec) {
-    if (!timeSec || isNaN(timeSec)) return "";
-    const totalSec = Math.floor(timeSec);
-    const ms = Math.round((timeSec - totalSec) * 1000);
-    const mm = Math.floor(totalSec / 60);
-    const ss = totalSec % 60;
-    return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
-  }
-
-  // Skyteresultat: forutsetter en 2D-array av booleans, f.eks. [[true,false],[false,true]]
-  function parseShootingArray(arr) {
-    if (!arr || !Array.isArray(arr)) return "";
-    return arr.map(serie => {
-      if (!Array.isArray(serie)) return "";
-      const hits = serie.filter(x => x === true).length;
-      return `${hits}/${serie.length}`;
-    }).join(", ");
-  }
-
-  document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
-</script>
-</body>
-</html>
+        //
