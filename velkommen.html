@@ -9,8 +9,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
-      background-color: #f9f9f9;
-      margin: 0;
+      background: #f9f9f9;
     }
     h1 {
       font-size: 36px;
@@ -43,20 +42,12 @@
       cursor: pointer;
       margin-top: 5px;
     }
-    table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      width: 90%;
+    pre {
+      text-align: left;
+      margin: 20px auto;
       max-width: 800px;
-    }
-    th, td {
-      border: 1px solid #ccc;
+      background: #eee;
       padding: 10px;
-      font-size: 18px;
-      text-align: center;
-    }
-    th {
-      background-color: #e9e9e9;
     }
     .nav-links {
       margin-top: 40px;
@@ -65,30 +56,24 @@
       display: inline-block;
       margin: 10px;
       padding: 12px 20px;
-      background-color: #007bff;
+      background: #007bff;
       color: #fff;
       text-decoration: none;
       font-size: 20px;
       border-radius: 5px;
     }
     .nav-links a:hover {
-      background-color: #0056b3;
+      background: #0056b3;
     }
     @media (max-width: 480px) {
       h1 {
         font-size: 28px;
       }
-      th, td {
-        font-size: 16px;
-        padding: 8px;
-      }
       .filter-container input,
-      .filter-container button {
-        font-size: 14px;
-      }
+      .filter-container button,
       .nav-links a {
-        font-size: 18px;
-        padding: 10px 16px;
+        font-size: 16px;
+        padding: 10px 14px;
       }
     }
   </style>
@@ -106,7 +91,9 @@
     <button id="filterBtn">Vis deltakere</button>
   </div>
   
-  <div id="participantTable"><p>Laster deltakere...</p></div>
+  <div id="participantTable">
+    <p>Laster deltakere...</p>
+  </div>
   
   <div class="nav-links">
     <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
@@ -120,30 +107,32 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Bruk ES-moduler for supabase (v2.49.3) fra jsDelivr -->
+  <!-- Import Supabase JS som ES-modul -->
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
-
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    
+    // Opprett Supabase-klienten
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
-
-    // Debug: Hent alle deltakere uten filter for å se hvilke kolonner som finnes
+    
+    // Debug: Hent alle deltakere for å se hvilke kolonner som finnes
     const { data: allParticipants, error: errorAll } = await supabaseClient
       .from('participants')
       .select('*');
     console.log("Alle deltakere:", allParticipants, errorAll);
-
+    
+    // Når brukeren klikker "Vis deltakere", kjøres denne koden:
     document.getElementById("filterBtn").addEventListener("click", async function() {
       const comp = document.getElementById("competitionInput").value.trim();
       const date = document.getElementById("dateInput").value;
       console.log("Filter: comp =", comp, "date =", date);
-
-      // Lagre filterverdier i sessionStorage
+      
+      // Lagre filterverdier i sessionStorage (om nødvendig)
       sessionStorage.setItem("selectedCompetition", comp);
       sessionStorage.setItem("selectedDate", date);
-
-      // Bygg spørringen: bruk kolonnenavn "comp_date" for dato og "competition" for konkurranse
+      
+      // Bygg spørringen – bruk kolonnen "comp_date" for dato og "competition" for konkurranse
       let query = supabaseClient
         .from('participants')
         .select('*')
@@ -151,47 +140,22 @@
       if (comp !== "") {
         query = query.eq('competition', comp);
       }
-
+      
       const { data: participants, error } = await query;
       console.log("Filtrerte deltakere:", participants, error);
-
+      
       if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
+        document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere: " + JSON.stringify(error) + "</p>";
         return;
       }
-
+      
       if (!participants || participants.length === 0) {
         document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
         return;
       }
-
-      // Håndter duplikate navn: legg til +100 per ekstra forekomst
-      let nameCounts = {};
-      let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
-
-      participants.forEach(function(participant) {
-        const currentName = participant.name;
-        if (nameCounts[currentName] === undefined) {
-          nameCounts[currentName] = 0;
-        } else {
-          nameCounts[currentName]++;
-        }
-        
-        const baseStartNum = participant.startnummer || 0;
-        const startNum = baseStartNum + (nameCounts[currentName] * 100);
-        
-        tableHtml += `<tr>
-                        <td>${participant.id}</td>
-                        <td>${participant.name}</td>
-                        <td>${participant.competition}</td>
-                        <td>${participant.comp_date}</td>
-                        <td>${startNum}</td>
-                      </tr>`;
-      });
-
-      tableHtml += '</tbody></table>';
-      document.getElementById("participantTable").innerHTML = tableHtml;
+      
+      // For debugging: vis resultatene som preformatert JSON
+      document.getElementById("participantTable").innerHTML = "<pre>" + JSON.stringify(participants, null, 2) + "</pre>";
     });
   </script>
 </body>
