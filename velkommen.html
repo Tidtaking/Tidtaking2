@@ -145,7 +145,7 @@
         sessionStorage.setItem("selectedDate", date);
         
         // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
-        let query = supabaseClient.from('participants').select('*').eq('comp_date', date);
+        let query = supabaseClient.from('participants').select('*').eq('date', date);
         if (comp !== "") {
           query = query.eq('competition', comp);
         }
