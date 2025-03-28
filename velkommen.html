@@ -92,8 +92,6 @@
       }
     }
   </style>
-  <!-- Last inn Supabase‑SDK (v2) med defer -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.min.js" defer></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -122,10 +120,12 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Inline-skriptet kjører etter DOMContentLoaded -->
+  <!-- Last inn Supabase‑SDK (v2.7.0) fra jsDelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.7.0/dist/supabase.min.js"></script>
+  
+  <!-- Inline-skriptet som bruker supabase -->
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
-      // Sjekk at supabase er definert
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Kjør siden via en webserver og sjekk CDN-URL.");
         return;
@@ -141,11 +141,9 @@
         const comp = document.getElementById("competitionInput").value.trim();
         const date = document.getElementById("dateInput").value;
         
-        // Lagre valgte verdier
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
-        // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
         let query = supabaseClient.from('participants').select('*').eq('date', date);
         if (comp !== "") {
           query = query.eq('competition', comp);
@@ -164,7 +162,6 @@
           return;
         }
         
-        // Håndter duplikate navn: legg til +100 per ekstra forekomst
         let nameCounts = {};
         let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
         
