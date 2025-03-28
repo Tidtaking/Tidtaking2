@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Resultater - LSK</title>
   <style>
     body {
@@ -73,98 +73,169 @@
 <body>
 
 <header>
-  <!-- LSK-logo – sørg for at "lsk_logo.jpg" finnes i samme mappe -->
+  <!-- Bytt ut "lsk_logo.jpg" med korrekt filnavn for logoen -->
   <img src="lsk_logo.jpg" alt="LSK Logo">
   <h1>Resultater</h1>
 </header>
 
-<div class="results-container">
-  <!-- Eksempel: Kjør en loop over hver klasse -->
-  <div class="class-section">
-    <h2 class="class-title">Klasse G14</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Rang</th>
-          <th>Navn</th>
-          <th>Mellomtid 1</th>
-          <th>Mellomtid 2</th>
-          <th>Sluttid</th>
-          <th>Differanse</th>
-          <th>Skyteresultat</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Eksempel på rader (rangert etter tid) -->
-        <tr>
-          <td class="rank-cell">1</td>
-          <td>Oliver Trudvang</td>
-          <td>12:20.5</td>
-          <td>23:45.7</td>
-          <td>35:10.2</td>
-          <td class="diff-cell">–</td>
-          <td>2/5, 3/5</td>
-        </tr>
-        <tr>
-          <td class="rank-cell">2</td>
-          <td>Isak Kjepso</td>
-          <td>12:30.1</td>
-          <td>23:59.9</td>
-          <td>35:42.5</td>
-          <td class="diff-cell">+0:32.3</td>
-          <td>4/5, 2/5</td>
-        </tr>
-        <tr>
-          <td class="rank-cell">3</td>
-          <td>Sondre Grøtt Stenstrøm</td>
-          <td>12:44.9</td>
-          <td>24:18.2</td>
-          <td>36:10.8</td>
-          <td class="diff-cell">+1:00.6</td>
-          <td>3/5, 3/5</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Eksempel: en annen klasse -->
-  <div class="class-section">
-    <h2 class="class-title">Klasse J14</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Rang</th>
-          <th>Navn</th>
-          <th>Mellomtid 1</th>
-          <th>Mellomtid 2</th>
-          <th>Sluttid</th>
-          <th>Differanse</th>
-          <th>Skyteresultat</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="rank-cell">1</td>
-          <td>Mille Kringler</td>
-          <td>13:10.0</td>
-          <td>25:30.2</td>
-          <td>37:59.9</td>
-          <td class="diff-cell">–</td>
-          <td>2/5, 2/5</td>
-        </tr>
-        <tr>
-          <td class="rank-cell">2</td>
-          <td>Eva Maria Asmundsdottir</td>
-          <td>13:15.5</td>
-          <td>25:40.0</td>
-          <td>38:05.3</td>
-          <td class="diff-cell">+0:05.4</td>
-          <td>3/5, 1/5</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+<div class="results-container" id="resultsContainer">
+  <p>Laster resultater...</p>
 </div>
 
+<!-- Navigasjonslenker -->
+<div class="nav-links">
+  <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
+  <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
+</div>
+
+<!-- Last inn Supabase (v1.x) eller v2 ESM avhengig av hva du ønsker. Eksempel v1.x: -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  // Opprett Supabase-klient med dine verdier
+  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+  // Funksjon for å hente resultater og vise i tabellform
+  async function fetchAndDisplayResults() {
+    const container = document.getElementById("resultsContainer");
+    container.innerHTML = "<p>Laster resultater...</p>";
+
+    // Hent ALLE deltakere for en gitt konkurranse/dato
+    // Du kan filtrere på competition/comp_date hvis ønskelig:
+    // .eq("competition", "test") .eq("comp_date", "2025-03-28")
+    const { data: participants, error } = await supabaseClient
+      .from("participants")
+      .select("*");
+    if (error) {
+      container.innerHTML = `<p>Feil ved henting av resultater: ${error.message}</p>`;
+      console.error("Supabase-feil:", error);
+      return;
+    }
+    if (!participants || participants.length === 0) {
+      container.innerHTML = "<p>Ingen deltakere funnet.</p>";
+      return;
+    }
+
+    // Filtrer kun deltakere som har en sluttid (finish) for rangering
+    // (Hvis du vil vise alle, kan du kommentere ut denne)
+    const finished = participants.filter(p => p.finish !== null);
+    if (finished.length === 0) {
+      container.innerHTML = "<p>Ingen har fullført ennå.</p>";
+      return;
+    }
+
+    // Grupper etter "class"
+    let classMap = {};
+    for (const p of finished) {
+      const cls = p.class || "Ukjent klasse";
+      if (!classMap[cls]) {
+        classMap[cls] = [];
+      }
+      classMap[cls].push(p);
+    }
+
+    // Bygg HTML for hver klasse
+    let html = "";
+    for (const cls of Object.keys(classMap)) {
+      // Sorter deltakerne i klassen etter finish (stigende)
+      classMap[cls].sort((a, b) => (a.finish || 9999999) - (b.finish || 9999999));
+
+      // Finn beste tid for differanse
+      const bestTime = classMap[cls][0].finish;
+
+      html += `<h2 class="class-title">Klasse ${cls}</h2>`;
+      html += `
+        <table>
+          <thead>
+            <tr>
+              <th>Rang</th>
+              <th>Navn</th>
+              <th>Mellomtid 1</th>
+              <th>Mellomtid 2</th>
+              <th>Sluttid</th>
+              <th>Differanse</th>
+              <th>Skyteresultat</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      classMap[cls].forEach((participant, index) => {
+        const rank = index + 1;
+        // Mellomtider fra "laps" (antatt array [12.20, 23.45])
+        // Hvis laps = [], vis tom streng
+        let lap1 = "";
+        let lap2 = "";
+        if (Array.isArray(participant.laps) && participant.laps.length >= 2) {
+          lap1 = formatTime(participant.laps[0]);
+          lap2 = formatTime(participant.laps[1]);
+        }
+        // Sluttid
+        const finishTime = formatTime(participant.finish);
+        // Differanse
+        const diff = participant.finish - bestTime;
+        const diffStr = rank === 1 ? "–" : "+" + formatTime(diff);
+        // Skyteresultat
+        const shootingStr = parseShooting(participant.shooting);
+
+        html += `
+          <tr>
+            <td class="rank-cell">${rank}</td>
+            <td>${participant.name || ""}</td>
+            <td>${lap1}</td>
+            <td>${lap2}</td>
+            <td>${finishTime}</td>
+            <td class="diff-cell">${diffStr}</td>
+            <td>${shootingStr}</td>
+          </tr>
+        `;
+      });
+
+      html += "</tbody></table>";
+    }
+
+    container.innerHTML = html;
+  }
+
+  // Hjelpefunksjon for å formatere tid i sekunder til mm:ss.x
+  function formatTime(timeSec) {
+    if (!timeSec || isNaN(timeSec)) return "";
+    // Du kan endre format etter ønske (f.eks. mm:ss)
+    const totalSec = Math.floor(timeSec / 1000); // antall sekunder
+    const ms = timeSec % 1000; // millisekunder
+    const mm = Math.floor(totalSec / 60);
+    const ss = totalSec % 60;
+    return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
+  }
+
+  // Hjelpefunksjon for å parse skyteresultat, f.eks. [[true,false],[false,true]] -> "1/2, 1/1"
+  function parseShooting(shootingData) {
+    if (!shootingData) return "";
+    try {
+      const arr = JSON.parse(shootingData);
+      // Forventer f.eks. arr = [[true,false,false,true,false],[false,true,true,false,false]]
+      // Telle antall "true" for hver serie
+      let seriesStr = arr.map(serie => {
+        const hits = serie.filter(x => x === true).length;
+        return `${hits}/${serie.length}`;
+      });
+      return seriesStr.join(", ");
+    } catch (err) {
+      console.warn("Kunne ikke parse shooting:", err);
+      return "";
+    }
+  }
+
+  // Kjør fetchAndDisplayResults() når siden er lastet
+  document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
+</script>
 </body>
 </html>
