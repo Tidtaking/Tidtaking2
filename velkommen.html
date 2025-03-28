@@ -1,17 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <!-- Include the Supabase library before your script -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="velkommen.js" defer></script>
-</head>
-<body>
-    <!-- Your body content -->
-</body>
-</html>
+<html lang="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -104,8 +92,8 @@
       }
     }
   </style>
-  <!-- Bruk UMD-versjonen uten spesifikt versjonsnummer -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/supabase.umd.min.js" defer></script>
+  <!-- Last inn Supabase‑SDK med defer -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js" defer></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -134,10 +122,10 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Inline-skript nederst og venter til DOMContentLoaded -->
+  <!-- Inline-skriptet plasseres nederst og kjøres etter DOMContentLoaded -->
   <script defer>
     document.addEventListener('DOMContentLoaded', function() {
-      // Test om supabase er definert
+      // Sjekk om supabase er definert
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Sjekk at CDN-skriptet lastes riktig.");
         return;
