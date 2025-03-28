@@ -103,8 +103,8 @@
     <div id="finishMarker" class="marker"></div>
     <!-- Marker-etiketter -->
     <div id="startLabel" class="marker-label">Start</div>
-    <div id="mt1Label" class="marker-label">Mellomtid 1</div>
-    <div id="mt2Label" class="marker-label">Mellomtid 2</div>
+    <div id="mt1Label" class="marker-label">MT1</div>
+    <div id="mt2Label" class="marker-label">MT2</div>
     <div id="finishLabel" class="marker-label">Mål</div>
   </div>
   
@@ -118,7 +118,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Håndter filtertype for drop-down og input-felt
+    // Håndter filtertype
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
         if (this.value === "class") {
@@ -138,13 +138,14 @@
     const trackStartX = trackMargin;
     const trackEndX = canvas.width - trackMargin;
     const trackLength = trackEndX - trackStartX;
-    const laneHeight = 60; // Høyde per bane
+    const laneHeight = 60;
     const simulationDuration = 10000; // 10 sekunder
-    const defaultFinish = 120; // Standard finish-tid i sekunder hvis mangler
+    const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
+    let mt1Pos, mt2Pos; // Globale posisjoner for mellomtider
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
@@ -184,31 +185,26 @@
         competitors = data;
       }
 
-      // Sørg for at hver deltaker har en finish-tid
+      // Sørg for at hver deltaker har en finish-tid (konverter til tall)
       competitors.forEach(comp => {
-        if (!comp.finish) {
-          comp.finish = defaultFinish;
-        } else {
-          comp.finish = parseFloat(comp.finish);
-        }
+        comp.finish = comp.finish ? parseFloat(comp.finish) : defaultFinish;
       });
 
-      // Sorter konkurrentene etter finish-tid (lavest først)
+      // Sorter konkurrentene etter finish-tid
       competitors.sort((a, b) => a.finish - b.finish);
 
       // Juster canvas høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
 
-      // Hent den raskeste konkurrenten (første i sortert rekkefølge)
+      // Beregn markerposisjoner basert på den raskeste deltakerens mellomtider
       const fastest = competitors[0];
-      let fastestLaps = parseJSONIfString(fastest.laps);
-
-      // Hvis det ikke finnes mellomtider, skjul markerne for dem.
-      let mt1Pos, mt2Pos;
+      const fastestLaps = parseJSONIfString(fastest.laps);
       if (Array.isArray(fastestLaps) && fastestLaps.length >= 1) {
         mt1Pos = trackStartX + (parseFloat(fastestLaps[0]) / fastest.finish) * trackLength;
         document.getElementById("mt1Marker").style.display = "block";
         document.getElementById("mt1Label").style.display = "block";
+        document.getElementById("mt1Marker").style.left = mt1Pos + "px";
+        document.getElementById("mt1Label").style.left = (mt1Pos - 15) + "px";
       } else {
         document.getElementById("mt1Marker").style.display = "none";
         document.getElementById("mt1Label").style.display = "none";
@@ -217,12 +213,13 @@
         mt2Pos = trackStartX + (parseFloat(fastestLaps[1]) / fastest.finish) * trackLength;
         document.getElementById("mt2Marker").style.display = "block";
         document.getElementById("mt2Label").style.display = "block";
+        document.getElementById("mt2Marker").style.left = mt2Pos + "px";
+        document.getElementById("mt2Label").style.left = (mt2Pos - 15) + "px";
       } else {
         document.getElementById("mt2Marker").style.display = "none";
         document.getElementById("mt2Label").style.display = "none";
       }
-
-      // Plasser start- og målmarkører og etiketter (de vises alltid)
+      // Plasser start- og målmarkører og etiketter
       document.getElementById("startMarker").style.left = trackStartX + "px";
       document.getElementById("finishMarker").style.left = trackEndX + "px";
       document.getElementById("startLabel").style.left = (trackStartX - 10) + "px";
@@ -258,7 +255,7 @@
       return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
     }
 
-    // Animerer løpet
+    // Animerer løpet med skyting underveis:
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -276,15 +273,17 @@
         ctx.stroke();
       });
 
-      // Den raskeste deltakerens finish-tid som referanse
+      // Referanse: raskeste deltakerens finish-tid
       const minFinish = competitors[0].finish;
 
-      // Tegn hver konkurrent
+      // Tegn hver konkurrent og vis skyteresultat underveis
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2 + 10;
         const compFinish = comp.finish;
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
+
+        // Tegn løperen
         ctx.beginPath();
         ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
@@ -295,6 +294,32 @@
         ctx.fillStyle = "#333";
         ctx.textAlign = "left";
         ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
+
+        // Vis skyteresultat for runde 1 når løperen passerer mellomtid1
+        if (mt1Pos !== undefined && posX >= mt1Pos) {
+          let shootingData = parseJSONIfString(comp.shooting);
+          let result1 = "";
+          if (Array.isArray(shootingData) && shootingData.length >= 1) {
+            const hits1 = shootingData[0].filter(x => x === true).length;
+            result1 = `${hits1}/${shootingData[0].length}`;
+          }
+          ctx.font = "14px Arial";
+          ctx.fillStyle = "red";
+          ctx.fillText(result1, posX, laneY - 15);
+        }
+
+        // Vis skyteresultat for runde 2 når løperen passerer mellomtid2
+        if (mt2Pos !== undefined && posX >= mt2Pos) {
+          let shootingData = parseJSONIfString(comp.shooting);
+          let result2 = "";
+          if (Array.isArray(shootingData) && shootingData.length >= 2) {
+            const hits2 = shootingData[1].filter(x => x === true).length;
+            result2 = `${hits2}/${shootingData[1].length}`;
+          }
+          ctx.font = "14px Arial";
+          ctx.fillStyle = "red";
+          ctx.fillText(result2, posX, laneY - 30);
+        }
       });
 
       // Oppdater infofelt med simulert tid for den raskeste deltaker
@@ -311,7 +336,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Ingen spesifikk handling ved last, venter på brukerinput
+      // Venter på brukerinput for å starte simuleringen
     });
   </script>
 </body>
