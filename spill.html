@@ -88,6 +88,8 @@
       #canvasContainer {
         width: 90vw;
         height: 90vw;
+        max-width: 600px;
+        max-height: 600px;
       }
     }
   </style>
@@ -96,7 +98,7 @@
   <h1>Skiskyting Øvelse – Sikt & Skyt!</h1>
   
   <div id="controls">
-    <!-- Velg filtertype (valgfritt, her for å kunne filtrere deltakere fra en database om ønskelig) -->
+    <!-- Filter (valgfritt – kan utvides med DB-integrasjon) -->
     <label>
       <input type="radio" name="filterType" value="class" checked>
       Filter etter Klasse
@@ -150,35 +152,29 @@
     <button id="resetBtn">Nullstill</button>
   </div>
   
-  <!-- Inkluder Supabase hvis du skal hente deltakerdata fra en database -->
+  <!-- Supabase (valgfritt om du skal integrere DB) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   
   <script>
-    // Variabler for spilllogikk
+    // Spillvariabler
     const maxShots = 5;
-    const gameDuration = 10000; // 10 sekunder i ms
-
+    const gameDuration = 10000; // 10 sekunder
     let shotsCount = 0;
     let totalScore = 0;
     let shotsResults = [];
-
-    // Timer-variabler
     let gameStartTime = null;
     let timerInterval = null;
 
-    // Canvas- og målvariabler for blinken
-    const canvas = document.getElementById("raceCanvas");
-    const ctx = canvas.getContext("2d");
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const maxRadius = 280; // litt margin til kantene
+    // Blink-innstillinger
+    let centerX = 300, centerY = 300;  // Utgangspunkt, men disse vil variere
+    const maxRadius = 280;
     const ringCount = 10;
     const ringWidth = maxRadius / ringCount;
 
-    // Kryss-sikte element (for å vise sikt)
+    // Kryss-sikte
     const crosshairEl = document.getElementById("crosshair");
 
-    // Resultatvisning
+    // Scorepanel-elementer
     const shotsCountEl = document.getElementById("shotsCount");
     const lastShotScoreEl = document.getElementById("lastShotScore");
     const totalScoreEl = document.getElementById("totalScore");
@@ -186,7 +182,7 @@
     const shotsBodyEl = document.getElementById("shotsBody");
     const resetBtn = document.getElementById("resetBtn");
 
-    // Tegn blink med 10 ringer
+    // Tegn blink med 10 ringer, med dynamisk senter (centerX, centerY)
     function drawTarget() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let i = 0; i < ringCount; i++) {
@@ -204,7 +200,7 @@
       ctx.fill();
     }
 
-    // Beregn poeng basert på avstand fra midten
+    // Beregn poeng basert på avstanden fra det dynamiske senteret
     function computeScore(dist) {
       const ringIndex = Math.floor(dist / ringWidth);
       let score = 10 - ringIndex;
@@ -213,7 +209,26 @@
       return score;
     }
 
-    // Tegn et skudd på canvas (rød prikk)
+    // Spill-logikk: Håndter klikk på canvas (skyting)
+    canvas.addEventListener("click", (e) => {
+      if (!gameStartTime) return;
+      const currentTime = Date.now();
+      if (currentTime - gameStartTime >= gameDuration || shotsCount >= maxShots) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const dx = mouseX - centerX;
+      const dy = mouseY - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      let shotScore = (dist <= maxRadius) ? computeScore(dist) : 0;
+      updateScorePanel(shotScore);
+      drawShot(mouseX, mouseY);
+      if (shotsCount >= maxShots) {
+        endGame();
+      }
+    });
+
     function drawShot(x, y) {
       ctx.beginPath();
       ctx.arc(x, y, 5, 0, 2 * Math.PI);
@@ -223,7 +238,6 @@
       ctx.stroke();
     }
 
-    // Oppdater resultat-tabellen
     function updateScorePanel(shotScore) {
       shotsCount++;
       totalScore += shotScore;
@@ -231,7 +245,6 @@
       shotsCountEl.textContent = shotsCount;
       lastShotScoreEl.textContent = shotScore;
       totalScoreEl.textContent = totalScore;
-      // Oppdater tabellen med nye skudd
       const row = document.createElement("tr");
       const cellNum = document.createElement("td");
       const cellScore = document.createElement("td");
@@ -242,7 +255,6 @@
       shotsBodyEl.appendChild(row);
     }
 
-    // Nullstill alt
     function resetGame() {
       shotsCount = 0;
       totalScore = 0;
@@ -257,34 +269,7 @@
       drawTarget();
     }
 
-    // Spill-logikk: Håndter klikk på canvas for å skyte
-    canvas.addEventListener("click", (e) => {
-      // Hvis tiden er ute eller maks antall skudd er nådd, ignorer klikk
-      if (!gameStartTime) return;
-      const currentTime = Date.now();
-      if (currentTime - gameStartTime >= gameDuration || shotsCount >= maxShots) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      const dx = mouseX - centerX;
-      const dy = mouseY - centerY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      let shotScore = 0;
-      if (dist <= maxRadius) {
-        shotScore = computeScore(dist);
-      } else {
-        shotScore = 0;
-      }
-      updateScorePanel(shotScore);
-      drawShot(mouseX, mouseY);
-      // Hvis maks antall skudd er nådd, avslutt spillet
-      if (shotsCount >= maxShots) {
-        endGame();
-      }
-    });
-
-    // Kryss-sikte: Vis kryss der musepekeren er
+    // Kryss-sikte: Følg musepekeren
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
@@ -297,7 +282,7 @@
       crosshairEl.style.display = "none";
     });
 
-    // Start en nedtelling når spillet starter
+    // Timer for spillet (10 sekunder)
     function startTimer() {
       gameStartTime = Date.now();
       timerInterval = setInterval(() => {
@@ -310,21 +295,50 @@
       }, 100);
     }
 
-    // Spill-slutt: Avslutt spillet og stopp timer
     function endGame() {
       clearInterval(timerInterval);
-      // Her kan du eventuelt vise en melding eller deaktivere videre klikk
       document.getElementById("info").innerHTML = "<em>Spillet er over!</em>";
     }
 
-    // Tegn bakgrunn (evt. blink) og initialiser
-    drawTarget();
+    // Legg til bevegelse: La blinkens senter bevege seg litt for å gjøre det vanskeligere
+    // Sentrumsposisjonene oscillerer med sinusfunksjoner
+    function updateTargetCenter(timestamp) {
+      const amplitude = 20; // maks bevegelse i piksler
+      const period = 5000;  // 5 sekunder per syklus
+      centerX = canvas.width / 2 + amplitude * Math.sin(timestamp / period);
+      centerY = canvas.height / 2 + amplitude * Math.cos(timestamp / period);
+    }
 
-    // Start simuleringen når "Start Simulering" trykkes
+    // Tegn bakgrunn, blink og simulering
+    function animateRace(timestamp) {
+      updateTargetCenter(timestamp);
+      drawTarget();
+
+      // Tegn skyting-simulering: For hver klikk (skudd) vises ingen skyting animasjon i denne øvelsen,
+      // men vi kan simulere at et skudd registreres med en liten animasjon hvis ønskelig.
+      // Her oppdaterer vi bare infofeltet.
+      const elapsed = timestamp - gameStartTime;
+      const progress = Math.min(elapsed / gameDuration, 1);
+      document.getElementById("info").innerHTML =
+        `Tid brukt: ${((elapsed) / 1000).toFixed(1)} sek / ${ (gameDuration / 1000).toFixed(1)} sek<br>
+         Progress: ${(progress * 100).toFixed(0)}%`;
+
+      if (progress < 1) {
+        requestAnimationFrame(animateRace);
+      } else {
+        endGame();
+      }
+    }
+
+    // Start spill når "Start Simulering" trykkes
     document.getElementById("startSimBtn").addEventListener("click", () => {
       resetGame();
       startTimer();
+      requestAnimationFrame(animateRace);
     });
+
+    // Initial tegning av blink
+    drawTarget();
   </script>
 </body>
 </html>
