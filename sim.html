@@ -252,7 +252,9 @@
       return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
     }
 
-    // Animerer løpet med skyting underveis
+    // Animerer løpet med skyting underveis:
+    // Skyteresultat vises når deltaker passerer sin personlige MT1 og MT2
+    // Vinneren merkes ved å bytte ut sin markør med en gullkrone (i stedet for en sirkel) når simuleringen er fullført.
     function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
@@ -279,17 +281,31 @@
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
 
-        // Tegn deltaker (sirkel)
-        ctx.beginPath();
-        ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
-        ctx.fillStyle = "#007bff";
-        ctx.fill();
-        ctx.strokeStyle = "#0056b3";
-        ctx.stroke();
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#333";
-        ctx.textAlign = "left";
-        ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
+        // Dersom simuleringen er fullført og dette er vinneren, erstatt markøren med en gullkrone
+        if (progress === 1 && idx === 0) {
+          ctx.font = "32px Arial";
+          ctx.fillStyle = "gold";
+          ctx.textAlign = "center";
+          // Tegn krone midt på posisjonen (juster vertikalt slik at den erstatter sirkelen)
+          ctx.fillText("👑", posX, laneY + 10);
+          // Tegn navnet til vinneren
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "#333";
+          ctx.textAlign = "left";
+          ctx.fillText(`${comp.name} (snr: ${comp.snr}) - Vinner`, posX + 20, laneY + 5);
+        } else {
+          // Tegn normal deltaker (sirkel)
+          ctx.beginPath();
+          ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
+          ctx.fillStyle = "#007bff";
+          ctx.fill();
+          ctx.strokeStyle = "#0056b3";
+          ctx.stroke();
+          ctx.font = "16px Arial";
+          ctx.fillStyle = "#333";
+          ctx.textAlign = "left";
+          ctx.fillText(`${comp.name} (snr: ${comp.snr})`, posX + 15, laneY + 5);
+        }
 
         // Vis skyteresultat for runde 1 når deltaker passerer sin personlige MT1
         let lapsArr = parseJSONIfString(comp.laps);
@@ -321,13 +337,6 @@
             ctx.fillStyle = "red";
             ctx.fillText(result2, posX, laneY - 30);
           }
-        }
-        
-        // Dersom simuleringen er fullført, vis gullkrone for vinneren (deltaker med index 0)
-        if (progress === 1 && idx === 0) {
-          ctx.font = "24px Arial";
-          ctx.fillStyle = "gold";
-          ctx.fillText("👑", posX - 20, laneY - 30);
         }
       });
 
