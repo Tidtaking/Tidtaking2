@@ -67,6 +67,7 @@
   <br>
   <button id="btnImportCSV">Importer CSV</button>
   
+  <!-- Last inn Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – lim inn din gyldige anon-nøkkel:
@@ -75,20 +76,37 @@
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    // Hent maks snr fra databasen for å generere nye snr-verdier
-    async function fetchMaxSNR() {
+    /**
+     * Henter ALLE deltakere fra databasen, bygger:
+     *   - globalMaxSNR: høyeste snr for ALLE deltakere
+     *   - nameMap: et dictionary der name -> høyeste snr for DET navnet
+     */
+    async function fetchParticipantsData() {
       const { data, error } = await supabaseClient
         .from("participants")
-        .select("snr", { count: "exact" });
+        .select("name, snr");
       if (error) {
-        console.error("Feil ved henting av snr:", error);
-        return 0;
+        console.error("Feil ved henting av deltakere:", error);
+        return { globalMaxSNR: 0, nameMap: {} };
       }
-      if (!data || data.length === 0) return 0;
-      return data.reduce((max, row) => (row.snr > max ? row.snr : max), 0);
+      let globalMaxSNR = 0;
+      let nameMap = {};
+      data.forEach(row => {
+        const snrNum = parseInt(row.snr, 10) || 0;
+        if (snrNum > globalMaxSNR) globalMaxSNR = snrNum;
+        if (!nameMap[row.name]) {
+          nameMap[row.name] = snrNum;
+        } else {
+          // Oppdater nameMap til høyeste snr for navnet
+          if (snrNum > nameMap[row.name]) {
+            nameMap[row.name] = snrNum;
+          }
+        }
+      });
+      return { globalMaxSNR, nameMap };
     }
 
-    // Funksjon for å lese CSV-filen og importere data med semikolon som skilletegn
+    // Funksjon for å lese CSV-filen og importere data
     async function parseCSVAndImport(file) {
       const competitionVal = document.getElementById("competitionInput").value.trim();
       const dateVal = document.getElementById("dateInput").value.trim();
@@ -96,6 +114,11 @@
         alert("Fyll ut konkurranse og dato før import!");
         return;
       }
+
+      // Hent eksisterende snr-data fra DB
+      const { globalMaxSNR, nameMap } = await fetchParticipantsData();
+      console.log("globalMaxSNR:", globalMaxSNR, "nameMap:", nameMap);
+
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
@@ -103,7 +126,7 @@
         // Del opp teksten i linjer
         const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
         if (lines.length < 2) {
-          alert("CSV-filen mangler data.");
+          alert("CSV-filen mangler data eller har ikke riktig header.");
           return;
         }
         // Forvent header med semikolon som skilletegn, f.eks.: "name;class"
@@ -127,26 +150,43 @@
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
-        // Hent maks snr fra DB og generer nye snr for de nye radene
-        const maxSNR = await fetchMaxSNR();
-        const newParticipants = rows.map((row, index) => ({
-          snr: maxSNR + index + 1,
-          name: row.name,
-          class: row.class,
-          competition: competitionVal,
-          comp_date: dateVal,
-          status: "Venter", // Standardstatus for nye deltakere
-          start: null,
-          laps: [],
-          finish: null,
-          rawFinish: null,
-          shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
-        }));
+
+        // Bygg array med nye deltakere
+        let newParticipants = [];
+        for (let i = 0; i < rows.length; i++) {
+          const { name, class: cls } = rows[i];
+          // Sjekk om navnet finnes i nameMap
+          if (!nameMap[name]) {
+            // Navnet finnes ikke i DB -> bruk globalMaxSNR+1 for første gang
+            nameMap[name] = globalMaxSNR + 1;
+            globalMaxSNR = globalMaxSNR + 1;
+          } else {
+            // Navnet finnes i DB -> øk forrige snr for navnet med 100
+            nameMap[name] = nameMap[name] + 100;
+          }
+
+          newParticipants.push({
+            snr: nameMap[name],
+            name,
+            class: cls,
+            competition: competitionVal,
+            comp_date: dateVal,
+            status: "Venter", // Standardstatus for nye deltakere
+            start: null,
+            laps: [],
+            finish: null,
+            rawFinish: null,
+            shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
+          });
+        }
+
         console.log("Nye deltakere fra CSV:", newParticipants);
+
+        // Sett dem inn i DB
         const { error } = await supabaseClient.from("participants").insert(newParticipants);
         if (error) {
           console.error("Feil ved CSV-import:", error);
-          alert("CSV-import feilet – sjekk konsollen.");
+          alert("CSV-import feilet – sjekk konsollen for detaljer.");
         } else {
           alert("CSV-import fullført!");
         }
