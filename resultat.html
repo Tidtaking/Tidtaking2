@@ -18,7 +18,7 @@
       margin-bottom: 20px;
     }
     header img {
-      width: 160px; /* juster størrelsen på logoen */
+      width: 160px;
     }
     h1 {
       margin: 10px 0;
@@ -73,7 +73,7 @@
 <body>
 
 <header>
-  <!-- Bytt ut "lsk_logo.jpg" med korrekt filnavn for logoen -->
+  <!-- LSK-logo – sørg for at "lsk_logo.jpg" finnes i samme mappe -->
   <img src="lsk_logo.jpg" alt="LSK Logo">
   <h1>Resultater</h1>
 </header>
@@ -95,7 +95,7 @@
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
-<!-- Last inn Supabase (v1.x) eller v2 ESM avhengig av hva du ønsker. Eksempel v1.x: -->
+<!-- Last inn Supabase (v1.x) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
   // Opprett Supabase-klient med dine verdier
@@ -103,14 +103,12 @@
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
   const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-  // Funksjon for å hente resultater og vise i tabellform
+  // Henter data og viser dem i tabellform
   async function fetchAndDisplayResults() {
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent ALLE deltakere for en gitt konkurranse/dato
-    // Du kan filtrere på competition/comp_date hvis ønskelig:
-    // .eq("competition", "test") .eq("comp_date", "2025-03-28")
+    // Hent ALLE deltakere (tilpass eventuelt spørringen)
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -124,8 +122,7 @@
       return;
     }
 
-    // Filtrer kun deltakere som har en sluttid (finish) for rangering
-    // (Hvis du vil vise alle, kan du kommentere ut denne)
+    // Filtrer kun de som har en sluttid
     const finished = participants.filter(p => p.finish !== null);
     if (finished.length === 0) {
       container.innerHTML = "<p>Ingen har fullført ennå.</p>";
@@ -170,20 +167,29 @@
 
       classMap[cls].forEach((participant, index) => {
         const rank = index + 1;
-        // Mellomtider fra "laps" (antatt array [12.20, 23.45])
-        // Hvis laps = [], vis tom streng
-        let lap1 = "";
-        let lap2 = "";
-        if (Array.isArray(participant.laps) && participant.laps.length >= 2) {
-          lap1 = formatTime(participant.laps[0]);
-          lap2 = formatTime(participant.laps[1]);
+
+        // Tolk finish som sekunder (f.eks. 123.456 -> 2:03.4).
+        // Hvis du lagrer i millisekunder, bruk: let finishSec = (participant.finish / 1000).
+        let finishSec = parseFloat(participant.finish) || 0;
+
+        // Mellomtider i laps (JSON). Forutsetter laps = [12.2, 23.45] i sekunder
+        let lap1 = "", lap2 = "";
+        if (participant.laps && Array.isArray(participant.laps) && participant.laps.length >= 2) {
+          lap1 = formatTime(parseFloat(participant.laps[0]) || 0);
+          lap2 = formatTime(parseFloat(participant.laps[1]) || 0);
         }
-        // Sluttid
-        const finishTime = formatTime(participant.finish);
+
+        // Formatert sluttid
+        const finishTimeStr = formatTime(finishSec);
+
         // Differanse
-        const diff = participant.finish - bestTime;
-        const diffStr = rank === 1 ? "–" : "+" + formatTime(diff);
-        // Skyteresultat
+        let diffStr = "–";
+        if (rank > 1) {
+          const diffSec = finishSec - parseFloat(bestTime);
+          diffStr = "+" + formatTime(diffSec);
+        }
+
+        // Skyteresultat (JSON, f.eks. [[true,false],[false,true]])
         const shootingStr = parseShooting(participant.shooting);
 
         html += `
@@ -192,7 +198,7 @@
             <td>${participant.name || ""}</td>
             <td>${lap1}</td>
             <td>${lap2}</td>
-            <td>${finishTime}</td>
+            <td>${finishTimeStr}</td>
             <td class="diff-cell">${diffStr}</td>
             <td>${shootingStr}</td>
           </tr>
@@ -205,36 +211,33 @@
     container.innerHTML = html;
   }
 
-  // Hjelpefunksjon for å formatere tid i sekunder til mm:ss.x
+  // Formatere tid (sekunder) til mm:ss.x
   function formatTime(timeSec) {
     if (!timeSec || isNaN(timeSec)) return "";
-    // Du kan endre format etter ønske (f.eks. mm:ss)
-    const totalSec = Math.floor(timeSec / 1000); // antall sekunder
-    const ms = timeSec % 1000; // millisekunder
+    const totalSec = Math.floor(timeSec);
+    const ms = Math.round((timeSec - totalSec) * 1000); // millisekunder
     const mm = Math.floor(totalSec / 60);
     const ss = totalSec % 60;
+    // f.eks. "2:03.4"
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
-  // Hjelpefunksjon for å parse skyteresultat, f.eks. [[true,false],[false,true]] -> "1/2, 1/1"
+  // Parse skyteresultat, f.eks. "[[true,false],[false,true]]" -> "1/2, 1/2"
   function parseShooting(shootingData) {
     if (!shootingData) return "";
     try {
       const arr = JSON.parse(shootingData);
-      // Forventer f.eks. arr = [[true,false,false,true,false],[false,true,true,false,false]]
-      // Telle antall "true" for hver serie
-      let seriesStr = arr.map(serie => {
+      if (!Array.isArray(arr)) return "";
+      return arr.map(serie => {
+        if (!Array.isArray(serie)) return "";
         const hits = serie.filter(x => x === true).length;
         return `${hits}/${serie.length}`;
-      });
-      return seriesStr.join(", ");
+      }).join(", ");
     } catch (err) {
-      console.warn("Kunne ikke parse shooting:", err);
       return "";
     }
   }
 
-  // Kjør fetchAndDisplayResults() når siden er lastet
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
 </script>
 </body>
