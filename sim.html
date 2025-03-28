@@ -110,15 +110,15 @@
   
   <div id="info"></div>
   
-  <!-- Supabase JS (brukes slik som på de andre sidene) -->
+  <!-- Supabase JS (bruk samme versjon som de andre sidene) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase-klienten
+    // Konfigurer Supabase-klient
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // For å velge filtertype: vis/skjul input-felt
+    // Håndter filtertype for drop-down og input-felt
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
         if (this.value === "class") {
@@ -138,17 +138,16 @@
     const trackStartX = trackMargin;
     const trackEndX = canvas.width - trackMargin;
     const trackLength = trackEndX - trackStartX;
-    const laneHeight = 60; // Hver løpebane
-    const simulationDuration = 10000; // Simulering varer 10 sekunder
-    const defaultFinish = 120; // Standard finish-tid (sekunder) hvis finish er null
+    const laneHeight = 60; // Høyde per bane
+    const simulationDuration = 10000; // 10 sekunder
+    const defaultFinish = 120; // Standard finish-tid i sekunder hvis mangler
 
-    let competitors = []; // Array med konkurrenter som skal simuleres
+    let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
 
     // Funksjon for å starte simuleringen
     document.getElementById("startSimBtn").addEventListener("click", async function() {
-      // Bestem filtertype: klasse eller snr
       const filterType = document.querySelector('input[name="filterType"]:checked').value;
       if (filterType === "class") {
         const selectedClass = document.getElementById("classSelect").value;
@@ -159,7 +158,8 @@
         const { data, error } = await supabaseClient
           .from("participants")
           .select("*")
-          .eq("class", selectedClass);
+          .eq("class", selectedClass)
+          .neq("finish", null);
         if (error || !data || data.length === 0) {
           alert("Ingen deltakere funnet for den valgte klassen.");
           return;
@@ -175,14 +175,16 @@
         const { data, error } = await supabaseClient
           .from("participants")
           .select("*")
-          .in("snr", snrArr);
+          .in("snr", snrArr)
+          .neq("finish", null);
         if (error || !data || data.length === 0) {
           alert("Ingen deltakere funnet for oppgitte startnumre.");
           return;
         }
         competitors = data;
       }
-      // Hvis finish-tid mangler, bruk defaultFinish
+
+      // Sørg for at hver deltaker har en finish-tid
       competitors.forEach(comp => {
         if (!comp.finish) {
           comp.finish = defaultFinish;
@@ -190,30 +192,40 @@
           comp.finish = parseFloat(comp.finish);
         }
       });
+
       // Sorter konkurrentene etter finish-tid (lavest først)
       competitors.sort((a, b) => a.finish - b.finish);
 
       // Juster canvas høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
 
-      // Plasser banemarkører: Start og Mål er faste. For mellomtid 1 og 2 bruker vi den raskeste deltakerens laps, dersom tilgjengelig.
+      // Hent den raskeste konkurrenten (første i sortert rekkefølge)
       const fastest = competitors[0];
       let fastestLaps = parseJSONIfString(fastest.laps);
-      let mt1Pos = trackStartX + (Array.isArray(fastestLaps) && fastestLaps.length >= 1
-                     ? (parseFloat(fastestLaps[0]) / fastest.finish) * trackLength
-                     : 0.33 * trackLength);
-      let mt2Pos = trackStartX + (Array.isArray(fastestLaps) && fastestLaps.length >= 2
-                     ? (parseFloat(fastestLaps[1]) / fastest.finish) * trackLength
-                     : 0.66 * trackLength);
 
+      // Hvis det ikke finnes mellomtider, skjul markerne for dem.
+      let mt1Pos, mt2Pos;
+      if (Array.isArray(fastestLaps) && fastestLaps.length >= 1) {
+        mt1Pos = trackStartX + (parseFloat(fastestLaps[0]) / fastest.finish) * trackLength;
+        document.getElementById("mt1Marker").style.display = "block";
+        document.getElementById("mt1Label").style.display = "block";
+      } else {
+        document.getElementById("mt1Marker").style.display = "none";
+        document.getElementById("mt1Label").style.display = "none";
+      }
+      if (Array.isArray(fastestLaps) && fastestLaps.length >= 2) {
+        mt2Pos = trackStartX + (parseFloat(fastestLaps[1]) / fastest.finish) * trackLength;
+        document.getElementById("mt2Marker").style.display = "block";
+        document.getElementById("mt2Label").style.display = "block";
+      } else {
+        document.getElementById("mt2Marker").style.display = "none";
+        document.getElementById("mt2Label").style.display = "none";
+      }
+
+      // Plasser start- og målmarkører og etiketter (de vises alltid)
       document.getElementById("startMarker").style.left = trackStartX + "px";
-      document.getElementById("mt1Marker").style.left = mt1Pos + "px";
-      document.getElementById("mt2Marker").style.left = mt2Pos + "px";
       document.getElementById("finishMarker").style.left = trackEndX + "px";
-      // Plasser etikettene litt over markerne
       document.getElementById("startLabel").style.left = (trackStartX - 10) + "px";
-      document.getElementById("mt1Label").style.left = (mt1Pos - 20) + "px";
-      document.getElementById("mt2Label").style.left = (mt2Pos - 20) + "px";
       document.getElementById("finishLabel").style.left = (trackEndX - 30) + "px";
 
       // Start simuleringen
@@ -236,7 +248,7 @@
       return val;
     }
 
-    // Hjelpefunksjon: Formatere tid (sekunder) til mm:ss.x
+    // Formatere tid (sekunder) til mm:ss.x
     function formatTime(timeSec) {
       if (!timeSec || isNaN(timeSec)) return "";
       const totalSec = Math.floor(timeSec);
@@ -253,7 +265,7 @@
       const progress = Math.min(elapsed / simulationDuration, 1);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Tegn horisontale baner
+      // Tegn horisontale linjer for hver bane
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2 + 10;
         ctx.beginPath();
@@ -264,24 +276,21 @@
         ctx.stroke();
       });
 
-      // Den raskeste deltakerens finish-tid brukes som referanse
+      // Den raskeste deltakerens finish-tid som referanse
       const minFinish = competitors[0].finish;
 
       // Tegn hver konkurrent
       competitors.forEach((comp, idx) => {
         const laneY = idx * laneHeight + laneHeight / 2 + 10;
-        // Bruk finish-tid (om finish er null, har vi allerede satt default)
         const compFinish = comp.finish;
         const speedFactor = minFinish / compFinish;
         const posX = trackStartX + progress * trackLength * speedFactor;
-        // Tegn konkurrentens ikon
         ctx.beginPath();
         ctx.arc(posX, laneY, 10, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
         ctx.fill();
         ctx.strokeStyle = "#0056b3";
         ctx.stroke();
-        // Skriv navn og snr
         ctx.font = "16px Arial";
         ctx.fillStyle = "#333";
         ctx.textAlign = "left";
@@ -301,6 +310,9 @@
       }
     }
 
+    document.addEventListener("DOMContentLoaded", () => {
+      // Ingen spesifikk handling ved last, venter på brukerinput
+    });
   </script>
 </body>
 </html>
