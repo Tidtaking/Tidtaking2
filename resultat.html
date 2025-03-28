@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultater - LSK</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f9f9f9;
+      text-align: center;
+      padding-bottom: 40px;
+    }
+    header {
+      background: #fff;
+      padding: 20px 0;
+      margin-bottom: 20px;
+    }
+    header img {
+      width: 160px; /* juster størrelsen på logoen */
+    }
+    h1 {
+      margin: 10px 0;
+      font-size: 32px;
+      color: #333;
+    }
+    .results-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 6px;
+    }
+    .class-title {
+      font-size: 24px;
+      margin: 20px 0 10px;
+      text-align: left;
+      color: #444;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      font-size: 16px;
+      text-align: center;
+    }
+    th {
+      background-color: #e9e9e9;
+    }
+    .rank-cell {
+      font-weight: bold;
+    }
+    .diff-cell {
+      color: #777;
+      font-size: 0.9em;
+    }
+    @media (max-width: 600px) {
+      th, td {
+        font-size: 14px;
+        padding: 6px;
+      }
+      .class-title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <!-- LSK-logo – sørg for at "lsk_logo.jpg" finnes i samme mappe -->
+  <img src="lsk_logo.jpg" alt="LSK Logo">
+  <h1>Resultater</h1>
+</header>
+
+<div class="results-container">
+  <!-- Eksempel: Kjør en loop over hver klasse -->
+  <div class="class-section">
+    <h2 class="class-title">Klasse G14</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Rang</th>
+          <th>Navn</th>
+          <th>Mellomtid 1</th>
+          <th>Mellomtid 2</th>
+          <th>Sluttid</th>
+          <th>Differanse</th>
+          <th>Skyteresultat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Eksempel på rader (rangert etter tid) -->
+        <tr>
+          <td class="rank-cell">1</td>
+          <td>Oliver Trudvang</td>
+          <td>12:20.5</td>
+          <td>23:45.7</td>
+          <td>35:10.2</td>
+          <td class="diff-cell">–</td>
+          <td>2/5, 3/5</td>
+        </tr>
+        <tr>
+          <td class="rank-cell">2</td>
+          <td>Isak Kjepso</td>
+          <td>12:30.1</td>
+          <td>23:59.9</td>
+          <td>35:42.5</td>
+          <td class="diff-cell">+0:32.3</td>
+          <td>4/5, 2/5</td>
+        </tr>
+        <tr>
+          <td class="rank-cell">3</td>
+          <td>Sondre Grøtt Stenstrøm</td>
+          <td>12:44.9</td>
+          <td>24:18.2</td>
+          <td>36:10.8</td>
+          <td class="diff-cell">+1:00.6</td>
+          <td>3/5, 3/5</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Eksempel: en annen klasse -->
+  <div class="class-section">
+    <h2 class="class-title">Klasse J14</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Rang</th>
+          <th>Navn</th>
+          <th>Mellomtid 1</th>
+          <th>Mellomtid 2</th>
+          <th>Sluttid</th>
+          <th>Differanse</th>
+          <th>Skyteresultat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="rank-cell">1</td>
+          <td>Mille Kringler</td>
+          <td>13:10.0</td>
+          <td>25:30.2</td>
+          <td>37:59.9</td>
+          <td class="diff-cell">–</td>
+          <td>2/5, 2/5</td>
+        </tr>
+        <tr>
+          <td class="rank-cell">2</td>
+          <td>Eva Maria Asmundsdottir</td>
+          <td>13:15.5</td>
+          <td>25:40.0</td>
+          <td>38:05.3</td>
+          <td class="diff-cell">+0:05.4</td>
+          <td>3/5, 1/5</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>
