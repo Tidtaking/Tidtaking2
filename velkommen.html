@@ -120,10 +120,10 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Legg supabase-scriptet rett før inline-koden, uten defer -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js"></script>
+  <!-- Last inn Supabase‑SDK uten defer, rett før inline‑skriptet -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/supabase.umd.js"></script>
   
-  <!-- Inline-skript som kjører etter at supabase er lastet -->
+  <!-- Inline-skriptet som bruker supabase -->
   <script>
     window.onload = function() {
       if (typeof supabase === 'undefined') {
@@ -141,7 +141,7 @@
         const comp = document.getElementById("competitionInput").value.trim();
         const date = document.getElementById("dateInput").value;
         
-        // Lagre de valgte verdiene for videre bruk
+        // Lagre valgte verdier
         sessionStorage.setItem("selectedCompetition", comp);
         sessionStorage.setItem("selectedDate", date);
         
