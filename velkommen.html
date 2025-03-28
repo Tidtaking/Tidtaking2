@@ -3,17 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dagens Deltakere - Tidtaking</title>
+  <title>Velkommen til Tidtaking (Flere Konkurranser)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
-      background: #f5f5f5;
+      background-color: #f9f9f9;
+      margin: 0;
     }
     h1 {
+      font-size: 36px;
       margin-bottom: 20px;
       color: #333;
+    }
+    .filter-container {
+      margin: 0 auto 20px;
+      max-width: 600px;
+      text-align: left;
+      background: #eee;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .filter-container label {
+      font-size: 18px;
+      margin: 5px 0;
+      display: block;
+    }
+    .filter-container input {
+      font-size: 16px;
+      padding: 8px;
+      margin-bottom: 10px;
+      width: 90%;
+      max-width: 300px;
+    }
+    .filter-container button {
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-top: 5px;
     }
     table {
       margin: 0 auto;
@@ -28,80 +56,141 @@
       text-align: center;
     }
     th {
-      background: #e9e9e9;
+      background-color: #e9e9e9;
+    }
+    .nav-links {
+      margin-top: 40px;
+    }
+    .nav-links a {
+      display: inline-block;
+      margin: 10px;
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      font-size: 20px;
+      border-radius: 5px;
+    }
+    .nav-links a:hover {
+      background-color: #0056b3;
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 28px;
+      }
+      th, td {
+        font-size: 16px;
+        padding: 8px;
+      }
+      .filter-container input,
+      .filter-container button {
+        font-size: 14px;
+      }
+      .nav-links a {
+        font-size: 18px;
+        padding: 10px 16px;
+      }
     }
   </style>
-  <!-- Last inn Supabase‑SDK med defer -->
+  <!-- Last inn Supabase‑SDK (UMD‑versjon v1.35.6) med defer -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js" defer></script>
 </head>
 <body>
-  <h1>Dagens Deltakere</h1>
-  <div id="participantTable"><p>Laster deltakere...</p></div>
+  <h1>Velkommen til Tidtaking</h1>
   
+  <div class="filter-container">
+    <label for="competitionInput">Konkurransenavn:</label>
+    <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
+    
+    <label for="dateInput">Dato (dd-mm-yyyy):</label>
+    <input type="date" id="dateInput">
+    
+    <button id="filterBtn">Vis deltakere</button>
+  </div>
+  
+  <div id="participantTable"></div>
+  
+  <div class="nav-links">
+    <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
+  </div>
+  
+  <!-- Inline-skriptet plasseres nederst og kjøres etter DOMContentLoaded -->
   <script defer>
-    document.addEventListener('DOMContentLoaded', async function() {
-      // Sjekk at supabase er definert (siden skal kjøres via webserver)
+    document.addEventListener('DOMContentLoaded', function() {
+      // Sjekk om supabase er definert
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Kjør siden via en webserver og sjekk CDN-URL.");
-        document.getElementById("participantTable").innerText = "Kunne ikke laste supabase.";
         return;
       }
       console.log("supabase er definert:", supabase);
       
-      // Opprett Supabase-klienten med dine verdier
+      // Opprett Supabase-klienten
       const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
       const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
       const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
       
-      // Hent dagens dato i formatet "YYYY-MM-DD"
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const formattedDate = `${yyyy}-${mm}-${dd}`;
-      console.log("Dagens dato:", formattedDate);
-      
-      // Bygg spørringen for å hente deltakere for dagens dato.
-      // Juster kolonnenavnet 'date' dersom databasen bruker et annet navn.
-      let { data: participants, error } = await supabaseClient
-        .from('participants')
-        .select('*')
-        .eq('date', formattedDate);
-      
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
-        return;
-      }
-      
-      if (!participants || participants.length === 0) {
-        document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for i dag (${formattedDate}).</p>`;
-        return;
-      }
-      
-      // Hvis det er nødvendig, håndter duplikate navn ved å legge til +100 per ekstra forekomst.
-      let nameCounts = {};
-      let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
-      
-      participants.forEach(function(participant) {
-        const currentName = participant.name;
-        if (nameCounts[currentName] === undefined) {
-          nameCounts[currentName] = 0;
-        } else {
-          nameCounts[currentName]++;
+      document.getElementById("filterBtn").addEventListener("click", async function() {
+        const comp = document.getElementById("competitionInput").value.trim();
+        const date = document.getElementById("dateInput").value;
+        
+        // Lagre de valgte verdiene for videre bruk
+        sessionStorage.setItem("selectedCompetition", comp);
+        sessionStorage.setItem("selectedDate", date);
+        
+        // Bygg spørringen basert på dato (og konkurranse hvis oppgitt)
+        let query = supabaseClient.from('participants').select('*').eq('date', date);
+        if (comp !== "") {
+          query = query.eq('competition', comp);
         }
-        const baseStartNum = participant.startnummer || 0;
-        const startNum = baseStartNum + (nameCounts[currentName] * 100);
-        tableHtml += `<tr>
-                        <td>${participant.id}</td>
-                        <td>${participant.name}</td>
-                        <td>${participant.competition}</td>
-                        <td>${participant.date}</td>
-                        <td>${startNum}</td>
-                      </tr>`;
+        
+        const { data: participants, error } = await query;
+        
+        if (error) {
+          console.error("Feil ved henting av deltakere:", error);
+          document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
+          return;
+        }
+        
+        if (!participants || participants.length === 0) {
+          document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
+          return;
+        }
+        
+        // Håndter duplikate navn: legg til +100 per ekstra forekomst
+        let nameCounts = {};
+        let tableHtml = '<table><thead><tr><th>ID</th><th>Navn</th><th>Konkurranse</th><th>Dato</th><th>Startnummer</th></tr></thead><tbody>';
+        
+        participants.forEach(function(participant) {
+          const currentName = participant.name;
+          if (nameCounts[currentName] === undefined) {
+            nameCounts[currentName] = 0;
+          } else {
+            nameCounts[currentName]++;
+          }
+          
+          const baseStartNum = participant.startnummer || 0;
+          const startNum = baseStartNum + (nameCounts[currentName] * 100);
+          
+          tableHtml += `<tr>
+                          <td>${participant.id}</td>
+                          <td>${participant.name}</td>
+                          <td>${participant.competition}</td>
+                          <td>${participant.date}</td>
+                          <td>${startNum}</td>
+                        </tr>`;
+        });
+        
+        tableHtml += '</tbody></table>';
+        document.getElementById("participantTable").innerHTML = tableHtml;
       });
-      tableHtml += '</tbody></table>';
-      document.getElementById("participantTable").innerHTML = tableHtml;
     });
   </script>
 </body>
