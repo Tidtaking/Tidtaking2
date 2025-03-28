@@ -92,8 +92,6 @@
       }
     }
   </style>
-  <!-- Last inn Supabase‑SDK (UMD‑versjon v1.35.6) med defer -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js" defer></script>
 </head>
 <body>
   <h1>Velkommen til Tidtaking</h1>
@@ -122,10 +120,12 @@
     <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
   
-  <!-- Inline-skriptet plasseres nederst og kjøres etter DOMContentLoaded -->
-  <script defer>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Sjekk om supabase er definert
+  <!-- Legg supabase-scriptet rett før inline-koden, uten defer -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.6/dist/umd/supabase.umd.min.js"></script>
+  
+  <!-- Inline-skript som kjører etter at supabase er lastet -->
+  <script>
+    window.onload = function() {
       if (typeof supabase === 'undefined') {
         console.error("supabase er ikke definert. Kjør siden via en webserver og sjekk CDN-URL.");
         return;
@@ -191,7 +191,7 @@
         tableHtml += '</tbody></table>';
         document.getElementById("participantTable").innerHTML = tableHtml;
       });
-    });
+    };
   </script>
 </body>
 </html>
