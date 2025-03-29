@@ -29,24 +29,13 @@
       text-align: center;
     }
     th {
-      background-color: #f4f4f4;
+      background-color: #a0a0a0; /* Mørkere grå for bedre lesbarhet */
+      color: #fff;
     }
     /* Skytekolonnen med grå bakgrunn */
     .shootingCell {
       background-color: gray;
       white-space: nowrap;
-    }
-    /* Blinkene – store sirkler uten tall (90x90px, font-size 54px) */
-    .target {
-      display: inline-block;
-      width: 90px;
-      height: 90px;
-      line-height: 90px;
-      border-radius: 50%;
-      margin: 4px;
-      font-size: 54px;
-      cursor: pointer;
-      vertical-align: middle;
     }
     /* Strafferunder-knappen – stor grønn knapp */
     .penalty-button {
@@ -65,12 +54,6 @@
     }
     @media (max-width: 480px) {
       th, td { font-size: 16px; padding: 8px; }
-      .target {
-        width: 70px;
-        height: 70px;
-        line-height: 70px;
-        font-size: 42px;
-      }
       .penalty-button {
         font-size: 18px;
         padding: 10px 16px;
@@ -89,7 +72,7 @@
     // Globalt deltakerobjekt – her lagres data for de aktive deltakerne
     window.participants = {};
 
-    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
+    // Hjelpefunksjon: Henter skyte-array for en deltaker (forventer 2 runder à 5 booleans)
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -111,7 +94,7 @@
       return count;
     }
 
-    // Henter aktive deltakere (status "I gang")
+    // Henter aktive deltakere med status "I gang"
     async function fetchActiveParticipants() {
       const { data, error } = await window.supabaseClient
         .from("participants")
@@ -130,7 +113,7 @@
       // Oppdater det globale objektet
       participants.forEach(p => {
         p.shooting = (typeof p.shooting === "string") ? getShootingArray(p) : p.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Sett standardverdi for penalty (om ikke definert)
+        // Sett standardverdi for penalty hvis ikke definert
         p.penalty = (p.penalty !== undefined && p.penalty !== null) ? p.penalty : 0;
         window.participants[p.snr] = p;
       });
@@ -150,10 +133,20 @@
         </thead>
         <tbody>`;
       participants.sort((a, b) => a.snr - b.snr).forEach(p => {
-        let s1 = p.shooting[0].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
-        let s2 = p.shooting[1].map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join(" ");
+        // For runde 1: tell treff (true) i første array
+        let hits1 = 0;
+        if (Array.isArray(p.shooting) && p.shooting.length >= 1) {
+          hits1 = p.shooting[0].filter(x => x === true).length;
+        }
+        let s1 = hits1 + "/5";
+        // For runde 2: tell treff i andre array
+        let hits2 = 0;
+        if (Array.isArray(p.shooting) && p.shooting.length >= 2) {
+          hits2 = p.shooting[1].filter(x => x === true).length;
+        }
+        let s2 = hits2 + "/5";
+
         let misses = countMisses(p);
-        // Hvis antall registrerte strafferunder (p.penalty) ikke er lik antall bom (misses), vis i rødt
         let penaltyDisplay = p.penalty;
         if (p.penalty !== misses) {
           penaltyDisplay = `<span class="penalty-error">${p.penalty}</span>`;
@@ -161,8 +154,8 @@
         html += `<tr>
           <td>${p.snr}</td>
           <td style="font-size:22px;">${p.name}</td>
-          <td class="shootingCell">${s1}</td>
-          <td class="shootingCell">${s2}</td>
+          <td class="shootingCell" style="font-size:20px;">${s1}</td>
+          <td class="shootingCell" style="font-size:20px;">${s2}</td>
           <td style="font-size:20px;">${misses}</td>
           <td style="font-size:20px;">${penaltyDisplay}</td>
           <td><button class="penalty-button" onclick="addPenalty(${p.snr})">Legg til strafferunde</button></td>
