@@ -29,7 +29,7 @@
       text-align: center;
     }
     th {
-      background-color: #a0a0a0; /* Mørkere grå for bedre lesbarhet */
+      background-color: rgb(150, 150, 150); /* Mørkere grå for bedre kontrast */
       color: #fff;
     }
     /* Skytekolonnen med grå bakgrunn */
@@ -47,6 +47,12 @@
       cursor: pointer;
       border-radius: 5px;
     }
+    /* Minus-knappen – omtrent halvparten av pluss-knappen */
+    .penalty-button.minus-btn {
+      padding: 6px 10px;
+      font-size: 10px;
+      margin-right: 4px;
+    }
     /* Dersom registrert strafferunder ikke stemmer med antall bom, vis tallet i rødt */
     .penalty-error {
       color: red;
@@ -57,6 +63,10 @@
       .penalty-button {
         font-size: 18px;
         padding: 10px 16px;
+      }
+      .penalty-button.minus-btn {
+        font-size: 9px;
+        padding: 5px 8px;
       }
     }
   </style>
@@ -72,7 +82,7 @@
     // Globalt deltakerobjekt – her lagres data for de aktive deltakerne
     window.participants = {};
 
-    // Hjelpefunksjon: Henter skyte-array for en deltaker (forventer 2 runder à 5 booleans)
+    // Hjelpefunksjon: Henter skyte-array fra et deltakerobjekt
     function getShootingArray(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       try {
@@ -94,7 +104,7 @@
       return count;
     }
 
-    // Henter aktive deltakere med status "I gang"
+    // Henter aktive deltakere (status "I gang")
     async function fetchActiveParticipants() {
       const { data, error } = await window.supabaseClient
         .from("participants")
@@ -113,7 +123,7 @@
       // Oppdater det globale objektet
       participants.forEach(p => {
         p.shooting = (typeof p.shooting === "string") ? getShootingArray(p) : p.shooting || [Array(5).fill(false), Array(5).fill(false)];
-        // Sett standardverdi for penalty hvis ikke definert
+        // Sett standardverdi for penalty (om ikke definert)
         p.penalty = (p.penalty !== undefined && p.penalty !== null) ? p.penalty : 0;
         window.participants[p.snr] = p;
       });
@@ -133,19 +143,16 @@
         </thead>
         <tbody>`;
       participants.sort((a, b) => a.snr - b.snr).forEach(p => {
-        // For runde 1: tell treff (true) i første array
-        let hits1 = 0;
+        let s1 = "";
         if (Array.isArray(p.shooting) && p.shooting.length >= 1) {
-          hits1 = p.shooting[0].filter(x => x === true).length;
+          const hits1 = p.shooting[0].filter(x => x === true).length;
+          s1 = hits1 + "/5";
         }
-        let s1 = hits1 + "/5";
-        // For runde 2: tell treff i andre array
-        let hits2 = 0;
+        let s2 = "";
         if (Array.isArray(p.shooting) && p.shooting.length >= 2) {
-          hits2 = p.shooting[1].filter(x => x === true).length;
+          const hits2 = p.shooting[1].filter(x => x === true).length;
+          s2 = hits2 + "/5";
         }
-        let s2 = hits2 + "/5";
-
         let misses = countMisses(p);
         let penaltyDisplay = p.penalty;
         if (p.penalty !== misses) {
@@ -158,7 +165,10 @@
           <td class="shootingCell" style="font-size:20px;">${s2}</td>
           <td style="font-size:20px;">${misses}</td>
           <td style="font-size:20px;">${penaltyDisplay}</td>
-          <td><button class="penalty-button" onclick="addPenalty(${p.snr})">Legg til strafferunde</button></td>
+          <td>
+            <button class="penalty-button minus-btn" onclick="removePenalty(${p.snr})">-</button>
+            <button class="penalty-button" onclick="addPenalty(${p.snr})">Legg til strafferunde</button>
+          </td>
         </tr>`;
       });
       html += `</tbody></table>`;
@@ -171,7 +181,8 @@
       if (!p) return;
       p.penalty = Number(p.penalty) + 1;
       console.log("Oppdaterer penalty for snr", snr, "med verdi", p.penalty);
-      const { error } = await window.supabaseClient.from("participants")
+      const { error } = await window.supabaseClient
+        .from("participants")
         .update({ penalty: Number(p.penalty) })
         .eq("snr", snr);
       if (error) {
@@ -181,7 +192,24 @@
       updatePenaltyTable();
     }
 
-    // Oppdater strafferunde-tabellen ved lasting og periodisk
+    // Funksjon for å fjerne en strafferunde for en deltaker
+    async function removePenalty(snr) {
+      let p = window.participants[snr];
+      if (!p) return;
+      // Sørg for at penalty ikke blir negativ
+      p.penalty = Math.max(Number(p.penalty) - 1, 0);
+      console.log("Reduserer penalty for snr", snr, "til verdi", p.penalty);
+      const { error } = await window.supabaseClient
+        .from("participants")
+        .update({ penalty: Number(p.penalty) })
+        .eq("snr", snr);
+      if (error) {
+        console.error("Feil ved oppdatering av penalty for snr", snr, error);
+        alert("Feil ved oppdatering. Sjekk konsollen.");
+      }
+      updatePenaltyTable();
+    }
+
     document.addEventListener("DOMContentLoaded", updatePenaltyTable);
     setInterval(updatePenaltyTable, 1000);
   </script>
