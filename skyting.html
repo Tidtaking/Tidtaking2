@@ -24,7 +24,7 @@
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 6px; /* redusert for å spare plass */
+      padding: 6px;
       font-size: 18px;
       text-align: center;
     }
@@ -34,20 +34,22 @@
     /* Faste kolonner for skyting */
     .shootingCell {
       background-color: gray;
-      width: 240px;
-      max-width: 240px;
+      /* Øk bredden for å få plass til 5 større blink */
+      width: 450px;
+      max-width: 450px;
       white-space: nowrap;
-      overflow: hidden;
+      /* Fjern overflow hidden for å unngå at blink forsvinner */
+      overflow: visible;
       text-align: center;
     }
-    /* Blink – større for bedre treff, f.eks. 80x80px, med litt margin */
+    /* Blink – 90x90 px, litt større font-size */
     .target {
       display: inline-block;
-      width: 80px;
-      height: 80px;
-      line-height: 80px;
+      width: 90px;
+      height: 90px;
+      line-height: 90px;
       border-radius: 50%;
-      margin: 4px;
+      margin: 2px;
       font-size: 48px;
       cursor: pointer;
       vertical-align: middle;
@@ -71,7 +73,7 @@
       background-color: #6c757d;
       cursor: default;
     }
-    /* Knapp for skytetid – nå separate for runde 1 og 2 */
+    /* Knapp for skytetid */
     .time-button {
       background-color: #007bff;
       color: white;
@@ -85,13 +87,16 @@
       cursor: default;
     }
     @media (max-width: 480px) {
+      table {
+        max-width: 100%;
+      }
       th, td {
         font-size: 16px;
         padding: 4px;
       }
       .shootingCell {
-        width: 220px;
-        max-width: 220px;
+        width: 320px;
+        max-width: 320px;
       }
       .target {
         width: 70px;
@@ -152,7 +157,7 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer deltakerens lokale shooting-toggles, eller setter standard
+    // Returnerer deltakerens lokale shooting-toggles
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -164,7 +169,7 @@
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
-      // Her lar vi den originale koden stå (men du kan eventuelt skjule visningen av blinkene på mobil om ønskelig)
+      // Her genereres 5 blink
       return arr.map((hit, i) =>
         `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join("");
@@ -189,9 +194,6 @@
         dbRec.s2sent = dbRec.s2sent || false;
         dbRec.skive = dbRec.skive || "";
         dbRec.status = dbRec.status || "";
-        // Legg til separate start-tider for skytetid for runde 1 og 2
-        dbRec.shootingTimeStart1 = dbRec.shootingTimeStart1 || null;
-        dbRec.shootingTimeStart2 = dbRec.shootingTimeStart2 || null;
         window.participants[snr] = dbRec;
       } else {
         local.status = dbRec.status || local.status;
@@ -232,7 +234,7 @@
 
     function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med begge skyteresultat sendt havner nederst
+      // Sorter: de med s1sent & s2sent nederst
       data.sort((a, b) => {
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
@@ -248,10 +250,8 @@
             <th>Skive</th>
             <th class="shootingCell">Skyting S1</th>
             <th>Send S1</th>
-            <th>Skytetid S1</th>
             <th class="shootingCell">Skyting S2</th>
             <th>Send S2</th>
-            <th>Skytetid S2</th>
           </tr>
         </thead>
         <tbody>`;
@@ -266,25 +266,6 @@
           ? `<button class="send-button sent" disabled>Sendt</button>`
           : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
         
-        // Knapp for skytetid for runde 1
-        let timeBtn1 = "";
-        if (p.shootingtime1) {
-          timeBtn1 = `<button class="time-button registered" disabled>Tid registrert</button>`;
-        } else if (!p.shootingTimeStart1) {
-          timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Start skytetid S1</button>`;
-        } else {
-          timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Registrer tid S1</button>`;
-        }
-        // Knapp for skytetid for runde 2
-        let timeBtn2 = "";
-        if (p.shootingtime2) {
-          timeBtn2 = `<button class="time-button registered" disabled>Tid registrert</button>`;
-        } else if (!p.shootingTimeStart2) {
-          timeBtn2 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 1)" id="timeBtn-${p.snr}-1">Start skytetid S2</button>`;
-        } else {
-          timeBtn2 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 1)" id="timeBtn-${p.snr}-1">Registrer tid S2</button>`;
-        }
-        
         html += `<tr>
           <td>${p.snr}</td>
           <td>${p.name}</td>
@@ -292,62 +273,12 @@
           <td>${inputSkive}</td>
           <td class="shootingCell">${s1}</td>
           <td>${btnS1}</td>
-          <td>${timeBtn1}</td>
           <td class="shootingCell">${s2}</td>
           <td>${btnS2}</td>
-          <td>${timeBtn2}</td>
         </tr>`;
       });
       html += `</tbody></table>`;
       document.getElementById("shootingTable").innerHTML = html;
-    }
-
-    // Funksjon for å registrere skytetid for en gitt runde (shootIdx: 0 for S1, 1 for S2)
-    async function registerShootingTime(snr, shootIdx) {
-      let p = window.participants[snr];
-      if (!p) return;
-      const btn = document.getElementById(`timeBtn-${snr}-${shootIdx}`);
-      if (shootIdx === 0) {
-        if (!p.shootingTimeStart1) {
-          p.shootingTimeStart1 = Date.now();
-          btn.innerText = "Registrer tid S1";
-        } else {
-          const elapsedMs = Date.now() - p.shootingTimeStart1;
-          const shootingTime = elapsedMs / 1000;
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ shootingtime1: shootingTime })
-            .eq("snr", snr);
-          if (error) {
-            console.error("Feil ved lagring av shootingtime1 for snr", snr, error);
-            alert("Feil ved lagring av tid – sjekk konsollen.");
-          } else {
-            p.shootingtime1 = shootingTime;
-            btn.innerText = "Tid registrert";
-            btn.classList.add("registered");
-            btn.disabled = true;
-          }
-        }
-      } else {
-        if (!p.shootingTimeStart2) {
-          p.shootingTimeStart2 = Date.now();
-          btn.innerText = "Registrer tid S2";
-        } else {
-          const elapsedMs = Date.now() - p.shootingTimeStart2;
-          const shootingTime = elapsedMs / 1000;
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ shootingtime2: shootingTime })
-            .eq("snr", snr);
-          if (error) {
-            console.error("Feil ved lagring av shootingtime2 for snr", snr, error);
-            alert("Feil ved lagring av tid – sjekk konsollen.");
-          } else {
-            p.shootingtime2 = shootingTime;
-            btn.innerText = "Tid registrert";
-            btn.classList.add("registered");
-            btn.disabled = true;
-          }
-        }
-      }
     }
 
     async function sendShootingResult(snr, shootIdx) {
@@ -376,47 +307,9 @@
       updateDataFromDb();
     }
 
-    function parseJSONIfString(val) {
-      if (!val) return null;
-      if (typeof val === "string") {
-        try {
-          return JSON.parse(val);
-        } catch (err) {
-          console.warn("Kunne ikke parse streng:", val);
-          return null;
-        }
-      }
-      return val;
-    }
-
-    async function fetchAllParticipants() {
-      const { data, error } = await window.supabaseClient
-        .from("participants")
-        .select("*");
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        return [];
-      }
-      return data;
-    }
-
-    async function updateDataFromDb() {
-      let dbData = await fetchAllParticipants();
-      let existingSnrs = {};
-      dbData.forEach(dbRec => {
-        mergeDbRecordIntoLocal(dbRec);
-        existingSnrs[dbRec.snr] = true;
-      });
-      for (let snr in window.participants) {
-        if (!existingSnrs[snr]) {
-          delete window.participants[snr];
-        }
-      }
-      renderTable();
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
       updateDataFromDb();
+      // Oppdater data hvert sekund
       setInterval(updateDataFromDb, 1000);
     });
   </script>
