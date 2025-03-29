@@ -59,6 +59,19 @@
       color: #777;
       font-size: 0.9em;
     }
+    #pdfBtn {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #pdfBtn:hover {
+      background-color: #0056b3;
+    }
     @media (max-width: 600px) {
       th, td {
         font-size: 14px;
@@ -66,6 +79,10 @@
       }
       .class-title {
         font-size: 20px;
+      }
+      #pdfBtn {
+        font-size: 18px;
+        padding: 8px 16px;
       }
     }
   </style>
@@ -82,6 +99,9 @@
   <p>Laster resultater...</p>
 </div>
 
+<!-- PDF-knapp -->
+<button id="pdfBtn">Lagre som PDF</button>
+
 <!-- Navigasjonslenker -->
 <div class="nav-links">
   <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
@@ -95,10 +115,14 @@
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
-<!-- Inkluder Supabase SDK (v1.x) -->
+<!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- jsPDF og jsPDF-AutoTable -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+
 <script>
-  // Opprett Supabase-klient med dine verdier
+  // Opprett Supabase-klient
   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
   const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -107,7 +131,7 @@
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent alle deltakere (her kan du legge til filter f.eks. .eq("competition", "Testløp").eq("comp_date", "2025-03-28"))
+    // Hent alle deltakere (tilpass spørringen om ønskelig)
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -128,7 +152,7 @@
       return;
     }
 
-    // Grupper etter klasse
+    // Grupper deltakerne klassevis
     let classMap = {};
     for (const p of finished) {
       const cls = p.class || "Ukjent klasse";
@@ -143,7 +167,7 @@
       // Sorter deltakerne i klassen etter finish (stigende)
       classMap[cls].sort((a, b) => (parseFloat(a.finish) || 9999999) - (parseFloat(b.finish) || 9999999));
 
-      // Finn den beste tiden i klassen
+      // Finn den beste tiden i klassen (for differanseberegning)
       const bestTime = parseFloat(classMap[cls][0].finish) || 0;
 
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
@@ -166,7 +190,6 @@
 
       classMap[cls].forEach((participant, index) => {
         const rank = index + 1;
-        // Formatér sluttid
         const finishSec = parseFloat(participant.finish) || 0;
         const finishStr = formatTime(finishSec);
 
@@ -175,15 +198,13 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Hent mellomtider: forsøk å parse laps hvis det er en streng
+        // Parser mellomtider (laps)
         let lapsArr = [];
         if (participant.laps) {
           if (typeof participant.laps === "string") {
             try {
               lapsArr = JSON.parse(participant.laps);
-            } catch (err) {
-              console.warn("Kunne ikke parse laps for", participant.name);
-            }
+            } catch {}
           } else if (Array.isArray(participant.laps)) {
             lapsArr = participant.laps;
           }
@@ -196,22 +217,20 @@
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
-        // Hent skyteresultat, parse hvis nødvendig
+        // Parser skyteresultat (shooting)
         let shootingArr = [];
         if (participant.shooting) {
           if (typeof participant.shooting === "string") {
             try {
               shootingArr = JSON.parse(participant.shooting);
-            } catch (err) {
-              console.warn("Kunne ikke parse shooting for", participant.name);
-            }
+            } catch {}
           } else if (Array.isArray(participant.shooting)) {
             shootingArr = participant.shooting;
           }
         }
         const shootingStr = parseShootingArray(shootingArr);
 
-        // Skytetid: Hvis feltet finnes, formater tiden
+        // Skytetid
         const shootingTimeStr = participant.shootingtime ? formatTime(parseFloat(participant.shootingtime)) : "";
 
         html += `
@@ -227,14 +246,12 @@
           </tr>
         `;
       });
-
       html += "</tbody></table>";
     }
-
     container.innerHTML = html;
   }
 
-  // Formatér tid (sekunder) til mm:ss.x (juster hvis tidene er i millisekunder)
+  // Formatere tid til mm:ss.x
   function formatTime(timeSec) {
     if (!timeSec || isNaN(timeSec)) return "";
     const totalSec = Math.floor(timeSec);
@@ -244,7 +261,7 @@
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
-  // Parser skyteresultat: Forventer en 2D-array med booleans, f.eks. [[true,false],[false,true]]
+  // Parser skyteresultat – forventer 2D-array med booleans
   function parseShootingArray(arr) {
     if (!arr || !Array.isArray(arr)) return "";
     return arr.map(serie => {
@@ -253,6 +270,39 @@
       return `${hits}/${serie.length}`;
     }).join(", ");
   }
+
+  // PDF-funksjonalitet: Lag PDF med jsPDF og autoTable
+  async function saveResultsAsPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt');
+    let yOffset = 20;
+    // Hent alle tabeller som er generert i resultatsiden
+    const container = document.getElementById("resultsContainer");
+    const tables = container.getElementsByTagName("table");
+    if (tables.length === 0) {
+      alert("Ingen resultater å eksportere.");
+      return;
+    }
+    // Legg til en tittel
+    doc.setFontSize(20);
+    doc.text("Resultater - LSK", 40, 30);
+    yOffset = 50;
+    // Bruk autoTable for hver tabell
+    for (let i = 0; i < tables.length; i++) {
+      doc.autoTable({
+        html: tables[i],
+        startY: yOffset,
+        theme: 'grid',
+        headStyles: { fillColor: [233, 233, 233] },
+        margin: { left: 40, right: 40 }
+      });
+      yOffset = doc.lastAutoTable.finalY + 20;
+    }
+    doc.save("resultater.pdf");
+  }
+
+  // PDF-knapp-håndtering
+  document.getElementById("pdfBtn").addEventListener("click", saveResultsAsPDF);
 
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
 </script>
