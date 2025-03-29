@@ -130,6 +130,7 @@
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
+    // Hent alle deltakere – her kan du tilpasse spørringen etter konkurranse/dato
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -165,7 +166,7 @@
       // Sorter deltakerne i klassen etter finish-tid (stigende)
       classMap[cls].sort((a, b) => (parseFloat(a.finish) || 9999999) - (parseFloat(b.finish) || 9999999));
 
-      // Finn beste tid i klassen
+      // Finn den beste tiden i klassen
       const bestTime = parseFloat(classMap[cls][0].finish) || 0;
 
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
@@ -180,7 +181,8 @@
               <th>Sluttid</th>
               <th>Differanse</th>
               <th>Skyteresultat</th>
-              <th>Skytetid</th>
+              <th>Skytetid S1</th>
+              <th>Skytetid S2</th>
             </tr>
           </thead>
           <tbody>
@@ -196,7 +198,7 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Hent mellomtider
+        // Hent mellomtider (laps)
         let lapsArr = [];
         if (participant.laps) {
           if (typeof participant.laps === "string") {
@@ -217,7 +219,7 @@
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
-        // Hent skyteresultat
+        // Hent skyteresultat (shooting)
         let shootingArr = [];
         if (participant.shooting) {
           if (typeof participant.shooting === "string") {
@@ -232,8 +234,9 @@
         }
         const shootingStr = parseShootingArray(shootingArr);
 
-        // Skytetid
-        const shootingTimeStr = participant.shootingtime ? formatTime(parseFloat(participant.shootingtime)) : "";
+        // Skytetid for runde 1 og 2
+        const shootingTimeStr1 = participant.shootingtime1 ? formatTime(parseFloat(participant.shootingtime1)) : "";
+        const shootingTimeStr2 = participant.shootingtime2 ? formatTime(parseFloat(participant.shootingtime2)) : "";
 
         html += `
           <tr>
@@ -244,16 +247,19 @@
             <td>${finishStr}</td>
             <td class="diff-cell">${diffStr}</td>
             <td>${shootingStr}</td>
-            <td>${shootingTimeStr}</td>
+            <td>${shootingTimeStr1}</td>
+            <td>${shootingTimeStr2}</td>
           </tr>
         `;
       });
+
       html += "</tbody></table>";
     }
 
     container.innerHTML = html;
   }
 
+  // Formatér tid (sekunder) til mm:ss.x
   function formatTime(timeSec) {
     if (!timeSec || isNaN(timeSec)) return "";
     const totalSec = Math.floor(timeSec);
@@ -263,6 +269,7 @@
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
+  // Parser skyteresultat – forventer en 2D-array med booleans
   function parseShootingArray(arr) {
     if (!arr || !Array.isArray(arr)) return "";
     return arr.map(serie => {
