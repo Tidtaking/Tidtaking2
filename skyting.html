@@ -31,24 +31,25 @@
     th {
       background-color: #f4f4f4;
     }
-    /* Faste kolonner for skyting – endret for å vise alle 5 blinkene */
+    /* Faste kolonner for skyting – nå smalere for mobil: ca. halvparten av forrige bredde */
     .shootingCell {
       background-color: gray;
-      width: 450px;
-      max-width: 450px;
-      /* Fjernet overflow: hidden for å vise alle blinkene */
+      width: 225px;
+      max-width: 225px;
+      white-space: nowrap;
+      /* Fjern overflow slik at alle blinkene vises */
       overflow: visible;
       text-align: center;
     }
-    /* Blink – større for bedre treff, f.eks. 80x80px */
+    /* Blinkene – reduserte i størrelse, ca. 40x40 px */
     .target {
       display: inline-block;
-      width: 80px;
-      height: 80px;
-      line-height: 80px;
+      width: 40px;
+      height: 40px;
+      line-height: 40px;
       border-radius: 50%;
       margin: 4px;
-      font-size: 48px;
+      font-size: 32px;
       cursor: pointer;
       vertical-align: middle;
     }
@@ -90,14 +91,14 @@
         padding: 4px;
       }
       .shootingCell {
-        width: 320px;
-        max-width: 320px;
+        width: 180px;
+        max-width: 180px;
       }
       .target {
-        width: 70px;
-        height: 70px;
-        line-height: 70px;
-        font-size: 40px;
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        font-size: 28px;
       }
       .skive-input {
         width: 50px;
@@ -109,7 +110,6 @@
       }
     }
   </style>
-
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
@@ -153,7 +153,7 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer deltakerens lokale shooting-toggles, eller setter standard
+    // Returnerer deltakerens lokale shooting-toggles (eller setter standard)
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -175,7 +175,7 @@
       let p = window.participants[snr];
       let arr = getShootingArray(p);
       arr[shootIdx][idx] = !arr[shootIdx][idx];
-      p.shootingLocal = arr;  // Oppdater lokal tilstand
+      p.shootingLocal = arr;
       e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
@@ -189,7 +189,7 @@
         dbRec.s2sent = dbRec.s2sent || false;
         dbRec.skive = dbRec.skive || "";
         dbRec.status = dbRec.status || "";
-        // Legg til separate start-tider for skytetid for runde 1 og 2
+        // Separate start-tider for skytetid for runde 1 og 2
         dbRec.shootingTimeStart1 = dbRec.shootingTimeStart1 || null;
         dbRec.shootingTimeStart2 = dbRec.shootingTimeStart2 || null;
         window.participants[snr] = dbRec;
@@ -232,7 +232,7 @@
 
     function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med begge skyteresultat sendt havner nederst
+      // Sorter slik at de med fullførte skyteresultater havner nederst
       data.sort((a, b) => {
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
