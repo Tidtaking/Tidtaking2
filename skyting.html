@@ -20,7 +20,7 @@
       margin: 0 auto;
       border-collapse: collapse;
       width: 95%;
-      max-width: 600px;
+      max-width: 600px; /* Begrenset bredde for mobil */
     }
     th, td {
       border: 1px solid #ccc;
@@ -34,11 +34,10 @@
     /* Faste kolonner for skyting */
     .shootingCell {
       background-color: gray;
-      /* Øk bredden for å få plass til 5 større blink */
-      width: 450px;
+      width: 450px;   /* Mer plass for 5 store blink */
       max-width: 450px;
       white-space: nowrap;
-      /* Fjern overflow hidden for å unngå at blink forsvinner */
+      /* Fjern overflow for at blinkene ikke forsvinner */
       overflow: visible;
       text-align: center;
     }
@@ -119,7 +118,7 @@
   <script>
     // Konfigurer Supabase
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     // Globalt deltaker-objekt for lokal toggling
@@ -157,7 +156,7 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer deltakerens lokale shooting-toggles
+    // Returnerer deltakerens lokalt lagrede toggles
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -169,9 +168,9 @@
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
-      // Her genereres 5 blink
       return arr.map((hit, i) =>
-        `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
+        `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})"
+          style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join("");
     }
 
@@ -189,13 +188,18 @@
       const snr = dbRec.snr;
       let local = window.participants[snr];
       if (!local) {
+        // Ny deltaker i local
         dbRec.shootingLocal = parseShooting(dbRec);
         dbRec.s1sent = dbRec.s1sent || false;
         dbRec.s2sent = dbRec.s2sent || false;
         dbRec.skive = dbRec.skive || "";
         dbRec.status = dbRec.status || "";
+        // For skytetid for runde 1 og 2
+        dbRec.shootingTimeStart1 = dbRec.shootingTimeStart1 || null;
+        dbRec.shootingTimeStart2 = dbRec.shootingTimeStart2 || null;
         window.participants[snr] = dbRec;
       } else {
+        // Oppdater local
         local.status = dbRec.status || local.status;
         local.s1sent = local.s1sent || dbRec.s1sent;
         local.s2sent = local.s2sent || dbRec.s2sent;
@@ -252,20 +256,22 @@
             <th>Send S1</th>
             <th class="shootingCell">Skyting S2</th>
             <th>Send S2</th>
+            <!-- Eksempel: Legg til 2 kolonner for skytetid (S1, S2) om ønskelig -->
           </tr>
         </thead>
         <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
-        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive" onchange="window.participants[${p.snr}].skive=this.value">`;
+        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive"
+                           onchange="window.participants[${p.snr}].skive=this.value">`;
         let btnS1 = p.s1sent
           ? `<button class="send-button sent" disabled>Sendt</button>`
           : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
         let btnS2 = p.s2sent
           ? `<button class="send-button sent" disabled>Sendt</button>`
           : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
-        
+
         html += `<tr>
           <td>${p.snr}</td>
           <td>${p.name}</td>
