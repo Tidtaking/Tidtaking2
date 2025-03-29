@@ -115,12 +115,11 @@
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
-<!-- Supabase SDK -->
+<!-- Inkluder Supabase SDK (v1.x) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<!-- jsPDF og jsPDF-AutoTable -->
+<!-- Inkluder jsPDF og jsPDF-AutoTable -->
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
-
 <script>
   // Opprett Supabase-klient
   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -131,7 +130,6 @@
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent alle deltakere (tilpass spørringen om ønskelig)
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -152,7 +150,7 @@
       return;
     }
 
-    // Grupper deltakerne klassevis
+    // Grupper deltakerne etter klasse
     let classMap = {};
     for (const p of finished) {
       const cls = p.class || "Ukjent klasse";
@@ -164,10 +162,10 @@
 
     let html = "";
     for (const cls of Object.keys(classMap)) {
-      // Sorter deltakerne i klassen etter finish (stigende)
+      // Sorter deltakerne i klassen etter finish-tid (stigende)
       classMap[cls].sort((a, b) => (parseFloat(a.finish) || 9999999) - (parseFloat(b.finish) || 9999999));
 
-      // Finn den beste tiden i klassen (for differanseberegning)
+      // Finn beste tid i klassen
       const bestTime = parseFloat(classMap[cls][0].finish) || 0;
 
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
@@ -198,13 +196,15 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Parser mellomtider (laps)
+        // Hent mellomtider
         let lapsArr = [];
         if (participant.laps) {
           if (typeof participant.laps === "string") {
             try {
               lapsArr = JSON.parse(participant.laps);
-            } catch {}
+            } catch (err) {
+              console.warn("Kunne ikke parse laps for", participant.name);
+            }
           } else if (Array.isArray(participant.laps)) {
             lapsArr = participant.laps;
           }
@@ -217,13 +217,15 @@
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
-        // Parser skyteresultat (shooting)
+        // Hent skyteresultat
         let shootingArr = [];
         if (participant.shooting) {
           if (typeof participant.shooting === "string") {
             try {
               shootingArr = JSON.parse(participant.shooting);
-            } catch {}
+            } catch (err) {
+              console.warn("Kunne ikke parse shooting for", participant.name);
+            }
           } else if (Array.isArray(participant.shooting)) {
             shootingArr = participant.shooting;
           }
@@ -248,10 +250,10 @@
       });
       html += "</tbody></table>";
     }
+
     container.innerHTML = html;
   }
 
-  // Formatere tid til mm:ss.x
   function formatTime(timeSec) {
     if (!timeSec || isNaN(timeSec)) return "";
     const totalSec = Math.floor(timeSec);
@@ -261,7 +263,6 @@
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
-  // Parser skyteresultat – forventer 2D-array med booleans
   function parseShootingArray(arr) {
     if (!arr || !Array.isArray(arr)) return "";
     return arr.map(serie => {
@@ -271,37 +272,36 @@
     }).join(", ");
   }
 
-  // PDF-funksjonalitet: Lag PDF med jsPDF og autoTable
+  // PDF-funksjonalitet med jsPDF og autoTable
   async function saveResultsAsPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'pt');
-    let yOffset = 20;
-    // Hent alle tabeller som er generert i resultatsiden
-    const container = document.getElementById("resultsContainer");
-    const tables = container.getElementsByTagName("table");
-    if (tables.length === 0) {
-      alert("Ingen resultater å eksportere.");
-      return;
-    }
-    // Legg til en tittel
+    let yOffset = 40;
     doc.setFontSize(20);
     doc.text("Resultater - LSK", 40, 30);
     yOffset = 50;
-    // Bruk autoTable for hver tabell
-    for (let i = 0; i < tables.length; i++) {
+
+    const container = document.getElementById("resultsContainer");
+    // Finn alle klasse-titler og tilhørende tabeller
+    const classTitles = container.getElementsByClassName("class-title");
+    for (let i = 0; i < classTitles.length; i++) {
+      let className = classTitles[i].textContent;
+      doc.setFontSize(18);
+      doc.text(className, 40, yOffset);
+      yOffset += 20;
+      let table = classTitles[i].nextElementSibling;
       doc.autoTable({
-        html: tables[i],
+        html: table,
         startY: yOffset,
         theme: 'grid',
-        headStyles: { fillColor: [233, 233, 233] },
+        headStyles: { fillColor: [150, 150, 150] },
         margin: { left: 40, right: 40 }
       });
-      yOffset = doc.lastAutoTable.finalY + 20;
+      yOffset = doc.lastAutoTable.finalY + 30;
     }
     doc.save("resultater.pdf");
   }
 
-  // PDF-knapp-håndtering
   document.getElementById("pdfBtn").addEventListener("click", saveResultsAsPDF);
 
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
