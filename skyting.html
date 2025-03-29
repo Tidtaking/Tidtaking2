@@ -20,11 +20,11 @@
       margin: 0 auto;
       border-collapse: collapse;
       width: 95%;
-      max-width: 800px;
+      max-width: 600px;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 4px; /* redusert for å spare plass */
+      padding: 6px; /* redusert for å spare plass */
       font-size: 18px;
       text-align: center;
     }
@@ -34,27 +34,27 @@
     /* Faste kolonner for skyting */
     .shootingCell {
       background-color: gray;
-      width: 320px;
-      max-width: 320px;
+      width: 240px;
+      max-width: 240px;
       white-space: nowrap;
       overflow: hidden;
       text-align: center;
     }
-    /* Blinkene – 60x60 px, 1 px margin, font-size 36px */
+    /* Blink – større for bedre treff, f.eks. 80x80px, med litt margin */
     .target {
       display: inline-block;
-      width: 60px;
-      height: 60px;
-      line-height: 60px;
+      width: 80px;
+      height: 80px;
+      line-height: 80px;
       border-radius: 50%;
-      margin: 1px;
-      font-size: 36px;
+      margin: 4px;
+      font-size: 48px;
       cursor: pointer;
       vertical-align: middle;
     }
     /* Inputfelt for skive */
     .skive-input {
-      width: 70px;
+      width: 60px;
       font-size: 18px;
       text-align: center;
     }
@@ -71,7 +71,7 @@
       background-color: #6c757d;
       cursor: default;
     }
-    /* Knapp for skytetid */
+    /* Knapp for skytetid – nå separate for runde 1 og 2 */
     .time-button {
       background-color: #007bff;
       color: white;
@@ -87,20 +87,20 @@
     @media (max-width: 480px) {
       th, td {
         font-size: 16px;
-        padding: 3px;
+        padding: 4px;
       }
       .shootingCell {
-        width: 280px;
-        max-width: 280px;
+        width: 220px;
+        max-width: 220px;
       }
       .target {
-        width: 55px;
-        height: 55px;
-        line-height: 55px;
-        font-size: 32px;
+        width: 70px;
+        height: 70px;
+        line-height: 70px;
+        font-size: 40px;
       }
       .skive-input {
-        width: 60px;
+        width: 50px;
         font-size: 16px;
       }
       .send-button, .time-button {
@@ -109,7 +109,6 @@
       }
     }
   </style>
-
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
@@ -153,7 +152,7 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer deltakerens local toggles, eller setter standard
+    // Returnerer deltakerens lokale shooting-toggles, eller setter standard
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -165,6 +164,7 @@
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
+      // Her lar vi den originale koden stå (men du kan eventuelt skjule visningen av blinkene på mobil om ønskelig)
       return arr.map((hit, i) =>
         `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
       ).join("");
@@ -189,8 +189,9 @@
         dbRec.s2sent = dbRec.s2sent || false;
         dbRec.skive = dbRec.skive || "";
         dbRec.status = dbRec.status || "";
-        // Initier shootingTimeStart som null
-        dbRec.shootingTimeStart = null;
+        // Legg til separate start-tider for skytetid for runde 1 og 2
+        dbRec.shootingTimeStart1 = dbRec.shootingTimeStart1 || null;
+        dbRec.shootingTimeStart2 = dbRec.shootingTimeStart2 || null;
         window.participants[snr] = dbRec;
       } else {
         local.status = dbRec.status || local.status;
@@ -231,7 +232,7 @@
 
     function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter: de med s1sent & s2sent nederst
+      // Sorter slik at de med begge skyteresultat sendt havner nederst
       data.sort((a, b) => {
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
@@ -247,9 +248,10 @@
             <th>Skive</th>
             <th class="shootingCell">Skyting S1</th>
             <th>Send S1</th>
+            <th>Skytetid S1</th>
             <th class="shootingCell">Skyting S2</th>
             <th>Send S2</th>
-            <th>Skytetid</th>
+            <th>Skytetid S2</th>
           </tr>
         </thead>
         <tbody>`;
@@ -264,16 +266,23 @@
           ? `<button class="send-button sent" disabled>Sendt</button>`
           : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
         
-        // Ny knapp for å registrere skytetid:
-        // Hvis shootingTimeStart er null, viser knappen "Start skytetid"
-        // Hvis shootingTimeStart er satt men shootingtime ikke lagret, viser knappen "Registrer tid"
-        let timeButtonHTML = "";
-        if (p.shootingtime) {
-          timeButtonHTML = `<button class="time-button registered" disabled>Tid registrert</button>`;
-        } else if (!p.shootingTimeStart) {
-          timeButtonHTML = `<button class="time-button" onclick="registerShootingTime(${p.snr})" id="timeBtn-${p.snr}">Start skytetid</button>`;
+        // Knapp for skytetid for runde 1
+        let timeBtn1 = "";
+        if (p.shootingtime1) {
+          timeBtn1 = `<button class="time-button registered" disabled>Tid registrert</button>`;
+        } else if (!p.shootingTimeStart1) {
+          timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Start skytetid S1</button>`;
         } else {
-          timeButtonHTML = `<button class="time-button" onclick="registerShootingTime(${p.snr})" id="timeBtn-${p.snr}">Registrer tid</button>`;
+          timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Registrer tid S1</button>`;
+        }
+        // Knapp for skytetid for runde 2
+        let timeBtn2 = "";
+        if (p.shootingtime2) {
+          timeBtn2 = `<button class="time-button registered" disabled>Tid registrert</button>`;
+        } else if (!p.shootingTimeStart2) {
+          timeBtn2 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 1)" id="timeBtn-${p.snr}-1">Start skytetid S2</button>`;
+        } else {
+          timeBtn2 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 1)" id="timeBtn-${p.snr}-1">Registrer tid S2</button>`;
         }
         
         html += `<tr>
@@ -283,42 +292,60 @@
           <td>${inputSkive}</td>
           <td class="shootingCell">${s1}</td>
           <td>${btnS1}</td>
+          <td>${timeBtn1}</td>
           <td class="shootingCell">${s2}</td>
           <td>${btnS2}</td>
-          <td>${timeButtonHTML}</td>
+          <td>${timeBtn2}</td>
         </tr>`;
       });
       html += `</tbody></table>`;
       document.getElementById("shootingTable").innerHTML = html;
     }
 
-    // Funksjon for å registrere skytetid ved knappetrykk
-    async function registerShootingTime(snr) {
+    // Funksjon for å registrere skytetid for en gitt runde (shootIdx: 0 for S1, 1 for S2)
+    async function registerShootingTime(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
-      const btn = document.getElementById("timeBtn-" + snr);
-      if (!p.shootingTimeStart) {
-        // Første trykk: registrer starttiden
-        p.shootingTimeStart = Date.now();
-        btn.innerText = "Registrer tid";
-      } else {
-        // Andre trykk: beregn elapsed tid (i sekunder, eventuelt millisekunder)
-        const elapsedMs = Date.now() - p.shootingTimeStart;
-        // For eksempel lagres tiden i sekunder:
-        const shootingTime = elapsedMs / 1000;
-        // Oppdater i databasen
-        const { error } = await window.supabaseClient
-          .from("participants")
-          .update({ shootingtime: shootingTime })
-          .eq("snr", snr);
-        if (error) {
-          console.error("Feil ved lagring av shootingtime for snr", snr, error);
-          alert("Feil ved lagring av shootingtime – se konsollen.");
+      const btn = document.getElementById(`timeBtn-${snr}-${shootIdx}`);
+      if (shootIdx === 0) {
+        if (!p.shootingTimeStart1) {
+          p.shootingTimeStart1 = Date.now();
+          btn.innerText = "Registrer tid S1";
         } else {
-          p.shootingtime = shootingTime;
-          btn.innerText = "Tid registrert";
-          btn.classList.add("registered");
-          btn.disabled = true;
+          const elapsedMs = Date.now() - p.shootingTimeStart1;
+          const shootingTime = elapsedMs / 1000;
+          const { error } = await window.supabaseClient.from("participants")
+            .update({ shootingtime1: shootingTime })
+            .eq("snr", snr);
+          if (error) {
+            console.error("Feil ved lagring av shootingtime1 for snr", snr, error);
+            alert("Feil ved lagring av tid – sjekk konsollen.");
+          } else {
+            p.shootingtime1 = shootingTime;
+            btn.innerText = "Tid registrert";
+            btn.classList.add("registered");
+            btn.disabled = true;
+          }
+        }
+      } else {
+        if (!p.shootingTimeStart2) {
+          p.shootingTimeStart2 = Date.now();
+          btn.innerText = "Registrer tid S2";
+        } else {
+          const elapsedMs = Date.now() - p.shootingTimeStart2;
+          const shootingTime = elapsedMs / 1000;
+          const { error } = await window.supabaseClient.from("participants")
+            .update({ shootingtime2: shootingTime })
+            .eq("snr", snr);
+          if (error) {
+            console.error("Feil ved lagring av shootingtime2 for snr", snr, error);
+            alert("Feil ved lagring av tid – sjekk konsollen.");
+          } else {
+            p.shootingtime2 = shootingTime;
+            btn.innerText = "Tid registrert";
+            btn.classList.add("registered");
+            btn.disabled = true;
+          }
         }
       }
     }
@@ -390,7 +417,6 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       updateDataFromDb();
-      // Oppdater data hvert sekund
       setInterval(updateDataFromDb, 1000);
     });
   </script>
