@@ -94,6 +94,7 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="900" height="600"></canvas>
+    <!-- Marker for start, mål, MT1 og MT2 -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
     <div id="mt1Marker" class="marker"></div>
@@ -126,7 +127,7 @@
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
-    let startTime = null;  // Skal være let, ikke const
+    let startTime = null;  // Endret til let slik at denne kan oppdateres
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
@@ -158,7 +159,7 @@
 
     // Last inn bakgrunnsbilde (kart)
     const backgroundImage = new Image();
-    backgroundImage.src = "hvalstjern_runde.jpg"; // Sørg for at filbanen er korrekt
+    backgroundImage.src = "hvalstjern_runde.jpg"; // Pass på at filbanen er korrekt
     backgroundImage.onload = () => { console.log("Bakgrunnsbilde lastet inn."); };
 
     // Filtertype-håndtering
@@ -229,7 +230,7 @@
       canvas.width = 900;
       canvas.height = 600;
       simulationDuration = 10000; // Juster simuleringstiden ved behov
-      startTime = null;  // Bruk let, så dette kan endres
+      startTime = null; // Sørg for at startTime er null før start
       cancelAnimationFrame(animationFrameId);
       requestAnimationFrame(animateRace);
     });
