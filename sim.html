@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Simulering av Skiskytterløp</title>
   <style>
     body {
@@ -35,8 +35,18 @@
       display: block;
       background: #fff;
     }
+    /* Marker-stiler */
+    .marker {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #ff0000;
+      opacity: 0.5;
+    }
     .marker-label {
       position: absolute;
+      top: -20px;
       font-size: 14px;
       color: #ff0000;
     }
@@ -49,7 +59,7 @@
 </head>
 <body>
   <h1>Simulering av Skiskytterløp</h1>
-
+  
   <div id="controls">
     <label>
       <input type="radio" name="filterType" value="class" checked>
@@ -80,56 +90,63 @@
     <br>
     <button id="startSimBtn">Start Simulering</button>
   </div>
-
+  
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="900" height="600"></canvas>
+    <!-- Marker for start og mål -->
+    <div id="startMarker" class="marker"></div>
+    <div id="finishMarker" class="marker"></div>
+    <!-- MT1 og MT2-markører med faste tidspunkter -->
+    <div id="mt1Marker" class="marker"></div>
+    <div id="mt2Marker" class="marker"></div>
+    <div id="startLabel" class="marker-label">Start</div>
+    <div id="mt1Label" class="marker-label">MT1</div>
+    <div id="mt2Label" class="marker-label">MT2</div>
+    <div id="finishLabel" class="marker-label">Mål</div>
   </div>
-
+  
   <div id="info"></div>
-
-  <!-- Supabase JS -->
+  
+  <!-- Inkluder Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase-klient
+    // Bruk din Supabase URL og nøkkel
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Hovedcanvas og kontekst
+    // Simuleringskonfigurasjon
     const canvas = document.getElementById("raceCanvas");
     const ctx = canvas.getContext("2d");
+    const trackMargin = 50;
+    const trackStartX = trackMargin;
+    const trackEndX = canvas.width - trackMargin;
+    const trackLength = trackEndX - trackStartX;
+    const laneHeight = 60;
+    const simulationDuration = 10000; // 10 sekunder
+    const defaultFinish = 120; // Standard finish-tid (sekunder)
 
-    // Laster inn bakgrunnsbildet (kartet med rød linje).
-    // Du kan peke til en URL, eller legge filen i samme mappe.
-    const backgroundImage = new Image();
-    backgroundImage.src = "hvalstjern_runde.jpg"; // Bytt til riktig filnavn/URL
-
-    // Definer pathPoints: liste av (x,y)-punkter som beskriver rødlinjen
-    // Du må selv finne/pikseltlpasste koordinater i "hvalstjern_runde.jpg".
-    // Eksempel:
-    const pathPoints = [
-      { x: 100, y: 550 }, // Start
-      { x: 200, y: 500 },
-      { x: 300, y: 450 }, // Mellomtid 1
-      { x: 500, y: 300 }, // Skyting
-      { x: 600, y: 250 }, // Mellomtid 2
-      { x: 700, y: 200 },
-      { x: 800, y: 150 }  // Mål
-    ];
-    // Fra disse punktene lager vi en "bane" der løperne beveger seg lineært mellom hvert punkt.
-
-    // Mellomtid- og skyting-lokasjoner (valgfritt) – du kan matche dem til punktene over.
-    let shootingIndex = 3;  // index i pathPoints
-    let mt1Index = 2;
-    let mt2Index = 5;
-
-    // Data for løpere
-    let competitors = [];
-    let simulationDuration = 10000; // 10 sekunder
+    let competitors = []; // Array for konkurrenter
     let startTime = null;
     let animationFrameId = null;
+    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Filtrering
+    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt (hvalstjern_runde.jpg)
+    const pathPoints = [
+      { x: 100, y: 550 },  // Start
+      { x: 200, y: 500 },
+      { x: 300, y: 450 },  // MT1
+      { x: 500, y: 300 },  // Skyting
+      { x: 600, y: 250 },  // MT2
+      { x: 700, y: 200 },
+      { x: 800, y: 150 }   // Mål
+    ];
+
+    // Last inn bakgrunnsbilde (kart)
+    const backgroundImage = new Image();
+    backgroundImage.src = "hvalstjern_runde.jpg"; // Sørg for at filbanen er korrekt
+
+    // Filtertype-håndtering
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
         if (this.value === "class") {
@@ -152,16 +169,16 @@
           alert("Velg en klasse først!");
           return;
         }
-        const resp = await supabaseClient
+        const { data: respData, error } = await supabaseClient
           .from("participants")
           .select("*")
           .eq("class", selectedClass)
           .not("finish", "is", null);
-        if (resp.error || !resp.data || resp.data.length === 0) {
+        if (error || !respData || respData.length === 0) {
           alert("Ingen deltakere funnet for den valgte klassen.");
           return;
         }
-        data = resp.data;
+        data = respData;
       } else {
         const snrInput = document.getElementById("snrInput").value.trim();
         if (!snrInput) {
@@ -169,21 +186,20 @@
           return;
         }
         const snrArr = snrInput.split(",").map(s => s.trim()).filter(s => s !== "");
-        const resp = await supabaseClient
+        const { data: respData, error } = await supabaseClient
           .from("participants")
           .select("*")
           .in("snr", snrArr)
           .not("finish", "is", null);
-        if (resp.error || !resp.data || resp.data.length === 0) {
+        if (error || !respData || respData.length === 0) {
           alert("Ingen deltakere funnet for oppgitte startnumre.");
           return;
         }
-        data = resp.data;
+        data = respData;
       }
-
       // Sett opp competitor-liste
       competitors = data.map(comp => {
-        const finishVal = comp.finish ? parseFloat(comp.finish) : 120;
+        const finishVal = comp.finish ? parseFloat(comp.finish) : defaultFinish;
         return {
           snr: comp.snr,
           name: comp.name,
@@ -192,161 +208,134 @@
           shooting: parseJSONIfString(comp.shooting)
         };
       });
-      // Sorter stigende
-      competitors.sort((a,b) => a.finish - b.finish);
-
-      // Høyde på canvasen = antall konkurrenter * 60 + litt margin
-      canvas.height = competitors.length * 60 + 20;
-      simulationDuration = 10000; // Du kan justere simuleringstiden
-
+      // Sorter stigende etter finish
+      competitors.sort((a, b) => a.finish - b.finish);
+      // Juster canvas høyde basert på antall konkurrenter
+      canvas.height = competitors.length * laneHeight + 20;
+      simulationDuration = 10000; // Juster simuleringstiden ved behov
       startTime = null;
       cancelAnimationFrame(animationFrameId);
-      requestAnimationFrame(animate);
+      requestAnimationFrame(animateRace);
     });
 
-    // Parse JSON-hjelpefunksjon
     function parseJSONIfString(val) {
       if (!val) return [];
       if (typeof val === "string") {
         try {
           return JSON.parse(val);
-        } catch {
+        } catch (err) {
+          console.warn("Kunne ikke parse JSON-streng:", val);
           return [];
         }
       }
       return val;
     }
 
-    // Kalkuler total lengde av pathPoints
-    let totalPathLength = 0;
-    let segmentLengths = []; // lengden av hvert segment
-    function computePathLengths() {
-      totalPathLength = 0;
-      segmentLengths = [];
-      for (let i=0; i<pathPoints.length-1; i++){
+    function formatTime(timeSec) {
+      if (!timeSec || isNaN(timeSec)) return "";
+      const totalSec = Math.floor(timeSec);
+      const ms = Math.round((timeSec - totalSec) * 1000);
+      const mm = Math.floor(totalSec / 60);
+      const ss = totalSec % 60;
+      return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
+    }
+
+    // Funksjon som beregner posisjon langs rød linje gitt progress (0..1)
+    function getPositionOnPath(progress) {
+      let totalLength = 0;
+      let segments = [];
+      for (let i = 0; i < pathPoints.length - 1; i++) {
         const p1 = pathPoints[i];
-        const p2 = pathPoints[i+1];
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const segLen = Math.sqrt(dx*dx + dy*dy);
-        segmentLengths.push(segLen);
-        totalPathLength += segLen;
+        const p2 = pathPoints[i + 1];
+        const segLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        segments.push(segLength);
+        totalLength += segLength;
       }
-    }
-    computePathLengths();
-
-    // Gitt en "progress" i [0..1], finn (x,y) på path
-    function getPositionOnPath(progress){
-      const distAlong = progress * totalPathLength;
-      let distSoFar = 0;
-      for (let i=0; i<pathPoints.length-1; i++){
-        const segLen = segmentLengths[i];
-        if (distSoFar + segLen >= distAlong){
-          // Ligger på segment i
-          const ratio = (distAlong - distSoFar) / segLen;
+      let targetLength = progress * totalLength;
+      let accLength = 0;
+      for (let i = 0; i < segments.length; i++) {
+        if (accLength + segments[i] >= targetLength) {
+          const ratio = (targetLength - accLength) / segments[i];
           const p1 = pathPoints[i];
-          const p2 = pathPoints[i+1];
-          const x = p1.x + ratio*(p2.x - p1.x);
-          const y = p1.y + ratio*(p2.y - p1.y);
-          return {x, y};
+          const p2 = pathPoints[i + 1];
+          const x = p1.x + ratio * (p2.x - p1.x);
+          const y = p1.y + ratio * (p2.y - p1.y);
+          return { x, y };
         }
-        distSoFar += segLen;
+        accLength += segments[i];
       }
-      // Hvis progress=1, ender vi her
-      return pathPoints[pathPoints.length-1];
+      return pathPoints[pathPoints.length - 1];
     }
 
-    // Tegn en løper (sirkel) på en gitt posisjon, pluss navnet
-    function drawCompetitor(x, y, comp, isWinner=false){
-      if (isWinner){
-        // Tegn krone
+    // Tegn en løper (sirkel) på posisjon med navn eller krone hvis vinner
+    function drawCompetitor(x, y, comp, isWinner=false) {
+      if (isWinner) {
         ctx.font = "32px Arial";
         ctx.textAlign = "center";
         ctx.fillText("👑", x, y);
-        // Navn ved siden av
         ctx.font = "16px Arial";
         ctx.fillStyle = "#333";
         ctx.textAlign = "left";
-        ctx.fillText(`${comp.name} (snr: ${comp.snr}) - Vinner`, x+20, y+5);
+        ctx.fillText(`${comp.name} (snr: ${comp.snr}) - Vinner`, x + 20, y + 5);
       } else {
-        // Sirkel
         ctx.beginPath();
-        ctx.arc(x, y, 10, 0, 2*Math.PI);
+        ctx.arc(x, y, 10, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
         ctx.fill();
         ctx.strokeStyle = "#0056b3";
         ctx.stroke();
-        // Navn
         ctx.font = "16px Arial";
         ctx.fillStyle = "#333";
         ctx.textAlign = "left";
-        ctx.fillText(`${comp.name} (snr: ${comp.snr})`, x+15, y+5);
+        ctx.fillText(`${comp.name} (snr: ${comp.snr})`, x + 15, y + 5);
       }
     }
 
-    function animate(timestamp){
+    function animateRace(timestamp) {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / simulationDuration, 1);
 
-      // Tegn bakgrunn
-      ctx.clearRect(0,0,canvas.width, canvas.height);
-
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       // Tegn bakgrunnsbilde (kartet)
-      // Merk: pass på at bildets ratio samsvarer med canvas
-      // Du kan justere drawImage for å passe
       ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-
-      // Tegn bane (valgfritt)
+      
+      // Tegn den røde linjen (løypa)
       ctx.strokeStyle = "red";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      for (let i=0; i<pathPoints.length; i++){
-        if (i===0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+      for (let i = 0; i < pathPoints.length; i++) {
+        if (i === 0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
         else ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
       }
       ctx.stroke();
 
-      // Tegn horizontale "baner" – her droppes, siden vi har en sti
-      // i stedet for lineær. Du kan eventuelt fjerne dem.
-
-      // Tegn hver konkurrent
-      // Den raskeste (lowest finish) har finish = minFinish
-      const minFinish = competitors[0].finish;
-      competitors.forEach((comp, idx)=>{
-        const ratio = (minFinish/comp.finish) * progress; 
-        // ratio i [0..1]
-        // finn pos langs path
-        const pos = getPositionOnPath(ratio);
-        // Sjekk om vinner (progress=1 og idx=0)
-        if (progress === 1 && idx===0){
+      // Tegn hver konkurrent langs rød linje
+      competitors.forEach((comp, idx) => {
+        // Her antar vi at alle konkurrentene følger samme progress langs banen
+        const pos = getPositionOnPath(progress);
+        if (progress === 1 && idx === 0) {
           drawCompetitor(pos.x, pos.y, comp, true);
         } else {
           drawCompetitor(pos.x, pos.y, comp, false);
         }
-
-        // Du kan eventuelt sjekke om pos.x, pos.y har passert en definert
-        // "MT1", "MT2" eller "Skyting" i pathPoints, og tegne skyteresultat.
-        // ...
       });
 
-      // Oppdater info
-      const simulatedTime = progress * minFinish;
+      // Oppdater infofelt
+      const simulatedTime = progress * competitors[0].finish;
       document.getElementById("info").innerHTML =
-        `Raskeste tid (simulert): ${formatTime(simulatedTime)} / ${formatTime(minFinish)}<br>
-         Fremdrift: ${(progress*100).toFixed(0)}%`;
-
-      if (progress < 1){
-        animationFrameId = requestAnimationFrame(animate);
+        `Raskeste tid (simulert): ${formatTime(simulatedTime)} / ${formatTime(competitors[0].finish)}<br>
+         Fremdrift: ${(progress * 100).toFixed(0)}%`;
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animateRace);
       } else {
         document.getElementById("info").innerHTML += "<br><em>Løpet er fullført!</em>";
       }
     }
 
-    // Laster inn bakgrunnsbildet før noe tegnes
-    backgroundImage.onload = ()=>{
-      console.log("Bakgrunnsbilde lastet inn.");
-    };
+    document.addEventListener("DOMContentLoaded", () => {
+      // Venter på brukerinput for å starte simuleringen
+    });
   </script>
 </body>
 </html>
