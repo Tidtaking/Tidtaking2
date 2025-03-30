@@ -128,7 +128,7 @@
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
-    let startTime = null;  // Bruk let slik at vi kan endre startTime
+    let startTime = null;  // Endret til let slik at vi kan endre startTime
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
@@ -214,10 +214,10 @@
       });
       // Sorter stigende etter finish
       competitors.sort((a, b) => a.finish - b.finish);
-      // Sett canvas-størrelsen fast (900x600) uavhengig av antall konkurrenter
+      // Sett canvas-størrelsen fast (900x600)
       canvas.width = 900;
       canvas.height = 600;
-      simulationDuration = 10000; // Juster simuleringstiden ved behov
+      // Start simuleringen
       startTime = null;
       cancelAnimationFrame(animationFrameId);
       requestAnimationFrame(animateRace);
@@ -261,11 +261,8 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < pathPoints.length; i++) {
-        if (i === 0) {
-          ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
-        } else {
-          ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
-        }
+        if (i === 0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+        else ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
       }
       ctx.stroke();
 
@@ -317,7 +314,7 @@
       return pathPoints[pathPoints.length - 1];
     }
 
-    // Tegn en løper (sirkel) på posisjon med navn eller krone hvis vinner
+    // Tegn en løper (sirkel) med navn eller krone hvis vinner
     function drawCompetitor(x, y, comp, isWinner = false) {
       if (isWinner) {
         ctx.font = "32px Arial";
