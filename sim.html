@@ -128,7 +128,7 @@
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
-    let startTime = null;  // Bruk let slik at vi kan endre startTime
+    let startTime = null;  // Sørg for at denne er deklarert med let
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
@@ -139,7 +139,7 @@
       { x: 260, y: 500 },
       { x: 340, y: 480 },  // MT1
       { x: 420, y: 460 },
-      { x: 500, y: 450 },  // Skyting/midtpunkt
+      { x: 500, y: 450 },  // Midtpunkt/Skyting
       { x: 580, y: 440 },
       { x: 660, y: 420 },  // MT2
       { x: 740, y: 400 },
@@ -160,7 +160,7 @@
 
     // Last inn bakgrunnsbilde (kart)
     const backgroundImage = new Image();
-    backgroundImage.src = "hvalstjern_runde.jpg"; // Pass på at filbanen er korrekt
+    backgroundImage.src = "hvalstjern_runde.jpg"; // Sørg for at filbanen er korrekt
     backgroundImage.onload = () => { console.log("Bakgrunnsbilde lastet inn."); };
 
     // Filtertype-håndtering
