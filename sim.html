@@ -96,7 +96,7 @@
     <!-- Marker for start og mål -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører -->
+    <!-- MT1 og MT2-markører med faste tidspunkter -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -131,7 +131,7 @@
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt
+    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt (hvalstjern_runde.jpg)
     const pathPoints = [
       { x: 100, y: 550 },  // Start
       { x: 200, y: 500 },
@@ -144,7 +144,7 @@
 
     // Last inn bakgrunnsbilde (kart)
     const backgroundImage = new Image();
-    backgroundImage.src = "hvalstjern_runde.jpg"; // Sørg for at filbanen er korrekt
+    backgroundImage.src = "hvalstjern_runde.jpg"; // Bytt til riktig filbane
     backgroundImage.onload = () => { console.log("Bakgrunnsbilde lastet inn."); };
 
     // Filtertype-håndtering
@@ -262,7 +262,6 @@
 
       // Tegn hver konkurrent langs rød linje
       competitors.forEach((comp, idx) => {
-        // Beregn posisjon langs løypa basert på progress
         const pos = getPositionOnPath(progress);
         if (progress === 1 && idx === 0) {
           drawCompetitor(pos.x, pos.y, comp, true);
@@ -271,7 +270,6 @@
         }
       });
 
-      // Oppdater infofelt
       const simulatedTime = progress * competitors[0].finish;
       document.getElementById("info").innerHTML =
         `Raskeste tid (simulert): ${formatTime(simulatedTime)} / ${formatTime(competitors[0].finish)}<br>
@@ -311,7 +309,7 @@
     }
 
     // Tegn en løper (sirkel) på posisjon med navn eller krone hvis vinner
-    function drawCompetitor(x, y, comp, isWinner=false) {
+    function drawCompetitor(x, y, comp, isWinner = false) {
       if (isWinner) {
         ctx.font = "32px Arial";
         ctx.textAlign = "center";
