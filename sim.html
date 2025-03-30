@@ -133,16 +133,15 @@
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
     // Nye pathPoints for en hel runde (lukket bane)
-    // Disse punktene danner en buet rute med start, MT1, MT2, og mål, og vender tilbake til start.
     const pathPoints = [
       { x: 100, y: 550 },  // Start
       { x: 180, y: 520 },
       { x: 260, y: 500 },
-      { x: 340, y: 480 },  // MT1 (ca.)
+      { x: 340, y: 480 },  // MT1
       { x: 420, y: 460 },
-      { x: 500, y: 450 },  // Skyting / midtpunkt
+      { x: 500, y: 450 },  // Skyting/midtpunkt
       { x: 580, y: 440 },
-      { x: 660, y: 420 },  // MT2 (ca.)
+      { x: 660, y: 420 },  // MT2
       { x: 740, y: 400 },
       { x: 820, y: 370 },
       { x: 880, y: 320 },
@@ -156,7 +155,7 @@
       { x: 300, y: 350 },
       { x: 220, y: 430 },
       { x: 150, y: 500 },
-      { x: 100, y: 550 }   // Tilbake til start for en komplett runde
+      { x: 100, y: 550 }   // Tilbake til start (Mål)
     ];
 
     // Last inn bakgrunnsbilde (kart)
