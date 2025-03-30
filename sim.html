@@ -128,21 +128,24 @@
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
-    let startTime = null;  // Endret til let slik at vi kan endre startTime
+    let startTime = null;  // Bruk let slik at vi kan endre startTime
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt
+    // Nye pathPoints som danner en buet rute med MT1, MT2 og Mål.
+    // Disse punktene er tilpasset et 900x600 canvas.
     const pathPoints = [
-      { x: 50,  y: 550 },   // Start
-      { x: 150, y: 500 },
-      { x: 250, y: 480 },
-      { x: 350, y: 430 },   // MT1
-      { x: 500, y: 370 },   // Skyting
-      { x: 650, y: 320 },   // MT2
-      { x: 750, y: 280 },
-      { x: 820, y: 220 },
-      { x: 880, y: 150 }    // Mål
+      { x: 100, y: 550 },   // Start
+      { x: 150, y: 520 },
+      { x: 220, y: 500 },
+      { x: 300, y: 480 },   // MT1
+      { x: 400, y: 460 },
+      { x: 500, y: 450 },   // Skyting/overgang
+      { x: 600, y: 430 },
+      { x: 680, y: 400 },   // MT2
+      { x: 750, y: 370 },
+      { x: 820, y: 320 },
+      { x: 880, y: 250 }    // Mål
     ];
 
     // Last inn bakgrunnsbilde (kart)
@@ -214,7 +217,7 @@
       });
       // Sorter stigende etter finish
       competitors.sort((a, b) => a.finish - b.finish);
-      // Sett canvas-størrelsen fast (900x600)
+      // Hold canvas-størrelsen fast (900x600)
       canvas.width = 900;
       canvas.height = 600;
       // Start simuleringen
@@ -261,12 +264,15 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < pathPoints.length; i++) {
-        if (i === 0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
-        else ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        if (i === 0) {
+          ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+        } else {
+          ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
       }
       ctx.stroke();
 
-      // Tegn hver konkurrent langs rød linje
+      // Tegn hver konkurrent langs den røde linjen
       competitors.forEach((comp, idx) => {
         const pos = getPositionOnPath(progress);
         if (progress === 1 && idx === 0) {
@@ -287,7 +293,7 @@
       }
     }
 
-    // Beregn posisjon langs rød linje gitt progress (0..1)
+    // Beregn posisjon langs rød linje basert på progress (0..1)
     function getPositionOnPath(progress) {
       let totalLength = 0;
       let segments = [];
@@ -314,7 +320,7 @@
       return pathPoints[pathPoints.length - 1];
     }
 
-    // Tegn en løper (sirkel) med navn eller krone hvis vinner
+    // Tegn en løper (sirkel) på posisjon med navn eller krone hvis vinner
     function drawCompetitor(x, y, comp, isWinner = false) {
       if (isWinner) {
         ctx.font = "32px Arial";
