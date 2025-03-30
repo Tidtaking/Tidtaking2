@@ -2,6 +2,7 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
+  <!-- Fast størrelse for canvas -->
   <meta name="viewport" content="width=900, height=600, initial-scale=1.0" />
   <title>Simulering av Skiskytterløp</title>
   <style>
@@ -37,6 +38,7 @@
       display: block;
       background: #fff;
     }
+    /* Marker-stiler */
     .marker {
       position: absolute;
       top: 0;
@@ -115,9 +117,11 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Simuleringskonfigurasjon
+    // Fast canvas-størrelse: 900x600
     const canvas = document.getElementById("raceCanvas");
     const ctx = canvas.getContext("2d");
+
+    // Konfigurer simulering
     const trackMargin = 50;
     const trackStartX = trackMargin;
     const trackEndX = canvas.width - trackMargin;
@@ -126,21 +130,23 @@
     const simulationDuration = 10000; // 10 sekunder
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
-    let competitors = []; // Array for konkurrenter
-    let startTime = null;  // Endret til let slik at denne kan oppdateres
+    // Variabler som skal endres deklareres med let
+    let competitors = [];
+    let startTime = null; // Skal kunne oppdateres
     let animationFrameId = null;
-    let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
+    let mt1PosGlobal, mt2PosGlobal;
 
-    // Nye pathPoints for en hel, buet runde (lukket bane)
+    // Definer pathPoints for en hel, buet runde (lukket bane)
+    // Disse koordinatene er et eksempel på en rute med start, to mellomtider og mål, som vender tilbake til start.
     const pathPoints = [
       { x: 100, y: 550 },  // Start
       { x: 180, y: 520 },
       { x: 260, y: 500 },
-      { x: 340, y: 480 },  // MT1
+      { x: 340, y: 480 },  // MT1-område
       { x: 420, y: 460 },
-      { x: 500, y: 450 },  // Midtpunkt / Skyting
+      { x: 500, y: 450 },  // Midtpunkt / skyting
       { x: 580, y: 440 },
-      { x: 660, y: 420 },  // MT2
+      { x: 660, y: 420 },  // MT2-område
       { x: 740, y: 400 },
       { x: 820, y: 370 },
       { x: 880, y: 320 },
@@ -159,10 +165,10 @@
 
     // Last inn bakgrunnsbilde (kart)
     const backgroundImage = new Image();
-    backgroundImage.src = "hvalstjern_runde.jpg"; // Pass på at filbanen er korrekt
+    backgroundImage.src = "hvalstjern_runde.jpg"; // Sørg for at filbanen er korrekt
     backgroundImage.onload = () => { console.log("Bakgrunnsbilde lastet inn."); };
 
-    // Filtertype-håndtering
+    // Håndter filtertype for inputfelt
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
       radio.addEventListener("change", function() {
         if (this.value === "class") {
@@ -226,11 +232,11 @@
       });
       // Sorter stigende etter finish
       competitors.sort((a, b) => a.finish - b.finish);
-      // Sett canvas-størrelsen fast (900x600)
+      // Sett canvas-størrelse fast (900x600)
       canvas.width = 900;
       canvas.height = 600;
-      simulationDuration = 10000; // Juster simuleringstiden ved behov
-      startTime = null; // Sørg for at startTime er null før start
+      simulationDuration = 10000; // Juster simuleringstiden om nødvendig
+      startTime = null;  // Skal være let slik at vi kan oppdatere den
       cancelAnimationFrame(animationFrameId);
       requestAnimationFrame(animateRace);
     });
@@ -265,7 +271,7 @@
       const progress = Math.min(elapsed / simulationDuration, 1);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Tegn bakgrunnsbilde (kartet) med konstant størrelse
+      // Tegn bakgrunnsbilde (kart) med konstant størrelse
       ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       
       // Tegn den røde linjen (løypa)
@@ -329,7 +335,7 @@
       return pathPoints[pathPoints.length - 1];
     }
 
-    // Tegn en løper (sirkel) med navn eller krone hvis vinner
+    // Tegn en løper (sirkel) med navn, eller krone hvis vinner
     function drawCompetitor(x, y, comp, isWinner = false) {
       if (isWinner) {
         ctx.font = "32px Arial";
