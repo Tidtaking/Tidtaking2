@@ -128,21 +128,21 @@
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
-    let startTime = null;  // Bruk let slik at vi kan oppdatere startTime
+    let startTime = null;  // Bruk let slik at vi kan endre startTime
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Definer pathPoints – her bruker vi et eksempel som dekker hele ruten
+    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt
     const pathPoints = [
-      { x: 50,  y: 550 },  // Start
+      { x: 50,  y: 550 },   // Start
       { x: 150, y: 500 },
       { x: 250, y: 480 },
-      { x: 350, y: 430 },  // MT1
-      { x: 500, y: 370 },  // Skyting
-      { x: 650, y: 320 },  // MT2
+      { x: 350, y: 430 },   // MT1
+      { x: 500, y: 370 },   // Skyting
+      { x: 650, y: 320 },   // MT2
       { x: 750, y: 280 },
       { x: 820, y: 220 },
-      { x: 880, y: 150 }   // Mål
+      { x: 880, y: 150 }    // Mål
     ];
 
     // Last inn bakgrunnsbilde (kart)
@@ -214,7 +214,7 @@
       });
       // Sorter stigende etter finish
       competitors.sort((a, b) => a.finish - b.finish);
-      // Her holder vi canvas-størrelsen fast (900x600) uavhengig av antall konkurrenter
+      // Sett canvas-størrelsen fast (900x600) uavhengig av antall konkurrenter
       canvas.width = 900;
       canvas.height = 600;
       simulationDuration = 10000; // Juster simuleringstiden ved behov
@@ -246,12 +246,14 @@
     }
 
     function animateRace(timestamp) {
-      if (!startTime) startTime = timestamp;
+      if (!startTime) {
+        startTime = timestamp;
+      }
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / simulationDuration, 1);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Tegn bakgrunnsbilde (kartet) i konstant størrelse
+      // Tegn bakgrunnsbilde (kartet) med konstant størrelse
       ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       
       // Tegn den røde linjen (løypa)
@@ -259,8 +261,11 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < pathPoints.length; i++) {
-        if (i === 0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
-        else ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        if (i === 0) {
+          ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+        } else {
+          ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
       }
       ctx.stroke();
 
