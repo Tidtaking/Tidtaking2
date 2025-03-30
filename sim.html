@@ -96,7 +96,7 @@
     <!-- Marker for start og mål -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører med faste tidspunkter -->
+    <!-- MT1 og MT2-markører -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -127,11 +127,11 @@
     const defaultFinish = 120; // Standard finish-tid (sekunder)
 
     let competitors = []; // Array for konkurrenter
-    let startTime = null;
+    let startTime = null;  // Bruk let slik at vi kan oppdatere startTime
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt (hvalstjern_runde.jpg)
+    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt
     const pathPoints = [
       { x: 100, y: 550 },  // Start
       { x: 200, y: 500 },
@@ -145,6 +145,7 @@
     // Last inn bakgrunnsbilde (kart)
     const backgroundImage = new Image();
     backgroundImage.src = "hvalstjern_runde.jpg"; // Sørg for at filbanen er korrekt
+    backgroundImage.onload = () => { console.log("Bakgrunnsbilde lastet inn."); };
 
     // Filtertype-håndtering
     document.querySelectorAll('input[name="filterType"]').forEach(radio => {
@@ -210,7 +211,7 @@
       });
       // Sorter stigende etter finish
       competitors.sort((a, b) => a.finish - b.finish);
-      // Juster canvas høyde basert på antall konkurrenter
+      // Juster canvas-høyde basert på antall konkurrenter
       canvas.height = competitors.length * laneHeight + 20;
       simulationDuration = 10000; // Juster simuleringstiden ved behov
       startTime = null;
@@ -238,6 +239,48 @@
       const mm = Math.floor(totalSec / 60);
       const ss = totalSec % 60;
       return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
+    }
+
+    function animateRace(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / simulationDuration, 1);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Tegn bakgrunnsbilde (kart)
+      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      
+      // Tegn den røde linjen (løypa)
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < pathPoints.length; i++) {
+        if (i === 0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+        else ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+      }
+      ctx.stroke();
+
+      // Tegn hver konkurrent langs rød linje
+      competitors.forEach((comp, idx) => {
+        // Beregn posisjon langs løypa basert på progress
+        const pos = getPositionOnPath(progress);
+        if (progress === 1 && idx === 0) {
+          drawCompetitor(pos.x, pos.y, comp, true);
+        } else {
+          drawCompetitor(pos.x, pos.y, comp, false);
+        }
+      });
+
+      // Oppdater infofelt
+      const simulatedTime = progress * competitors[0].finish;
+      document.getElementById("info").innerHTML =
+        `Raskeste tid (simulert): ${formatTime(simulatedTime)} / ${formatTime(competitors[0].finish)}<br>
+         Fremdrift: ${(progress * 100).toFixed(0)}%`;
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animateRace);
+      } else {
+        document.getElementById("info").innerHTML += "<br><em>Løpet er fullført!</em>";
+      }
     }
 
     // Funksjon som beregner posisjon langs rød linje gitt progress (0..1)
@@ -288,48 +331,6 @@
         ctx.fillStyle = "#333";
         ctx.textAlign = "left";
         ctx.fillText(`${comp.name} (snr: ${comp.snr})`, x + 15, y + 5);
-      }
-    }
-
-    function animateRace(timestamp) {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / simulationDuration, 1);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Tegn bakgrunnsbilde (kartet)
-      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      
-      // Tegn den røde linjen (løypa)
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let i = 0; i < pathPoints.length; i++) {
-        if (i === 0) ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
-        else ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
-      }
-      ctx.stroke();
-
-      // Tegn hver konkurrent langs rød linje
-      competitors.forEach((comp, idx) => {
-        // Her antar vi at alle konkurrentene følger samme progress langs banen
-        const pos = getPositionOnPath(progress);
-        if (progress === 1 && idx === 0) {
-          drawCompetitor(pos.x, pos.y, comp, true);
-        } else {
-          drawCompetitor(pos.x, pos.y, comp, false);
-        }
-      });
-
-      // Oppdater infofelt
-      const simulatedTime = progress * competitors[0].finish;
-      document.getElementById("info").innerHTML =
-        `Raskeste tid (simulert): ${formatTime(simulatedTime)} / ${formatTime(competitors[0].finish)}<br>
-         Fremdrift: ${(progress * 100).toFixed(0)}%`;
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(animateRace);
-      } else {
-        document.getElementById("info").innerHTML += "<br><em>Løpet er fullført!</em>";
       }
     }
 
