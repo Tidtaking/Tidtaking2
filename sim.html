@@ -2,7 +2,7 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=900, height=600, initial-scale=1.0" />
   <title>Simulering av Skiskytterløp</title>
   <style>
     body {
@@ -30,6 +30,8 @@
       margin: 0 auto;
       background: #fff;
       border: 2px solid #333;
+      width: 900px;
+      height: 600px;
     }
     canvas {
       display: block;
@@ -93,10 +95,9 @@
   
   <div id="canvasContainer">
     <canvas id="raceCanvas" width="900" height="600"></canvas>
-    <!-- Marker for start og mål -->
+    <!-- Marker for start, mål, MT1 og MT2 -->
     <div id="startMarker" class="marker"></div>
     <div id="finishMarker" class="marker"></div>
-    <!-- MT1 og MT2-markører med faste tidspunkter -->
     <div id="mt1Marker" class="marker"></div>
     <div id="mt2Marker" class="marker"></div>
     <div id="startLabel" class="marker-label">Start</div>
@@ -131,20 +132,22 @@
     let animationFrameId = null;
     let mt1PosGlobal, mt2PosGlobal; // Globale posisjoner for MT1 og MT2
 
-    // Definer pathPoints – tilpass disse slik at de samsvarer med kartet ditt (hvalstjern_runde.jpg)
+    // Definer pathPoints – her bruker vi et eksempel som dekker hele ruten
     const pathPoints = [
-      { x: 100, y: 550 },  // Start
-      { x: 200, y: 500 },
-      { x: 300, y: 450 },  // MT1
-      { x: 500, y: 300 },  // Skyting
-      { x: 600, y: 250 },  // MT2
-      { x: 700, y: 200 },
-      { x: 800, y: 150 }   // Mål
+      { x: 50,  y: 550 },  // Start
+      { x: 150, y: 500 },
+      { x: 250, y: 480 },
+      { x: 350, y: 430 },  // MT1
+      { x: 500, y: 370 },  // Skyting
+      { x: 650, y: 320 },  // MT2
+      { x: 750, y: 280 },
+      { x: 820, y: 220 },
+      { x: 880, y: 150 }   // Mål
     ];
 
     // Last inn bakgrunnsbilde (kart)
     const backgroundImage = new Image();
-    backgroundImage.src = "hvalstjern_runde.jpg"; // Bytt til riktig filbane
+    backgroundImage.src = "hvalstjern_runde.jpg"; // Pass på at filbanen er korrekt
     backgroundImage.onload = () => { console.log("Bakgrunnsbilde lastet inn."); };
 
     // Filtertype-håndtering
@@ -211,8 +214,9 @@
       });
       // Sorter stigende etter finish
       competitors.sort((a, b) => a.finish - b.finish);
-      // Juster canvas-høyde basert på antall konkurrenter
-      canvas.height = competitors.length * laneHeight + 20;
+      // Her holder vi canvas-størrelsen fast (900x600) uavhengig av antall konkurrenter
+      canvas.width = 900;
+      canvas.height = 600;
       simulationDuration = 10000; // Juster simuleringstiden ved behov
       startTime = null;
       cancelAnimationFrame(animationFrameId);
@@ -247,7 +251,7 @@
       const progress = Math.min(elapsed / simulationDuration, 1);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Tegn bakgrunnsbilde (kart)
+      // Tegn bakgrunnsbilde (kartet) i konstant størrelse
       ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
       
       // Tegn den røde linjen (løypa)
@@ -281,7 +285,7 @@
       }
     }
 
-    // Funksjon som beregner posisjon langs rød linje gitt progress (0..1)
+    // Beregn posisjon langs rød linje gitt progress (0..1)
     function getPositionOnPath(progress) {
       let totalLength = 0;
       let segments = [];
