@@ -70,16 +70,17 @@
   <!-- Last inn Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – lim inn din gyldige anon-nøkkel:
+    // Konfigurer Supabase – bruk din Supabase URL og nøkkel
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
     /**
-     * Henter ALLE deltakere fra databasen, bygger:
+     * Henter ALLE deltakere fra databasen med kolonnene name og snr.
+     * Returnerer et objekt med:
      *   - globalMaxSNR: høyeste snr for ALLE deltakere
-     *   - nameMap: et dictionary der name -> høyeste snr for DET navnet
+     *   - nameMap: et dictionary der name -> høyeste snr for det navnet
      */
     async function fetchParticipantsData() {
       const { data, error } = await supabaseClient
@@ -97,7 +98,6 @@
         if (!nameMap[row.name]) {
           nameMap[row.name] = snrNum;
         } else {
-          // Oppdater nameMap til høyeste snr for navnet
           if (snrNum > nameMap[row.name]) {
             nameMap[row.name] = snrNum;
           }
@@ -116,7 +116,7 @@
       }
 
       // Hent eksisterende snr-data fra DB
-      const { globalMaxSNR, nameMap } = await fetchParticipantsData();
+      let { globalMaxSNR, nameMap } = await fetchParticipantsData();
       console.log("globalMaxSNR:", globalMaxSNR, "nameMap:", nameMap);
 
       const reader = new FileReader();
@@ -150,7 +150,6 @@
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
-
         // Bygg array med nye deltakere
         let newParticipants = [];
         for (let i = 0; i < rows.length; i++) {
