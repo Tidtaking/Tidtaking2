@@ -100,7 +100,7 @@
     <label for="competitionInput">Konkurransenavn:</label>
     <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
     
-    <label for="dateInput">Dato (dd-mm-yyyy):</label>
+    <label for="dateInput">Dato (yyyy-mm-dd):</label>
     <input type="date" id="dateInput">
     
     <button id="filterBtn">Vis deltakere</button>
@@ -111,7 +111,7 @@
   </div>
   
   <div class="nav-links">
-    <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/">Oppsett konkurranse</a>
     <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
     <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
     <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
@@ -131,19 +131,16 @@
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
-
-    // Hent alle deltakere (debug) for å se hvilke kolonner som finnes
-    const { data: allParticipants, error: errorAll } = await supabaseClient
-      .from('participants')
-      .select('*');
-    console.log("Alle deltakere:", allParticipants, errorAll);
-
-    document.getElementById("filterBtn").addEventListener("click", async function() {
+    
+    // Sett dato-inputfeltet til dagens dato (format: yyyy-mm-dd)
+    document.getElementById("dateInput").value = new Date().toISOString().split('T')[0];
+    
+    // Funksjon for å hente deltakere for valgt konkurranse og dato
+    async function fetchParticipants() {
       const comp = document.getElementById("competitionInput").value.trim();
       const date = document.getElementById("dateInput").value;
-      console.log("Filter: comp =", comp, "date =", date);
+      console.log("Henter deltakere for: konkurranse=", comp, "dato=", date);
       
-      // Bygg spørringen: bruk kolonnene "comp_date" for dato og "competition" for konkurranse
       let query = supabaseClient
         .from('participants')
         .select('*')
@@ -153,26 +150,25 @@
       }
       
       const { data: participants, error } = await query;
-      console.log("Filtrerte deltakere:", participants, error);
-
       if (error) {
+        console.error("Feil ved henting av deltakere:", error);
         document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
         return;
       }
-
+      
       if (!participants || participants.length === 0) {
         document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for konkurranse <strong>${comp}</strong> den <strong>${date}</strong>.</p>`;
         return;
       }
-
-      // Sorter deltakerne etter startnummer (snr), numerisk
+      
+      // Sorter deltakerne etter startnummer (snr) numerisk
       participants.sort((a, b) => {
-        const snrA = parseInt(a.snr, 10) || 0;  // fallback 0 om snr er ugyldig
+        const snrA = parseInt(a.snr, 10) || 0;
         const snrB = parseInt(b.snr, 10) || 0;
         return snrA - snrB;
       });
-
-      // Bygg en tabell med kun startnummer (snr) og navn (name)
+      
+      // Bygg en tabell med kun startnummer og navn
       let tableHtml = `
         <table>
           <thead>
@@ -183,7 +179,6 @@
           </thead>
           <tbody>
       `;
-
       for (const participant of participants) {
         tableHtml += `
           <tr>
@@ -192,11 +187,17 @@
           </tr>
         `;
       }
-
       tableHtml += "</tbody></table>";
-
       document.getElementById("participantTable").innerHTML = tableHtml;
+    }
+    
+    // Kjør spørringen automatisk ved lasting, og sett opp knapp for manuell refresh
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchParticipants();
     });
+    
+    // Knytt knappen for å oppdatere visningen manuelt
+    document.getElementById("filterBtn").addEventListener("click", fetchParticipants);
   </script>
 </body>
 </html>
