@@ -37,6 +37,9 @@
       font-size: 24px;
       margin: 20px 0 10px;
       color: #444;
+      background-color: #ddd; /* Litt mørkere bakgrunn for overskriftene */
+      padding: 5px;
+      border-radius: 4px;
     }
     table {
       width: 100%;
@@ -269,7 +272,7 @@
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
-  // Parser skyteresultat – forventer en 2D-array med booleans
+  // Parser skyteresultat: forventer en 2D-array med booleans
   function parseShootingArray(arr) {
     if (!arr || !Array.isArray(arr)) return "";
     return arr.map(serie => {
@@ -279,7 +282,7 @@
     }).join(", ");
   }
 
-  // PDF-funksjonalitet med jsPDF og autoTable
+  // PDF-funksjonalitet med jsPDF og autoTable samt lagring i "history"-tabellen
   async function saveResultsAsPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'pt');
@@ -306,6 +309,20 @@
       });
       yOffset = doc.lastAutoTable.finalY + 30;
     }
+
+    // Ekstra: lagre resultatene i "history"-tabellen
+    // Vi lagrer resultatene som en HTML-streng sammen med en tidsstempel.
+    const resultHTML = container.innerHTML;
+    const now = new Date().toISOString();
+    const { error } = await supabaseClient
+      .from("history")
+      .insert([{ timestamp: now, result_html: resultHTML }]);
+    if (error) {
+      console.error("Feil ved lagring i history-tabellen:", error);
+    } else {
+      console.log("Resultatene ble lagret i history-tabellen.");
+    }
+
     doc.save("resultater.pdf");
   }
 
