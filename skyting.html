@@ -120,10 +120,6 @@
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     window.participants = {};
 
-    // Globalt flagg for scrolling
-    window.isScrolling = false;
-    let scrollTimeout;
-
     function ensureShootingFormat(arr) {
       if (!Array.isArray(arr) || arr.length !== 2) {
         return [Array(5).fill(false), Array(5).fill(false)];
@@ -222,30 +218,13 @@
           delete window.participants[snr];
         }
       }
-      // Oppdater kun hvis brukeren ikke scroller
-      if (!window.isScrolling) {
-        renderTable();
-      }
+      renderTable();
     }
-
-    // Legg til scroll-hendelse for containeren
-    document.addEventListener("DOMContentLoaded", () => {
-      const container = document.getElementById("shootingTable");
-      container.addEventListener("scroll", () => {
-        window.isScrolling = true;
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          window.isScrolling = false;
-          renderTable();
-        }, 1000);
-      });
-      updateDataFromDb();
-      setInterval(updateDataFromDb, 1000);
-    });
 
     function renderTable() {
       const container = document.getElementById("shootingTable");
-      let data = Object.values(window.participants);
+      const data = Object.values(window.participants);
+      // Sorter slik at de med status "I gang" eller ufullstendig skyting ligger øverst
       data.sort((a, b) => {
         if(a.status === "I gang" && b.status !== "I gang") return -1;
         if(a.status !== "I gang" && b.status === "I gang") return 1;
@@ -255,23 +234,22 @@
         return a.snr - b.snr;
       });
       
-      let html = `<div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Startnr</th>
-              <th>Navn</th>
-              <th>Status</th>
-              <th>Skive</th>
-              <th class="shootingCell">Skyting S1</th>
-              <th>Send S1</th>
-              <th>Skytetid S1</th>
-              <th class="shootingCell">Skyting S2</th>
-              <th>Send S2</th>
-              <th>Skytetid S2</th>
-            </tr>
-          </thead>
-          <tbody>`;
+      let html = `<div class="table-container"><table>
+        <thead>
+          <tr>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Status</th>
+            <th>Skive</th>
+            <th class="shootingCell">Skyting S1</th>
+            <th>Send S1</th>
+            <th>Skytetid S1</th>
+            <th class="shootingCell">Skyting S2</th>
+            <th>Send S2</th>
+            <th>Skytetid S2</th>
+          </tr>
+        </thead>
+        <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
