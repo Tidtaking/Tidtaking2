@@ -37,7 +37,7 @@
       font-size: 24px;
       margin: 20px 0 10px;
       color: #444;
-      background-color: #ddd; /* Mørkere grå for overskrifter */
+      background-color: #ddd;
       padding: 5px;
       border-radius: 4px;
     }
@@ -305,7 +305,7 @@
     }
 
     // Arkiver resultatene i "history"-tabellen.
-    // For å unngå konflikt med eksisterende primærnøkkel (snr), fjerner vi snr-feltet fra hver deltaker
+    // Vi fjerner feltet "snr" fra hvert objekt slik at det ikke blir sendt med
     const { data: finished, error: errorFinished } = await supabaseClient
       .from("participants")
       .select("*")
@@ -313,12 +313,8 @@
     if (errorFinished) {
       console.error("Feil ved henting av ferdige deltakere:", errorFinished);
     } else {
-      // Map ferdige deltakere til et objekt uten snr-felt
-      const toInsert = finished.map(rec => {
-        let newRec = { ...rec };
-        delete newRec.snr;
-        return newRec;
-      });
+      // Bruk destrukturering for å utelate snr-feltet
+      const toInsert = finished.map(({ snr, ...rest }) => rest);
       const { error: historyError } = await supabaseClient
         .from("history")
         .insert(toInsert);
@@ -333,7 +329,6 @@
   }
 
   document.getElementById("pdfBtn").addEventListener("click", saveResultsAsPDF);
-
   document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
 </script>
 </body>
