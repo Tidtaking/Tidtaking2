@@ -84,10 +84,10 @@
       background-color: #6c757d;
       cursor: default;
     }
-    /* Pakk tabellen i en container som lar horisontal scrolling om nødvendig */
+    /* Pakk tabellen i en container som lar horisontal scrolling */
     .table-container {
       overflow-x: auto;
-      margin: 0 auto;
+      width: 100%;
     }
     @media (max-width: 480px) {
       th, td {
@@ -226,15 +226,14 @@
       renderTable();
     }
 
-    // Oppdater renderTable slik at scrollposisjon bevares
+    // Render tabellen med bevaring av scroll-posisjon
     function renderTable() {
       const container = document.getElementById("shootingTable");
-      // Lagre scroll-posisjon
-      const scrollLeft = container.scrollLeft;
-      const scrollTop = container.scrollTop;
+      const currentScrollLeft = container.scrollLeft;
+      const currentScrollTop = container.scrollTop;
       
       let data = Object.values(window.participants);
-      // Sorter slik at de med status "I gang" eller ufullstendig skyting ligger øverst
+      // Sorter slik at deltakerne med status "I gang" eller ufullstendig skyting ligger øverst
       data.sort((a, b) => {
         if(a.status === "I gang" && b.status !== "I gang") return -1;
         if(a.status !== "I gang" && b.status === "I gang") return 1;
@@ -244,24 +243,23 @@
         return a.snr - b.snr;
       });
       
-      let html = `
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Startnr</th>
-                <th>Navn</th>
-                <th>Status</th>
-                <th>Skive</th>
-                <th class="shootingCell">Skyting S1</th>
-                <th>Send S1</th>
-                <th>Skytetid S1</th>
-                <th class="shootingCell">Skyting S2</th>
-                <th>Send S2</th>
-                <th>Skytetid S2</th>
-              </tr>
-            </thead>
-            <tbody>`;
+      let html = `<div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Startnr</th>
+              <th>Navn</th>
+              <th>Status</th>
+              <th>Skive</th>
+              <th class="shootingCell">Skyting S1</th>
+              <th>Send S1</th>
+              <th>Skytetid S1</th>
+              <th class="shootingCell">Skyting S2</th>
+              <th>Send S2</th>
+              <th>Skytetid S2</th>
+            </tr>
+          </thead>
+          <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
@@ -308,9 +306,8 @@
       html += `</tbody></table></div>`;
       
       container.innerHTML = html;
-      // Gjenopprett scroll-posisjon
-      container.scrollLeft = scrollLeft;
-      container.scrollTop = scrollTop;
+      container.scrollLeft = currentScrollLeft;
+      container.scrollTop = currentScrollTop;
     }
 
     async function sendShootingResult(snr, shootIdx) {
