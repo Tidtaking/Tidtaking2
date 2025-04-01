@@ -105,7 +105,6 @@
 <!-- PDF-knapp -->
 <button id="pdfBtn">Lagre som PDF</button>
 
-<!-- Navigasjonslenker -->
 <div class="nav-links">
   <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
   <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
@@ -176,12 +175,13 @@
         <table>
           <thead>
             <tr>
-              <th>Rang</th>
+              <th>Plassering</th>
+              <th>Startnr</th>
               <th>Navn</th>
-              <th>Mellomtid 1</th>
-              <th>Mellomtid 2</th>
-              <th>Sluttid</th>
-              <th>Differanse</th>
+              <th>Konkurranse</th>
+              <th>Dato</th>
+              <th>Status</th>
+              <th>Måltid</th>
               <th>Skyteresultat</th>
               <th>Skytetid S1</th>
               <th>Skytetid S2</th>
@@ -241,11 +241,12 @@
         html += `
           <tr>
             <td class="rank-cell">${rank}</td>
+            <td>${participant.snr || ""}</td>
             <td>${participant.name || ""}</td>
-            <td>${lap1}</td>
-            <td>${lap2}</td>
+            <td>${participant.competition || ""}</td>
+            <td>${participant.comp_date || ""}</td>
+            <td>${participant.status || ""}</td>
             <td>${finishStr}</td>
-            <td class="diff-cell">${diffStr}</td>
             <td>${shootingStr}</td>
             <td>${shootingTimeStr1}</td>
             <td>${shootingTimeStr2}</td>
@@ -276,7 +277,7 @@
     }).join(", ");
   }
 
-  // PDF-funksjonalitet med jsPDF, autoTable og lagring i "history"-tabellen
+  // PDF-funksjonalitet med jsPDF, autoTable og arkivering til "history"
   async function saveResultsAsPDF() {
     const jsPDFConstructor = window.jspdf.jsPDF;
     const doc = new jsPDFConstructor('p', 'pt');
@@ -303,8 +304,8 @@
       yOffset = doc.lastAutoTable.finalY + 30;
     }
 
-    // Sett inn resultatene i "history"-tabellen
-    // Vi setter inn alle ferdige deltakere (de med finish) direkte, siden history-tabellen er en kopi av participants.
+    // Arkiver resultatene i "history"-tabellen.
+    // For å unngå konflikt med eksisterende primærnøkkel (snr), fjerner vi snr-feltet fra hver deltaker
     const { data: finished, error: errorFinished } = await supabaseClient
       .from("participants")
       .select("*")
@@ -312,9 +313,15 @@
     if (errorFinished) {
       console.error("Feil ved henting av ferdige deltakere:", errorFinished);
     } else {
+      // Map ferdige deltakere til et objekt uten snr-felt
+      const toInsert = finished.map(rec => {
+        let newRec = { ...rec };
+        delete newRec.snr;
+        return newRec;
+      });
       const { error: historyError } = await supabaseClient
         .from("history")
-        .insert(finished);
+        .insert(toInsert);
       if (historyError) {
         console.error("Feil ved lagring i history-tabellen:", historyError);
       } else {
