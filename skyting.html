@@ -16,7 +16,7 @@
       font-size: 28px;
       margin-bottom: 20px;
     }
-    /* Pakk tabellen i en container med overflow-x auto */
+    /* Pakk tabellen i en container som tillater horisontal scrolling */
     .table-container {
       overflow-x: auto;
       width: 100%;
@@ -29,14 +29,14 @@
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 6px; /* redusert for å spare plass */
+      padding: 6px;
       font-size: 18px;
       text-align: center;
     }
     th {
       background-color: #f4f4f4;
     }
-    /* Faste kolonner for skyting – økt til 340px slik at alle 5 blinkene vises */
+    /* Økt bredde slik at alle 5 blinkene vises */
     .shootingCell {
       background-color: gray;
       width: 340px;
@@ -45,7 +45,7 @@
       overflow: visible;
       text-align: center;
     }
-    /* Blinkene – 60x60 px, font-size 48px */
+    /* Blinkene – 60×60 px, fontstørrelse 48px */
     .target {
       display: inline-block;
       width: 60px;
@@ -113,6 +113,7 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
+    // Konfigurer Supabase
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -204,40 +205,8 @@
       return data;
     }
 
+    // Bruk debounce for oppdatering – vi utsetter oppdatering til 1 sekund etter siste scroll
     let scrollTimeout;
-    async function updateDataFromDb() {
-      let dbData = await fetchAllParticipants();
-      let existingSnrs = {};
-      dbData.forEach(dbRec => {
-        mergeDbRecordIntoLocal(dbRec);
-        existingSnrs[dbRec.snr] = true;
-      });
-      for (let snr in window.participants) {
-        if (!existingSnrs[snr]) {
-          delete window.participants[snr];
-        }
-      }
-      // Unngå oppdatering mens brukeren scroller
-      if (!document.getElementById("shootingTable").isScrolling) {
-        renderTable();
-      }
-    }
-
-    // Debounce scroll: sett et flagg mens brukeren scroller
-    document.addEventListener("DOMContentLoaded", () => {
-      const container = document.getElementById("shootingTable");
-      container.addEventListener("scroll", () => {
-        container.isScrolling = true;
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          container.isScrolling = false;
-          renderTable();
-        }, 1000); // 1 sekund etter siste scroll-hendelse
-      });
-      updateDataFromDb();
-      setInterval(updateDataFromDb, 1000);
-    });
-
     function renderTable() {
       const container = document.getElementById("shootingTable");
       const currentScrollLeft = container.scrollLeft;
@@ -253,23 +222,22 @@
         return a.snr - b.snr;
       });
       
-      let html = `<div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Startnr</th>
-              <th>Navn</th>
-              <th>Status</th>
-              <th>Skive</th>
-              <th class="shootingCell">Skyting S1</th>
-              <th>Send S1</th>
-              <th>Skytetid S1</th>
-              <th class="shootingCell">Skyting S2</th>
-              <th>Send S2</th>
-              <th>Skytetid S2</th>
-            </tr>
-          </thead>
-          <tbody>`;
+      let html = `<div class="table-container"><table>
+        <thead>
+          <tr>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Status</th>
+            <th>Skive</th>
+            <th class="shootingCell">Skyting S1</th>
+            <th>Send S1</th>
+            <th>Skytetid S1</th>
+            <th class="shootingCell">Skyting S2</th>
+            <th>Send S2</th>
+            <th>Skytetid S2</th>
+          </tr>
+        </thead>
+        <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
@@ -420,6 +388,13 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      const container = document.getElementById("shootingTable");
+      container.addEventListener("scroll", () => {
+        clearTimeout(window._scrollTimeout);
+        window._scrollTimeout = setTimeout(() => {
+          renderTable();
+        }, 1000);
+      });
       updateDataFromDb();
       setInterval(updateDataFromDb, 1000);
     });
