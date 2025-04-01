@@ -110,22 +110,13 @@
     #pdfBtn:hover {
       background-color: #0056b3;
     }
-    @media (max-width: 480px) {
-      h1 {
-        font-size: 28px;
-      }
+    @media (max-width: 600px) {
       th, td {
         font-size: 14px;
         padding: 6px;
       }
-      .search-container input,
-      .search-container button {
-        font-size: 14px;
-        padding: 6px 10px;
-      }
-      .nav-links a {
-        font-size: 18px;
-        padding: 10px 16px;
+      .class-title {
+        font-size: 20px;
       }
       #pdfBtn {
         font-size: 18px;
@@ -170,11 +161,16 @@
     <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
     <a href="https://tidtaking.github.io/Tidtaking2/resultat">Resultater målgang</a>
     <a href="https://tidtaking.github.io/Tidtaking2/sim">Simulator</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
 
-  <!-- Inkluder Supabase SDK (v2 via ES-modul) -->
+  <!-- Inkluder Supabase SDK (v2 via ES-modul) og jsPDF -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
+    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+    // Du kan inkludere jsPDF-AutoTable hvis ønskelig:
+    // import "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js";
+
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
@@ -207,49 +203,67 @@
         return;
       }
       
-      // Sorter etter dato og konkurranse
-      data.sort((a, b) => {
-        if (a.comp_date === b.comp_date) {
-          return a.competition.localeCompare(b.competition);
+      // Gruppér dataene etter konkurranse og dato
+      const groups = {};
+      data.forEach(row => {
+        const groupKey = `${row.competition}_${row.comp_date}`;
+        if (!groups[groupKey]) {
+          groups[groupKey] = [];
         }
-        return a.comp_date.localeCompare(b.comp_date);
+        groups[groupKey].push(row);
       });
       
-      // Bygg tabell med utvidede kolonner
-      let tableHtml = `
-        <table>
-          <thead>
-            <tr>
-              <th>Startnr</th>
-              <th>Navn</th>
-              <th>Konkurranse</th>
-              <th>Dato</th>
-              <th>Status</th>
-              <th>Måltid</th>
-              <th>Skyteresultat</th>
-              <th>Skytetid S1</th>
-              <th>Skytetid S2</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      for (const row of data) {
-        tableHtml += `
-          <tr>
-            <td>${row.snr || ""}</td>
-            <td>${row.name || ""}</td>
-            <td>${row.competition || ""}</td>
-            <td>${row.comp_date || ""}</td>
-            <td>${row.status || ""}</td>
-            <td>${row.finish ? formatTime(parseFloat(row.finish)) : ""}</td>
-            <td>${row.shooting ? parseShootingArray(JSON.parse(row.shooting)) : ""}</td>
-            <td>${row.shootingtime1 ? formatTime(parseFloat(row.shootingtime1)) : ""}</td>
-            <td>${row.shootingtime2 ? formatTime(parseFloat(row.shootingtime2)) : ""}</td>
-          </tr>
+      let html = "";
+      // For hver gruppe, sorter etter finish-tid og bygg en tabell
+      for (const key in groups) {
+        const group = groups[key];
+        // For å få plassering, sortér etter finish (lavest først)
+        group.sort((a, b) => (parseFloat(a.finish) || Infinity) - (parseFloat(b.finish) || Infinity));
+        // Finn klasse (vi forventer at alle i gruppa har samme klasse)
+        const cls = group[0].class || "Ukjent klasse";
+        // Bruk konkurranse og dato fra første element i gruppa
+        const competition = group[0].competition || "";
+        const compDate = group[0].comp_date || "";
+        html += `<h2 class="class-title">Konkurranse: ${competition} | Dato: ${compDate} | Klasse: ${cls}</h2>`;
+        html += `
+          <table>
+            <thead>
+              <tr>
+                <th>Plassering</th>
+                <th>Startnr</th>
+                <th>Navn</th>
+                <th>Status</th>
+                <th>Måltid</th>
+                <th>Skyteresultat</th>
+                <th>Skytetid S1</th>
+                <th>Skytetid S2</th>
+              </tr>
+            </thead>
+            <tbody>
         `;
+        group.forEach((row, index) => {
+          const rank = index + 1;
+          const finishStr = row.finish ? formatTime(parseFloat(row.finish)) : "";
+          const shootingStr = row.shooting ? parseShootingArray(JSON.parse(row.shooting)) : "";
+          const shootingTimeStr1 = row.shootingtime1 ? formatTime(parseFloat(row.shootingtime1)) : "";
+          const shootingTimeStr2 = row.shootingtime2 ? formatTime(parseFloat(row.shootingtime2)) : "";
+          html += `
+            <tr>
+              <td>${rank}</td>
+              <td>${row.snr || ""}</td>
+              <td>${row.name || ""}</td>
+              <td>${row.status || ""}</td>
+              <td>${finishStr}</td>
+              <td>${shootingStr}</td>
+              <td>${shootingTimeStr1}</td>
+              <td>${shootingTimeStr2}</td>
+            </tr>
+          `;
+        });
+        html += `</tbody></table>`;
       }
-      tableHtml += "</tbody></table>";
-      container.innerHTML = tableHtml;
+      
+      container.innerHTML = html;
     }
 
     function formatTime(timeSec) {
@@ -270,7 +284,6 @@
       }).join(", ");
     }
 
-    // Håndter filter-knapper
     document.getElementById("searchBtn").addEventListener("click", () => {
       const competition = document.getElementById("competitionSearch").value.trim();
       const date = document.getElementById("dateSearch").value;
@@ -284,7 +297,7 @@
       document.getElementById("participantSearch").value = "";
       displayHistory();
     });
-
+    
     document.addEventListener("DOMContentLoaded", () => {
       displayHistory();
     });
