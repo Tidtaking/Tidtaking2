@@ -37,7 +37,6 @@
       width: 225px;
       max-width: 225px;
       white-space: nowrap;
-      /* Fjern overflow slik at alle blinkene vises */
       overflow: visible;
       text-align: center;
     }
@@ -110,6 +109,7 @@
       }
     }
   </style>
+
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
@@ -121,7 +121,6 @@
     // Globalt deltaker-objekt for lokal toggling
     window.participants = {};
 
-    // Sikrer at shooting er en 2×5 matrise
     function ensureShootingFormat(arr) {
       if (!Array.isArray(arr) || arr.length !== 2) {
         return [Array(5).fill(false), Array(5).fill(false)];
@@ -134,7 +133,6 @@
       });
     }
 
-    // Parser en deltakers shooting-felt
     function parseShooting(record) {
       let val = record.shooting;
       let arr;
@@ -153,7 +151,6 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer deltakerens lokale shooting-toggles (eller setter standard)
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -161,7 +158,6 @@
       return p.shootingLocal;
     }
 
-    // Rendrer 5 blink for en skyterunde (shootIdx)
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
@@ -170,7 +166,6 @@
       ).join("");
     }
 
-    // Toggling av blink
     window.toggleTarget = function(e, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
@@ -179,7 +174,6 @@
       e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
-    // Merge DB-record med lokal toggling
     function mergeDbRecordIntoLocal(dbRec) {
       const snr = dbRec.snr;
       let local = window.participants[snr];
@@ -189,7 +183,6 @@
         dbRec.s2sent = dbRec.s2sent || false;
         dbRec.skive = dbRec.skive || "";
         dbRec.status = dbRec.status || "";
-        // Separate start-tider for skytetid for runde 1 og 2
         dbRec.shootingTimeStart1 = dbRec.shootingTimeStart1 || null;
         dbRec.shootingTimeStart2 = dbRec.shootingTimeStart2 || null;
         window.participants[snr] = dbRec;
@@ -203,7 +196,6 @@
       }
     }
 
-    // Henter deltakere fra DB
     async function fetchAllParticipants() {
       const { data, error } = await window.supabaseClient
         .from("participants")
@@ -232,11 +224,16 @@
 
     function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med fullførte skyteresultater havner nederst
+      // Sorter slik at de med status "I gang" (eller ikke begge skytinger sendt) ligger øverst
       data.sort((a, b) => {
+        // Hvis status "I gang" skal ligge øverst
+        if(a.status === "I gang" && b.status !== "I gang") return -1;
+        if(a.status !== "I gang" && b.status === "I gang") return 1;
+        // Dersom status er lik, bruk skyteflaggene: de med ufullstendig skyting (0) skal ligge øverst
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
         if (aDone !== bDone) return aDone - bDone;
+        // Til slutt sorteres etter startnummer
         return a.snr - b.snr;
       });
       let html = `<table>
@@ -266,7 +263,6 @@
           ? `<button class="send-button sent" disabled>Sendt</button>`
           : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
         
-        // Knapp for skytetid for runde 1
         let timeBtn1 = "";
         if (p.shootingtime1) {
           timeBtn1 = `<button class="time-button registered" disabled>Tid registrert</button>`;
@@ -275,7 +271,7 @@
         } else {
           timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Registrer tid S1</button>`;
         }
-        // Knapp for skytetid for runde 2
+        
         let timeBtn2 = "";
         if (p.shootingtime2) {
           timeBtn2 = `<button class="time-button registered" disabled>Tid registrert</button>`;
@@ -328,7 +324,6 @@
       updateDataFromDb();
     }
 
-    // Funksjon for å registrere skytetid for en gitt runde (shootIdx: 0 for S1, 1 for S2)
     async function registerShootingTime(snr, shootIdx) {
       let p = window.participants[snr];
       if (!p) return;
