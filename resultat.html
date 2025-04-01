@@ -37,7 +37,7 @@
       font-size: 24px;
       margin: 20px 0 10px;
       color: #444;
-      background-color: #ddd; /* Litt mørkere bakgrunn for overskriftene */
+      background-color: #ddd; /* Mørkere grå for overskrifter */
       padding: 5px;
       border-radius: 4px;
     }
@@ -118,19 +118,21 @@
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
-<!-- Inkluder Supabase SDK som ES-modul, jsPDF og jsPDF-AutoTable -->
+<!-- Inkluder Supabase SDK (v1.x) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Inkluder jsPDF og jsPDF-AutoTable fra cdnjs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
+  // Bruk Supabase v2 ES-modul for å opprette klienten (om ønskelig, kan du også bruke v1.x)
+  // Her fortsetter vi å bruke v1.x for kompatibilitet med den opprinnelige koden.
+  // Vi bruker window.supabaseClient fra det inkluderte scriptet ovenfor.
   
-  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-  const supabaseClient = createClient(supabaseUrl, supabaseKey);
-
+  // Funksjon for å hente og vise resultater
   async function fetchAndDisplayResults() {
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent alle deltakere
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -144,14 +146,12 @@
       return;
     }
 
-    // Filtrer kun de som har en sluttid
     const finished = participants.filter(p => p.finish !== null);
     if (finished.length === 0) {
       container.innerHTML = "<p>Ingen har fullført ennå.</p>";
       return;
     }
 
-    // Grupper deltakerne etter klasse
     let classMap = {};
     for (const p of finished) {
       const cls = p.class || "Ukjent klasse";
@@ -163,12 +163,8 @@
 
     let html = "";
     for (const cls of Object.keys(classMap)) {
-      // Sorter deltakerne i klassen etter finish-tid (stigende)
       classMap[cls].sort((a, b) => (parseFloat(a.finish) || 9999999) - (parseFloat(b.finish) || 9999999));
-
-      // Finn den beste tiden i klassen
       const bestTime = parseFloat(classMap[cls][0].finish) || 0;
-
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
       html += `
         <table>
@@ -187,18 +183,15 @@
           </thead>
           <tbody>
       `;
-
       classMap[cls].forEach((participant, index) => {
         const rank = index + 1;
         const finishSec = parseFloat(participant.finish) || 0;
         const finishStr = formatTime(finishSec);
-
         let diffStr = "–";
         if (rank > 1) {
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
-        // Hent mellomtider (laps)
         let lapsArr = [];
         if (participant.laps) {
           if (typeof participant.laps === "string") {
@@ -219,7 +212,6 @@
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
-        // Hent skyteresultat (shooting)
         let shootingArr = [];
         if (participant.shooting) {
           if (typeof participant.shooting === "string") {
@@ -233,8 +225,6 @@
           }
         }
         const shootingStr = parseShootingArray(shootingArr);
-
-        // Skytetid for runde 1 og 2
         const shootingTimeStr1 = participant.shootingtime1 ? formatTime(parseFloat(participant.shootingtime1)) : "";
         const shootingTimeStr2 = participant.shootingtime2 ? formatTime(parseFloat(participant.shootingtime2)) : "";
 
@@ -252,10 +242,8 @@
           </tr>
         `;
       });
-
       html += "</tbody></table>";
     }
-
     container.innerHTML = html;
   }
 
@@ -279,8 +267,9 @@
 
   // PDF-funksjonalitet med jsPDF, autoTable og lagring i "history"-tabellen
   async function saveResultsAsPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'pt');
+    // Hent jsPDF-konstruktøren fra window.jspdf
+    const jsPDFConstructor = window.jspdf.jsPDF;
+    const doc = new jsPDFConstructor('p', 'pt');
     let yOffset = 40;
     doc.setFontSize(20);
     doc.text("Resultater - LSK", 40, 30);
@@ -304,8 +293,7 @@
       yOffset = doc.lastAutoTable.finalY + 30;
     }
 
-    // Lagre resultatene i "history"-tabellen
-    // Vi henter ferdigstilte deltakere fra "participants" (de med finish satt)
+    // Sett inn resultatene i "history"-tabellen (kopi av alle felter fra participants)
     const { data: finished, error: errorFinished } = await supabaseClient
       .from("participants")
       .select("*")
