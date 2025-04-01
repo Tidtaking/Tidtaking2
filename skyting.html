@@ -16,6 +16,11 @@
       font-size: 28px;
       margin-bottom: 20px;
     }
+    /* Pakk tabellen i en container med overflow-x auto */
+    .table-container {
+      overflow-x: auto;
+      width: 100%;
+    }
     table {
       margin: 0 auto;
       border-collapse: collapse;
@@ -52,13 +57,11 @@
       cursor: pointer;
       vertical-align: middle;
     }
-    /* Inputfelt for skive */
     .skive-input {
       width: 60px;
       font-size: 18px;
       text-align: center;
     }
-    /* Send-knapper */
     .send-button {
       background-color: #28a745;
       color: white;
@@ -71,7 +74,6 @@
       background-color: #6c757d;
       cursor: default;
     }
-    /* Knapp for skytetid – separate for S1 og S2 */
     .time-button {
       background-color: #007bff;
       color: white;
@@ -83,11 +85,6 @@
     .time-button.registered {
       background-color: #6c757d;
       cursor: default;
-    }
-    /* Pakk tabellen i en container som lar horisontal scrolling */
-    .table-container {
-      overflow-x: auto;
-      width: 100%;
     }
     @media (max-width: 480px) {
       th, td {
@@ -114,15 +111,11 @@
       }
     }
   </style>
-  <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Globalt deltaker-objekt for lokal toggling
     window.participants = {};
 
     function ensureShootingFormat(arr) {
@@ -211,6 +204,7 @@
       return data;
     }
 
+    let scrollTimeout;
     async function updateDataFromDb() {
       let dbData = await fetchAllParticipants();
       let existingSnrs = {};
@@ -223,17 +217,33 @@
           delete window.participants[snr];
         }
       }
-      renderTable();
+      // Unngå oppdatering mens brukeren scroller
+      if (!document.getElementById("shootingTable").isScrolling) {
+        renderTable();
+      }
     }
 
-    // Render tabellen med bevaring av scroll-posisjon
+    // Debounce scroll: sett et flagg mens brukeren scroller
+    document.addEventListener("DOMContentLoaded", () => {
+      const container = document.getElementById("shootingTable");
+      container.addEventListener("scroll", () => {
+        container.isScrolling = true;
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          container.isScrolling = false;
+          renderTable();
+        }, 1000); // 1 sekund etter siste scroll-hendelse
+      });
+      updateDataFromDb();
+      setInterval(updateDataFromDb, 1000);
+    });
+
     function renderTable() {
       const container = document.getElementById("shootingTable");
       const currentScrollLeft = container.scrollLeft;
       const currentScrollTop = container.scrollTop;
       
       let data = Object.values(window.participants);
-      // Sorter slik at deltakerne med status "I gang" eller ufullstendig skyting ligger øverst
       data.sort((a, b) => {
         if(a.status === "I gang" && b.status !== "I gang") return -1;
         if(a.status !== "I gang" && b.status === "I gang") return 1;
