@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Historikk - LSK</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f9f9f9;
+      text-align: center;
+      padding-bottom: 40px;
+    }
+    header {
+      background: #fff;
+      padding: 20px 0;
+      margin-bottom: 20px;
+    }
+    header img {
+      width: 160px;
+    }
+    h1 {
+      margin: 10px 0;
+      font-size: 32px;
+      color: #333;
+    }
+    .search-container {
+      max-width: 800px;
+      margin: 0 auto 20px;
+      background: #eee;
+      padding: 15px;
+      border-radius: 5px;
+      text-align: left;
+    }
+    .search-container label {
+      font-size: 18px;
+      margin: 5px 0;
+      display: block;
+    }
+    .search-container input {
+      font-size: 16px;
+      padding: 8px;
+      margin-bottom: 10px;
+      width: 100%;
+      max-width: 300px;
+    }
+    .search-container button {
+      font-size: 16px;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .results-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 6px;
+      text-align: left;
+    }
+    .class-title {
+      font-size: 24px;
+      margin: 20px 0 10px;
+      color: #444;
+      background-color: #ddd;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      font-size: 16px;
+      text-align: center;
+    }
+    th {
+      background-color: #e9e9e9;
+    }
+    .nav-links {
+      margin-top: 40px;
+    }
+    .nav-links a {
+      display: inline-block;
+      margin: 10px;
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      font-size: 20px;
+      border-radius: 5px;
+    }
+    .nav-links a:hover {
+      background: #0056b3;
+    }
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 28px;
+      }
+      th, td {
+        font-size: 14px;
+        padding: 8px;
+      }
+      .search-container input,
+      .search-container button {
+        font-size: 14px;
+        padding: 6px 10px;
+      }
+      .nav-links a {
+        font-size: 18px;
+        padding: 10px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- LSK-logo – pass på at "lsk_logo.jpg" ligger i samme mappe -->
+    <img src="lsk_logo.jpg" alt="LSK Logo">
+    <h1>Historikk</h1>
+  </header>
+
+  <div class="search-container">
+    <label for="competitionSearch">Konkurranse (navn):</label>
+    <input type="text" id="competitionSearch" placeholder="F.eks. Klubbløp-2025">
+
+    <label for="dateSearch">Dato (yyyy-mm-dd):</label>
+    <input type="date" id="dateSearch">
+
+    <label for="participantSearch">Deltaker (navn):</label>
+    <input type="text" id="participantSearch" placeholder="F.eks. Ola">
+
+    <button id="searchBtn">Søk</button>
+    <button id="showAllBtn">Vis Alt</button>
+  </div>
+
+  <div class="results-container" id="resultsContainer">
+    <p>Laster historikk...</p>
+  </div>
+
+  <div class="nav-links">
+    <a href="https://tidtaking.github.io/Tidtaking2/">Sette Starttider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/resultat">Resultater målgang</a>
+    <a href="https://tidtaking.github.io/Tidtaking2/sim">Simulator</a>
+  </div>
+
+  <!-- Inkluder Supabase SDK (v2 via ES-modul import) -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
+    
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    async function fetchHistory(filters = {}) {
+      let query = supabaseClient.from("history").select("*");
+      
+      // Legg til filter for konkurranse hvis satt
+      if (filters.competition) {
+        query = query.eq("competition", filters.competition);
+      }
+      // Filter på dato (comp_date)
+      if (filters.date) {
+        query = query.eq("comp_date", filters.date);
+      }
+      // Filter på deltaker (navn, bruker ilike for case-insensitiv søk)
+      if (filters.participant) {
+        query = query.ilike("name", `%${filters.participant}%`);
+      }
+      
+      const { data, error } = await query;
+      if (error) {
+        console.error("Feil ved henting av history:", error);
+        return [];
+      }
+      return data;
+    }
+
+    async function displayHistory(filters = {}) {
+      const container = document.getElementById("resultsContainer");
+      container.innerHTML = "<p>Laster historikk...</p>";
+      const data = await fetchHistory(filters);
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = "<p>Ingen poster funnet.</p>";
+        return;
+      }
+      
+      // For enkelhets skyld sorteres data etter comp_date og konkurranse
+      data.sort((a, b) => {
+        if (a.comp_date === b.comp_date) {
+          return a.competition.localeCompare(b.competition);
+        }
+        return a.comp_date.localeCompare(b.comp_date);
+      });
+      
+      // Bygg tabell – du kan velge hvilke felter som skal vises
+      let tableHtml = `
+        <table>
+          <thead>
+            <tr>
+              <th>Startnr</th>
+              <th>Navn</th>
+              <th>Konkurranse</th>
+              <th>Dato</th>
+              <th>Status</th>
+              <th>Finish</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      for (const row of data) {
+        tableHtml += `
+          <tr>
+            <td>${row.snr || ""}</td>
+            <td>${row.name || ""}</td>
+            <td>${row.competition || ""}</td>
+            <td>${row.comp_date || ""}</td>
+            <td>${row.status || ""}</td>
+            <td>${row.finish || ""}</td>
+          </tr>
+        `;
+      }
+      tableHtml += "</tbody></table>";
+      container.innerHTML = tableHtml;
+    }
+
+    // Håndter knappetrykk
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      const competition = document.getElementById("competitionSearch").value.trim();
+      const date = document.getElementById("dateSearch").value;
+      const participant = document.getElementById("participantSearch").value.trim();
+      displayHistory({ competition, date, participant });
+    });
+    
+    document.getElementById("showAllBtn").addEventListener("click", () => {
+      // Tøm filterfeltene
+      document.getElementById("competitionSearch").value = "";
+      document.getElementById("dateSearch").value = "";
+      document.getElementById("participantSearch").value = "";
+      displayHistory();
+    });
+
+    // Ved lasting, vis alle poster
+    document.addEventListener("DOMContentLoaded", () => {
+      displayHistory();
+    });
+  </script>
+</body>
+</html>
