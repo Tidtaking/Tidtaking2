@@ -16,13 +16,6 @@
       font-size: 28px;
       margin-bottom: 20px;
     }
-    /* Hvis du ønsker å kunne scrolle horisontalt på mobilen:
-       Pakk tabellen i en container med overflow-x: auto
-    */
-    .table-container {
-      overflow-x: auto;
-      width: 100%;
-    }
     table {
       margin: 0 auto;
       border-collapse: collapse;
@@ -31,14 +24,14 @@
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 6px;
+      padding: 6px; /* redusert for å spare plass */
       font-size: 18px;
       text-align: center;
     }
     th {
       background-color: #f4f4f4;
     }
-    /* Faste kolonner for skyting – utvidet til 340px */
+    /* Faste kolonner for skyting – økt til 340px slik at alle 5 blinkene vises */
     .shootingCell {
       background-color: gray;
       width: 340px;
@@ -47,7 +40,7 @@
       overflow: visible;
       text-align: center;
     }
-    /* Blinkene – 60×60 px, font-size 48px */
+    /* Blinkene – 60x60 px, font-size 48px */
     .target {
       display: inline-block;
       width: 60px;
@@ -78,7 +71,7 @@
       background-color: #6c757d;
       cursor: default;
     }
-    /* Knapp for skytetid */
+    /* Knapp for skytetid – separate for S1 og S2 */
     .time-button {
       background-color: #007bff;
       color: white;
@@ -91,17 +84,20 @@
       background-color: #6c757d;
       cursor: default;
     }
+    /* Pakk tabellen i en container som lar horisontal scrolling om nødvendig */
+    .table-container {
+      overflow-x: auto;
+      margin: 0 auto;
+    }
     @media (max-width: 480px) {
       th, td {
         font-size: 16px;
         padding: 4px;
       }
-      /* Samme bredde i mobilvisning for .shootingCell */
       .shootingCell {
         width: 340px;
         max-width: 340px;
       }
-      /* Blinkene for mobil – beholder 60×60 px for bedre trykkflate */
       .target {
         width: 60px;
         height: 60px;
@@ -129,7 +125,6 @@
     // Globalt deltaker-objekt for lokal toggling
     window.participants = {};
 
-    // Sikrer at shooting er en 2×5 matrise
     function ensureShootingFormat(arr) {
       if (!Array.isArray(arr) || arr.length !== 2) {
         return [Array(5).fill(false), Array(5).fill(false)];
@@ -142,7 +137,6 @@
       });
     }
 
-    // Parser en deltakers shooting-felt
     function parseShooting(record) {
       let val = record.shooting;
       let arr;
@@ -161,7 +155,6 @@
       return ensureShootingFormat(arr);
     }
 
-    // Returnerer deltakerens lokale toggles, eller setter standard
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -169,7 +162,6 @@
       return p.shootingLocal;
     }
 
-    // Rendrer 5 blink for en skyterunde (shootIdx)
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
@@ -178,7 +170,6 @@
       ).join("");
     }
 
-    // Toggling av blink
     window.toggleTarget = function(e, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
@@ -187,7 +178,6 @@
       e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
-    // Merge DB-record med lokal toggling
     function mergeDbRecordIntoLocal(dbRec) {
       const snr = dbRec.snr;
       let local = window.participants[snr];
@@ -236,9 +226,15 @@
       renderTable();
     }
 
-    // Sorteringslogikk: status "I gang" øverst, deretter de som ikke har sendt begge skytinger, til slutt startnr
+    // Oppdater renderTable slik at scrollposisjon bevares
     function renderTable() {
+      const container = document.getElementById("shootingTable");
+      // Lagre scroll-posisjon
+      const scrollLeft = container.scrollLeft;
+      const scrollTop = container.scrollTop;
+      
       let data = Object.values(window.participants);
+      // Sorter slik at de med status "I gang" eller ufullstendig skyting ligger øverst
       data.sort((a, b) => {
         if(a.status === "I gang" && b.status !== "I gang") return -1;
         if(a.status !== "I gang" && b.status === "I gang") return 1;
@@ -247,6 +243,7 @@
         if (aDone !== bDone) return aDone - bDone;
         return a.snr - b.snr;
       });
+      
       let html = `
         <div class="table-container">
           <table>
@@ -264,8 +261,7 @@
                 <th>Skytetid S2</th>
               </tr>
             </thead>
-            <tbody>
-      `;
+            <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
@@ -307,11 +303,14 @@
             <td class="shootingCell">${s2}</td>
             <td>${btnS2}</td>
             <td>${timeBtn2}</td>
-          </tr>
-        `;
+          </tr>`;
       });
       html += `</tbody></table></div>`;
-      document.getElementById("shootingTable").innerHTML = html;
+      
+      container.innerHTML = html;
+      // Gjenopprett scroll-posisjon
+      container.scrollLeft = scrollLeft;
+      container.scrollTop = scrollTop;
     }
 
     async function sendShootingResult(snr, shootIdx) {
@@ -351,8 +350,7 @@
         } else {
           const elapsedMs = Date.now() - p.shootingTimeStart1;
           const shootingTime = elapsedMs / 1000;
-          const { error } = await window.supabaseClient
-            .from("participants")
+          const { error } = await window.supabaseClient.from("participants")
             .update({ shootingtime1: shootingTime })
             .eq("snr", snr);
           if (error) {
@@ -372,8 +370,7 @@
         } else {
           const elapsedMs = Date.now() - p.shootingTimeStart2;
           const shootingTime = elapsedMs / 1000;
-          const { error } = await window.supabaseClient
-            .from("participants")
+          const { error } = await window.supabaseClient.from("participants")
             .update({ shootingtime2: shootingTime })
             .eq("snr", snr);
           if (error) {
@@ -387,6 +384,32 @@
           }
         }
       }
+    }
+
+    async function fetchAllParticipants() {
+      const { data, error } = await window.supabaseClient
+        .from("participants")
+        .select("*");
+      if (error) {
+        console.error("Feil ved henting av deltakere:", error);
+        return [];
+      }
+      return data;
+    }
+
+    async function updateDataFromDb() {
+      let dbData = await fetchAllParticipants();
+      let existingSnrs = {};
+      dbData.forEach(dbRec => {
+        mergeDbRecordIntoLocal(dbRec);
+        existingSnrs[dbRec.snr] = true;
+      });
+      for (let snr in window.participants) {
+        if (!existingSnrs[snr]) {
+          delete window.participants[snr];
+        }
+      }
+      renderTable();
     }
 
     document.addEventListener("DOMContentLoaded", () => {
