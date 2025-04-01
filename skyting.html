@@ -113,7 +113,6 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -205,13 +204,28 @@
       return data;
     }
 
-    // Bruk debounce for oppdatering – vi utsetter oppdatering til 1 sekund etter siste scroll
     let scrollTimeout;
+    async function updateDataFromDb() {
+      let dbData = await fetchAllParticipants();
+      let existingSnrs = {};
+      dbData.forEach(dbRec => {
+        mergeDbRecordIntoLocal(dbRec);
+        existingSnrs[dbRec.snr] = true;
+      });
+      for (let snr in window.participants) {
+        if (!existingSnrs[snr]) {
+          delete window.participants[snr];
+        }
+      }
+      // Debounce: vent 1 sekund etter siste oppdatering
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        renderTable();
+      }, 1000);
+    }
+
     function renderTable() {
       const container = document.getElementById("shootingTable");
-      const currentScrollLeft = container.scrollLeft;
-      const currentScrollTop = container.scrollTop;
-      
       let data = Object.values(window.participants);
       data.sort((a, b) => {
         if(a.status === "I gang" && b.status !== "I gang") return -1;
@@ -222,22 +236,23 @@
         return a.snr - b.snr;
       });
       
-      let html = `<div class="table-container"><table>
-        <thead>
-          <tr>
-            <th>Startnr</th>
-            <th>Navn</th>
-            <th>Status</th>
-            <th>Skive</th>
-            <th class="shootingCell">Skyting S1</th>
-            <th>Send S1</th>
-            <th>Skytetid S1</th>
-            <th class="shootingCell">Skyting S2</th>
-            <th>Send S2</th>
-            <th>Skytetid S2</th>
-          </tr>
-        </thead>
-        <tbody>`;
+      let html = `<div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Startnr</th>
+              <th>Navn</th>
+              <th>Status</th>
+              <th>Skive</th>
+              <th class="shootingCell">Skyting S1</th>
+              <th>Send S1</th>
+              <th>Skytetid S1</th>
+              <th class="shootingCell">Skyting S2</th>
+              <th>Send S2</th>
+              <th>Skytetid S2</th>
+            </tr>
+          </thead>
+          <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
@@ -282,10 +297,7 @@
           </tr>`;
       });
       html += `</tbody></table></div>`;
-      
       container.innerHTML = html;
-      container.scrollLeft = currentScrollLeft;
-      container.scrollTop = currentScrollTop;
     }
 
     async function sendShootingResult(snr, shootIdx) {
