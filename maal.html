@@ -36,6 +36,11 @@
       margin: 10px 0;
       color: #333;
     }
+    .distance {
+      font-size: 24px;
+      color: #d00;
+      margin-top: 10px;
+    }
     .finish-button {
       background-color: #28a745;
       color: white;
@@ -50,7 +55,7 @@
       .participant-card h2 {
         font-size: 28px;
       }
-      .participant-card p {
+      .participant-card p, .distance {
         font-size: 22px;
       }
       .finish-button {
@@ -62,12 +67,12 @@
   <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // Konfigurer Supabase – bruk dine verdier
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Funksjon for å hente alle deltakere med status "I gang"
+    // Hent aktive deltakere (status "I gang")
     async function fetchActiveParticipants() {
       const { data, error } = await supabaseClient
         .from("participants")
@@ -80,29 +85,83 @@
       return data;
     }
 
-    // Oppdaterer visningen med aktive deltakerkort
+    // Hent fullførte deltakere (status "Fullført")
+    async function fetchFinishedParticipants() {
+      const { data, error } = await supabaseClient
+        .from("participants")
+        .select("*")
+        .eq("status", "Fullført");
+      if (error) {
+        console.error("Feil ved henting av fullførte deltakere:", error);
+        return [];
+      }
+      return data;
+    }
+
+    // Formatér tid (sekunder) til mm:ss
+    function formatTime(timeSec) {
+      if (!timeSec || isNaN(timeSec)) return "";
+      const totalSec = Math.floor(timeSec);
+      const mm = Math.floor(totalSec / 60);
+      const ss = totalSec % 60;
+      return `${mm}:${ss.toString().padStart(2, "0")}`;
+    }
+
+    // Oppdater deltakerkortene
     async function updateParticipantCards() {
-      const participants = await fetchActiveParticipants();
+      // Hent aktive og fullførte deltakere
+      const active = await fetchActiveParticipants();
+      const finished = await fetchFinishedParticipants();
+
+      // Gruppe fullførte deltakere etter klasse og finn ledertiden (min finish-tid) for hver klasse
+      const finishedByClass = {};
+      finished.forEach(p => {
+        const cls = p.class || "Ukjent klasse";
+        const finishTime = parseFloat(p.finish) || 0;
+        if (!finishedByClass[cls] || finishTime < finishedByClass[cls]) {
+          finishedByClass[cls] = finishTime;
+        }
+      });
+
       const container = document.getElementById("participantContainer");
-      if (participants.length === 0) {
+      if (active.length === 0) {
         container.innerHTML = "<p>Ingen aktive deltakere.</p>";
         return;
       }
+
+      // Sorter aktive deltakere etter startnummer
+      active.sort((a, b) => a.snr - b.snr);
+
       let html = "";
-      // Sorter deltakerne etter startnummer
-      participants.sort((a, b) => a.snr - b.snr);
-      participants.forEach(p => {
-        html += `<div class="participant-card">
-                   <h2>Startnr: ${p.snr}</h2>
-                   <p>${p.name}</p>
-                   <button class="finish-button" onclick="markAsFinished(${p.snr})">Mål</button>
-                 </div>`;
+      active.forEach(p => {
+        // Beregn deltakerens nåværende tid (hvis start er registrert)
+        let elapsed = 0;
+        if (p.start) {
+          elapsed = (Date.now() - Date.parse(p.start)) / 1000;
+        }
+        // Finn ledertiden for deltakerens klasse (hvis noen har fullført)
+        const cls = p.class || "Ukjent klasse";
+        let leaderTime = finishedByClass[cls] || null;
+        let diffStr = "";
+        if (leaderTime !== null && elapsed > leaderTime) {
+          let diff = elapsed - leaderTime;
+          diffStr = `<p class="distance">Avstand: +${formatTime(diff)}</p>`;
+        }
+        html += `
+          <div class="participant-card">
+            <h2>Startnr: ${p.snr}</h2>
+            <p>${p.name}</p>
+            ${diffStr}
+            <button class="finish-button" onclick="markAsFinished(${p.snr})">Mål</button>
+          </div>
+        `;
       });
       container.innerHTML = html;
     }
 
-    // Registrerer måltid for en deltaker uten bekreftelsesboks
+    // Registrer at en deltaker har nådd målet
     async function markAsFinished(snr) {
+      // Hent deltakerdata
       const { data, error } = await supabaseClient
         .from("participants")
         .select("*")
@@ -131,7 +190,7 @@
 
     document.addEventListener("DOMContentLoaded", function() {
       updateParticipantCards();
-      // Oppdater deltakerkortene hvert sekund for å fjerne fullførte
+      // Oppdater kortene hvert sekund (dette gir nedtellingseffekt)
       setInterval(updateParticipantCards, 1000);
     });
   </script>
