@@ -120,6 +120,7 @@
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     window.participants = {};
 
+    // Funksjoner for parsing og formatering av skyting
     function ensureShootingFormat(arr) {
       if (!Array.isArray(arr) || arr.length !== 2) {
         return [Array(5).fill(false), Array(5).fill(false)];
@@ -223,8 +224,7 @@
 
     function renderTable() {
       const container = document.getElementById("shootingTable");
-      const data = Object.values(window.participants);
-      // Sorter slik at de med status "I gang" eller ufullstendig skyting ligger øverst
+      let data = Object.values(window.participants);
       data.sort((a, b) => {
         if(a.status === "I gang" && b.status !== "I gang") return -1;
         if(a.status !== "I gang" && b.status === "I gang") return 1;
@@ -234,22 +234,23 @@
         return a.snr - b.snr;
       });
       
-      let html = `<div class="table-container"><table>
-        <thead>
-          <tr>
-            <th>Startnr</th>
-            <th>Navn</th>
-            <th>Status</th>
-            <th>Skive</th>
-            <th class="shootingCell">Skyting S1</th>
-            <th>Send S1</th>
-            <th>Skytetid S1</th>
-            <th class="shootingCell">Skyting S2</th>
-            <th>Send S2</th>
-            <th>Skytetid S2</th>
-          </tr>
-        </thead>
-        <tbody>`;
+      let html = `<div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Startnr</th>
+              <th>Navn</th>
+              <th>Status</th>
+              <th>Skive</th>
+              <th class="shootingCell">Skyting S1</th>
+              <th>Send S1</th>
+              <th>Skytetid S1</th>
+              <th class="shootingCell">Skyting S2</th>
+              <th>Send S2</th>
+              <th>Skytetid S2</th>
+            </tr>
+          </thead>
+          <tbody>`;
       data.forEach(p => {
         let s1 = renderShooting(p.snr, 0);
         let s2 = renderShooting(p.snr, 1);
@@ -294,7 +295,6 @@
           </tr>`;
       });
       html += `</tbody></table></div>`;
-      
       container.innerHTML = html;
     }
 
@@ -399,7 +399,10 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       updateDataFromDb();
-      setInterval(updateDataFromDb, 1000);
+      // Vi setter automatisk oppdatering kun for desktop
+      if (window.innerWidth >= 600) {
+        setInterval(updateDataFromDb, 1000);
+      }
     });
   </script>
 </head>
