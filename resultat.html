@@ -120,19 +120,21 @@
 
 <!-- Inkluder Supabase SDK (v1.x) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<!-- Inkluder jsPDF og jsPDF-AutoTable fra cdnjs -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<script type="module">
-  // Bruk Supabase v2 ES-modul for å opprette klienten (om ønskelig, kan du også bruke v1.x)
-  // Her fortsetter vi å bruke v1.x for kompatibilitet med den opprinnelige koden.
-  // Vi bruker window.supabaseClient fra det inkluderte scriptet ovenfor.
-  
-  // Funksjon for å hente og vise resultater
+<!-- Inkluder jsPDF og jsPDF-AutoTable fra cdn.jsdelivr.net -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+  // Opprett Supabase-klient
+  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
   async function fetchAndDisplayResults() {
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
+    // Hent alle deltakere fra participants-tabellen
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -146,25 +148,29 @@
       return;
     }
 
+    // Filtrer ut de som ikke har satt finish
     const finished = participants.filter(p => p.finish !== null);
     if (finished.length === 0) {
       container.innerHTML = "<p>Ingen har fullført ennå.</p>";
       return;
     }
 
+    // Grupper deltakerne etter klasse
     let classMap = {};
-    for (const p of finished) {
+    finished.forEach(p => {
       const cls = p.class || "Ukjent klasse";
       if (!classMap[cls]) {
         classMap[cls] = [];
       }
       classMap[cls].push(p);
-    }
+    });
 
     let html = "";
     for (const cls of Object.keys(classMap)) {
+      // Sorter deltakerne i klassen etter finish (stigende)
       classMap[cls].sort((a, b) => (parseFloat(a.finish) || 9999999) - (parseFloat(b.finish) || 9999999));
       const bestTime = parseFloat(classMap[cls][0].finish) || 0;
+
       html += `<h2 class="class-title">Klasse ${cls}</h2>`;
       html += `
         <table>
@@ -192,6 +198,7 @@
           diffStr = "+" + formatTime(finishSec - bestTime);
         }
 
+        // Hent mellomtider (laps)
         let lapsArr = [];
         if (participant.laps) {
           if (typeof participant.laps === "string") {
@@ -212,6 +219,7 @@
           lap2 = formatTime(parseFloat(lapsArr[1]) || 0);
         }
 
+        // Hent skyteresultat (shooting)
         let shootingArr = [];
         if (participant.shooting) {
           if (typeof participant.shooting === "string") {
@@ -225,6 +233,8 @@
           }
         }
         const shootingStr = parseShootingArray(shootingArr);
+
+        // Skytetid for runde 1 og 2
         const shootingTimeStr1 = participant.shootingtime1 ? formatTime(parseFloat(participant.shootingtime1)) : "";
         const shootingTimeStr2 = participant.shootingtime2 ? formatTime(parseFloat(participant.shootingtime2)) : "";
 
@@ -244,6 +254,7 @@
       });
       html += "</tbody></table>";
     }
+
     container.innerHTML = html;
   }
 
@@ -267,7 +278,6 @@
 
   // PDF-funksjonalitet med jsPDF, autoTable og lagring i "history"-tabellen
   async function saveResultsAsPDF() {
-    // Hent jsPDF-konstruktøren fra window.jspdf
     const jsPDFConstructor = window.jspdf.jsPDF;
     const doc = new jsPDFConstructor('p', 'pt');
     let yOffset = 40;
@@ -293,7 +303,8 @@
       yOffset = doc.lastAutoTable.finalY + 30;
     }
 
-    // Sett inn resultatene i "history"-tabellen (kopi av alle felter fra participants)
+    // Sett inn resultatene i "history"-tabellen
+    // Vi setter inn alle ferdige deltakere (de med finish) direkte, siden history-tabellen er en kopi av participants.
     const { data: finished, error: errorFinished } = await supabaseClient
       .from("participants")
       .select("*")
