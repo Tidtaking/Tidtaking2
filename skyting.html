@@ -31,24 +31,24 @@
     th {
       background-color: #f4f4f4;
     }
-    /* Faste kolonner for skyting – nå smalere for mobil: ca. halvparten av forrige bredde */
+    /* Faste kolonner for skyting – utvidet for mobil */
     .shootingCell {
       background-color: gray;
-      width: 225px;
-      max-width: 225px;
+      width: 260px;  /* Økt bredde slik at alle 5 blinkene vises */
+      max-width: 260px;
       white-space: nowrap;
       overflow: visible;
       text-align: center;
     }
-    /* Blinkene – reduserte i størrelse, ca. 40x40 px */
+    /* Blinkene – gjort større for bedre treff, ca. 50x50 px */
     .target {
       display: inline-block;
-      width: 40px;
-      height: 40px;
-      line-height: 40px;
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
       border-radius: 50%;
       margin: 4px;
-      font-size: 32px;
+      font-size: 40px;
       cursor: pointer;
       vertical-align: middle;
     }
@@ -90,14 +90,14 @@
         padding: 4px;
       }
       .shootingCell {
-        width: 180px;
-        max-width: 180px;
+        width: 260px;  /* Sikrer at bredden holder seg, slik at 5 blink er synlige */
+        max-width: 260px;
       }
       .target {
-        width: 35px;
-        height: 35px;
-        line-height: 35px;
-        font-size: 28px;
+        width: 50px;
+        height: 50px;
+        line-height: 50px;
+        font-size: 40px;
       }
       .skive-input {
         width: 50px;
@@ -121,6 +121,7 @@
     // Globalt deltaker-objekt for lokal toggling
     window.participants = {};
 
+    // Sikrer at shooting er en 2×5 matrise
     function ensureShootingFormat(arr) {
       if (!Array.isArray(arr) || arr.length !== 2) {
         return [Array(5).fill(false), Array(5).fill(false)];
@@ -133,6 +134,7 @@
       });
     }
 
+    // Parser en deltakers shooting-felt
     function parseShooting(record) {
       let val = record.shooting;
       let arr;
@@ -151,6 +153,7 @@
       return ensureShootingFormat(arr);
     }
 
+    // Returnerer deltakerens lokale shooting-toggles (eller setter standard)
     function getShootingArray(p) {
       if (!p.shootingLocal) {
         p.shootingLocal = parseShooting(p);
@@ -158,6 +161,7 @@
       return p.shootingLocal;
     }
 
+    // Rendrer 5 blink for en skyterunde (shootIdx)
     function renderShooting(snr, shootIdx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p)[shootIdx];
@@ -166,6 +170,7 @@
       ).join("");
     }
 
+    // Toggling av blink
     window.toggleTarget = function(e, snr, shootIdx, idx) {
       let p = window.participants[snr];
       let arr = getShootingArray(p);
@@ -174,6 +179,7 @@
       e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
     };
 
+    // Merge DB-record med lokal toggling
     function mergeDbRecordIntoLocal(dbRec) {
       const snr = dbRec.snr;
       let local = window.participants[snr];
@@ -224,16 +230,13 @@
 
     function renderTable() {
       let data = Object.values(window.participants);
-      // Sorter slik at de med status "I gang" (eller ikke begge skytinger sendt) ligger øverst
+      // Sorter slik at deltakerne med status "I gang" (eller ufullstendig skyting) ligger øverst
       data.sort((a, b) => {
-        // Hvis status "I gang" skal ligge øverst
         if(a.status === "I gang" && b.status !== "I gang") return -1;
         if(a.status !== "I gang" && b.status === "I gang") return 1;
-        // Dersom status er lik, bruk skyteflaggene: de med ufullstendig skyting (0) skal ligge øverst
         let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
         let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
         if (aDone !== bDone) return aDone - bDone;
-        // Til slutt sorteres etter startnummer
         return a.snr - b.snr;
       });
       let html = `<table>
