@@ -110,13 +110,22 @@
     #pdfBtn:hover {
       background-color: #0056b3;
     }
-    @media (max-width: 600px) {
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 28px;
+      }
       th, td {
         font-size: 14px;
         padding: 6px;
       }
-      .class-title {
-        font-size: 20px;
+      .search-container input,
+      .search-container button {
+        font-size: 14px;
+        padding: 6px 10px;
+      }
+      .nav-links a {
+        font-size: 18px;
+        padding: 10px 16px;
       }
       #pdfBtn {
         font-size: 18px;
@@ -127,7 +136,7 @@
 </head>
 <body>
   <header>
-    <!-- LSK-logo – pass på at "lsk_logo.jpg" ligger i samme mappe -->
+    <!-- LSK-logo – sørg for at "lsk_logo.jpg" ligger i samme mappe -->
     <img src="lsk_logo.jpg" alt="LSK Logo">
     <h1>Historikk</h1>
   </header>
@@ -161,16 +170,13 @@
     <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
     <a href="https://tidtaking.github.io/Tidtaking2/resultat">Resultater målgang</a>
     <a href="https://tidtaking.github.io/Tidtaking2/sim">Simulator</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
   </div>
 
-  <!-- Inkluder Supabase SDK (v2 via ES-modul) og jsPDF -->
+  <!-- Inkluder Supabase SDK (v2 via ES-modul) og jsPDF (fra CDN, UMD-versjon) -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
-    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
-    // Du kan inkludere jsPDF-AutoTable hvis ønskelig:
-    // import "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js";
-
+    // Vi laster UMD-versjonen av jsPDF med et vanlig script-tag i <head> eller nederst i body (se neste linje hvis ønskelig)
+    // Her forventer vi at jsPDF er tilgjengelig på window.jspdf.jsPDF
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
@@ -203,67 +209,68 @@
         return;
       }
       
-      // Gruppér dataene etter konkurranse og dato
-      const groups = {};
-      data.forEach(row => {
-        const groupKey = `${row.competition}_${row.comp_date}`;
-        if (!groups[groupKey]) {
-          groups[groupKey] = [];
+      // Sorter data etter klasse og deretter etter finish-tid
+      data.sort((a, b) => {
+        const classA = a.class || "";
+        const classB = b.class || "";
+        if (classA !== classB) {
+          return classA.localeCompare(classB);
         }
-        groups[groupKey].push(row);
+        return (parseFloat(a.finish) || Infinity) - (parseFloat(b.finish) || Infinity);
       });
       
-      let html = "";
-      // For hver gruppe, sorter etter finish-tid og bygg en tabell
-      for (const key in groups) {
-        const group = groups[key];
-        // For å få plassering, sortér etter finish (lavest først)
-        group.sort((a, b) => (parseFloat(a.finish) || Infinity) - (parseFloat(b.finish) || Infinity));
-        // Finn klasse (vi forventer at alle i gruppa har samme klasse)
-        const cls = group[0].class || "Ukjent klasse";
-        // Bruk konkurranse og dato fra første element i gruppa
-        const competition = group[0].competition || "";
-        const compDate = group[0].comp_date || "";
-        html += `<h2 class="class-title">Konkurranse: ${competition} | Dato: ${compDate} | Klasse: ${cls}</h2>`;
-        html += `
-          <table>
-            <thead>
-              <tr>
-                <th>Plassering</th>
-                <th>Startnr</th>
-                <th>Navn</th>
-                <th>Status</th>
-                <th>Måltid</th>
-                <th>Skyteresultat</th>
-                <th>Skytetid S1</th>
-                <th>Skytetid S2</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-        group.forEach((row, index) => {
-          const rank = index + 1;
-          const finishStr = row.finish ? formatTime(parseFloat(row.finish)) : "";
-          const shootingStr = row.shooting ? parseShootingArray(JSON.parse(row.shooting)) : "";
-          const shootingTimeStr1 = row.shootingtime1 ? formatTime(parseFloat(row.shootingtime1)) : "";
-          const shootingTimeStr2 = row.shootingtime2 ? formatTime(parseFloat(row.shootingtime2)) : "";
-          html += `
+      let tableHtml = `
+        <table>
+          <thead>
             <tr>
-              <td>${rank}</td>
-              <td>${row.snr || ""}</td>
-              <td>${row.name || ""}</td>
-              <td>${row.status || ""}</td>
-              <td>${finishStr}</td>
-              <td>${shootingStr}</td>
-              <td>${shootingTimeStr1}</td>
-              <td>${shootingTimeStr2}</td>
+              <th>Plassering</th>
+              <th>Startnr</th>
+              <th>Navn</th>
+              <th>Klasse</th>
+              <th>Konkurranse</th>
+              <th>Dato</th>
+              <th>Status</th>
+              <th>Måltid</th>
+              <th>Skyteresultat</th>
+              <th>Skytetid S1</th>
+              <th>Skytetid S2</th>
             </tr>
-          `;
-        });
-        html += `</tbody></table>`;
-      }
-      
-      container.innerHTML = html;
+          </thead>
+          <tbody>
+      `;
+      // For hver klasse må vi beregne plassering basert på finish-tid
+      // Vi kan iterere over de sorterte dataene, og dersom samme klasse opptrer, inkrementerer vi rangeringen innenfor den klassen
+      let currentClass = "";
+      let rankInClass = 0;
+      data.forEach(row => {
+        if ((row.class || "") !== currentClass) {
+          currentClass = row.class || "";
+          rankInClass = 1;
+        } else {
+          rankInClass++;
+        }
+        const finishStr = row.finish ? formatTime(parseFloat(row.finish)) : "";
+        const shootingStr = row.shooting ? parseShootingArray(JSON.parse(row.shooting)) : "";
+        const shootingTimeStr1 = row.shootingtime1 ? formatTime(parseFloat(row.shootingtime1)) : "";
+        const shootingTimeStr2 = row.shootingtime2 ? formatTime(parseFloat(row.shootingtime2)) : "";
+        tableHtml += `
+          <tr>
+            <td>${rankInClass}</td>
+            <td>${row.snr || ""}</td>
+            <td>${row.name || ""}</td>
+            <td>${row.class || ""}</td>
+            <td>${row.competition || ""}</td>
+            <td>${row.comp_date || ""}</td>
+            <td>${row.status || ""}</td>
+            <td>${finishStr}</td>
+            <td>${shootingStr}</td>
+            <td>${shootingTimeStr1}</td>
+            <td>${shootingTimeStr2}</td>
+          </tr>
+        `;
+      });
+      tableHtml += "</tbody></table>";
+      container.innerHTML = tableHtml;
     }
 
     function formatTime(timeSec) {
