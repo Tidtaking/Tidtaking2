@@ -97,13 +97,26 @@
     .nav-links a:hover {
       background: #0056b3;
     }
+    #pdfBtn {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #pdfBtn:hover {
+      background-color: #0056b3;
+    }
     @media (max-width: 480px) {
       h1 {
         font-size: 28px;
       }
       th, td {
         font-size: 14px;
-        padding: 8px;
+        padding: 6px;
       }
       .search-container input,
       .search-container button {
@@ -113,6 +126,10 @@
       .nav-links a {
         font-size: 18px;
         padding: 10px 16px;
+      }
+      #pdfBtn {
+        font-size: 18px;
+        padding: 8px 16px;
       }
     }
   </style>
@@ -155,30 +172,24 @@
     <a href="https://tidtaking.github.io/Tidtaking2/sim">Simulator</a>
   </div>
 
-  <!-- Inkluder Supabase SDK (v2 via ES-modul import) -->
+  <!-- Inkluder Supabase SDK (v2 via ES-modul) -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
-    
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     async function fetchHistory(filters = {}) {
       let query = supabaseClient.from("history").select("*");
-      
-      // Legg til filter for konkurranse hvis satt
       if (filters.competition) {
         query = query.eq("competition", filters.competition);
       }
-      // Filter på dato (comp_date)
       if (filters.date) {
         query = query.eq("comp_date", filters.date);
       }
-      // Filter på deltaker (navn, bruker ilike for case-insensitiv søk)
       if (filters.participant) {
         query = query.ilike("name", `%${filters.participant}%`);
       }
-      
       const { data, error } = await query;
       if (error) {
         console.error("Feil ved henting av history:", error);
@@ -191,13 +202,12 @@
       const container = document.getElementById("resultsContainer");
       container.innerHTML = "<p>Laster historikk...</p>";
       const data = await fetchHistory(filters);
-      
       if (!data || data.length === 0) {
         container.innerHTML = "<p>Ingen poster funnet.</p>";
         return;
       }
       
-      // For enkelhets skyld sorteres data etter comp_date og konkurranse
+      // Sorter etter dato og konkurranse
       data.sort((a, b) => {
         if (a.comp_date === b.comp_date) {
           return a.competition.localeCompare(b.competition);
@@ -205,7 +215,7 @@
         return a.comp_date.localeCompare(b.comp_date);
       });
       
-      // Bygg tabell – du kan velge hvilke felter som skal vises
+      // Bygg tabell med utvidede kolonner
       let tableHtml = `
         <table>
           <thead>
@@ -215,7 +225,10 @@
               <th>Konkurranse</th>
               <th>Dato</th>
               <th>Status</th>
-              <th>Finish</th>
+              <th>Måltid</th>
+              <th>Skyteresultat</th>
+              <th>Skytetid S1</th>
+              <th>Skytetid S2</th>
             </tr>
           </thead>
           <tbody>
@@ -228,7 +241,10 @@
             <td>${row.competition || ""}</td>
             <td>${row.comp_date || ""}</td>
             <td>${row.status || ""}</td>
-            <td>${row.finish || ""}</td>
+            <td>${row.finish ? formatTime(parseFloat(row.finish)) : ""}</td>
+            <td>${row.shooting ? parseShootingArray(JSON.parse(row.shooting)) : ""}</td>
+            <td>${row.shootingtime1 ? formatTime(parseFloat(row.shootingtime1)) : ""}</td>
+            <td>${row.shootingtime2 ? formatTime(parseFloat(row.shootingtime2)) : ""}</td>
           </tr>
         `;
       }
@@ -236,7 +252,25 @@
       container.innerHTML = tableHtml;
     }
 
-    // Håndter knappetrykk
+    function formatTime(timeSec) {
+      if (!timeSec || isNaN(timeSec)) return "";
+      const totalSec = Math.floor(timeSec);
+      const ms = Math.round((timeSec - totalSec) * 1000);
+      const mm = Math.floor(totalSec / 60);
+      const ss = totalSec % 60;
+      return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
+    }
+
+    function parseShootingArray(arr) {
+      if (!arr || !Array.isArray(arr)) return "";
+      return arr.map(serie => {
+        if (!Array.isArray(serie)) return "";
+        const hits = serie.filter(x => x === true).length;
+        return `${hits}/${serie.length}`;
+      }).join(", ");
+    }
+
+    // Håndter filter-knapper
     document.getElementById("searchBtn").addEventListener("click", () => {
       const competition = document.getElementById("competitionSearch").value.trim();
       const date = document.getElementById("dateSearch").value;
@@ -245,14 +279,12 @@
     });
     
     document.getElementById("showAllBtn").addEventListener("click", () => {
-      // Tøm filterfeltene
       document.getElementById("competitionSearch").value = "";
       document.getElementById("dateSearch").value = "";
       document.getElementById("participantSearch").value = "";
       displayHistory();
     });
 
-    // Ved lasting, vis alle poster
     document.addEventListener("DOMContentLoaded", () => {
       displayHistory();
     });
