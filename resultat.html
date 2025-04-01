@@ -118,22 +118,19 @@
   <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
 </div>
 
-<!-- Inkluder Supabase SDK (v1.x) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<!-- Inkluder jsPDF og jsPDF-AutoTable -->
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
-<script>
-  // Opprett Supabase-klient
+<!-- Inkluder Supabase SDK som ES-modul, jsPDF og jsPDF-AutoTable -->
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
+  
   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-  const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+  const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
   async function fetchAndDisplayResults() {
     const container = document.getElementById("resultsContainer");
     container.innerHTML = "<p>Laster resultater...</p>";
 
-    // Hent alle deltakere – her kan du tilpasse spørringen etter konkurranse/dato
+    // Hent alle deltakere
     const { data: participants, error } = await supabaseClient
       .from("participants")
       .select("*");
@@ -262,7 +259,6 @@
     container.innerHTML = html;
   }
 
-  // Formatér tid (sekunder) til mm:ss.x
   function formatTime(timeSec) {
     if (!timeSec || isNaN(timeSec)) return "";
     const totalSec = Math.floor(timeSec);
@@ -272,7 +268,6 @@
     return `${mm}:${ss.toString().padStart(2, "0")}.${Math.floor(ms / 100)}`;
   }
 
-  // Parser skyteresultat: forventer en 2D-array med booleans
   function parseShootingArray(arr) {
     if (!arr || !Array.isArray(arr)) return "";
     return arr.map(serie => {
@@ -282,7 +277,7 @@
     }).join(", ");
   }
 
-  // PDF-funksjonalitet med jsPDF og autoTable samt lagring i "history"-tabellen
+  // PDF-funksjonalitet med jsPDF, autoTable og lagring i "history"-tabellen
   async function saveResultsAsPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'pt');
@@ -292,7 +287,6 @@
     yOffset = 50;
 
     const container = document.getElementById("resultsContainer");
-    // Finn alle klasse-titler og tilhørende tabeller
     const classTitles = container.getElementsByClassName("class-title");
     for (let i = 0; i < classTitles.length; i++) {
       let className = classTitles[i].textContent;
@@ -310,17 +304,23 @@
       yOffset = doc.lastAutoTable.finalY + 30;
     }
 
-    // Ekstra: lagre resultatene i "history"-tabellen
-    // Vi lagrer resultatene som en HTML-streng sammen med en tidsstempel.
-    const resultHTML = container.innerHTML;
-    const now = new Date().toISOString();
-    const { error } = await supabaseClient
-      .from("history")
-      .insert([{ timestamp: now, result_html: resultHTML }]);
-    if (error) {
-      console.error("Feil ved lagring i history-tabellen:", error);
+    // Lagre resultatene i "history"-tabellen
+    // Vi henter ferdigstilte deltakere fra "participants" (de med finish satt)
+    const { data: finished, error: errorFinished } = await supabaseClient
+      .from("participants")
+      .select("*")
+      .not("finish", "is", null);
+    if (errorFinished) {
+      console.error("Feil ved henting av ferdige deltakere:", errorFinished);
     } else {
-      console.log("Resultatene ble lagret i history-tabellen.");
+      const { error: historyError } = await supabaseClient
+        .from("history")
+        .insert(finished);
+      if (historyError) {
+        console.error("Feil ved lagring i history-tabellen:", historyError);
+      } else {
+        console.log("Resultatene ble lagret i history-tabellen.");
+      }
     }
 
     doc.save("resultater.pdf");
