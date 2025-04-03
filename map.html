@@ -26,7 +26,6 @@
     <input type="text" id="search" placeholder="Søk i adresser..." />
     <select id="kommune-filter">
       <option value="">Alle kommuner</option>
-      
     </select>
   </div>
   <div id="map"></div>
@@ -91,7 +90,7 @@
     document.getElementById('search').addEventListener('input', hentDataInnenforKart);
     document.getElementById('kommune-filter').addEventListener('change', hentDataInnenforKart);
     hentDataInnenforKart();
-      // Dynamisk utfylling av kommuneliste
+
     async function hentKommuner() {
       const { data, error } = await supabaseClient
         .from('addresses')
