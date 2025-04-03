@@ -29,11 +29,18 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function hentData() {
-      const { data, error } = await supabaseClient
-        .from('addresses')
-        .select('lat, lon, full_adresse')
-        .limit(10000);
+    async function hentDataInnenforKart() {
+      markers.clearLayers();
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+
+      const { data, error } = await supabaseClient.rpc('hent_adresser_innenfor_bbox', {
+        x_min: sw.lng,
+        y_min: sw.lat,
+        x_max: ne.lng,
+        y_max: ne.lat
+      });
 
       if (error) {
         console.error('Feil ved henting fra Supabase:', error);
@@ -56,7 +63,8 @@
       map.addLayer(markers);
     }
 
-    hentData();
+    map.on('moveend', hentDataInnenforKart);
+    hentDataInnenforKart();
   </script>
 </body>
 </html>
