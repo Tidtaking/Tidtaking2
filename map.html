@@ -5,6 +5,8 @@
   <title>Enkel kartvisning</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
   <style>
     #map { height: 100vh; }
   </style>
@@ -12,6 +14,8 @@
 <body>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     const map = L.map('map').setView([59.91, 10.75], 6);
 
@@ -19,33 +23,41 @@
       attribution: '&copy; OpenStreetMap bidragsytere'
     }).addTo(map);
 
-    // Last inn CSV-data og plasser markører
-    fetch('Test_import_geokodet.csv')
-      .then(response => response.text())
-      .then(csv => {
-        const rows = csv.split('\n');
-        const headers = rows[0].split(',');
-        const latIndex = headers.indexOf('lat');
-        const lonIndex = headers.indexOf('lon');
-        const adresseIndex = headers.indexOf('full_adresse');
+    const markers = L.markerClusterGroup();
 
-        for (let i = 1; i < rows.length; i++) {
-          const cols = rows[i].split(',');
-          const lat = parseFloat(cols[latIndex]);
-          const lon = parseFloat(cols[lonIndex]);
-          const adresse = cols[adresseIndex];
+    // Sett inn dine egne Supabase-url og key her:
+    const supabaseUrl = 'https://YOUR_PROJECT_ID.supabase.co';
+    const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-          if (!isNaN(lat) && !isNaN(lon)) {
-            L.circleMarker([lat, lon], {
-              radius: 3,
-              color: '#007bff',
-              fillColor: '#007bff',
-              fillOpacity: 0.7
-            }).addTo(map)
-              .bindPopup(adresse);
-          }
+    async function hentData() {
+      const { data, error } = await supabase
+        .from('addresses')
+        .select('lat, lon, full_adresse')
+        .limit(10000); // eller legg inn bbox-filter senere
+
+      if (error) {
+        console.error('Feil ved henting fra Supabase:', error);
+        return;
+      }
+
+      data.forEach(row => {
+        if (row.lat && row.lon) {
+          const marker = L.circleMarker([row.lat, row.lon], {
+            radius: 4,
+            color: '#007bff',
+            fillColor: '#007bff',
+            fillOpacity: 0.7
+          }).bindPopup(row.full_adresse);
+
+          markers.addLayer(marker);
         }
       });
+
+      map.addLayer(markers);
+    }
+
+    hentData();
   </script>
 </body>
 </html>
