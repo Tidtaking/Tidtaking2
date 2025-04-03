@@ -45,21 +45,23 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+    // Funksjon for å hente den riktige adressen
     function hentVisningsadresse(row) {
       return row.adresse || 'Ukjent adresse';
     }
 
-    // Hent kommune-navn uten postnummer fra adressefeltet
+    // Funksjon for å hente kommunen uten postnummer
     function hentKommune(adresse) {
       const parts = adresse.split(',');
       if (parts.length >= 2) {
         const kommuneDel = parts[parts.length - 2].trim();
-        const utenPostnummer = kommuneDel.replace(/^\d{4}\s*/, '');  // Fjern postnummer (fire siffer)
+        const utenPostnummer = kommuneDel.replace(/^\d{4}\s*/, '');  // Fjern postnummer
         return utenPostnummer.trim();
       }
       return '';
     }
 
+    // Hent data innenfor kartets område
     async function hentDataInnenforKart() {
       markers.clearLayers();
       const bounds = map.getBounds();
@@ -76,6 +78,7 @@
         y_max: ne.lat
       });
 
+      console.log('Data hentet fra Supabase:', data);
       if (error) {
         console.error('Feil ved henting fra Supabase:', error);
         return;
@@ -85,17 +88,18 @@
         .filter(row => {
           const visning = hentVisningsadresse(row).toLowerCase();
           const adresseMatch = visning.includes(søk);
-          const kommuneMatch = kommune ? row.Poststed.includes(kommune) : true;
+          const kommuneMatch = kommune ? hentKommune(row.adresse) === kommune : true;
           return adresseMatch && kommuneMatch;
         })
         .forEach(row => {
           if (row.lat && row.lon) {
+            // Bind popup med riktig adresse
             const marker = L.circleMarker([row.lat, row.lon], {
               radius: 4,
               color: '#007bff',
               fillColor: '#007bff',
               fillOpacity: 0.7
-            }).bindPopup(`<strong>${hentVisningsadresse(row)}</strong>`);
+            }).bindPopup(`<strong>Adresse: ${row.adresse}</strong><br><em>Full adresse: ${row.full_adresse}</em>`);
             markers.addLayer(marker);
           }
         });
@@ -106,7 +110,7 @@
     map.on('moveend', hentDataInnenforKart);
     document.getElementById('search').addEventListener('input', hentDataInnenforKart);
     document.getElementById('kommune-filter').addEventListener('change', hentDataInnenforKart);
-    hentDataInnenforKart();
+    hentDataInnenforKart(); // Første gang ved oppstart
 
     // Dynamisk utfylling av kommuneliste
     async function hentKommuner() {
@@ -131,7 +135,7 @@
       });
     }
 
-    hentKommuner();
+    hentKommuner();  // Hent kommuner for filteret
   </script>
 </body>
 </html>
