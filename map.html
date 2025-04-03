@@ -31,7 +31,7 @@
 
     async function hentData() {
       const { data, error } = await supabaseClient
-        .from('addresses')
+        .from('adresses')
         .select('lat, lon, full_adresse')
         .limit(10000);
 
