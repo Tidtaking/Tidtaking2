@@ -61,7 +61,7 @@
       return '';
     }
 
-    // Hent data innenfor kartets område
+    // Hent data innenfor kartets område med pagination
     async function hentDataInnenforKart() {
       markers.clearLayers();  // Rydder gamle markører før vi legger til nye
       const bounds = map.getBounds();
@@ -71,20 +71,34 @@
       const søk = document.getElementById('search').value.toLowerCase();
       const kommune = document.getElementById('kommune-filter').value;
 
-      // Hent alle dataene fra Supabase
-      const { data, error } = await supabaseClient
-        .from('addresses')
-        .select('*');  // Hent alle kolonner, uten limit
+      // Pagination - hent data i batcher
+      let allData = [];
+      let page = 0;
+      let batchSize = 1000;  // Sett ønsket batch-størrelse
+      let hasMoreData = true;
 
-      console.log('Data hentet fra Supabase:', data); // Logg dataene for å bekrefte at de er oppdatert
+      while (hasMoreData) {
+        const { data, error } = await supabaseClient
+          .from('addresses')
+          .select('*')
+          .range(page * batchSize, (page + 1) * batchSize - 1);  // Hent batch
 
-      if (error) {
-        console.error('Feil ved henting fra Supabase:', error);
-        return;
+        if (error) {
+          console.error('Feil ved henting fra Supabase:', error);
+          return;
+        }
+
+        allData = allData.concat(data);  // Legg til data fra denne batchen
+        page++;
+
+        // Sjekk om vi har hentet alle dataene
+        if (data.length < batchSize) {
+          hasMoreData = false;
+        }
       }
 
       // Filtrer dataene basert på søk og kommune
-      data
+      allData
         .filter(row => {
           const visning = hentVisningsadresse(row).toLowerCase();
           const adresseMatch = visning.includes(søk);
