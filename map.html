@@ -8,10 +8,29 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <style>
-    #map { height: 100vh; }
+    body { margin: 0; font-family: sans-serif; }
+    #map { height: 90vh; }
+    #controls {
+      padding: 10px;
+      background: #f9f9f9;
+      border-bottom: 1px solid #ccc;
+    }
+    #controls input, #controls select {
+      margin-right: 10px;
+      padding: 5px;
+    }
   </style>
 </head>
 <body>
+  <div id="controls">
+    <input type="text" id="search" placeholder="Søk i adresser..." />
+    <select id="kommune-filter">
+      <option value="">Alle kommuner</option>
+      <option value="OSLO">Oslo</option>
+      <option value="LILLESTRØM">Lillestrøm</option>
+      <option value="NANNESTAD">Nannestad</option>
+    </select>
+  </div>
   <div id="map"></div>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -24,7 +43,6 @@
     }).addTo(map);
 
     const markers = L.markerClusterGroup();
-
     const supabaseUrl = "https://elxfbvedetfoayykrzts.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -34,6 +52,9 @@
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
+
+      const søk = document.getElementById('search').value.toLowerCase();
+      const kommune = document.getElementById('kommune-filter').value;
 
       const { data, error } = await supabaseClient.rpc('hent_adresser_innenfor_bbox', {
         x_min: sw.lng,
@@ -47,23 +68,30 @@
         return;
       }
 
-      data.forEach(row => {
-        if (row.lat && row.lon) {
-          const marker = L.circleMarker([row.lat, row.lon], {
-            radius: 4,
-            color: '#007bff',
-            fillColor: '#007bff',
-            fillOpacity: 0.7
-          }).bindPopup(row.full_adresse);
-
-          markers.addLayer(marker);
-        }
-      });
+      data
+        .filter(row => {
+          const adresseMatch = row.full_adresse.toLowerCase().includes(søk);
+          const kommuneMatch = kommune ? row.full_adresse.includes(kommune) : true;
+          return adresseMatch && kommuneMatch;
+        })
+        .forEach(row => {
+          if (row.lat && row.lon) {
+            const marker = L.circleMarker([row.lat, row.lon], {
+              radius: 4,
+              color: '#007bff',
+              fillColor: '#007bff',
+              fillOpacity: 0.7
+            }).bindPopup(`<strong>${row.full_adresse}</strong>`);
+            markers.addLayer(marker);
+          }
+        });
 
       map.addLayer(markers);
     }
 
     map.on('moveend', hentDataInnenforKart);
+    document.getElementById('search').addEventListener('input', hentDataInnenforKart);
+    document.getElementById('kommune-filter').addEventListener('change', hentDataInnenforKart);
     hentDataInnenforKart();
   </script>
 </body>
