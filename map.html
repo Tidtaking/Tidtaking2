@@ -111,9 +111,9 @@
 
       const select = document.getElementById('kommune-filter');
       const unike = [...new Set(data.map(row => {
-        // Ekstraher nest siste del (kommunen) fra adresse, fjerner postnummeret
+        // Ekstraher nest siste del (kommunen) fra adresse og fjern postnummeret
         const addressParts = row.adresse.split(',');
-        // Hent nest siste del (poststedet)
+        // Hent nest siste del (kommunen) som er før postnummeret
         const kommune = addressParts[addressParts.length - 2]?.trim();
         return kommune;
       }).filter(Boolean))].sort();
