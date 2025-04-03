@@ -29,6 +29,7 @@
     </select>
   </div>
   <div id="map"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -41,7 +42,7 @@
 
     const markers = L.markerClusterGroup();
     const supabaseUrl = "https://elxfbvedetfoayykrzts.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     async function hentDataInnenforKart() {
@@ -67,8 +68,8 @@
 
       data
         .filter(row => {
-          const adresseMatch = row.full_adresse.toLowerCase().includes(søk);
-          const kommuneMatch = kommune ? row.full_adresse.includes(kommune) : true;
+          const adresseMatch = row.adresse.toLowerCase().includes(søk);
+          const kommuneMatch = kommune ? row.adresse.includes(kommune) : true;
           return adresseMatch && kommuneMatch;
         })
         .forEach(row => {
@@ -78,7 +79,7 @@
               color: '#007bff',
               fillColor: '#007bff',
               fillOpacity: 0.7
-            }).bindPopup(`<strong>${row.full_adresse}</strong>`);
+            }).bindPopup(`<strong>${row.adresse}</strong>`);
             markers.addLayer(marker);
           }
         });
