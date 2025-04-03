@@ -45,8 +45,20 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+    // Hent visningsadresse direkte fra adressefeltet
     function hentVisningsadresse(row) {
-      return row.adresse || row.full_adresse || 'Ukjent adresse';
+      return row.adresse || 'Ukjent adresse';
+    }
+
+    // Hent kommune-navn uten postnummer fra adressefeltet
+    function hentKommune(adresse) {
+      const parts = adresse.split(',');
+      if (parts.length >= 2) {
+        const kommuneDel = parts[parts.length - 2].trim();
+        const utenPostnummer = kommuneDel.replace(/^\d{4}\s*/, '');  // Fjern postnummer (fire siffer)
+        return utenPostnummer.trim();
+      }
+      return '';
     }
 
     async function hentDataInnenforKart() {
@@ -74,7 +86,7 @@
         .filter(row => {
           const visning = hentVisningsadresse(row).toLowerCase();
           const adresseMatch = visning.includes(søk);
-          const kommuneMatch = kommune ? row.Poststed.includes(kommune) : true;
+          const kommuneMatch = kommune ? hentKommune(row.adresse) === kommune : true;
           return adresseMatch && kommuneMatch;
         })
         .forEach(row => {
@@ -110,13 +122,7 @@
       }
 
       const select = document.getElementById('kommune-filter');
-      const unike = [...new Set(data.map(row => {
-        // Ekstraher nest siste del (kommunen) fra adresse og fjern postnummeret
-        const addressParts = row.adresse.split(',');
-        // Hent nest siste del (kommunen) som er før postnummeret
-        const kommune = addressParts[addressParts.length - 2]?.trim();
-        return kommune;
-      }).filter(Boolean))].sort();
+      const unike = [...new Set(data.map(row => hentKommune(row.adresse)).filter(Boolean))].sort();
 
       unike.forEach(kommune => {
         const option = document.createElement('option');
