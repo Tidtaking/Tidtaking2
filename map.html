@@ -26,9 +26,7 @@
     <input type="text" id="search" placeholder="Søk i adresser..." />
     <select id="kommune-filter">
       <option value="">Alle kommuner</option>
-      <option value="OSLO">Oslo</option>
-      <option value="LILLESTRØM">Lillestrøm</option>
-      <option value="NANNESTAD">Nannestad</option>
+      
     </select>
   </div>
   <div id="map"></div>
@@ -93,6 +91,30 @@
     document.getElementById('search').addEventListener('input', hentDataInnenforKart);
     document.getElementById('kommune-filter').addEventListener('change', hentDataInnenforKart);
     hentDataInnenforKart();
+      // Dynamisk utfylling av kommuneliste
+    async function hentKommuner() {
+      const { data, error } = await supabaseClient
+        .from('addresses')
+        .select('Poststed')
+        .neq('Poststed', null);
+
+      if (error) {
+        console.error('Feil ved henting av kommuneliste:', error);
+        return;
+      }
+
+      const select = document.getElementById('kommune-filter');
+      const unike = [...new Set(data.map(row => row.Poststed).filter(Boolean))].sort();
+
+      unike.forEach(kommune => {
+        const option = document.createElement('option');
+        option.value = kommune;
+        option.textContent = kommune;
+        select.appendChild(option);
+      });
+    }
+
+    hentKommuner();
   </script>
 </body>
 </html>
