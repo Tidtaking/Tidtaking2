@@ -45,10 +45,12 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+    // Funksjon for å hente adressevisning
     function hentVisningsadresse(row) {
       return row.adresse || row.full_adresse || 'Ukjent adresse';
     }
 
+    // Funksjon for å hente data innenfor kartområdet
     async function hentDataInnenforKart() {
       markers.clearLayers();
       const bounds = map.getBounds();
@@ -70,6 +72,8 @@
         return;
       }
 
+      console.log("Data hentet fra Supabase:", data);  // Debugging linje for data
+
       data
         .filter(row => {
           const visning = hentVisningsadresse(row).toLowerCase();
@@ -78,6 +82,7 @@
           return adresseMatch && kommuneMatch;
         })
         .forEach(row => {
+          console.log("Rader med lat/lon:", row.lat, row.lon);  // Debugging linje for lat/lon
           if (row.lat && row.lon) {
             const marker = L.circleMarker([row.lat, row.lon], {
               radius: 4,
