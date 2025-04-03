@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="no">
 <head>
   <meta charset="utf-8" />
-  <title>Enkel kartvisning</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enkel kartvisning</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -45,7 +45,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVseGZidmVkZXRmb2F5eWtyenRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1ODUxMzksImV4cCI6MjA1OTE2MTEzOX0.Rk54IKI7tPLor4aQ4wBWeyaqQNqWABLpDl8JeyBRsms";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Funksjon for å hente den riktige adressen
+    // Funksjon for å hente riktig adresse
     function hentVisningsadresse(row) {
       return row.adresse || 'Ukjent adresse';
     }
@@ -63,7 +63,7 @@
 
     // Hent data innenfor kartets område
     async function hentDataInnenforKart() {
-      markers.clearLayers();
+      markers.clearLayers();  // Rydder gamle markører før vi legger til nye
       const bounds = map.getBounds();
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
@@ -71,6 +71,7 @@
       const søk = document.getElementById('search').value.toLowerCase();
       const kommune = document.getElementById('kommune-filter').value;
 
+      // Hent de siste dataene fra Supabase
       const { data, error } = await supabaseClient.rpc('hent_adresser_innenfor_bbox', {
         x_min: sw.lng,
         y_min: sw.lat,
@@ -78,12 +79,14 @@
         y_max: ne.lat
       });
 
-      console.log('Data hentet fra Supabase:', data);
+      console.log('Data hentet fra Supabase:', data); // Logg dataene for å bekrefte at de er oppdatert
+
       if (error) {
         console.error('Feil ved henting fra Supabase:', error);
         return;
       }
 
+      // Filtrer dataene basert på søk og kommune
       data
         .filter(row => {
           const visning = hentVisningsadresse(row).toLowerCase();
@@ -93,13 +96,12 @@
         })
         .forEach(row => {
           if (row.lat && row.lon) {
-            // Bind popup med riktig adresse
             const marker = L.circleMarker([row.lat, row.lon], {
               radius: 4,
               color: '#007bff',
               fillColor: '#007bff',
               fillOpacity: 0.7
-            }).bindPopup(`<strong>Adresse: ${row.adresse}</strong><br><em>Full adresse: ${row.full_adresse}</em>`);
+            }).bindPopup(`<strong>Adresse: ${hentVisningsadresse(row)}</strong><br><em>Full adresse: ${row.full_adresse || 'Ikke tilgjengelig'}</em>`);
             markers.addLayer(marker);
           }
         });
