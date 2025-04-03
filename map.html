@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Enkel kartvisning</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Startkart
+    const map = L.map('map').setView([59.91, 10.75], 10); // Oslo-sentrum
+
+    // Bakgrunnskart fra OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap bidragsytere'
+    }).addTo(map);
+
+    // Eksempel: legg til én markør
+    L.marker([59.91, 10.75])
+      .addTo(map)
+      .bindPopup('Hei fra Oslo!')
+      .openPopup();
+  </script>
+</body>
+</html>
