@@ -39,7 +39,7 @@
     <h2>Alle lagrede serier</h2>
     <table>
       <thead>
-        <tr><th>Dato</th><th>Serie #</th><th>Sted</th><th>Skudd</th><th>Treff (>8p)</th><th>Totalpoeng</th><th>Tid (mm:ss)</th></tr>
+        <tr><th>Dato</th><th>Serie #</th><th>Sted</th><th>Skudd</th><th>Treff (≥8p)</th><th>Totalpoeng</th><th>Tid (mm:ss)</th></tr>
       </thead>
       <tbody id="seriesTableBody"></tbody>
     </table>
@@ -70,10 +70,9 @@
         ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
         ctx.fillStyle = (j % 2 === 0) ? '#ddd' : '#fff';
         ctx.fill();
-        ctx.lineWidth = (j === 3) ? 4 : 1; // Ring 8 poeng = j=3 → tykkere
+        ctx.lineWidth = (j === 3) ? 4 : 1;
         ctx.strokeStyle = '#333';
         ctx.stroke();
-        // Tekst for poeng på høyresiden av sirkelen
         ctx.fillStyle = '#000';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'left';
@@ -121,7 +120,7 @@
 
     saveSeriesBtn.onclick = () => {
       const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
-      const hits = currentShots.filter(s => s.score > 8).length;
+      const hits = currentShots.filter(s => s.score >= 8).length;
       seriesCount++;
       const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
       const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
