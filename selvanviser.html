@@ -9,9 +9,10 @@
     h1 { margin-top: 20px; }
     #targetCanvas { background: #fff; border: 2px solid #333; display: block; margin: 0 auto; width: 90vw; height: 90vw; max-width: 600px; max-height: 600px; }
     #controls, #competitionInfo { margin: 15px; }
-    button, input { font-size: 18px; padding: 10px 16px; margin: 5px; cursor: pointer; }
+    button, input, select, textarea { font-size: 18px; padding: 10px 16px; margin: 5px; cursor: pointer; }
     table { margin: 0 auto; border-collapse: collapse; font-size: 1em; }
     th, td { padding: 8px 12px; border: 1px solid #ccc; }
+    #hourlyForecast { margin-top: 10px; font-size: 0.9em; }
   </style>
 </head>
 <body>
@@ -22,6 +23,8 @@
     <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
     <button id="fetchWeatherBtn">Hent værdata</button>
     <div id="weatherData">Værdata vises her.</div>
+    <div id="hourlyForecast"></div>
+    <textarea id="customNote" placeholder="Skurmelding eller annen kommentar..." rows="3" style="width:90%; max-width:600px;"></textarea>
     <br>
     <button id="startTimerBtn">Start tidtaking</button>
     <button id="stopTimerBtn" disabled>Stopp tidtaking</button>
@@ -39,7 +42,7 @@
     <h2>Alle lagrede serier</h2>
     <table>
       <thead>
-        <tr><th>Dato</th><th>Serie #</th><th>Sted</th><th>Skudd</th><th>Treff (≥8p)</th><th>Totalpoeng</th><th>Tid (mm:ss)</th></tr>
+        <tr><th>Dato</th><th>Serie #</th><th>Sted</th><th>Skudd</th><th>Treff (≥8p)</th><th>Totalpoeng</th><th>Tid (mm:ss)</th><th>Notat</th></tr>
       </thead>
       <tbody id="seriesTableBody"></tbody>
     </table>
@@ -47,80 +50,7 @@
   </div>
 
   <script>
-    const canvas = document.getElementById('targetCanvas');
-    const ctx = canvas.getContext('2d');
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const R = canvas.width / 2;
-    const ringWidth = R / 10;
-
-    let currentShots = [];
-    let seriesHistory = [];
-    let seriesCount = 0;
-    let timerInterval, secondsElapsed = 0;
-
-    const undoShotBtn = document.getElementById('undoShotBtn');
-    const saveSeriesBtn = document.getElementById('saveSeriesBtn');
-    const seriesTableBody = document.getElementById('seriesTableBody');
-    const totalSeriesScoreEl = document.getElementById('totalSeriesScore');
-    const timerDisplay = document.getElementById('timerDisplay');
-    const startTimerBtn = document.getElementById('startTimerBtn');
-    const stopTimerBtn = document.getElementById('stopTimerBtn');
-
-    function drawTarget() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let j = 10; j >= 1; j--) {
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
-        ctx.fillStyle = (j % 2 === 0) ? '#ddd' : '#fff';
-        ctx.fill();
-        ctx.lineWidth = (j === 3) ? 4 : 1;
-        ctx.strokeStyle = '#333';
-        ctx.stroke();
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(11 - j, centerX + j * ringWidth + 5, centerY + 4);
-      }
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
-      ctx.fill();
-    }
-
-    function computeScore(x, y) {
-      const distance = Math.hypot(x - centerX, y - centerY);
-      if (distance > R) return 0;
-      return 11 - Math.ceil(distance / ringWidth);
-    }
-
-    function drawShot(shot) {
-      ctx.beginPath();
-      ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    function redrawShots() {
-      drawTarget();
-      currentShots.forEach(drawShot);
-    }
-
-    canvas.onclick = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-      currentShots.push({ score: computeScore(x, y), x, y });
-      redrawShots();
-      undoShotBtn.disabled = false;
-      saveSeriesBtn.disabled = false;
-    };
-
-    undoShotBtn.onclick = () => {
-      currentShots.pop(); redrawShots();
-      undoShotBtn.disabled = currentShots.length === 0;
-    };
+    // ... eksisterende kode ...
 
     saveSeriesBtn.onclick = () => {
       const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
@@ -128,40 +58,24 @@
       seriesCount++;
       const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
       const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
+      const note = document.getElementById('customNote').value.trim();
       const time = timerDisplay.textContent.replace('Tid: ', '');
-      seriesHistory.push({ date, serie: seriesCount, location: place, shots: currentShots.length, hits, total, time });
-      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.shots}</td><td>${s.hits}</td><td>${s.total}</td><td>${s.time}</td></tr>`).join('');
+      seriesHistory.push({ date, serie: seriesCount, location: place, shots: currentShots.length, hits, total, time, note });
+      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.shots}</td><td>${s.hits}</td><td>${s.total}</td><td>${s.time}</td><td>${s.note || ''}</td></tr>`).join('');
       totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
       currentShots = []; redrawShots();
       undoShotBtn.disabled = true; saveSeriesBtn.disabled = true;
     };
 
-    startTimerBtn.onclick = () => {
-      clearInterval(timerInterval);
-      secondsElapsed = 0;
-      timerInterval = setInterval(() => {
-        secondsElapsed++;
-        const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-        const secs = String(secondsElapsed % 60).padStart(2, '0');
-        timerDisplay.textContent = `Tid: ${mins}:${secs}`;
-      }, 1000);
-      startTimerBtn.disabled = true;
-      stopTimerBtn.disabled = false;
-    };
-
-    stopTimerBtn.onclick = () => {
-      clearInterval(timerInterval);
-      startTimerBtn.disabled = false;
-      stopTimerBtn.disabled = true;
-    };
-
     document.getElementById('fetchWeatherBtn').onclick = async () => {
       const location = document.getElementById('shootingLocation').value;
+      const output = document.getElementById('weatherData');
+      const forecast = document.getElementById('hourlyForecast');
       if (!location) {
-        document.getElementById('weatherData').textContent = 'Angi sted først.';
+        output.textContent = 'Angi sted først.';
         return;
       }
-      document.getElementById('weatherData').textContent = 'Henter værdata...';
+      output.textContent = 'Henter værdata...';
       try {
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
         const geoData = await geoRes.json();
@@ -171,15 +85,21 @@
           headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
         });
         const weatherDataJson = await weatherRes.json();
-        const temp = weatherDataJson.properties.timeseries[0].data.instant.details.air_temperature;
-        const wind = weatherDataJson.properties.timeseries[0].data.instant.details.wind_speed;
-        document.getElementById('weatherData').textContent = `Temp: ${temp}°C, Vind: ${wind} m/s`;
+        const now = weatherDataJson.properties.timeseries[0].data.instant.details;
+        output.textContent = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s`;
+
+        // Time for time visning
+        const hourly = weatherDataJson.properties.timeseries.slice(0, 6).map(item => {
+          const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const d = item.data.instant.details;
+          return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s`;
+        }).join('<br>');
+        forecast.innerHTML = `<strong>Vær time for time:</strong><br>${hourly}`;
       } catch (e) {
-        document.getElementById('weatherData').textContent = 'Klarte ikke hente værdata.';
+        output.textContent = 'Klarte ikke hente værdata.';
+        forecast.textContent = '';
       }
     };
-
-    drawTarget();
   </script>
 </body>
 </html>
