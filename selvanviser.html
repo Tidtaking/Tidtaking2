@@ -120,6 +120,25 @@
       saveSeriesBtn.disabled = false;
     });
 
+    startTimerBtn.onclick = () => {
+      clearInterval(timerInterval);
+      secondsElapsed = 0;
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+        const secs = String(secondsElapsed % 60).padStart(2, '0');
+        timerDisplay.textContent = `Tid: ${mins}:${secs}`;
+      }, 1000);
+      startTimerBtn.disabled = true;
+      stopTimerBtn.disabled = false;
+    };
+
+    stopTimerBtn.onclick = () => {
+      clearInterval(timerInterval);
+      startTimerBtn.disabled = false;
+      stopTimerBtn.disabled = true;
+    };
+
     document.getElementById('fetchWeatherBtn').onclick = async () => {
       const location = document.getElementById('shootingLocation').value;
       const dateInput = document.getElementById('shootingDate').value;
