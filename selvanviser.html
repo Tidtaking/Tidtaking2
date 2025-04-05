@@ -57,11 +57,15 @@
     let currentShots = [];
     let seriesHistory = [];
     let seriesCount = 0;
+    let timerInterval, secondsElapsed = 0;
 
     const undoShotBtn = document.getElementById('undoShotBtn');
     const saveSeriesBtn = document.getElementById('saveSeriesBtn');
     const seriesTableBody = document.getElementById('seriesTableBody');
     const totalSeriesScoreEl = document.getElementById('totalSeriesScore');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const startTimerBtn = document.getElementById('startTimerBtn');
+    const stopTimerBtn = document.getElementById('stopTimerBtn');
 
     function drawTarget() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -130,6 +134,49 @@
       totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
       currentShots = []; redrawShots();
       undoShotBtn.disabled = true; saveSeriesBtn.disabled = true;
+    };
+
+    startTimerBtn.onclick = () => {
+      clearInterval(timerInterval);
+      secondsElapsed = 0;
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+        const secs = String(secondsElapsed % 60).padStart(2, '0');
+        timerDisplay.textContent = `Tid: ${mins}:${secs}`;
+      }, 1000);
+      startTimerBtn.disabled = true;
+      stopTimerBtn.disabled = false;
+    };
+
+    stopTimerBtn.onclick = () => {
+      clearInterval(timerInterval);
+      startTimerBtn.disabled = false;
+      stopTimerBtn.disabled = true;
+    };
+
+    document.getElementById('fetchWeatherBtn').onclick = async () => {
+      const location = document.getElementById('shootingLocation').value;
+      if (!location) {
+        document.getElementById('weatherData').textContent = 'Angi sted først.';
+        return;
+      }
+      document.getElementById('weatherData').textContent = 'Henter værdata...';
+      try {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+        const geoData = await geoRes.json();
+        if (!geoData.length) throw new Error('Sted ikke funnet');
+        const { lat, lon } = geoData[0];
+        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+          headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
+        });
+        const weatherDataJson = await weatherRes.json();
+        const temp = weatherDataJson.properties.timeseries[0].data.instant.details.air_temperature;
+        const wind = weatherDataJson.properties.timeseries[0].data.instant.details.wind_speed;
+        document.getElementById('weatherData').textContent = `Temp: ${temp}°C, Vind: ${wind} m/s`;
+      } catch (e) {
+        document.getElementById('weatherData').textContent = 'Klarte ikke hente værdata.';
+      }
     };
 
     drawTarget();
