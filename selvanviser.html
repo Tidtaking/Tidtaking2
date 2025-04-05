@@ -36,10 +36,10 @@
   </div>
 
   <div id="seriesTableContainer">
-    <h2>Siste 3 serier (10 skudd hver)</h2>
+    <h2>Siste 3 serier</h2>
     <table>
       <thead>
-        <tr><th>Dato</th><th>Serie #</th><th>Sted</th><th>Totalpoeng</th><th>Tid (mm:ss)</th></tr>
+        <tr><th>Dato</th><th>Serie #</th><th>Sted</th><th>Skudd</th><th>Treff (>8p)</th><th>Totalpoeng</th><th>Tid (mm:ss)</th></tr>
       </thead>
       <tbody id="seriesTableBody"></tbody>
     </table>
@@ -47,7 +47,6 @@
   </div>
 
   <script>
-    // Komplett JavaScript integrert (canvas, skuddhåndtering, vær og tidtaking)
     const canvas = document.getElementById('targetCanvas');
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
@@ -99,49 +98,33 @@
     }
 
     canvas.onclick = (e) => {
-      if (currentShots.length >= 10) return;
       const rect = canvas.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (canvas.width / rect.width);
       const y = (e.clientY - rect.top) * (canvas.height / rect.height);
       currentShots.push({ score: computeScore(x, y), x, y });
       redrawShots();
       undoShotBtn.disabled = false;
-      saveSeriesBtn.disabled = currentShots.length !== 10;
+      saveSeriesBtn.disabled = false;
     };
 
     undoShotBtn.onclick = () => {
       currentShots.pop(); redrawShots();
       undoShotBtn.disabled = currentShots.length === 0;
-      saveSeriesBtn.disabled = true;
     };
 
     saveSeriesBtn.onclick = () => {
       const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
+      const hits = currentShots.filter(s => s.score > 8).length;
       seriesCount++;
       const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
       const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
       const time = timerDisplay.textContent.replace('Tid: ', '');
-      seriesHistory.push({ date, serie: seriesCount, location: place, total, time });
+      seriesHistory.push({ date, serie: seriesCount, location: place, shots: currentShots.length, hits, total, time });
       if (seriesHistory.length > 3) seriesHistory.shift();
-      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.total}</td><td>${s.time}</td></tr>`).join('');
+      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.shots}</td><td>${s.hits}</td><td>${s.total}</td><td>${s.time}</td></tr>`).join('');
       totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
       currentShots = []; redrawShots();
-      saveSeriesBtn.disabled = true;
-    };
-
-    document.getElementById('fetchWeatherBtn').onclick = async () => {
-      const location = document.getElementById('shootingLocation').value;
-      if (!location) { weatherData.textContent = 'Angi sted først.'; return; }
-      weatherData.textContent = 'Henter værdata...';
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
-      const geoData = await geoRes.json();
-      if (!geoData.length) { weatherData.textContent = 'Sted ikke funnet.'; return; }
-      const { lat, lon } = geoData[0];
-      const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, { headers: { 'User-Agent': 'skyteanalyse/1.0 your-email@example.com' }});
-      const weatherDataJson = await weatherRes.json();
-      const temp = weatherDataJson.properties.timeseries[0].data.instant.details.air_temperature;
-      const wind = weatherDataJson.properties.timeseries[0].data.instant.details.wind_speed;
-      weatherData.textContent = `Temp: ${temp}°C, Vind: ${wind}m/s`;
+      undoShotBtn.disabled = true; saveSeriesBtn.disabled = true;
     };
 
     drawTarget();
