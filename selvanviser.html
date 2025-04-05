@@ -47,17 +47,16 @@
   </div>
 
   <script>
-    // Integrert JavaScript-kode for selvanviser
+    // Komplett JavaScript integrert (canvas, skuddhåndtering, vær og tidtaking)
     const canvas = document.getElementById('targetCanvas');
     const ctx = canvas.getContext('2d');
-    const canvasSize = canvas.width;
-    const centerX = canvasSize / 2;
-    const centerY = canvasSize / 2;
-    const R = canvasSize / 2;
-    const numRings = 10;
-    const ringWidth = R / numRings;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const R = canvas.width / 2;
+    const ringWidth = R / 10;
 
     let currentShots = [];
+    let seriesHistory = [];
     let seriesCount = 0;
 
     const undoShotBtn = document.getElementById('undoShotBtn');
@@ -65,17 +64,13 @@
     const seriesTableBody = document.getElementById('seriesTableBody');
     const totalSeriesScoreEl = document.getElementById('totalSeriesScore');
 
-    let seriesHistory = [];
-
     function drawTarget() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let j = numRings; j >= 1; j--) {
-        const radius = j * ringWidth;
+      for (let j = 10; j >= 1; j--) {
         ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
         ctx.fillStyle = (j % 2 === 0) ? '#ddd' : '#fff';
         ctx.fill();
-        ctx.strokeStyle = '#333';
         ctx.stroke();
       }
       ctx.beginPath();
@@ -85,12 +80,9 @@
     }
 
     function computeScore(x, y) {
-      const dx = x - centerX;
-      const dy = y - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const distance = Math.hypot(x - centerX, y - centerY);
       if (distance > R) return 0;
-      const ring = Math.max(1, Math.ceil(distance / ringWidth));
-      return 11 - ring;
+      return 11 - Math.ceil(distance / ringWidth);
     }
 
     function drawShot(shot) {
@@ -106,30 +98,53 @@
       currentShots.forEach(drawShot);
     }
 
-    function handleShot(clientX, clientY) {
+    canvas.onclick = (e) => {
       if (currentShots.length >= 10) return;
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const x = (clientX - rect.left) * scaleX;
-      const y = (clientY - rect.top) * scaleY;
-      const score = computeScore(x, y);
-      currentShots.push({ score, x, y });
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      currentShots.push({ score: computeScore(x, y), x, y });
       redrawShots();
-      undoShotBtn.disabled = currentShots.length === 0;
-      saveSeriesBtn.disabled = currentShots.length !== 10;
-    }
-
-    canvas.addEventListener('click', e => handleShot(e.clientX, e.clientY));
-
-    undoShotBtn.onclick = () => {
-      currentShots.pop();
-      redrawShots();
-      undoShotBtn.disabled = currentShots.length === 0;
+      undoShotBtn.disabled = false;
       saveSeriesBtn.disabled = currentShots.length !== 10;
     };
 
-    // Husk å legge inn værdata og tidtaking (eksisterende kode beholdes)
+    undoShotBtn.onclick = () => {
+      currentShots.pop(); redrawShots();
+      undoShotBtn.disabled = currentShots.length === 0;
+      saveSeriesBtn.disabled = true;
+    };
+
+    saveSeriesBtn.onclick = () => {
+      const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
+      seriesCount++;
+      const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
+      const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
+      const time = timerDisplay.textContent.replace('Tid: ', '');
+      seriesHistory.push({ date, serie: seriesCount, location: place, total, time });
+      if (seriesHistory.length > 3) seriesHistory.shift();
+      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.total}</td><td>${s.time}</td></tr>`).join('');
+      totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
+      currentShots = []; redrawShots();
+      saveSeriesBtn.disabled = true;
+    };
+
+    document.getElementById('fetchWeatherBtn').onclick = async () => {
+      const location = document.getElementById('shootingLocation').value;
+      if (!location) { weatherData.textContent = 'Angi sted først.'; return; }
+      weatherData.textContent = 'Henter værdata...';
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+      const geoData = await geoRes.json();
+      if (!geoData.length) { weatherData.textContent = 'Sted ikke funnet.'; return; }
+      const { lat, lon } = geoData[0];
+      const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, { headers: { 'User-Agent': 'skyteanalyse/1.0 your-email@example.com' }});
+      const weatherDataJson = await weatherRes.json();
+      const temp = weatherDataJson.properties.timeseries[0].data.instant.details.air_temperature;
+      const wind = weatherDataJson.properties.timeseries[0].data.instant.details.wind_speed;
+      weatherData.textContent = `Temp: ${temp}°C, Vind: ${wind}m/s`;
+    };
+
+    drawTarget();
   </script>
 </body>
 </html>
