@@ -120,6 +120,26 @@
       saveSeriesBtn.disabled = false;
     });
 
+    saveSeriesBtn.onclick = () => {
+      const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
+      const hits = currentShots.filter(s => s.score >= 8).length;
+      const note = document.getElementById('customNote').value.trim();
+      const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
+      const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
+      const time = timerDisplay.textContent.replace('Tid: ', '');
+
+      seriesCount++;
+      seriesHistory.push({ date, serie: seriesCount, location: place, shots: currentShots.length, hits, total, time, note });
+
+      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.shots}</td><td>${s.hits}</td><td>${s.total}</td><td>${s.time}</td><td>${s.note || ''}</td></tr>`).join('');
+      totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
+
+      currentShots = [];
+      redrawShots();
+      undoShotBtn.disabled = true;
+      saveSeriesBtn.disabled = true;
+    };
+
     startTimerBtn.onclick = () => {
       clearInterval(timerInterval);
       secondsElapsed = 0;
@@ -137,50 +157,6 @@
       clearInterval(timerInterval);
       startTimerBtn.disabled = false;
       stopTimerBtn.disabled = true;
-    };
-
-    document.getElementById('fetchWeatherBtn').onclick = async () => {
-      const location = document.getElementById('shootingLocation').value;
-      const dateInput = document.getElementById('shootingDate').value;
-      const output = document.getElementById('weatherData');
-      const forecast = document.getElementById('hourlyForecast');
-      if (!location) {
-        output.textContent = 'Angi sted først.';
-        return;
-      }
-      output.textContent = 'Henter værdata...';
-      try {
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
-        const geoData = await geoRes.json();
-        if (!geoData.length) throw new Error('Sted ikke funnet');
-        const { lat, lon } = geoData[0];
-        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-          headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
-        });
-        const data = await weatherRes.json();
-
-        const selectedDate = dateInput || new Date().toISOString().split('T')[0];
-        const forecasts = data.properties.timeseries.filter(f => f.time.startsWith(selectedDate));
-
-        if (forecasts.length === 0) {
-          output.textContent = 'Ingen værdata for valgt dato.';
-          return;
-        }
-
-        const now = forecasts[0].data.instant.details;
-        output.textContent = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s`;
-
-        const hourly = forecasts.slice(0, 6).map(item => {
-          const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const d = item.data.instant.details;
-          return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s`;
-        }).join('<br>');
-
-        forecast.innerHTML = `<strong>Vær time for time (${selectedDate}):</strong><br>${hourly}`;
-      } catch (e) {
-        output.textContent = 'Klarte ikke hente værdata.';
-        forecast.textContent = '';
-      }
     };
 
     drawTarget();
