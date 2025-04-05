@@ -46,7 +46,32 @@
     <div id="totalSeriesScore">Total for alle serier: 0</div>
   </div>
 
+  <script src="https://tidtaking.github.io/skyting-funksjonalitet.js"></script>
+
   <script>
+    // ----- START TIDTAKING -----
+    let timerInterval, secondsElapsed = 0;
+    const timerDisplay = document.getElementById('timerDisplay');
+    document.getElementById('startTimerBtn').onclick = () => {
+      clearInterval(timerInterval);
+      secondsElapsed = 0;
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        let mins = String(Math.floor(secondsElapsed / 60)).padStart(2,'0');
+        let secs = String(secondsElapsed % 60).padStart(2,'0');
+        timerDisplay.textContent = `Tid: ${mins}:${secs}`;
+      }, 1000);
+      startTimerBtn.disabled = true;
+      stopTimerBtn.disabled = false;
+    };
+
+    document.getElementById('stopTimerBtn').onclick = () => {
+      clearInterval(timerInterval);
+      startTimerBtn.disabled = false;
+      stopTimerBtn.disabled = true;
+    };
+
+    // ----- HENT VÆRDATA FRA YR.NO -----
     async function fetchWeather(location) {
       try {
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
@@ -58,9 +83,7 @@
         const lon = geoData[0].lon;
 
         const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-          headers: {
-            'User-Agent': 'skyteanalyse/1.0 your-email@example.com'
-          }
+          headers: { 'User-Agent': 'skyteanalyse/1.0 your-email@example.com' }
         });
         const weatherData = await weatherRes.json();
 
@@ -76,15 +99,12 @@
     document.getElementById('fetchWeatherBtn').onclick = async () => {
       const location = document.getElementById('shootingLocation').value;
       if (!location) {
-        document.getElementById('weatherData').textContent = 'Angi sted først.';
+        weatherData.textContent = 'Angi sted først.';
         return;
       }
-      document.getElementById('weatherData').textContent = 'Henter værdata...';
-      const weatherInfo = await fetchWeather(location);
-      document.getElementById('weatherData').textContent = weatherInfo;
+      weatherData.textContent = 'Henter værdata...';
+      weatherData.textContent = await fetchWeather(location);
     };
-
-    // Legg inn resten av eksisterende JavaScript-kode for canvas, tidtaking, og skuddhåndtering nedenfor
   </script>
 </body>
 </html>
