@@ -49,21 +49,27 @@
   <script>
     async function fetchWeather(location) {
       try {
-        // Hent koordinater fra Geocode.xyz
-        const geoRes = await fetch(`https://geocode.xyz/${location}?json=1`);
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
         const geoData = await geoRes.json();
-        const lat = geoData.latt;
-        const lon = geoData.longt;
 
-        // Hent vær fra Yr
-        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`);
+        if (!geoData.length) throw new Error('Sted ikke funnet');
+
+        const lat = geoData[0].lat;
+        const lon = geoData[0].lon;
+
+        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+          headers: {
+            'User-Agent': 'skyteanalyse/1.0 your-email@example.com'
+          }
+        });
         const weatherData = await weatherRes.json();
 
         const temp = weatherData.properties.timeseries[0].data.instant.details.air_temperature;
         const windSpeed = weatherData.properties.timeseries[0].data.instant.details.wind_speed;
+
         return `Temperatur: ${temp} °C, Vindstyrke: ${windSpeed} m/s`;
       } catch (error) {
-        return 'Feil ved henting av værdata.';
+        return 'Feil ved henting av værdata: ' + error.message;
       }
     }
 
@@ -78,7 +84,7 @@
       document.getElementById('weatherData').textContent = weatherInfo;
     };
 
-    // Tidtaking-funksjonaliteten og eksisterende skytekode beholdes herfra og nedover (legg inn resten av eksisterende JavaScript-kode nedenfor)
+    // Legg inn resten av eksisterende JavaScript-kode for canvas, tidtaking, og skuddhåndtering nedenfor
   </script>
 </body>
 </html>
