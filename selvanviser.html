@@ -81,62 +81,65 @@
     });
 
     // Hent værdata mellom kl 05 og 15 for valgt dato
-    document.getElementById('fetchWeatherBtn').onclick = async () => {
-      const shootingLocation = document.getElementById('shootingLocation');
-      const shootingDate = document.getElementById('shootingDate');
-      const location = shootingLocation.value;
-      const dateInput = shootingDate.value;
-      const output = document.getElementById('weatherData');
-      const forecast = document.getElementById('hourlyForecast');
+      const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
+      if (fetchWeatherBtn) {
+        fetchWeatherBtn.onclick = async () => {
+          const shootingLocation = document.getElementById('shootingLocation');
+          const shootingDate = document.getElementById('shootingDate');
+          const location = shootingLocation.value;
+          const dateInput = shootingDate.value;
+          const output = document.getElementById('weatherData');
+          const forecast = document.getElementById('hourlyForecast');
 
-      if (!dateInput) {
-        output.textContent = 'Du må velge dato først.';
-        return;
+          if (!dateInput) {
+            output.textContent = 'Du må velge dato først.';
+            return;
+          }
+          if (!location) {
+            output.textContent = 'Du må skrive inn sted først.';
+            return;
+          }
+
+          output.textContent = 'Henter værdata...';
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+            const geoData = await geoRes.json();
+            if (!geoData.length) throw new Error('Sted ikke funnet');
+            const { lat, lon } = geoData[0];
+
+            const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+              headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
+            });
+            const data = await weatherRes.json();
+
+            const forecasts = data.properties.timeseries.filter(f => {
+              const dt = new Date(f.time);
+              const h = dt.getHours();
+              return f.time.startsWith(dateInput) && h >= 5 && h <= 15;
+            });
+
+            if (!forecasts.length) {
+              output.textContent = 'Ingen værdata for valgt dato.';
+              forecast.innerHTML = '';
+              return;
+            }
+
+            const now = forecasts[0].data.instant.details;
+            output.textContent = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s`;
+
+            const hourly = forecasts.map(item => {
+              const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const d = item.data.instant.details;
+              return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s`;
+            }).join('<br>');
+
+            forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
+          } catch (e) {
+            output.textContent = 'Klarte ikke hente værdata.';
+            forecast.innerHTML = '';
+          }
+        };
       }
-      if (!location) {
-        output.textContent = 'Du må skrive inn sted først.';
-        return;
-      }
-
-      output.textContent = 'Henter værdata...';
-      try {
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
-        const geoData = await geoRes.json();
-        if (!geoData.length) throw new Error('Sted ikke funnet');
-        const { lat, lon } = geoData[0];
-
-        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-          headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
-        });
-        const data = await weatherRes.json();
-
-        const forecasts = data.properties.timeseries.filter(f => {
-          const dt = new Date(f.time);
-          const h = dt.getHours();
-          return f.time.startsWith(dateInput) && h >= 5 && h <= 15;
-        });
-
-        if (!forecasts.length) {
-          output.textContent = 'Ingen værdata for valgt dato.';
-          forecast.innerHTML = '';
-          return;
-        }
-
-        const now = forecasts[0].data.instant.details;
-        output.textContent = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s`;
-
-        const hourly = forecasts.map(item => {
-          const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const d = item.data.instant.details;
-          return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s`;
-        }).join('<br>');
-
-        forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
-      } catch (e) {
-        output.textContent = 'Klarte ikke hente værdata.';
-        forecast.innerHTML = '';
-      }
-    };
   </script>
 </body>
 </html>
