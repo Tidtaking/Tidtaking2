@@ -189,18 +189,7 @@
           forecast.innerHTML = '';
         }
       }
-        if (!location) {
-          output.textContent = 'Du må skrive inn sted først.';
-          return;
-        }
-
-        output.textContent = 'Henter værdata...';
-        try {
-          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(location)}`);
-          const geoData = await geoRes.json();
-          if (!geoData.length) {
-  output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
-  forecast.innerHTML = '';
+        
   return;
 }
           const { lat, lon } = geoData[0];
