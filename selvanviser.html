@@ -57,7 +57,12 @@
       printWindow.focus();
       printWindow.print();
     };
-    document.getElementById('seriesTableContainer').appendChild(pdfKnapp);
+    window.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('seriesTableContainer');
+      if (container) {
+        container.appendChild(pdfKnapp);
+      }
+    });
 
     // Automatisk hent værdata når sted og dato er valgt
     const shootingDate = document.getElementById('shootingDate');
