@@ -122,41 +122,22 @@
           return;
         }
 
-        output.textContent = 'Henter værdata...';
-        let lat = null, lon = null;
-
-        if (locationInput) {
-          try {
-            const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(locationInput)}`);
-            const geoData = await geoRes.json();
-            if (!geoData.length) {
-              output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
-              forecast.innerHTML = '';
-              return;
-            }
-            lat = geoData[0].lat;
-            lon = geoData[0].lon;
-          } catch (e) {
-            output.textContent = 'Feil ved henting av stedsdata.';
-            return;
-          }
-        } else if (navigator.geolocation) {
-          try {
-            const pos = await new Promise((resolve, reject) =>
-              navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
-            );
-            lat = pos.coords.latitude;
-            lon = pos.coords.longitude;
-          } catch (err) {
-            output.textContent = 'Fikk ikke tilgang til posisjon.';
-            return;
-          }
-        } else {
-          output.textContent = 'Ingen sted eller posisjon tilgjengelig.';
+        if (!locationInput) {
+          output.textContent = 'Du må skrive inn sted først.';
           return;
         }
 
+        output.textContent = 'Henter værdata...';
         try {
+          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(locationInput)}`);
+          const geoData = await geoRes.json();
+          if (!geoData.length) {
+            output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
+            forecast.innerHTML = '';
+            return;
+          }
+          const { lat, lon } = geoData[0];
+
           const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
             headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
           });
@@ -189,7 +170,7 @@
           forecast.innerHTML = '';
         }
       }
-        
+    });
   </script>
 </body>
 </html>
