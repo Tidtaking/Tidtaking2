@@ -111,6 +111,31 @@
     function redrawShots() {
       drawTarget();
 
+    // Lagre til PDF
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = 'Last ned som PDF';
+    exportBtn.onclick = () => {
+      const printWindow = window.open('', '_blank');
+      const weather = document.getElementById('weatherData').textContent;
+      const forecast = document.getElementById('hourlyForecast').innerHTML;
+      const table = document.getElementById('seriesTableContainer').innerHTML;
+      const style = `<style>body{font-family:Arial}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:center}img{max-width:100px}</style>`;
+      const html = `
+        <html><head><title>Skyteresultat</title>${style}</head><body>
+        <h1>Skyting – Rapport</h1>
+        <h3>Værdata:</h3>
+        <p>${weather}</p>
+        <div>${forecast}</div>
+        <h3>Resultater:</h3>
+        ${table}
+        </body></html>`;
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    };
+    document.getElementById('seriesTableContainer').appendChild(exportBtn);
+
     document.getElementById('fetchWeatherBtn').onclick = async () => {
       const location = document.getElementById('shootingLocation').value;
       const dateInput = document.getElementById('shootingDate').value;
