@@ -175,24 +175,54 @@
     });
 
     saveSeriesBtn.onclick = () => {
-      const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
-      const hits = currentShots.filter(s => s.score >= 8).length;
-      const note = document.getElementById('customNote').value.trim();
-      const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
-      const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
-      const time = timerDisplay.textContent.replace('Tid: ', '');
+  const total = currentShots.reduce((sum, shot) => sum + shot.score, 0);
+  const hits = currentShots.filter(s => s.score >= 8).length;
+  const note = document.getElementById('customNote').value.trim();
+  const date = document.getElementById('shootingDate').value;
+  const place = document.getElementById('shootingLocation').value || 'Ikke angitt';
+  const time = timerDisplay.textContent.replace('Tid: ', '');
 
-      seriesCount++;
-      seriesHistory.push({ date, serie: seriesCount, location: place, shots: currentShots.length, hits, total, time, note });
+  if (!date) {
+    alert('Du må velge dato før du lagrer serien.');
+    return;
+  }
 
-      seriesTableBody.innerHTML = seriesHistory.map(s => `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.shots}</td><td>${s.hits}</td><td>${s.total}</td><td>${s.time}</td><td>${s.note || ''}</td></tr>`).join('');
-      totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
+  // Lag miniatyr
+  const shotPreview = document.createElement('canvas');
+  shotPreview.width = 100;
+  shotPreview.height = 100;
+  const previewCtx = shotPreview.getContext('2d');
+  const scale = shotPreview.width / canvas.width;
+  previewCtx.fillStyle = '#fff';
+  previewCtx.fillRect(0, 0, 100, 100);
+  for (let j = 10; j >= 1; j--) {
+    previewCtx.beginPath();
+    previewCtx.arc(50, 50, j * ringWidth * scale, 0, 2 * Math.PI);
+    previewCtx.strokeStyle = j === 3 ? '#000' : '#999';
+    previewCtx.lineWidth = j === 3 ? 2 : 0.5;
+    previewCtx.stroke();
+  }
+  currentShots.forEach(s => {
+    previewCtx.beginPath();
+    previewCtx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
+    previewCtx.fillStyle = 'red';
+    previewCtx.fill();
+  });
+  const imageUrl = shotPreview.toDataURL();
 
-      currentShots = [];
-      redrawShots();
-      undoShotBtn.disabled = true;
-      saveSeriesBtn.disabled = true;
-    };
+  seriesCount++;
+  seriesHistory.push({ date, serie: seriesCount, location: place, shots: currentShots.length, hits, total, time, note, imageUrl });
+
+  seriesTableBody.innerHTML = seriesHistory.map(s =>
+    `<tr><td>${s.date}</td><td>${s.serie}</td><td>${s.location}</td><td>${s.shots}</td><td>${s.hits}</td><td>${s.total}</td><td>${s.time}</td><td>${s.note || ''}<br><img src="${s.imageUrl}" width="100"></td></tr>`
+  ).join('');
+
+  totalSeriesScoreEl.textContent = `Total for alle serier: ${seriesHistory.reduce((sum, s) => sum + s.total, 0)}`;
+  currentShots = [];
+  redrawShots();
+  undoShotBtn.disabled = true;
+  saveSeriesBtn.disabled = true;
+};
 
     startTimerBtn.onclick = () => {
       clearInterval(timerInterval);
