@@ -20,7 +20,7 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
 
-  $1</div>
+  <div id="competitionInfo">
     <input type="date" id="shootingDate">
     <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
     <button id="fetchWeatherBtn">Hent værdata</button>
@@ -49,7 +49,7 @@
       <button id="stopTimerBtn" disabled>Stopp tidtaking</button>
       <div id="timerDisplay">Tid: 00:00</div>
     </div>
-    $1
+    <canvas id="targetCanvas" width="600" height="600"></canvas>
   </div>
 
   <script>
