@@ -23,88 +23,67 @@
   <!-- resten av siden beholdes likt -->
 
   <script>
-    // ...eksisterende funksjoner beholdes...
-
-    // Legg til én PDF-knapp kun én gang
-    const pdfKnapp = document.createElement('button');
-    pdfKnapp.textContent = 'Last ned som PDF';
-    pdfKnapp.onclick = () => {
-      const printWindow = window.open('', '_blank');
-      const weather = document.getElementById('weatherData').textContent;
-      const forecast = document.getElementById('hourlyForecast').innerHTML;
-      const table = document.getElementById('seriesTableContainer').innerHTML;
-      const logo = '<img src="lsk_logo.jpg" alt="LSK Logo" style="max-width:120px;">';
-      const style = `
-        <style>
-          body{font-family:Arial;padding:20px}
-          h1{text-align:center}
-          table{border-collapse:collapse;width:100%}
-          td,th{border:1px solid #ccc;padding:8px;text-align:center}
-          img{max-width:100px}
-        </style>`;
-      const html = `
-        <html><head><title>Skyteresultat</title>${style}</head><body>
-        ${logo}
-        <h1>Skyting – Rapport</h1>
-        <h3>Værdata:</h3>
-        <p>${weather}</p>
-        <div>${forecast}</div>
-        <h3>Resultater:</h3>
-        ${table}
-        </body></html>`;
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.focus();
-      const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
-      const filename = `skyteresultat_${date}.pdf`;
-      printWindow.document.title = filename;
-      printWindow.print();
-    };
     window.addEventListener('DOMContentLoaded', () => {
-      const container = document.getElementById('seriesTableContainer');
-      if (container) {
-        container.appendChild(pdfKnapp);
-      }
-    });
-
-    // Automatisk hent værdata når sted og dato er valgt
-    window.addEventListener('DOMContentLoaded', () => {
+      // PDF-knapp
+      const pdfKnapp = document.createElement('button');
+      pdfKnapp.textContent = 'Last ned som PDF';
+      pdfKnapp.onclick = () => {
+        const printWindow = window.open('', '_blank');
+        const weather = document.getElementById('weatherData').textContent;
+        const forecast = document.getElementById('hourlyForecast').innerHTML;
+        const table = document.getElementById('seriesTableContainer').innerHTML;
+        const logo = '<img src="lsk_logo.jpg" alt="LSK Logo" style="max-width:120px;">';
+        const style = `
+          <style>
+            body{font-family:Arial;padding:20px}
+            h1{text-align:center}
+            table{border-collapse:collapse;width:100%}
+            td,th{border:1px solid #ccc;padding:8px;text-align:center}
+            img{max-width:100px}
+          </style>`;
+        const html = `
+          <html><head><title>Skyteresultat</title>${style}</head><body>
+          ${logo}
+          <h1>Skyting – Rapport</h1>
+          <h3>Værdata:</h3>
+          <p>${weather}</p>
+          <div>${forecast}</div>
+          <h3>Resultater:</h3>
+          ${table}
+          </body></html>`;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
+        const filename = `skyteresultat_${date}.pdf`;
+        printWindow.document.title = filename;
+        printWindow.print();
+      };
       const container = document.getElementById('seriesTableContainer');
       if (container) {
         container.appendChild(pdfKnapp);
       }
 
+      // Automatisk hent værdata når dato og sted er valgt
       const shootingDate = document.getElementById('shootingDate');
       const shootingLocation = document.getElementById('shootingLocation');
 
       function attemptFetchWeather() {
-        const location = shootingLocation.value;
-        const dateInput = shootingDate.value;
+        const location = shootingLocation?.value;
+        const dateInput = shootingDate?.value;
         if (location && dateInput) {
-          document.getElementById('fetchWeatherBtn').click();
+          document.getElementById('fetchWeatherBtn')?.click();
         }
       }
 
-      if (shootingDate && shootingLocation) {
-        shootingDate.addEventListener('change', attemptFetchWeather);
-        shootingLocation.addEventListener('change', attemptFetchWeather);
-      }
+      shootingDate?.addEventListener('change', attemptFetchWeather);
+      shootingLocation?.addEventListener('change', attemptFetchWeather);
     });
-    const shootingLocation = document.getElementById('shootingLocation');
 
-    function attemptFetchWeather() {
-      const location = shootingLocation.value;
-      const dateInput = shootingDate.value;
-      if (location && dateInput) {
-        document.getElementById('fetchWeatherBtn').click();
-      }
-    }
-
-    shootingDate.addEventListener('change', attemptFetchWeather);
-    shootingLocation.addEventListener('change', attemptFetchWeather);
-
-    // Endre værdata for alltid kl 05-15 for valgt dato
+    // Hent værdata mellom kl 05 og 15 for valgt dato
     document.getElementById('fetchWeatherBtn').onclick = async () => {
+      const shootingLocation = document.getElementById('shootingLocation');
+      const shootingDate = document.getElementById('shootingDate');
       const location = shootingLocation.value;
       const dateInput = shootingDate.value;
       const output = document.getElementById('weatherData');
