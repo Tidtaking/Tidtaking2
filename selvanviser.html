@@ -55,11 +55,7 @@
       printWindow.document.write(html);
       printWindow.document.close();
       printWindow.focus();
-      const shootingDateEl = printWindow.document.createElement('input');
-shootingDateEl.type = 'hidden';
-shootingDateEl.value = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
-printWindow.document.body.appendChild(shootingDateEl);
-const date = shootingDateEl.value;
+      const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
       const filename = `skyteresultat_${date}.pdf`;
       printWindow.document.title = filename;
       printWindow.print();
