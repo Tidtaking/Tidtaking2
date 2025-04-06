@@ -55,6 +55,9 @@
       printWindow.document.write(html);
       printWindow.document.close();
       printWindow.focus();
+      const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
+      const filename = `skyteresultat_${date}.pdf`;
+      printWindow.document.title = filename;
       printWindow.print();
     };
     window.addEventListener('DOMContentLoaded', () => {
@@ -65,7 +68,28 @@
     });
 
     // Automatisk hent værdata når sted og dato er valgt
-    const shootingDate = document.getElementById('shootingDate');
+    window.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('seriesTableContainer');
+      if (container) {
+        container.appendChild(pdfKnapp);
+      }
+
+      const shootingDate = document.getElementById('shootingDate');
+      const shootingLocation = document.getElementById('shootingLocation');
+
+      function attemptFetchWeather() {
+        const location = shootingLocation.value;
+        const dateInput = shootingDate.value;
+        if (location && dateInput) {
+          document.getElementById('fetchWeatherBtn').click();
+        }
+      }
+
+      if (shootingDate && shootingLocation) {
+        shootingDate.addEventListener('change', attemptFetchWeather);
+        shootingLocation.addEventListener('change', attemptFetchWeather);
+      }
+    });
     const shootingLocation = document.getElementById('shootingLocation');
 
     function attemptFetchWeather() {
