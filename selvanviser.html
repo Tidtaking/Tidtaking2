@@ -21,6 +21,9 @@
   <h1>Utvidet analyse av skyting</h1>
 
   <div id="competitionInfo">
+    <button id="startTimerBtn">Start tidtaking</button>
+    <button id="stopTimerBtn" disabled>Stopp tidtaking</button>
+    <div id="timerDisplay">Tid: 00:00</div>
     <input type="date" id="shootingDate">
     <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
     <button id="fetchWeatherBtn">Hent værdata</button>
@@ -39,7 +42,7 @@
     <!-- Tabell -->
     <table id="resultTable">
       <thead>
-        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Miniatyr</th></tr>
+        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Miniatyr</th></tr>
       </thead>
       <tbody>
       </tbody>
@@ -123,9 +126,13 @@
 
         output.textContent = 'Henter værdata...';
         try {
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(location)}`);
           const geoData = await geoRes.json();
-          if (!geoData.length) throw new Error('Sted ikke funnet');
+          if (!geoData.length) {
+  output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
+  forecast.innerHTML = '';
+  return;
+}
           const { lat, lon } = geoData[0];
 
           const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
@@ -193,7 +200,27 @@
 
     drawTarget();
 
+    document.getElementById('startTimerBtn').addEventListener('click', () => {
+      secondsElapsed = 0;
+      document.getElementById('startTimerBtn').disabled = true;
+      document.getElementById('stopTimerBtn').disabled = false;
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+        const sec = String(secondsElapsed % 60).padStart(2, '0');
+        document.getElementById('timerDisplay').textContent = `Tid: ${min}:${sec}`;
+      }, 1000);
+    });
+
+    document.getElementById('stopTimerBtn').addEventListener('click', () => {
+      clearInterval(timerInterval);
+      document.getElementById('startTimerBtn').disabled = false;
+      document.getElementById('stopTimerBtn').disabled = true;
+    });
+
     let currentShots = [];
+let timerInterval = null;
+let secondsElapsed = 0;
     let seriesCount = 0;
 
     function computeScore(x, y) {
@@ -236,13 +263,14 @@
     });
 
     document.getElementById('saveSeriesBtn').addEventListener('click', () => {
+      const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
       const total = currentShots.reduce((sum, s) => sum + s.score, 0);
       const table = document.getElementById('resultTable').querySelector('tbody');
       const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
       const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
       seriesCount++;
       const row = document.createElement('tr');
-      row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
+      row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td>${timeText}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
 
       // Tegn miniatyr og legg inn i raden
       const previewCanvas = document.createElement('canvas');
