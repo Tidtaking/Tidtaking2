@@ -32,6 +32,7 @@
   <h1>Utvidet analyse av skyting</h1>
 
   <div id="competitionInfo">
+    <input type="text" id="shooterName" placeholder="Navn på utøver">
     <input type="date" id="shootingDate">
     <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
     <button id="fetchWeatherBtn">Hent værdata</button>
@@ -63,7 +64,7 @@
 
     <table id="resultTable">
       <thead>
-        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
+        <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -179,12 +180,13 @@
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
         const treff = currentShots.filter(s => s.score >= 7.8).length;
         const table = document.getElementById('resultTable').querySelector('tbody');
+        const name = document.getElementById('shooterName')?.value || 'Ukjent';
         const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
         const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
         const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
+        row.innerHTML = `<td>${name}</td><td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
 
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
@@ -230,7 +232,8 @@
             vindgrader: lastWindDir ?? 0,
             skrumelding: adjText,
             skudddata: currentShots,
-            miniatur_dataurl: previewImg.src
+            miniatur_dataurl: previewImg.src,
+            navn: name
           }
         ]);
         console.log('Supabase insert:', insertResult);
@@ -283,6 +286,31 @@
           <h3>Resultater:</h3>
           ${table}
           
+<div style="margin-top: 40px;">
+  <h3>Hent resultater etter navn</h3>
+  <input type="text" id="searchName" placeholder="Søk på utøvernavn">
+  <button id="searchBtn">Hent fra Supabase</button>
+  <div id="searchResults"></div>
+</div>
+
+<script>
+  document.getElementById('searchBtn').addEventListener('click', async () => {
+    const name = document.getElementById('searchName').value;
+    const { data, error } = await supabase.from('selvanviser').select('*').ilike('navn', `%${name}%`).order('dato', { ascending: false });
+
+    const container = document.getElementById('searchResults');
+    if (error) {
+      container.innerHTML = 'Feil ved henting av data.';
+      return;
+    }
+    if (!data.length) {
+      container.innerHTML = 'Ingen resultater funnet.';
+      return;
+    }
+    const rows = data.map(r => `<tr><td>${r.dato}</td><td>${r.serie}</td><td>${r.sted}</td><td>${r.poeng}</td><td>${r.treff}</td><td>${r.tid}</td><td>${r.vindretning}</td><td>${r.skrumelding}</td><td><img src='${r.miniatur_dataurl}' width='80'></td></tr>`).join('');
+    container.innerHTML = `<table><thead><tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Poeng</th><th>Treff</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr></thead><tbody>${rows}</tbody></table>`;
+  });
+</script>
 </body></html>`;
         printWindow.document.write(html);
         printWindow.document.close();
