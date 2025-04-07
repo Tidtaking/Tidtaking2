@@ -25,7 +25,8 @@
       transform-origin: center;
     }
   </style>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"></script>
+  <!-- Bruk den vanlige CDN-lenken for Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
@@ -207,7 +208,7 @@
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = true;
 
-        // Send til Supabase
+        // Send to Supabase
         const insertResult = await supabase.from('selvanviser').insert([
           {
             dato: date,
@@ -227,108 +228,6 @@
         ]);
         console.log('Supabase insert:', insertResult);
       });
-
-      // Timer controls
-      document.getElementById('startTimerBtn').addEventListener('click', () => {
-        secondsElapsed = 0;
-        document.getElementById('startTimerBtn').disabled = true;
-        document.getElementById('stopTimerBtn').disabled = false;
-        timerInterval = setInterval(() => {
-          secondsElapsed++;
-          const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-          const sec = String(secondsElapsed % 60).padStart(2, '0');
-          document.getElementById('timerDisplay').textContent = `Tid: ${min}:${sec}`;
-        }, 1000);
-      });
-
-      document.getElementById('stopTimerBtn').addEventListener('click', () => {
-        clearInterval(timerInterval);
-        document.getElementById('startTimerBtn').disabled = false;
-        document.getElementById('stopTimerBtn').disabled = true;
-      });
-
-      // Weather Data
-      const shootingDate = document.getElementById('shootingDate');
-      const shootingLocation = document.getElementById('shootingLocation');
-      const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
-
-      function attemptFetchWeather() {
-        const location = shootingLocation?.value;
-        const dateInput = shootingDate?.value;
-        if (location && dateInput) {
-          fetchWeather();
-        }
-      }
-
-      shootingDate?.addEventListener('change', attemptFetchWeather);
-      shootingLocation?.addEventListener('change', attemptFetchWeather);
-      fetchWeatherBtn?.addEventListener('click', fetchWeather);
-
-      function getCompassDirection(deg) {
-        const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
-        const i = Math.round(deg / 45) % 8;
-        return dirs[i];
-      }
-
-      async function fetchWeather() {
-        const output = document.getElementById('weatherData');
-        const forecast = document.getElementById('hourlyForecast');
-        const dateInput = shootingDate.value;
-        const locationInput = shootingLocation.value;
-
-        if (!dateInput) {
-          output.textContent = 'Du må velge dato først.';
-          return;
-        }
-        if (!locationInput) {
-          output.textContent = 'Du må skrive inn sted først.';
-          return;
-        }
-
-        output.textContent = 'Henter værdata...';
-        try {
-          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(locationInput)}`);
-          const geoData = await geoRes.json();
-          if (!geoData.length) {
-            output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
-            forecast.innerHTML = '';
-            return;
-          }
-          const { lat, lon } = geoData[0];
-
-          const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-            headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
-          });
-          const data = await weatherRes.json();
-
-          const forecasts = data.properties.timeseries.filter(f => {
-            const dt = new Date(f.time);
-            const h = dt.getHours();
-            return f.time.startsWith(dateInput) && h >= 5 && h <= 15;
-          });
-
-          if (!forecasts.length) {
-            output.textContent = 'Ingen værdata for valgt dato.';
-            forecast.innerHTML = '';
-            return;
-          }
-
-          const now = forecasts[0].data.instant.details;
-          const windDir = forecasts[0].data.instant.details.wind_from_direction;
-          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
-
-          const hourly = forecasts.map(item => {
-            const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const d = item.data.instant.details;
-            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${item.data.instant.details.wind_from_direction}deg);'></span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
-          }).join('<br>');
-
-          forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
-        } catch (e) {
-          output.textContent = 'Klarte ikke hente værdata.';
-          forecast.innerHTML = '';
-        }
-      }
     });
   </script>
 </body>
