@@ -51,10 +51,11 @@
   </div>
 
   <script>
-    // Supabase innstilling
+    // Definer Supabase klienten først
+    const { createClient } = window.supabase;
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     let currentShots = [];
     let seriesCount = 0;
@@ -266,14 +267,6 @@
         console.error('Uventet feil:', err);
         document.getElementById('searchResults').innerHTML = 'Uventet feil ved søk.';
       }
-    });
-
-    // Tøm søkefelt
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchDate').value = '';
-      document.getElementById('searchPlace').value = '';
-      document.getElementById('searchResults').innerHTML = '';
     });
   </script>
 </body>
