@@ -156,10 +156,10 @@
       document.querySelectorAll('#adjustmentControls button').forEach(btn => {
         btn.addEventListener('click', () => {
           const dir = btn.textContent;
-          if (dir === '↑') adjustment.up++;
-          else if (dir === '↓') adjustment.down++;
-          else if (dir === '←') adjustment.left++;
-          else if (dir === '→') adjustment.right++;
+          if (dir === '↑') { adjustment.up++; adjustment.down = 0; }
+          else if (dir === '↓') { adjustment.down++; adjustment.up = 0; }
+          else if (dir === '←') { adjustment.left++; adjustment.right = 0; }
+          else if (dir === '→') { adjustment.right++; adjustment.left = 0; }
           manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         });
       });
@@ -201,6 +201,8 @@
 
         table.appendChild(row);
         currentShots = [];
+        adjustment = { up: 0, down: 0, left: 0, right: 0 };
+        manualDisplay.textContent = `Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0`;
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = true;
         document.getElementById('undoShotBtn').disabled = true;
