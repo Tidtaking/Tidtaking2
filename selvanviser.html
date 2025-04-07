@@ -14,7 +14,17 @@
     th, td { padding: 8px 12px; border: 1px solid #ccc; }
     #hourlyForecast { margin-top: 10px; font-size: 0.9em; }
     .logo { max-width: 120px; margin-bottom: 10px; }
-  </style>
+    .wind-arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 4px;
+    vertical-align: middle;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid black;
+  }
+</style>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
@@ -290,12 +300,12 @@
 
           const now = forecasts[0].data.instant.details;
           const windDir = forecasts[0].data.instant.details.wind_from_direction;
-          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span style='display:inline-block; transform: rotate(${windDir}deg); font-size: 1.2em;'>⬆️</span> (${getCompassDirection(windDir)})`;
+          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
 
           const hourly = forecasts.map(item => {
             const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const d = item.data.instant.details;
-            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span style='display:inline-block; transform: rotate(${item.data.instant.details.wind_from_direction}deg); font-size: 1em;'>⬆️</span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
+            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${item.data.instant.details.wind_from_direction}deg);'></span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
           }).join('<br>');
 
           forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
