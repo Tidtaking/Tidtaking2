@@ -90,13 +90,10 @@
 
         ctx.fillStyle = '#000';
         ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(11 - j, centerX + j * ringWidth + 5, centerY + 5);
+        ctx.textAlign = 'center';
+        ctx.fillText(11 - j, centerX, centerY - (j * ringWidth) + ringWidth / 2);
         }
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = 'red';
-        ctx.fill();
+        
       }
 
       function computeScore(x, y) {
