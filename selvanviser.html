@@ -16,13 +16,13 @@
     .logo { max-width: 120px; margin-bottom: 10px; }
     .wind-arrow {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: solid red;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-  padding: 3px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid red;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
   margin-left: 6px;
+  transform-origin: center;
 }
 </style>
 </head>
@@ -147,7 +147,7 @@
         const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td>${timeText}</td><td>${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
 
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
@@ -213,6 +213,7 @@
             table{border-collapse:collapse;width:100%}
             td,th{border:1px solid #ccc;padding:8px;text-align:center}
             img{max-width:100px}
+.wind-arrow{display:inline-block;width:0;height:0;border-top:10px solid red;border-left:4px solid transparent;border-right:4px solid transparent;margin-left:4px;transform-origin:center;}
           </style>`;
         const html = `
           <html><head><title>Skyteresultat</title>${style}</head><body>
