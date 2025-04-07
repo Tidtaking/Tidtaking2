@@ -103,6 +103,7 @@
       let secondsElapsed = 0;
       let lastWindDir = null;
       let adjustment = { up: 0, down: 0, left: 0, right: 0 };
+      let timerRunning = false;
 
       // Tegn målet
       function drawTarget() {
@@ -164,7 +165,7 @@
         document.getElementById('saveSeriesBtn').disabled = false;
       });
 
-      // Undo shot
+      // Angre skudd
       document.getElementById('undoShotBtn').addEventListener('click', () => {
         currentShots.pop();
         redrawShots();
