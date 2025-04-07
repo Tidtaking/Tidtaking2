@@ -15,431 +15,66 @@
     #hourlyForecast { margin-top: 10px; font-size: 0.9em; }
     .logo { max-width: 120px; margin-bottom: 10px; }
     .wind-arrow {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  border-top: 10px solid red;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  margin-left: 6px;
-  transform-origin: center;
-}
-</style>
+      display: inline-block;
+      width: 0;
+      height: 0;
+      border-top: 10px solid red;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      margin-left: 6px;
+      transform-origin: center;
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
-
-  <div id="competitionInfo">
-    <input type="text" id="shooterName" placeholder="Navn på utøver">
-    <input type="date" id="shootingDate">
-    <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
-    <button id="fetchWeatherBtn">Hent værdata</button>
-    <div id="weatherData">Værdata vises her.</div>
-    <div id="hourlyForecast"></div>
-    <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
-    <div id="adjustmentControls">
-      <h4>Manuell skrumelding</h4>
-      <div>
-        <button id="adjUp">↑ Opp</button>
-      </div>
-      <div>
-        <button id="adjLeft">← Venstre</button>
-        <button id="adjRight">Høyre →</button>
-      </div>
-      <div>
-        <button id="adjDown">↓ Ned</button>
-      </div>
-      <div id="manualAdjustmentDisplay">Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0</div>
-    </div>
+  <div id="mainApp">
+    <!-- Hovedfunksjonaliteten blir nå håndtert i selvanviser-fiks.js -->
   </div>
 
-  <div id="seriesTableContainer">
-    <h2>Resultater</h2>
-    <div id="controls">
-      <button id="undoShotBtn" disabled>Angre skudd</button>
-      <button id="saveSeriesBtn" disabled>Lagre serie</button>
-    </div>
-
-    <table id="resultTable">
-      <thead>
-        <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div id="timerControls">
-      <button id="startTimerBtn">Start tidtaking</button>
-      <button id="stopTimerBtn" disabled>Stopp tidtaking</button>
-      <div id="timerDisplay">Tid: 00:00</div>
-    </div>
-
-    <canvas id="targetCanvas" width="600" height="600"></canvas>
+  <!-- Søkeseksjon nederst på siden -->
+  <div id="historySection" style="margin-top: 40px;">
+    <h3>Historiske resultater</h3>
+    <input type="text" id="searchName" placeholder="Navn">
+    <input type="date" id="searchDate">
+    <input type="text" id="searchPlace" placeholder="Sted">
+    <button id="searchBtn">Søk i historikk</button>
+    <div id="searchResults"></div>
   </div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', async () => {
-      const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-      const canvas = document.getElementById('targetCanvas');
-      const ctx = canvas.getContext('2d');
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const R = canvas.width / 2;
-      const ringWidth = R / 10;
+    const supabase = window.supabase.createClient(
+      'https://chzfewhbfkdtcizdxyzk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+    );
 
-      let currentShots = [];
-      let seriesCount = 0;
-      let timerInterval = null;
-      let secondsElapsed = 0;
-      let lastWindDir = null;
-      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const name = document.getElementById('searchName').value.trim();
+      const date = document.getElementById('searchDate').value;
+      const place = document.getElementById('searchPlace').value.trim();
 
-      function drawTarget() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let j = 10; j >= 1; j--) {
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
-        ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
-        ctx.fill();
-        ctx.lineWidth = (j === 3) ? 4 : 1;
-        ctx.strokeStyle = '#333';
-        ctx.stroke();
+      let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+      if (name) query = query.ilike('navn', `%${name}%`);
+      if (date) query = query.eq('dato', date);
+      if (place) query = query.ilike('sted', `%${place}%`);
 
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(11 - j, centerX, centerY - (j * ringWidth) + ringWidth / 2);
-        }
-        
+      const { data, error } = await query;
+      const container = document.getElementById('searchResults');
+      if (error) {
+        container.innerHTML = 'Feil ved henting av data.';
+        return;
       }
-
-      function computeScore(x, y) {
-        const dx = x - centerX;
-        const dy = y - centerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > R) return 0;
-        const ring = Math.floor(distance / ringWidth);
-        return 10 - ring;
+      if (!data.length) {
+        container.innerHTML = 'Ingen resultater funnet.';
+        return;
       }
-
-      function drawShot(shot, index) {
-        ctx.beginPath();
-        ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = shot.score >= 7.8 ? 'green' : 'red';
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(index + 1, shot.x, shot.y - 10);
-      }
-
-      function redrawShots() {
-        drawTarget();
-        currentShots.forEach((shot, i) => drawShot(shot, i));
-      }
-
-      drawTarget();
-
-      canvas.addEventListener('click', e => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-        const score = computeScore(x, y);
-        currentShots.push({ score, x, y });
-        redrawShots();
-        document.getElementById('undoShotBtn').disabled = false;
-        document.getElementById('saveSeriesBtn').disabled = false;
-      });
-
-      document.getElementById('undoShotBtn').addEventListener('click', () => {
-        currentShots.pop();
-        redrawShots();
-        document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
-      });
-
-      const manualDisplay = document.getElementById('manualAdjustmentDisplay');
-      document.querySelectorAll('#adjustmentControls button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const dir = btn.id;
-          if (dir === 'adjUp') { adjustment.up++; adjustment.down = 0; }
-          else if (dir === 'adjDown') { adjustment.down++; adjustment.up = 0; }
-          else if (dir === 'adjLeft') { adjustment.left++; adjustment.right = 0; }
-          else if (dir === 'adjRight') { adjustment.right++; adjustment.left = 0; }
-          manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
-        });
-      });
-
-      document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
-        const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
-        const total = currentShots.reduce((sum, s) => sum + s.score, 0);
-        const treff = currentShots.filter(s => s.score >= 7.8).length;
-        const table = document.getElementById('resultTable').querySelector('tbody');
-        const name = document.getElementById('shooterName')?.value || 'Ukjent';
-        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
-        const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
-        const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
-        seriesCount++;
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${name}</td><td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
-
-        const previewCanvas = document.createElement('canvas');
-        previewCanvas.width = 100;
-        previewCanvas.height = 100;
-        const pctx = previewCanvas.getContext('2d');
-        const scale = previewCanvas.width / canvas.width;
-        pctx.fillStyle = '#fff';
-        pctx.fillRect(0, 0, 100, 100);
-        for (let j = 10; j >= 1; j--) {
-          pctx.beginPath();
-          pctx.arc(50, 50, j * ringWidth * scale, 0, 2 * Math.PI);
-          pctx.strokeStyle = j === 3 ? '#000' : '#ccc';
-          pctx.lineWidth = j === 3 ? 2 : 0.5;
-          pctx.stroke();
-        }
-        currentShots.forEach(s => {
-          pctx.beginPath();
-          pctx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
-          pctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
-          pctx.fill();
-        });
-        const previewImg = row.querySelector(`#preview-${seriesCount}`);
-        previewImg.src = previewCanvas.toDataURL();
-
-        table.appendChild(row);
-        currentShots = [];
-        adjustment = { up: 0, down: 0, left: 0, right: 0 };
-        manualDisplay.textContent = `Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0`;
-        redrawShots();
-        document.getElementById('saveSeriesBtn').disabled = true;
-
-        // Send til Supabase
-        const insertResult = await supabase.from('selvanviser').insert([
-          {
-            dato: date,
-            serie: seriesCount,
-            sted: place,
-            skudd: currentShots.length,
-            poeng: total,
-            treff: treff,
-            tid: timeText,
-            vindretning: getCompassDirection(lastWindDir ?? 0),
-            vindgrader: lastWindDir ?? 0,
-            skrumelding: adjText,
-            skudddata: currentShots,
-            miniatur_dataurl: previewImg.src,
-            navn: name
-          }
-        ]);
-        console.log('Supabase insert:', insertResult);
-        document.getElementById('undoShotBtn').disabled = true;
-      });
-
-      document.getElementById('startTimerBtn').addEventListener('click', () => {
-        secondsElapsed = 0;
-        document.getElementById('startTimerBtn').disabled = true;
-        document.getElementById('stopTimerBtn').disabled = false;
-        timerInterval = setInterval(() => {
-          secondsElapsed++;
-          const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-          const sec = String(secondsElapsed % 60).padStart(2, '0');
-          document.getElementById('timerDisplay').textContent = `Tid: ${min}:${sec}`;
-        }, 1000);
-      });
-
-      document.getElementById('stopTimerBtn').addEventListener('click', () => {
-        clearInterval(timerInterval);
-        document.getElementById('startTimerBtn').disabled = false;
-        document.getElementById('stopTimerBtn').disabled = true;
-      });
-
-      // PDF-knapp
-      const pdfKnapp = document.createElement('button');
-      pdfKnapp.textContent = 'Last ned som PDF';
-      pdfKnapp.onclick = () => {
-        const printWindow = window.open('', '_blank');
-        const weather = document.getElementById('weatherData')?.textContent || '';
-        const forecast = document.getElementById('hourlyForecast')?.innerHTML || '';
-        const table = document.getElementById('seriesTableContainer')?.innerHTML || '';
-        const logo = '<img src="lsk_logo.jpg" alt="LSK Logo" style="max-width:120px;">';
-        const style = `
-          <style>
-            body{font-family:Arial;padding:20px}
-            h1{text-align:center}
-            table{border-collapse:collapse;width:100%}
-            td,th{border:1px solid #ccc;padding:8px;text-align:center}
-            img{max-width:100px}
-.wind-arrow{display:inline-block;width:0;height:0;border-top:10px solid red;border-left:4px solid transparent;border-right:4px solid transparent;margin-left:4px;transform-origin:center;}
-          </style>`;
-        const html = `
-          <html><head><title>Skyteresultat</title>${style}</head><body>
-          ${logo}
-          <h1>Skyting – Rapport</h1>
-          <h3>Værdata:</h3>
-          <p>${weather}</p>
-          <div>${forecast}</div>
-          <h3>Resultater:</h3>
-          ${table}
-          
-
-<div style="margin-top: 40px;">
-  <h3>Historiske resultater</h3>
-  <input type="text" id="searchName" placeholder="Navn">
-  <input type="date" id="searchDate">
-  <input type="text" id="searchPlace" placeholder="Sted">
-  <button id="searchBtn">Søk i Supabase</button>
-  <div id="searchResults"></div>
-</div>
-
-<script>
-  document.getElementById('searchBtn').addEventListener('click', async () => {
-    const name = document.getElementById('searchName').value.trim();
-    const date = document.getElementById('searchDate').value;
-    const place = document.getElementById('searchPlace').value.trim();
-
-    let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-
-    if (name) query = query.ilike('navn', `%${name}%`);
-    if (date) query = query.eq('dato', date);
-    if (place) query = query.ilike('sted', `%${place}%`);
-
-    const { data, error } = await query;
-    const container = document.getElementById('searchResults');
-    if (error) {
-      container.innerHTML = 'Feil ved henting av data.';
-      return;
-    }
-    if (!data.length) {
-      container.innerHTML = 'Ingen resultater funnet.';
-      return;
-    }
-    const rows = data.map(r => `<tr><td>${r.navn}</td><td>${r.dato}</td><td>${r.serie}</td><td>${r.sted}</td><td>${r.skudd}</td><td>${r.poeng}</td><td>${r.tid}</td><td>${r.vindretning}</td><td>${r.skrumelding}</td><td><img src='${r.miniatur_dataurl}' width='80'></td></tr>`).join('');
-    container.innerHTML = `<table><thead><tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr></thead><tbody>${rows}</tbody></table>`;
-  });
-</script>
-</body></html>`;
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.focus();
-        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
-        printWindow.document.title = `skyteresultat_${date}.pdf`;
-        printWindow.print();
-      };
-      document.getElementById('seriesTableContainer').appendChild(pdfKnapp);
-
-      // Værdata
-      const shootingDate = document.getElementById('shootingDate');
-      const shootingLocation = document.getElementById('shootingLocation');
-      const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
-
-      function attemptFetchWeather() {
-        const location = shootingLocation?.value;
-        const dateInput = shootingDate?.value;
-        if (location && dateInput) {
-          fetchWeather();
-        }
-      }
-
-      shootingDate?.addEventListener('change', attemptFetchWeather);
-      shootingLocation?.addEventListener('change', attemptFetchWeather);
-      fetchWeatherBtn?.addEventListener('click', fetchWeather);
-
-      function getCompassDirection(deg) {
-        const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
-        const i = Math.round(deg / 45) % 8;
-        return dirs[i];
-      }
-
-      function showAdjustmentSuggestion(speed, directionDeg) {
-        const direction = getCompassDirection(directionDeg);
-        let clicks = 0;
-        if (speed >= 1 && speed < 2) clicks = 1;
-        else if (speed >= 2 && speed < 4) clicks = 2;
-        else if (speed >= 4 && speed < 6) clicks = 3;
-        else if (speed >= 6) clicks = 4;
-
-        if (clicks === 0) {
-          document.getElementById('adjustmentSuggestion').textContent = 'Ingen skrumelding nødvendig (vind < 1 m/s)';
-        } else {
-          let side = '';
-          if (["vest", "nordvest", "sørvest"].includes(direction)) side = 'venstre';
-          else if (["øst", "nordøst", "sørøst"].includes(direction)) side = 'høyre';
-          else if (direction === "sør") side = 'opp';
-          else if (direction === "nord") side = 'ned';
-          else side = direction;
-          document.getElementById('adjustmentSuggestion').textContent = `Forslag til skrumelding: Skru ${clicks} knepp ${side}`;
-        }
-      }
-
-      async function fetchWeather() {
-        const output = document.getElementById('weatherData');
-        const forecast = document.getElementById('hourlyForecast');
-        const dateInput = shootingDate.value;
-        const locationInput = shootingLocation.value;
-
-        if (!dateInput) {
-          output.textContent = 'Du må velge dato først.';
-          return;
-        }
-        if (!locationInput) {
-          output.textContent = 'Du må skrive inn sted først.';
-          return;
-        }
-
-        output.textContent = 'Henter værdata...';
-        try {
-          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(locationInput)}`);
-          const geoData = await geoRes.json();
-          if (!geoData.length) {
-            output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
-            forecast.innerHTML = '';
-          document.getElementById('adjustmentSuggestion').textContent = '';
-            return;
-          }
-          const { lat, lon } = geoData[0];
-
-          const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-            headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
-          });
-          const data = await weatherRes.json();
-
-          const forecasts = data.properties.timeseries.filter(f => {
-            const dt = new Date(f.time);
-            const h = dt.getHours();
-            return f.time.startsWith(dateInput) && h >= 5 && h <= 15;
-          });
-
-          if (!forecasts.length) {
-            output.textContent = 'Ingen værdata for valgt dato.';
-            forecast.innerHTML = '';
-            return;
-          }
-
-          const now = forecasts[0].data.instant.details;
-          const windDir = forecasts[0].data.instant.details.wind_from_direction;
-          lastWindDir = windDir;
-          showAdjustmentSuggestion(now.wind_speed, windDir);
-          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
-
-          const hourly = forecasts.map(item => {
-            const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const d = item.data.instant.details;
-            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${item.data.instant.details.wind_from_direction}deg);'></span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
-          }).join('<br>');
-
-          forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
-        } catch (e) {
-          output.textContent = 'Klarte ikke hente værdata.';
-          document.getElementById('adjustmentSuggestion').textContent = '';
-          forecast.innerHTML = '';
-        }
-      }
+      const rows = data.map(r => `<tr><td>${r.navn}</td><td>${r.dato}</td><td>${r.serie}</td><td>${r.sted}</td><td>${r.skudd}</td><td>${r.poeng}</td><td>${r.tid}</td><td>${r.vindretning}</td><td>${r.skrumelding}</td><td><img src='${r.miniatur_dataurl}' width='80'></td></tr>`).join('');
+      container.innerHTML = `<table><thead><tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr></thead><tbody>${rows}</tbody></table>`;
     });
   </script>
+
+  <script src="selvanviser-fiks.js"></script>
 </body>
 </html>
