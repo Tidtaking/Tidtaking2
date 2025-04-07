@@ -239,6 +239,12 @@
       shootingLocation?.addEventListener('change', attemptFetchWeather);
       fetchWeatherBtn?.addEventListener('click', fetchWeather);
 
+      function getCompassDirection(deg) {
+        const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
+        const i = Math.round(deg / 45) % 8;
+        return dirs[i];
+      }
+
       async function fetchWeather() {
         const output = document.getElementById('weatherData');
         const forecast = document.getElementById('hourlyForecast');
@@ -283,12 +289,13 @@
           }
 
           const now = forecasts[0].data.instant.details;
-          output.textContent = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s`;
+          const windDir = forecasts[0].data.instant.details.wind_from_direction;
+          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span style='display:inline-block; transform: rotate(${windDir}deg); font-size: 1.2em;'>⬆️</span> (${getCompassDirection(windDir)})`;
 
           const hourly = forecasts.map(item => {
             const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const d = item.data.instant.details;
-            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s`;
+            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span style='display:inline-block; transform: rotate(${item.data.instant.details.wind_from_direction}deg); font-size: 1em;'>⬆️</span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
           }).join('<br>');
 
           forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
