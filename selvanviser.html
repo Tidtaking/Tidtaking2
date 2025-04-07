@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge"> <!-- For å unngå Quirks Mode -->
   <title>Utvidet analyse av skyting</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
@@ -26,15 +25,13 @@
       transform-origin: center;
     }
   </style>
-  <!-- Legg til Supabase-klient via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.0.0/dist/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
 
   <div id="competitionInfo">
-    <input type="text" id="shooterName" placeholder="Navn på utøver">
     <input type="date" id="shootingDate">
     <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
     <button id="fetchWeatherBtn">Hent værdata</button>
@@ -66,7 +63,7 @@
 
     <table id="resultTable">
       <thead>
-        <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
+        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -81,10 +78,12 @@
   </div>
 
   <script>
-    // Supabase-URL og -nøkkel for tilkobling til databasen
+    // Supabase URL and Key for connecting to the database
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Initialize Supabase client
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     window.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('targetCanvas');
@@ -101,7 +100,7 @@
       let lastWindDir = null;
       let adjustment = { up: 0, down: 0, left: 0, right: 0 };
 
-      // Tegn målet
+      // Draw the target
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let j = 10; j >= 1; j--) {
@@ -120,6 +119,7 @@
         }
       }
 
+      // Compute score based on shot placement
       function computeScore(x, y) {
         const dx = x - centerX;
         const dy = y - centerY;
@@ -129,6 +129,7 @@
         return 10 - ring;
       }
 
+      // Draw a shot on the target
       function drawShot(shot, index) {
         ctx.beginPath();
         ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
@@ -143,6 +144,7 @@
         ctx.fillText(index + 1, shot.x, shot.y - 10);
       }
 
+      // Redraw all shots on the target
       function redrawShots() {
         drawTarget();
         currentShots.forEach((shot, i) => drawShot(shot, i));
@@ -150,6 +152,7 @@
 
       drawTarget();
 
+      // Handle canvas click event to record a shot
       canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -161,12 +164,14 @@
         document.getElementById('saveSeriesBtn').disabled = false;
       });
 
+      // Undo shot
       document.getElementById('undoShotBtn').addEventListener('click', () => {
         currentShots.pop();
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
       });
 
+      // Handle manual adjustment buttons
       const manualDisplay = document.getElementById('manualAdjustmentDisplay');
       document.querySelectorAll('#adjustmentControls button').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -179,6 +184,7 @@
         });
       });
 
+      // Save the series (store results in Supabase)
       document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
         const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
@@ -187,12 +193,12 @@
         const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
         const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
         const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
-        const name = document.getElementById('shooterName').value || 'Ukjent';
-
+        const name = document.getElementById('nameInput').value || 'Ukjent';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${name}</td><td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
 
+        // Create a preview image of the shots
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
         previewCanvas.height = 100;
@@ -239,7 +245,7 @@
             skrumelding: adjText,
             skudddata: currentShots,
             miniatur_dataurl: previewImg.src,
-            navn: name
+            navn: name // Save the name in the database
           }
         ]);
         console.log('Supabase insert:', insertResult);
@@ -262,6 +268,86 @@
         document.getElementById('startTimerBtn').disabled = false;
         document.getElementById('stopTimerBtn').disabled = true;
       });
+
+      // Fetch weather data
+      const shootingDate = document.getElementById('shootingDate');
+      const shootingLocation = document.getElementById('shootingLocation');
+      const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
+
+      function attemptFetchWeather() {
+        const location = shootingLocation?.value;
+        const dateInput = shootingDate?.value;
+        if (location && dateInput) {
+          fetchWeather();
+        }
+      }
+
+      shootingDate?.addEventListener('change', attemptFetchWeather);
+      shootingLocation?.addEventListener('change', attemptFetchWeather);
+      fetchWeatherBtn?.addEventListener('click', fetchWeather);
+
+      async function fetchWeather() {
+        const output = document.getElementById('weatherData');
+        const forecast = document.getElementById('hourlyForecast');
+        const dateInput = shootingDate.value;
+        const locationInput = shootingLocation.value;
+
+        if (!dateInput) {
+          output.textContent = 'Du må velge dato først.';
+          return;
+        }
+        if (!locationInput) {
+          output.textContent = 'Du må skrive inn sted først.';
+          return;
+        }
+
+        output.textContent = 'Henter værdata...';
+        try {
+          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(locationInput)}`);
+          const geoData = await geoRes.json();
+          if (!geoData.length) {
+            output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
+            forecast.innerHTML = '';
+            return;
+          }
+          const { lat, lon } = geoData[0];
+
+          const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+            headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
+          });
+          const data = await weatherRes.json();
+
+          const forecasts = data.properties.timeseries.filter(f => {
+            const dt = new Date(f.time);
+            const h = dt.getHours();
+            return f.time.startsWith(dateInput) && h >= 5 && h <= 15;
+          });
+
+          if (!forecasts.length) {
+            output.textContent = 'Ingen værdata for valgt dato.';
+            forecast.innerHTML = '';
+            return;
+          }
+
+          const now = forecasts[0].data.instant.details;
+          const windDir = forecasts[0].data.instant.details.wind_from_direction;
+          lastWindDir = windDir;
+          showAdjustmentSuggestion(now.wind_speed, windDir);
+          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
+
+          const hourly = forecasts.map(item => {
+            const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const d = item.data.instant.details;
+            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${item.data.instant.details.wind_from_direction}deg);'></span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
+          }).join('<br>');
+
+          forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
+        } catch (e) {
+          output.textContent = 'Klarte ikke hente værdata.';
+          document.getElementById('adjustmentSuggestion').textContent = '';
+          forecast.innerHTML = '';
+        }
+      }
     });
   </script>
 </body>
