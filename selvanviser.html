@@ -30,40 +30,47 @@
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
-  <div id="mainApp"><div style="margin-top: 40px;">
-    <h3>Historiske resultater</h3>
-    <input type="text" id="searchName" placeholder="Navn">
-    <input type="date" id="searchDate">
-    <input type="text" id="searchPlace" placeholder="Sted">
-    <button id="searchBtn">Søk i historikk</button>
-    <div id="searchResults"></div>
-  </div>
-  <script>
-    const supabase = window.supabase.createClient("https://chzfewhbfkdtcizdxyzk.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA");
-    document.getElementById('searchBtn').addEventListener('click', async () => {
-      const name = document.getElementById('searchName').value.trim();
-      const date = document.getElementById('searchDate').value;
-      const place = document.getElementById('searchPlace').value.trim();
+  <div id="mainApp">
+  <!-- Her kommer hovedfunksjonaliteten fra selvanviser-fiks.js -->
 
-      let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-      if (name) query = query.ilike('navn', `%${name}%`);
-      if (date) query = query.eq('dato', date);
-      if (place) query = query.ilike('sted', `%${place}%`);
+<!-- Søkeseksjon nederst på siden -->
+<div style="margin-top: 40px;">
+  <h3>Historiske resultater</h3>
+  <input type="text" id="searchName" placeholder="Navn">
+  <input type="date" id="searchDate">
+  <input type="text" id="searchPlace" placeholder="Sted">
+  <button id="searchBtn">Søk i historikk</button>
+  <div id="searchResults"></div>
+</div>
+<script>
+  document.getElementById('searchBtn').addEventListener('click', async () => {
+    const supabase = window.supabase.createClient(
+      'https://chzfewhbfkdtcizdxyzk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+    );
+    const name = document.getElementById('searchName').value.trim();
+    const date = document.getElementById('searchDate').value;
+    const place = document.getElementById('searchPlace').value.trim();
 
-      const { data, error } = await query;
-      const container = document.getElementById('searchResults');
-      if (error) {
-        container.innerHTML = 'Feil ved henting av data.';
-        return;
-      }
-      if (!data.length) {
-        container.innerHTML = 'Ingen resultater funnet.';
-        return;
-      }
-      const rows = data.map(r => `<tr><td>${r.navn}</td><td>${r.dato}</td><td>${r.serie}</td><td>${r.sted}</td><td>${r.skudd}</td><td>${r.poeng}</td><td>${r.tid}</td><td>${r.vindretning}</td><td>${r.skrumelding}</td><td><img src='${r.miniatur_dataurl}' width='80'></td></tr>`).join('');
-      container.innerHTML = `<table><thead><tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr></thead><tbody>${rows}</tbody></table>`;
-    });
-  </script>
-  <script src="selvanviser-fiks.js"></script>
+    let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+    if (name) query = query.ilike('navn', `%${name}%`);
+    if (date) query = query.eq('dato', date);
+    if (place) query = query.ilike('sted', `%${place}%`);
+
+    const { data, error } = await query;
+    const container = document.getElementById('searchResults');
+    if (error) {
+      container.innerHTML = 'Feil ved henting av data.';
+      return;
+    }
+    if (!data.length) {
+      container.innerHTML = 'Ingen resultater funnet.';
+      return;
+    }
+    const rows = data.map(r => `<tr><td>${r.navn}</td><td>${r.dato}</td><td>${r.serie}</td><td>${r.sted}</td><td>${r.skudd}</td><td>${r.poeng}</td><td>${r.tid}</td><td>${r.vindretning}</td><td>${r.skrumelding}</td><td><img src='${r.miniatur_dataurl}' width='80'></td></tr>`).join('');
+    container.innerHTML = `<table><thead><tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr></thead><tbody>${rows}</tbody></table>`;
+  });
+</script>
+<script src="selvanviser-fiks.js"></script>
 </body>
 </html>
