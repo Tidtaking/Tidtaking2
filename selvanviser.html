@@ -25,7 +25,6 @@
       transform-origin: center;
     }
   </style>
-  <!-- Bruk den vanlige CDN-lenken for Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -80,29 +79,28 @@
   </div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      // Initialize Supabase client
-      const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    // Initialize Supabase client
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-      const canvas = document.getElementById('targetCanvas');
-      const ctx = canvas.getContext('2d');
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const R = canvas.width / 2;
-      const ringWidth = R / 10;
+    const canvas = document.getElementById('targetCanvas');
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const R = canvas.width / 2;
+    const ringWidth = R / 10;
 
-      let currentShots = [];
-      let seriesCount = 0;
-      let timerInterval = null;
-      let secondsElapsed = 0;
-      let lastWindDir = null;
-      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
+    let currentShots = [];
+    let seriesCount = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let lastWindDir = null;
+    let adjustment = { up: 0, down: 0, left: 0, right: 0 };
 
-      function drawTarget() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let j = 10; j >= 1; j--) {
+    function drawTarget() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let j = 10; j >= 1; j--) {
         ctx.beginPath();
         ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
         ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
@@ -115,120 +113,123 @@
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(11 - j, centerX, centerY - (j * ringWidth) + ringWidth / 2);
-        }
       }
+    }
 
-      function computeScore(x, y) {
-        const dx = x - centerX;
-        const dy = y - centerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > R) return 0;
-        const ring = Math.floor(distance / ringWidth);
-        return 10 - ring;
-      }
+    function computeScore(x, y) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > R) return 0;
+      const ring = Math.floor(distance / ringWidth);
+      return 10 - ring;
+    }
 
-      function drawShot(shot, index) {
-        ctx.beginPath();
-        ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = shot.score >= 7.8 ? 'green' : 'red';
-        ctx.fill();
-        ctx.stroke();
+    function drawShot(shot, index) {
+      ctx.beginPath();
+      ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = shot.score >= 7.8 ? 'green' : 'red';
+      ctx.fill();
+      ctx.stroke();
 
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(index + 1, shot.x, shot.y - 10);
-      }
+      ctx.fillStyle = 'black';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(index + 1, shot.x, shot.y - 10);
+    }
 
-      function redrawShots() {
-        drawTarget();
-        currentShots.forEach((shot, i) => drawShot(shot, i));
-      }
-
+    function redrawShots() {
       drawTarget();
+      currentShots.forEach((shot, i) => drawShot(shot, i));
+    }
 
-      canvas.addEventListener('click', e => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-        const score = computeScore(x, y);
-        currentShots.push({ score, x, y });
-        redrawShots();
-        document.getElementById('undoShotBtn').disabled = false;
-        document.getElementById('saveSeriesBtn').disabled = false;
-      });
+    drawTarget();
 
-      document.getElementById('undoShotBtn').addEventListener('click', () => {
-        currentShots.pop();
-        redrawShots();
-        document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
-      });
-
-      document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
-        const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
-        const total = currentShots.reduce((sum, s) => sum + s.score, 0);
-        const treff = currentShots.filter(s => s.score >= 7.8).length;
-        const table = document.getElementById('resultTable').querySelector('tbody');
-        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
-        const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
-        const name = document.getElementById('shooterName')?.value || 'Ukjent';
-        const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
-        seriesCount++;
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${name}</td><td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
-
-        // Preview shot on table
-        const previewCanvas = document.createElement('canvas');
-        previewCanvas.width = 100;
-        previewCanvas.height = 100;
-        const pctx = previewCanvas.getContext('2d');
-        const scale = previewCanvas.width / canvas.width;
-        pctx.fillStyle = '#fff';
-        pctx.fillRect(0, 0, 100, 100);
-        for (let j = 10; j >= 1; j--) {
-          pctx.beginPath();
-          pctx.arc(50, 50, j * ringWidth * scale, 0, 2 * Math.PI);
-          pctx.strokeStyle = j === 3 ? '#000' : '#ccc';
-          pctx.lineWidth = j === 3 ? 2 : 0.5;
-          pctx.stroke();
-        }
-        currentShots.forEach(s => {
-          pctx.beginPath();
-          pctx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
-          pctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
-          pctx.fill();
-        });
-        const previewImg = row.querySelector(`#preview-${seriesCount}`);
-        previewImg.src = previewCanvas.toDataURL();
-
-        table.appendChild(row);
-        currentShots = [];
-        adjustment = { up: 0, down: 0, left: 0, right: 0 };
-        redrawShots();
-        document.getElementById('saveSeriesBtn').disabled = true;
-
-        // Send to Supabase
-        const insertResult = await supabase.from('selvanviser').insert([
-          {
-            dato: date,
-            serie: seriesCount,
-            sted: place,
-            skudd: currentShots.length,
-            poeng: total,
-            treff: treff,
-            tid: timeText,
-            vindretning: getCompassDirection(lastWindDir ?? 0),
-            vindgrader: lastWindDir ?? 0,
-            skrumelding: adjText,
-            skudddata: currentShots,
-            miniatur_dataurl: previewImg.src,
-            navn: name
-          }
-        ]);
-        console.log('Supabase insert:', insertResult);
-      });
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const score = computeScore(x, y);
+      currentShots.push({ score, x, y });
+      redrawShots();
+      document.getElementById('undoShotBtn').disabled = false;
+      document.getElementById('saveSeriesBtn').disabled = false;
     });
+
+    document.getElementById('undoShotBtn').addEventListener('click', () => {
+      currentShots.pop();
+      redrawShots();
+      document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
+    });
+
+    document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
+      const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+      const total = currentShots.reduce((sum, s) => sum + s.score, 0);
+      const treff = currentShots.filter(s => s.score >= 7.8).length;
+      const table = document.getElementById('resultTable').querySelector('tbody');
+      const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
+      const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
+      const name = document.getElementById('shooterName')?.value || 'Ukjent';
+      const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
+      seriesCount++;
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${name}</td><td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
+
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width = 100;
+      previewCanvas.height = 100;
+      const pctx = previewCanvas.getContext('2d');
+      const scale = previewCanvas.width / canvas.width;
+      pctx.fillStyle = '#fff';
+      pctx.fillRect(0, 0, 100, 100);
+      for (let j = 10; j >= 1; j--) {
+        pctx.beginPath();
+        pctx.arc(50, 50, j * ringWidth * scale, 0, 2 * Math.PI);
+        pctx.strokeStyle = j === 3 ? '#000' : '#ccc';
+        pctx.lineWidth = j === 3 ? 2 : 0.5;
+        pctx.stroke();
+      }
+      currentShots.forEach(s => {
+        pctx.beginPath();
+        pctx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
+        pctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
+        pctx.fill();
+      });
+      const previewImg = row.querySelector(`#preview-${seriesCount}`);
+      previewImg.src = previewCanvas.toDataURL();
+
+      table.appendChild(row);
+      currentShots = [];
+      adjustment = { up: 0, down: 0, left: 0, right: 0 };
+      redrawShots();
+      document.getElementById('saveSeriesBtn').disabled = true;
+
+      const insertResult = await supabase.from('selvanviser').insert([
+        {
+          dato: date,
+          serie: seriesCount,
+          sted: place,
+          skudd: currentShots.length,
+          poeng: total,
+          treff: treff,
+          tid: timeText,
+          vindretning: getCompassDirection(lastWindDir ?? 0),
+          vindgrader: lastWindDir ?? 0,
+          skrumelding: adjText,
+          skudddata: currentShots,
+          miniatur_dataurl: previewImg.src,
+          navn: name
+        }
+      ]);
+      console.log('Supabase insert:', insertResult);
+    });
+
+    function getCompassDirection(deg) {
+      const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
+      const i = Math.round(deg / 45) % 8;
+      return dirs[i];
+    }
   </script>
 </body>
 </html>
