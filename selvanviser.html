@@ -1,1 +1,86 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"> <!-- Added to avoid Quirks Mode -->
+  <title>Utvidet analyse av skyting</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
+    h1 { margin-top: 20px; }
+    #targetCanvas { background: #fff; border: 2px solid #333; display: block; margin: 0 auto; width: 90vw; height: 90vw; max-width: 600px; max-height: 600px; }
+    #controls, #competitionInfo { margin: 15px; }
+    button, input, select, textarea { font-size: 18px; padding: 10px 16px; margin: 5px; cursor: pointer; }
+    table { margin: 0 auto; border-collapse: collapse; font-size: 1em; }
+    th, td { padding: 8px 12px; border: 1px solid #ccc; }
+    #hourlyForecast { margin-top: 10px; font-size: 0.9em; }
+    .logo { max-width: 120px; margin-bottom: 10px; }
+    .wind-arrow {
+      display: inline-block;
+      width: 0;
+      height: 0;
+      border-top: 10px solid red;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      margin-left: 6px;
+      transform-origin: center;
+    }
+  </style>
+</head>
+<body>
+  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
+  <h1>Utvidet analyse av skyting</h1>
+
+  <div id="competitionInfo">
+    <input type="text" id="shooterName" placeholder="Navn på utøver">
+    <input type="date" id="shootingDate">
+    <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata">
+    <button id="fetchWeatherBtn">Hent værdata</button>
+    <div id="weatherData">Værdata vises her.</div>
+    <div id="hourlyForecast"></div>
+    <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
+    <div id="adjustmentControls">
+      <h4>Manuell skrumelding</h4>
+      <div>
+        <button id="adjUp">↑ Opp</button>
+      </div>
+      <div>
+        <button id="adjLeft">← Venstre</button>
+        <button id="adjRight">Høyre →</button>
+      </div>
+      <div>
+        <button id="adjDown">↓ Ned</button>
+      </div>
+      <div id="manualAdjustmentDisplay">Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0</div>
+    </div>
+  </div>
+
+  <div id="seriesTableContainer">
+    <h2>Resultater</h2>
+    <div id="controls">
+      <button id="undoShotBtn" disabled>Angre skudd</button>
+      <button id="saveSeriesBtn" disabled>Lagre serie</button>
+    </div>
+
+    <table id="resultTable">
+      <thead>
+        <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="timerControls">
+      <button id="startTimerBtn">Start tidtaking</button>
+      <button id="stopTimerBtn" disabled>Stopp tidtaking</button>
+      <div id="timerDisplay">Tid: 00:00</div>
+    </div>
+
+    <canvas id="targetCanvas" width="600" height="600"></canvas>
+  </div>
+
+  <script>
+    // Javascript code remains the same as before...
+  </script>
+</body>
+</html>
 
