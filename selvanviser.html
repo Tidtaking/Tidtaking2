@@ -171,7 +171,7 @@
         currentShots.forEach(s => {
           pctx.beginPath();
           pctx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
-          pctx.fillStyle = 'red';
+          pctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
           pctx.fill();
         });
         const previewImg = row.querySelector(`#preview-${seriesCount}`);
