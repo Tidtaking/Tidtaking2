@@ -77,7 +77,10 @@
   </div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
       const canvas = document.getElementById('targetCanvas');
       const ctx = canvas.getContext('2d');
       const centerX = canvas.width / 2;
@@ -170,7 +173,7 @@
         });
       });
 
-      document.getElementById('saveSeriesBtn').addEventListener('click', () => {
+      document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
         const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
         const treff = currentShots.filter(s => s.score >= 7.8).length;
@@ -211,6 +214,25 @@
         manualDisplay.textContent = `Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0`;
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = true;
+
+        // Send til Supabase
+        const insertResult = await supabase.from('selvanviser').insert([
+          {
+            dato: date,
+            serie: seriesCount,
+            sted: place,
+            skudd: currentShots.length,
+            poeng: total,
+            treff: treff,
+            tid: timeText,
+            vindretning: getCompassDirection(lastWindDir ?? 0),
+            vindgrader: lastWindDir ?? 0,
+            skrumelding: adjText,
+            skudddata: currentShots,
+            miniatur_dataurl: previewImg.src
+          }
+        ]);
+        console.log('Supabase insert:', insertResult);
         document.getElementById('undoShotBtn').disabled = true;
       });
 
@@ -259,7 +281,8 @@
           <div>${forecast}</div>
           <h3>Resultater:</h3>
           ${table}
-          </body></html>`;
+          <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</body></html>`;
         printWindow.document.write(html);
         printWindow.document.close();
         printWindow.focus();
