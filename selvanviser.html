@@ -88,68 +88,234 @@
   </div>
 
   <script>
-    // Funksjon for å hente kompassretning basert på grader
-    function getCompassDirection(deg) {
-      const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
-      const i = Math.round(deg / 45) % 8; // Beregn hvilken retning
-      return dirs[i];
-    }
-
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     window.addEventListener('DOMContentLoaded', () => {
-      // Start timer, værdata og annet kodesett her
+      const canvas = document.getElementById('targetCanvas');
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const R = canvas.width / 2;
+      const ringWidth = R / 10;
 
-      // Hent historikk basert på navn eller dato
-      document.getElementById('searchBtn').addEventListener('click', async () => {
-        const name = document.getElementById('searchName').value.trim();
-        const date = document.getElementById('searchDate').value;
+      let currentShots = [];
+      let seriesCount = 0;
+      let timerInterval = null;
+      let secondsElapsed = 0;
+      let lastWindDir = null;
+      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
 
-        let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+      // Draw target
+      function drawTarget() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let j = 10; j >= 1; j--) {
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
+          ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
+          ctx.fill();
+          ctx.lineWidth = (j === 3) ? 4 : 1;
+          ctx.strokeStyle = '#333';
+          ctx.stroke();
 
-        if (name) {
-          query = query.ilike('navn', `%${name}%`);
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 12px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(11 - j, centerX, centerY - (j * ringWidth) + ringWidth / 2);
         }
-        if (date) {
-          query = query.eq('dato', date);
+      }
+
+      function computeScore(x, y) {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > R) return 0;
+        const ring = Math.floor(distance / ringWidth);
+        return 10 - ring;
+      }
+
+      function drawShot(shot, index) {
+        ctx.beginPath();
+        ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = shot.score >= 7.8 ? 'green' : 'red';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(index + 1, shot.x, shot.y - 10);
+      }
+
+      function redrawShots() {
+        drawTarget();
+        currentShots.forEach((shot, i) => drawShot(shot, i));
+      }
+
+      drawTarget();
+
+      canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const score = computeScore(x, y);
+        currentShots.push({ score, x, y });
+        redrawShots();
+        document.getElementById('undoShotBtn').disabled = false;
+        document.getElementById('saveSeriesBtn').disabled = false;
+      });
+
+      // Undo shot
+      document.getElementById('undoShotBtn').addEventListener('click', () => {
+        currentShots.pop();
+        redrawShots();
+        document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
+      });
+
+      // Manual adjustment buttons
+      const manualDisplay = document.getElementById('manualAdjustmentDisplay');
+      document.querySelectorAll('#adjustmentControls button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dir = btn.id;
+          if (dir === 'adjUp') { adjustment.up++; adjustment.down = 0; }
+          else if (dir === 'adjDown') { adjustment.down++; adjustment.up = 0; }
+          else if (dir === 'adjLeft') { adjustment.left++; adjustment.right = 0; }
+          else if (dir === 'adjRight') { adjustment.right++; adjustment.left = 0; }
+          manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+        });
+      });
+
+      // Save series to Supabase
+      document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
+        const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+        const total = currentShots.reduce((sum, s) => sum + s.score, 0);
+        const treff = currentShots.filter(s => s.score >= 7.8).length;
+        const table = document.getElementById('resultTable').querySelector('tbody');
+        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
+        const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
+        const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
+        const name = document.getElementById('nameInput').value || 'Ukjent'; // Save name
+        seriesCount++;
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
+
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width = 100;
+        previewCanvas.height = 100;
+        const pctx = previewCanvas.getContext('2d');
+        const scale = previewCanvas.width / canvas.width;
+        pctx.fillStyle = '#fff';
+        pctx.fillRect(0, 0, 100, 100);
+        for (let j = 10; j >= 1; j--) {
+          pctx.beginPath();
+          pctx.arc(50, 50, j * ringWidth * scale, 0, 2 * Math.PI);
+          pctx.strokeStyle = j === 3 ? '#000' : '#ccc';
+          pctx.lineWidth = j === 3 ? 2 : 0.5;
+          pctx.stroke();
+        }
+        currentShots.forEach(s => {
+          pctx.beginPath();
+          pctx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
+          pctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
+          pctx.fill();
+        });
+        const previewImg = row.querySelector(`#preview-${seriesCount}`);
+        previewImg.src = previewCanvas.toDataURL();
+
+        table.appendChild(row);
+        currentShots = [];
+        adjustment = { up: 0, down: 0, left: 0, right: 0 };
+        manualDisplay.textContent = `Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0`;
+        redrawShots();
+        document.getElementById('saveSeriesBtn').disabled = true;
+        document.getElementById('undoShotBtn').disabled = true;
+
+        // Send to Supabase
+        const insertResult = await supabase.from('selvanviser').insert([
+          {
+            dato: date,
+            serie: seriesCount,
+            sted: place,
+            skudd: currentShots.length,
+            poeng: total,
+            treff: treff,
+            tid: timeText,
+            vindretning: getCompassDirection(lastWindDir ?? 0),
+            vindgrader: lastWindDir ?? 0,
+            skrumelding: adjText,
+            skudddata: currentShots,
+            miniatur_dataurl: previewImg.src,
+            navn: name // Save the name as well
+          }
+        ]);
+        console.log('Supabase insert:', insertResult);
+      });
+
+      // Hent værdata
+      const shootingDate = document.getElementById('shootingDate');
+      const shootingLocation = document.getElementById('shootingLocation');
+      const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
+
+      fetchWeatherBtn.addEventListener('click', fetchWeather);
+
+      async function fetchWeather() {
+        const output = document.getElementById('weatherData');
+        const forecast = document.getElementById('hourlyForecast');
+        const dateInput = shootingDate.value;
+        const locationInput = shootingLocation.value;
+
+        if (!dateInput || !locationInput) {
+          output.textContent = 'Vennligst fyll inn både dato og sted.';
+          return;
         }
 
+        output.textContent = 'Henter værdata...';
         try {
-          const { data, error } = await query;
-          if (error) throw error;
-          const tableBody = document.getElementById('searchResults');
-          if (data.length === 0) {
-            tableBody.innerHTML = 'Ingen resultater funnet.';
+          const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(locationInput)}`);
+          const geoData = await geoRes.json();
+          if (!geoData.length) {
+            output.textContent = 'Sted ikke funnet. Prøv et annet sted.';
+            forecast.innerHTML = '';
+            return;
+          }
+          const { lat, lon } = geoData[0];
+
+          const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+            headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
+          });
+          const data = await weatherRes.json();
+
+          const forecasts = data.properties.timeseries.filter(f => {
+            const dt = new Date(f.time);
+            const h = dt.getHours();
+            return f.time.startsWith(dateInput) && h >= 5 && h <= 15;
+          });
+
+          if (!forecasts.length) {
+            output.textContent = 'Ingen værdata for valgt dato.';
+            forecast.innerHTML = '';
             return;
           }
 
-          const rows = data.map(item => {
-            return `
-              <tr>
-                <td>${item.dato}</td>
-                <td>${item.serie}</td>
-                <td>${item.sted}</td>
-                <td>${item.skudd}</td>
-                <td>${item.poeng}</td>
-                <td>${item.tid}</td>
-                <td>${getCompassDirection(item.vindgrader)}</td>
-                <td>${item.skrumelding}</td>
-              </tr>
-            `;
-          }).join('');
-          tableBody.innerHTML = `<table>
-            <thead>
-              <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th></tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>`;
-        } catch (error) {
-          console.error('Feil ved søk:', error);
-          document.getElementById('searchResults').innerHTML = 'Feil ved henting av data.';
+          const now = forecasts[0].data.instant.details;
+          const windDir = forecasts[0].data.instant.details.wind_from_direction;
+          lastWindDir = windDir;
+          output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
+
+          const hourly = forecasts.map(item => {
+            const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const d = item.data.instant.details;
+            return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${item.data.instant.details.wind_from_direction}deg);'></span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
+          }).join('<br>');
+
+          forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
+        } catch (e) {
+          output.textContent = 'Klarte ikke hente værdata.';
+          forecast.innerHTML = '';
         }
-      });
+      }
     });
   </script>
 </body>
