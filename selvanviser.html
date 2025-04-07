@@ -37,6 +37,14 @@
     <div id="weatherData">Værdata vises her.</div>
     <div id="hourlyForecast"></div>
     <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
+    <div id="adjustmentControls">
+      <h4>Manuell skrumelding</h4>
+      <button onclick="adjustment.up++">↑</button>
+      <button onclick="adjustment.left++">←</button>
+      <button onclick="adjustment.right++">→</button>
+      <button onclick="adjustment.down++">↓</button>
+      <div id="manualAdjustmentDisplay">Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0</div>
+    </div>
   </div>
 
   <div id="seriesTableContainer">
@@ -48,7 +56,7 @@
 
     <table id="resultTable">
       <thead>
-        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Miniatyr</th></tr>
+        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -76,6 +84,7 @@
       let timerInterval = null;
       let secondsElapsed = 0;
       let lastWindDir = null;
+      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
 
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -143,7 +152,20 @@
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
       });
 
+      const manualDisplay = document.getElementById('manualAdjustmentDisplay');
+      document.querySelectorAll('#adjustmentControls button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dir = btn.textContent;
+          if (dir === '↑') adjustment.up++;
+          else if (dir === '↓') adjustment.down++;
+          else if (dir === '←') adjustment.left++;
+          else if (dir === '→') adjustment.right++;
+          manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+        });
+      });
+
       document.getElementById('saveSeriesBtn').addEventListener('click', () => {
+        const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
         const treff = currentShots.filter(s => s.score >= 7.8).length;
         const table = document.getElementById('resultTable').querySelector('tbody');
@@ -152,7 +174,7 @@
         const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
 
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
