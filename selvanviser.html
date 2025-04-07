@@ -47,7 +47,7 @@
 
     <table id="resultTable">
       <thead>
-        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Miniatyr</th></tr>
+        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Miniatyr</th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -74,6 +74,7 @@
       let seriesCount = 0;
       let timerInterval = null;
       let secondsElapsed = 0;
+      let lastWindDir = null;
 
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -146,7 +147,7 @@
         const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td>${timeText}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td>${timeText}</td><td>${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
 
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
@@ -300,6 +301,7 @@
 
           const now = forecasts[0].data.instant.details;
           const windDir = forecasts[0].data.instant.details.wind_from_direction;
+          lastWindDir = windDir;
           output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
 
           const hourly = forecasts.map(item => {
