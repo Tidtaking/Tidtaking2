@@ -39,10 +39,16 @@
     <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
     <div id="adjustmentControls">
       <h4>Manuell skrumelding</h4>
-      <button onclick="adjustment.up++">↑</button>
-      <button onclick="adjustment.left++">←</button>
-      <button onclick="adjustment.right++">→</button>
-      <button onclick="adjustment.down++">↓</button>
+      <div>
+        <button id="adjUp">↑ Opp</button>
+      </div>
+      <div>
+        <button id="adjLeft">← Venstre</button>
+        <button id="adjRight">Høyre →</button>
+      </div>
+      <div>
+        <button id="adjDown">↓ Ned</button>
+      </div>
       <div id="manualAdjustmentDisplay">Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0</div>
     </div>
   </div>
@@ -155,11 +161,11 @@
       const manualDisplay = document.getElementById('manualAdjustmentDisplay');
       document.querySelectorAll('#adjustmentControls button').forEach(btn => {
         btn.addEventListener('click', () => {
-          const dir = btn.textContent;
-          if (dir === '↑') adjustment.up++;
-          else if (dir === '↓') adjustment.down++;
-          else if (dir === '←') adjustment.left++;
-          else if (dir === '→') adjustment.right++;
+          const dir = btn.id;
+          if (dir === 'adjUp') { adjustment.up++; adjustment.down = 0; }
+          else if (dir === 'adjDown') { adjustment.down++; adjustment.up = 0; }
+          else if (dir === 'adjLeft') { adjustment.left++; adjustment.right = 0; }
+          else if (dir === 'adjRight') { adjustment.right++; adjustment.left = 0; }
           manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         });
       });
@@ -201,6 +207,8 @@
 
         table.appendChild(row);
         currentShots = [];
+        adjustment = { up: 0, down: 0, left: 0, right: 0 };
+        manualDisplay.textContent = `Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0`;
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = true;
         document.getElementById('undoShotBtn').disabled = true;
