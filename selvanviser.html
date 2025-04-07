@@ -270,12 +270,12 @@
           document.getElementById('adjustmentSuggestion').textContent = 'Ingen skrumelding nødvendig (vind < 1 m/s)';
         } else {
           let side = '';
-          if (["vest", "nordvest"].includes(direction)) side = 'høyre';
-          else if (["øst", "nordøst"].includes(direction)) side = 'venstre';
-          else if (["sør", "sørøst"].includes(direction)) side = 'ned';
-          else if (["nord", "nordøst"].includes(direction)) side = 'opp';
+          if (["vest", "nordvest", "sørvest"].includes(direction)) side = 'høyre';
+          else if (["øst", "nordøst", "sørøst"].includes(direction)) side = 'venstre';
+          else if (direction === "sør") side = 'ned';
+          else if (direction === "nord") side = 'opp';
           else side = direction;
-          document.getElementById('adjustmentSuggestion').textContent = `Forslag til skrumelding: Flytt ${clicks} knepp ${side}`;
+          document.getElementById('adjustmentSuggestion').textContent = `Forslag til skrumelding: Skru ${clicks} knepp ${side}`;
         }
       }
 
