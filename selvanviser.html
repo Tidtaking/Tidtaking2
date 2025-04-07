@@ -81,7 +81,7 @@
   </div>
 
   <script>
-    // Initialize Supabase client here (at the top of the script)
+    // Supabase-URL og -nøkkel for tilkobling til databasen
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -101,7 +101,7 @@
       let lastWindDir = null;
       let adjustment = { up: 0, down: 0, left: 0, right: 0 };
 
-      // Draw target
+      // Tegn målet
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let j = 10; j >= 1; j--) {
