@@ -105,17 +105,24 @@
         return 10 - ring;
       }
 
-      function drawShot(shot) {
+      function drawShot(shot, index) {
         ctx.beginPath();
         ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = shot.score >= 7.8 ? 'green' : 'red';
         ctx.fill();
         ctx.stroke();
+
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(index + 1, shot.x, shot.y - 10);
+      }
       }
 
       function redrawShots() {
         drawTarget();
-        currentShots.forEach(drawShot);
+        currentShots.forEach((shot, i) => drawShot(shot, i));
       }
 
       drawTarget();
@@ -139,13 +146,14 @@
 
       document.getElementById('saveSeriesBtn').addEventListener('click', () => {
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
+        const treff = currentShots.filter(s => s.score >= 7.8).length;
         const table = document.getElementById('resultTable').querySelector('tbody');
         const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
         const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
         const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total}</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td>`;
 
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
