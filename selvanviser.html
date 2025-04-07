@@ -78,17 +78,14 @@
     <canvas id="targetCanvas" width="600" height="600"></canvas>
   </div>
 
-  <!-- Søkeseksjon for historikk -->
-  <div id="historySection" style="margin-top: 40px;">
-    <h3>Søk i historikk</h3>
-    <input type="text" id="searchName" placeholder="Navn på utøver">
-    <input type="date" id="searchDate">
-    <button id="searchBtn">Søk</button>
-    <div id="searchResults"></div>
-  </div>
-
   <script>
-    // Supabase-tilkobling
+    // Funksjon for å hente kompassretning basert på grader
+    function getCompassDirection(deg) {
+      const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
+      const i = Math.round(deg / 45) % 8; // Beregn hvilken retning
+      return dirs[i];
+    }
+
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
