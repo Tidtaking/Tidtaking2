@@ -26,9 +26,8 @@
     }
   </style>
 
-  <!-- Import Supabase SDK -->
+  <!-- Importer Supabase SDK fra CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.0.0-beta.6"></script>
-
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
@@ -82,7 +81,7 @@
   </div>
 
   <script>
-    // Initialiser Supabase-klienten her etter at biblioteket er lastet
+    // Nå initialiserer vi Supabase-klienten etter at biblioteket er lastet
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = createClient(supabaseUrl, supabaseKey);
