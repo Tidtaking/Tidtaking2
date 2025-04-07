@@ -34,12 +34,97 @@
     );
 
     document.addEventListener('DOMContentLoaded', () => {
+      const mainApp = document.getElementById('mainApp');
+
+      const canvas = document.createElement('canvas');
+      canvas.id = 'targetCanvas';
+      canvas.width = 600;
+      canvas.height = 600;
+      mainApp.appendChild(canvas);
+
+      const controls = document.createElement('div');
+      controls.id = 'controls';
+      controls.innerHTML = `
+        <button id="undoShotBtn" disabled>Angre skudd</button>
+        <button id="saveSeriesBtn" disabled>Lagre serie</button>
+      `;
+      mainApp.appendChild(controls);
+
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const R = canvas.width / 2;
+      const ringWidth = R / 10;
+      let shots = [];
+
+      function drawTarget() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let j = 10; j >= 1; j--) {
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
+          ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
+          ctx.fill();
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      function computeScore(x, y) {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > R) return 0;
+        const ring = Math.floor(distance / ringWidth);
+        return 10 - ring;
+      }
+
+      function drawShot(x, y, index, score) {
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = score >= 7.8 ? 'green' : 'red';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(index + 1, x, y - 10);
+      }
+
+      function redrawShots() {
+        drawTarget();
+        shots.forEach((s, i) => drawShot(s.x, s.y, i, s.score));
+      }
+
+      canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const score = computeScore(x, y);
+        shots.push({ x, y, score });
+        redrawShots();
+        document.getElementById('undoShotBtn').disabled = false;
+        document.getElementById('saveSeriesBtn').disabled = false;
+      });
+
+      document.getElementById('undoShotBtn').addEventListener('click', () => {
+        shots.pop();
+        redrawShots();
+        document.getElementById('saveSeriesBtn').disabled = shots.length === 0;
+      });
+
+      drawTarget();
+
+      // Historikksøk
       const nameField = document.getElementById('searchName');
       const dateField = document.getElementById('searchDate');
       const placeField = document.getElementById('searchPlace');
       const resultsContainer = document.getElementById('searchResults');
+      const clearBtn = document.getElementById('clearBtn');
+      const searchBtn = document.getElementById('searchBtn');
 
-      document.getElementById('searchBtn').addEventListener('click', async () => {
+      searchBtn.addEventListener('click', async () => {
         const name = nameField.value.trim();
         const date = dateField.value;
         const place = placeField.value.trim();
@@ -49,6 +134,7 @@
         if (date) query = query.eq('dato', date);
         if (place) query = query.ilike('sted', `%${place}%`);
 
+        resultsContainer.innerHTML = 'Søker...';
         try {
           const { data, error } = await query;
           if (error) {
@@ -68,7 +154,7 @@
         }
       });
 
-      document.getElementById('clearBtn').addEventListener('click', () => {
+      clearBtn.addEventListener('click', () => {
         nameField.value = '';
         dateField.value = '';
         placeField.value = '';
@@ -80,11 +166,9 @@
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
-  <div id="mainApp">
-    <!-- Hovedfunksjonaliteten er integrert her i stedet for ekstern JS -->
-  </div>
 
-  <!-- Søkeseksjon nederst på siden -->
+  <div id="mainApp"></div>
+
   <div id="historySection" style="margin-top: 40px;">
     <h3>Historiske resultater</h3>
     <input type="text" id="searchName" placeholder="Navn">
