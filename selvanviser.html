@@ -79,6 +79,13 @@
   </div>
 
   <script>
+    // Funksjon for å få kompassretning basert på vindretning i grader
+    function getCompassDirection(deg) {
+      const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
+      const i = Math.round(deg / 45) % 8; // Beregn hvilken retning basert på gradene
+      return dirs[i];
+    }
+
     // Supabase URL and Key for connecting to the database
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
