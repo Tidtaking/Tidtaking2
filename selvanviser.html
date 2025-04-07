@@ -161,11 +161,11 @@
       const manualDisplay = document.getElementById('manualAdjustmentDisplay');
       document.querySelectorAll('#adjustmentControls button').forEach(btn => {
         btn.addEventListener('click', () => {
-          const dir = btn.textContent;
-          if (dir === '↑') { adjustment.up++; adjustment.down = 0; }
-          else if (dir === '↓') { adjustment.down++; adjustment.up = 0; }
-          else if (dir === '←') { adjustment.left++; adjustment.right = 0; }
-          else if (dir === '→') { adjustment.right++; adjustment.left = 0; }
+          const dir = btn.id;
+          if (dir === 'adjUp') { adjustment.up++; adjustment.down = 0; }
+          else if (dir === 'adjDown') { adjustment.down++; adjustment.up = 0; }
+          else if (dir === 'adjLeft') { adjustment.left++; adjustment.right = 0; }
+          else if (dir === 'adjRight') { adjustment.right++; adjustment.left = 0; }
           manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         });
       });
