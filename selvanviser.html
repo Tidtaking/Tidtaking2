@@ -83,7 +83,7 @@
   <script>
     // Initialize Supabase client here (at the top of the script)
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseKey = "YOUR_SUPABASE_KEY";  // Replace with your actual key
     const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -262,60 +262,6 @@
         document.getElementById('startTimerBtn').disabled = false;
         document.getElementById('stopTimerBtn').disabled = true;
       });
-
-      // Weather data fetch
-      async function fetchWeatherData(location, date) {
-        const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(location)}`);
-        const geoData = await geoRes.json();
-        if (!geoData.length) {
-          alert('Sted ikke funnet.');
-          return null;
-        }
-
-        const { lat, lon } = geoData[0];
-        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-          headers: { 'User-Agent': 'skyteanalyse/1.0' }
-        });
-        const data = await weatherRes.json();
-        return data;
-      }
-
-      document.getElementById('fetchWeatherBtn').addEventListener('click', async () => {
-        const location = document.getElementById('shootingLocation').value;
-        const date = document.getElementById('shootingDate').value;
-
-        if (!location || !date) {
-          alert('Fyll ut både sted og dato før du henter værdata.');
-          return;
-        }
-
-        const weatherData = await fetchWeatherData(location, date);
-        if (weatherData) {
-          displayWeatherData(weatherData);
-        }
-      });
-
-      // Display weather data
-      function displayWeatherData(data) {
-        const output = document.getElementById('weatherData');
-        const forecast = document.getElementById('hourlyForecast');
-        if (!data) {
-          output.textContent = 'Ingen værdata tilgjengelig.';
-          forecast.innerHTML = '';
-          return;
-        }
-
-        const hourlyForecast = data.properties.timeseries.map(item => {
-          const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const temp = item.data.instant.details.air_temperature;
-          const windSpeed = item.data.instant.details.wind_speed;
-          const windDir = item.data.instant.details.wind_from_direction;
-          const windDirText = getCompassDirection(windDir);
-          return `${time}: Temp: ${temp}°C, Vind: ${windSpeed} m/s ${windDirText}`;
-        }).join('<br>');
-
-        forecast.innerHTML = `<strong>Time for time:</strong><br>${hourlyForecast}`;
-      }
     });
   </script>
 </body>
