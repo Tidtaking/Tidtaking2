@@ -78,10 +78,12 @@
   </div>
 
   <script>
+    // Initialiser Supabase-klienten øverst i scriptet
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
     window.addEventListener('DOMContentLoaded', () => {
-      const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-      const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-      const supabase = supabase.createClient(supabaseUrl, supabaseKey);
       const canvas = document.getElementById('targetCanvas');
       const ctx = canvas.getContext('2d');
       const centerX = canvas.width / 2;
