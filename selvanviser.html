@@ -36,6 +36,7 @@
     <button id="fetchWeatherBtn">Hent værdata</button>
     <div id="weatherData">Værdata vises her.</div>
     <div id="hourlyForecast"></div>
+    <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
   </div>
 
   <div id="seriesTableContainer">
@@ -257,6 +258,27 @@
         return dirs[i];
       }
 
+      function showAdjustmentSuggestion(speed, directionDeg) {
+        const direction = getCompassDirection(directionDeg);
+        let clicks = 0;
+        if (speed >= 1 && speed < 2) clicks = 1;
+        else if (speed >= 2 && speed < 4) clicks = 2;
+        else if (speed >= 4 && speed < 6) clicks = 3;
+        else if (speed >= 6) clicks = 4;
+
+        if (clicks === 0) {
+          document.getElementById('adjustmentSuggestion').textContent = 'Ingen skrumelding nødvendig (vind < 1 m/s)';
+        } else {
+          let side = '';
+          if (["vest", "nordvest"].includes(direction)) side = 'høyre';
+          else if (["øst", "nordøst"].includes(direction)) side = 'venstre';
+          else if (["sør", "sørøst"].includes(direction)) side = 'ned';
+          else if (["nord", "nordøst"].includes(direction)) side = 'opp';
+          else side = direction;
+          document.getElementById('adjustmentSuggestion').textContent = `Forslag til skrumelding: Flytt ${clicks} knepp ${side}`;
+        }
+      }
+
       async function fetchWeather() {
         const output = document.getElementById('weatherData');
         const forecast = document.getElementById('hourlyForecast');
@@ -279,6 +301,7 @@
           if (!geoData.length) {
             output.textContent = 'Sted ikke funnet. Prøv et annet navn.';
             forecast.innerHTML = '';
+          document.getElementById('adjustmentSuggestion').textContent = '';
             return;
           }
           const { lat, lon } = geoData[0];
@@ -303,6 +326,7 @@
           const now = forecasts[0].data.instant.details;
           const windDir = forecasts[0].data.instant.details.wind_from_direction;
           lastWindDir = windDir;
+          showAdjustmentSuggestion(now.wind_speed, windDir);
           output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
 
           const hourly = forecasts.map(item => {
@@ -314,6 +338,7 @@
           forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
         } catch (e) {
           output.textContent = 'Klarte ikke hente værdata.';
+          document.getElementById('adjustmentSuggestion').textContent = '';
           forecast.innerHTML = '';
         }
       }
