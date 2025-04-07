@@ -334,7 +334,6 @@
           forecast.innerHTML = `<strong>Vær time for time (${dateInput} 05–15):</strong><br>${hourly}`;
         } catch (e) {
           output.textContent = 'Klarte ikke hente værdata.';
-          document.getElementById('adjustmentSuggestion').textContent = '';
           forecast.innerHTML = '';
         }
       }
