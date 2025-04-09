@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Utvidet analyse av skyting</title>
   <style>
     body {
@@ -85,13 +85,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo" />
+  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Historikk - Søk etter Skyteinformasjon</h1>
 
   <div id="searchControls">
-    <input type="text" id="searchName" placeholder="Søk på navn" />
-    <input type="text" id="searchLocation" placeholder="Søk på sted" />
-    <input type="date" id="searchDate" />
+    <input type="text" id="searchName" placeholder="Søk på navn">
+    <input type="text" id="searchLocation" placeholder="Søk på sted">
+    <input type="date" id="searchDate">
     <button id="searchBtn">Søk</button>
     <button id="clearBtn">Nullstill</button>
   </div>
@@ -99,12 +99,14 @@
   <div id="searchResults"></div>
 
   <div id="imageModal" class="modal" onclick="this.style.display='none'">
-    <button onclick="document.getElementById('imageModal').style.display='none'">&#10005;</button>
-    <a id="downloadLink" download><img id="modalImage" src=""></a>
+    <button onclick="document.getElementById('imageModal').style.display='none'">✕</button>
+    <a id="downloadLink" download>
+      <img id="modalImage" src="">
+    </a>
   </div>
 
   <div id="hitStatsModal" class="modal" style="display:none;">
-    <button onclick="document.getElementById('hitStatsModal').style.display='none'">&#10005;</button>
+    <button onclick="document.getElementById('hitStatsModal').style.display='none'">✕</button>
     <div id="hitStatsContent" style="background: white; padding: 20px; border-radius: 10px; max-width: 90%; text-align: center;"></div>
   </div>
 
