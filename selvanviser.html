@@ -31,11 +31,6 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
 
-  <div id="timerControls">
-    <button id="startStopTimerBtn">Start tidtaking</button>
-    <div id="timerDisplay">Tid: 00:00</div>
-  </div>
-
   <div id="competitionInfo">
     <input type="text" id="nameInput" placeholder="Navn på utøver" required>
     <input type="date" id="shootingDate" required>
@@ -60,13 +55,10 @@
     </div>
   </div>
 
-  <div id="searchControls">
-    <input type="text" id="searchName" placeholder="Søk på navn">
-    <input type="date" id="searchDate">
-    <button id="searchBtn">Søk</button>
-    <button id="clearBtn">Nullstill</button>
+  <div id="timerControls">
+    <button id="startStopTimerBtn">Start tidtaking</button>
+    <div id="timerDisplay">Tid: 00:00</div>
   </div>
-  <div id="searchResults"></div>
 
   <div id="seriesTableContainer">
     <h2>Resultater</h2>
@@ -85,6 +77,14 @@
     <canvas id="targetCanvas" width="600" height="600"></canvas>
   </div>
 
+  <div id="searchControls">
+    <input type="text" id="searchName" placeholder="Søk på navn">
+    <input type="date" id="searchDate">
+    <button id="searchBtn">Søk</button>
+    <button id="clearBtn">Nullstill</button>
+  </div>
+  <div id="searchResults"></div>
+
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const timerBtn = document.getElementById('startStopTimerBtn');
@@ -93,6 +93,7 @@
       let timerInterval;
       let secondsElapsed = 0;
 
+      // Tidtaking funksjon
       timerBtn.addEventListener('click', function () {
         if (!timerRunning) {
           secondsElapsed = 0;
@@ -116,6 +117,7 @@
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
       );
 
+      // Søkefunksjon for historikk
       document.getElementById('searchBtn').addEventListener('click', async () => {
         const name = document.getElementById('searchName').value.trim();
         const date = document.getElementById('searchDate').value;
@@ -245,19 +247,6 @@
         currentShots.pop();
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
-      });
-
-      // Manuelle skrumeldingsknapper
-      const manualDisplay = document.getElementById('manualAdjustmentDisplay');
-      document.querySelectorAll('#adjustmentControls button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const dir = btn.id;
-          if (dir === 'adjUp') { adjustment.up++; adjustment.down = 0; }
-          else if (dir === 'adjDown') { adjustment.down++; adjustment.up = 0; }
-          else if (dir === 'adjLeft') { adjustment.left++; adjustment.right = 0; }
-          else if (dir === 'adjRight') { adjustment.right++; adjustment.left = 0; }
-          manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
-        });
       });
     });
   </script>
