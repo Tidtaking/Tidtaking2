@@ -33,8 +33,6 @@
     }
     table {
       width: 100%;
-      max-width: 100%;
-      overflow-x: auto;
       border-collapse: collapse;
       font-size: 0.9em;
       margin: 0 auto;
@@ -93,7 +91,7 @@
 
   <!-- Bilde-modal -->
   <div id="imageModal" class="modal" onclick="this.style.display='none'">
-    <button onclick="document.getElementById('imageModal').style.display='none'">✕</button>
+    <button onclick="document.getElementById('imageModal').style.display='none'">&#10005;</button>
     <a id="downloadLink" download>
       <img id="modalImage" src="">
     </a>
@@ -114,7 +112,7 @@
         document.getElementById('searchName').value = '';
         document.getElementById('searchLocation').value = '';
         document.getElementById('searchDate').value = '';
-        fetchData();
+        resultsContainer.innerHTML = '';
       });
 
       async function fetchData() {
@@ -168,9 +166,10 @@
         document.getElementById('deleteBtn').addEventListener('click', async () => {
           const ids = Array.from(document.querySelectorAll('.selectRow:checked')).map(cb => cb.dataset.id);
           if (ids.length === 0) return alert('Ingen rader valgt.');
+
           const { error } = await supabase.from('selvanviser').delete().in('id', ids);
           if (error) {
-            alert('Feil ved sletting.');
+            alert('Feil ved sletting: ' + error.message);
           } else {
             alert('Rad(er) slettet.');
             fetchData();
@@ -181,8 +180,6 @@
           document.querySelectorAll('.selectRow').forEach(cb => cb.checked = true);
         });
       }
-
-      fetchData(); // Hent alt først
     });
 
     function showImage(src) {
