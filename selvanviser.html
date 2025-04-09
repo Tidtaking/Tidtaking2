@@ -1,67 +1,29 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Utvidet analyse av skyting</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 10px;
-      background: #f5f5f5;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
     h1 { margin-top: 20px; font-size: 2em; }
     .logo { max-width: 120px; margin-bottom: 10px; }
-    #targetCanvas {
-      background: #fff;
-      border: 2px solid #333;
-      display: block;
-      margin: 10px auto;
-      width: 90vw;
-      max-width: 600px;
-      aspect-ratio: 1 / 1;
-    }
+    #targetCanvas { background: #fff; border: 2px solid #333; display: block; margin: 10px auto; width: 90vw; max-width: 600px; aspect-ratio: 1 / 1; }
     #competitionInfo, #controls, #timerControls, #adjustmentControls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin: 15px 0;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0;
     }
     button, input {
-      font-size: 1rem;
-      padding: 0.75em 1em;
-      margin: 4px;
-      width: 100%;
-      max-width: 300px;
-      box-sizing: border-box;
-      cursor: pointer;
+      font-size: 1rem; padding: 0.75em 1em; margin: 4px; width: 100%; max-width: 300px; box-sizing: border-box; cursor: pointer;
     }
     table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      font-size: 1em;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
+      margin: 0 auto; border-collapse: collapse; font-size: 1em; width: 100%; overflow-x: auto; display: block;
     }
     th, td {
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      text-align: center;
+      padding: 8px 12px; border: 1px solid #ccc; text-align: center;
     }
     .wind-arrow {
-      display: inline-block;
-      width: 0;
-      height: 0;
-      border-top: 10px solid red;
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      margin-left: 6px;
-      transform-origin: center;
+      display: inline-block; width: 0; height: 0; border-top: 10px solid red; border-left: 4px solid transparent; border-right: 4px solid transparent; margin-left: 6px; transform-origin: center;
     }
     @media (max-width: 600px) {
       h1 { font-size: 1.5em; }
@@ -72,9 +34,7 @@
       margin-top: 20px;
     }
     .nav-links a {
-      color: #333;
-      text-decoration: none;
-      font-size: 1rem;
+      color: #333; text-decoration: none; font-size: 1rem;
     }
   </style>
 </head>
@@ -89,7 +49,6 @@
     <button id="fetchWeatherBtn">Hent værdata</button>
     <div id="weatherData">Værdata vises her.</div>
     <div id="hourlyForecast"></div>
-    <div id="adjustmentSuggestion" style="font-weight: bold;"></div>
   </div>
 
   <div id="adjustmentControls">
@@ -127,11 +86,11 @@
     <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk">Selvanviser historikk</a>
   </div>
 
-<script>
-  const supabase = window.supabase.createClient(
-    "https://chzfewhbfkdtcizdxyzk.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
-  );
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+    );
 
     window.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('targetCanvas');
@@ -140,22 +99,16 @@
       const centerY = canvas.height / 2;
       const R = canvas.width / 2;
       const ringWidth = R / 10;
-      const dateInput = document.getElementById('shootingDate');
-      dateInput.value = new Date().toISOString().split('T')[0];
 
       let currentShots = [];
       let seriesCount = 0;
       let timerInterval = null;
       let secondsElapsed = 0;
       let lastWindDir = null;
-      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
       let timerRunning = false;
+      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
 
-      function getCompassDirection(deg) {
-        const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
-        const i = Math.round(deg / 45) % 8;
-        return dirs[i];
-      }
+      document.getElementById('shootingDate').value = new Date().toISOString().split('T')[0];
 
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -164,8 +117,8 @@
           ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
           ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
           ctx.fill();
-          ctx.lineWidth = (j === 3) ? 4 : 1;
           ctx.strokeStyle = '#333';
+          ctx.lineWidth = (j === 3) ? 2 : 1;
           ctx.stroke();
           ctx.fillStyle = '#000';
           ctx.font = 'bold 12px Arial';
@@ -174,23 +127,26 @@
         }
       }
 
-      function drawShot(shot, index) {
+      function drawShot(s, i) {
         ctx.beginPath();
-        ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = shot.score >= 7.8 ? 'green' : 'red';
+        ctx.arc(s.x, s.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = 'black';
         ctx.font = 'bold 12px Arial';
-        ctx.fillText(index + 1, shot.x, shot.y - 10);
+        ctx.fillText(i + 1, s.x, s.y - 10);
       }
 
       function computeScore(x, y) {
-        const dx = x - centerX;
-        const dy = y - centerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const ring = Math.floor(distance / ringWidth);
-        return (distance > R) ? 0 : 10 - ring;
+        const dx = x - centerX, dy = y - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return (dist > R) ? 0 : 10 - Math.floor(dist / ringWidth);
+      }
+
+      function getCompassDirection(deg) {
+        const dirs = ['nord','nordøst','øst','sørøst','sør','sørvest','vest','nordvest'];
+        return dirs[Math.round(deg / 45) % 8];
       }
 
       function updateAdjustmentDisplay() {
@@ -200,26 +156,24 @@
 
       drawTarget();
 
-      canvas.addEventListener('click', (e) => {
+      canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (canvas.width / rect.width);
         const y = (e.clientY - rect.top) * (canvas.height / rect.height);
         const score = computeScore(x, y);
         currentShots.push({ x, y, score });
-        drawTarget();
-        currentShots.forEach(drawShot);
+        drawTarget(); currentShots.forEach(drawShot);
         document.getElementById('saveSeriesBtn').disabled = false;
         document.getElementById('undoShotBtn').disabled = false;
       });
 
       document.getElementById('undoShotBtn').addEventListener('click', () => {
         currentShots.pop();
-        drawTarget();
-        currentShots.forEach(drawShot);
+        drawTarget(); currentShots.forEach(drawShot);
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
       });
 
-      ['adjUp', 'adjDown', 'adjLeft', 'adjRight'].forEach(id => {
+      ['adjUp','adjDown','adjLeft','adjRight'].forEach(id => {
         document.getElementById(id).addEventListener('click', () => {
           const dir = id.replace('adj', '').toLowerCase();
           Object.keys(adjustment).forEach(k => adjustment[k] = (k === dir) ? adjustment[k] + 1 : 0);
@@ -228,11 +182,11 @@
       });
 
       document.getElementById('startStopTimerBtn').addEventListener('click', () => {
-        const display = document.getElementById('timerDisplay');
         const btn = document.getElementById('startStopTimerBtn');
+        const display = document.getElementById('timerDisplay');
         if (!timerRunning) {
           timerRunning = true;
-          btn.textContent = 'Stopp tidtaking';
+          btn.textContent = "Stopp tidtaking";
           timerInterval = setInterval(() => {
             secondsElapsed++;
             const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
@@ -242,30 +196,28 @@
         } else {
           clearInterval(timerInterval);
           timerRunning = false;
-          btn.textContent = 'Start tidtaking';
+          btn.textContent = "Start tidtaking";
         }
       });
 
       document.getElementById('fetchWeatherBtn').addEventListener('click', async () => {
-        const location = document.getElementById('shootingLocation').value;
+        const loc = document.getElementById('shootingLocation').value;
         const date = document.getElementById('shootingDate').value;
         const weatherBox = document.getElementById('weatherData');
         const forecastBox = document.getElementById('hourlyForecast');
-        if (!location || !date) return alert('Fyll inn sted og dato');
+        if (!loc || !date) return alert('Fyll inn sted og dato');
         weatherBox.textContent = 'Henter værdata...';
         try {
-          const geo = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(location)}`);
-          const geoData = await geo.json();
-          const { lat, lon } = geoData[0];
-          const weather = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+          const geo = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(loc)}`);
+          const { lat, lon } = (await geo.json())[0];
+          const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
             headers: { 'User-Agent': 'skyteapp/1.0 kontakt@example.com' }
           });
-          const data = await weather.json();
+          const data = await res.json();
           const series = data.properties.timeseries.filter(e => e.time.startsWith(date));
           const now = series[0]?.data.instant.details;
-          const windDir = now?.wind_from_direction;
-          lastWindDir = windDir;
-          weatherBox.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${windDir}deg);"></span> (${getCompassDirection(windDir)})`;
+          lastWindDir = now.wind_from_direction;
+          weatherBox.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${lastWindDir}deg);"></span> (${getCompassDirection(lastWindDir)})`;
           forecastBox.innerHTML = series.map(f => {
             const h = new Date(f.time).getHours();
             if (h < 5 || h > 15) return '';
@@ -273,37 +225,55 @@
             return `${h}:00 - ${d.air_temperature}°C, ${d.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${d.wind_from_direction}deg);"></span>`;
           }).join('<br>');
         } catch {
-          weatherBox.textContent = 'Kunne ikke hente værdata';
-          forecastBox.textContent = '';
+          weatherBox.textContent = "Klarte ikke hente værdata";
+          forecastBox.innerHTML = '';
         }
       });
 
       document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
-        const name = document.getElementById('nameInput').value || 'Ukjent';
-        const date = document.getElementById('shootingDate').value;
-        const location = document.getElementById('shootingLocation').value || 'Ukjent';
-        const time = document.getElementById('timerDisplay').textContent.replace('Tid: ', '');
-        const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+        const navn = document.getElementById('nameInput').value || 'Ukjent';
+        const dato = document.getElementById('shootingDate').value;
+        const sted = document.getElementById('shootingLocation').value || 'Ukjent';
+        const tid = document.getElementById('timerDisplay').textContent.replace("Tid: ", "");
+        const skrumelding = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         const treff = currentShots.filter(s => s.score >= 7.8).length;
-        const total = currentShots.reduce((sum, s) => sum + s.score, 0);
+        const poeng = currentShots.reduce((sum, s) => sum + s.score, 0);
         seriesCount++;
 
-        await supabase.from('selvanviser').insert({
-          navn: name,
-          dato: date,
-          sted: location,
-          serie: seriesCount,
-          skudd: currentShots.length,
-          poeng: total,
-          treff: treff,
-          tid: time,
-          vindretning: getCompassDirection(lastWindDir ?? 0),
-          vindgrader: lastWindDir ?? 0,
-          skrumelding: adjText,
-          skudddata: currentShots
+        const preview = document.createElement('canvas');
+        preview.width = 100; preview.height = 100;
+        const pctx = preview.getContext('2d');
+        const scale = preview.width / canvas.width;
+        pctx.fillStyle = '#fff';
+        pctx.fillRect(0, 0, 100, 100);
+        for (let j = 10; j >= 1; j--) {
+          pctx.beginPath();
+          pctx.arc(50, 50, j * ringWidth * scale, 0, 2 * Math.PI);
+          pctx.strokeStyle = j === 3 ? '#000' : '#ccc';
+          pctx.lineWidth = j === 3 ? 2 : 0.5;
+          pctx.stroke();
+        }
+        currentShots.forEach(s => {
+          pctx.beginPath();
+          pctx.arc(s.x * scale, s.y * scale, 2, 0, 2 * Math.PI);
+          pctx.fillStyle = s.score >= 7.8 ? 'green' : 'red';
+          pctx.fill();
         });
 
-        alert('Serie lagret!');
+        const dataUrl = preview.toDataURL();
+
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${dato}</td><td>${seriesCount}</td><td>${sted}</td><td>${currentShots.length}</td><td>${poeng} (${treff})</td><td>${tid}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td>${skrumelding}</td><td><img src="${dataUrl}" width="80"></td>`;
+        document.querySelector('#resultTable tbody').appendChild(row);
+
+        await supabase.from('selvanviser').insert({
+          navn, dato, sted, serie: seriesCount, skudd: currentShots.length,
+          poeng, treff, tid, vindretning: getCompassDirection(lastWindDir ?? 0),
+          vindgrader: lastWindDir ?? 0, skrumelding, skudddata: currentShots,
+          miniatur_dataurl: dataUrl
+        });
+
+        alert("Serie lagret!");
         currentShots = [];
         drawTarget();
         updateAdjustmentDisplay();
