@@ -1,256 +1,60 @@
-<!DOCTYPE html>
-<html lang="no">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Utvidet analyse av skyting</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
-    h1 { margin-top: 20px; }
-    #targetCanvas { background: #fff; border: 2px solid #333; display: block; margin: 0 auto; width: 90vw; height: 90vw; max-width: 600px; max-height: 600px; }
-    #controls, #competitionInfo { margin: 15px; }
-    button, input, select, textarea { font-size: 18px; padding: 10px 16px; margin: 5px; cursor: pointer; }
-    table { margin: 0 auto; border-collapse: collapse; font-size: 1em; }
-    th, td { padding: 8px 12px; border: 1px solid #ccc; }
-    #hourlyForecast { margin-top: 10px; font-size: 0.9em; }
-    .logo { max-width: 120px; margin-bottom: 10px; }
-    .wind-arrow {
-      display: inline-block;
-      width: 0;
-      height: 0;
-      border-top: 10px solid red;
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      margin-left: 6px;
-      transform-origin: center;
-    }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body>
-  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
-  <h1>Utvidet analyse av skyting</h1>
+document.getElementById('searchBtn').addEventListener('click', async () => {
+  const name = document.getElementById('searchName').value.trim();
+  const date = document.getElementById('searchDate').value;
+  const resultsContainer = document.getElementById('searchResults');
 
-  <!-- Tid-taking -->
-  <div id="timerControls">
-    <button id="startStopTimerBtn">Start tidtaking</button>
-    <div id="timerDisplay">Tid: 00:00</div>
-  </div>
+  // Bygg spørringen basert på input
+  let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
 
-  <div id="competitionInfo">
-    <input type="text" id="nameInput" placeholder="Navn på utøver" required>
-    <input type="date" id="shootingDate" required>
-    <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata" required>
-    <button id="fetchWeatherBtn">Hent værdata</button>
-    <div id="weatherData">Værdata vises her.</div>
-    <div id="hourlyForecast"></div>
-    <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
-    <div id="adjustmentControls">
-      <h4>Manuell skrumelding</h4>
-      <div>
-        <button id="adjUp">↑ Opp</button>
-      </div>
-      <div>
-        <button id="adjLeft">← Venstre</button>
-        <button id="adjRight">Høyre →</button>
-      </div>
-      <div>
-        <button id="adjDown">↓ Ned</button>
-      </div>
-      <div id="manualAdjustmentDisplay">Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0</div>
-    </div>
-  </div>
+  // Legg til betingelser for søket
+  if (name) {
+    query = query.ilike('navn', `%${name}%`);
+  }
+  if (date) {
+    query = query.eq('dato', date);
+  }
 
-  <div id="seriesTableContainer">
-    <h2>Resultater</h2>
-    <div id="controls">
-      <button id="undoShotBtn" disabled>Angre skudd</button>
-      <button id="saveSeriesBtn" disabled>Lagre serie</button>
-    </div>
+  // Hent data fra Supabase
+  const { data, error } = await query;
 
-    <table id="resultTable">
+  // Sjekk for feil
+  if (error) {
+    console.log(error);
+    resultsContainer.innerHTML = 'Feil ved henting av data.';
+    return;
+  }
+
+  // Hvis ingen resultater, vis melding
+  if (!data.length) {
+    resultsContainer.innerHTML = 'Ingen resultater funnet.';
+    return;
+  }
+
+  // Lag tabell med resultatene
+  const rows = data.map(r => `
+    <tr>
+      <td>${r.navn}</td>
+      <td>${r.dato}</td>
+      <td>${r.serie}</td>
+      <td>${r.sted}</td>
+      <td>${r.skudd}</td>
+      <td>${r.poeng}</td>
+      <td>${r.tid}</td>
+      <td>${r.vindretning}</td>
+      <td>${r.skrumelding}</td>
+      <td><img src='${r.miniatur_dataurl}' width='80'></td>
+    </tr>
+  `).join('');
+
+  // Sett resultatene i HTML
+  resultsContainer.innerHTML = `
+    <table>
       <thead>
-        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <canvas id="targetCanvas" width="600" height="600"></canvas>
-  </div>
-
-  <!-- Historikk søk -->
-  <div id="searchControls">
-    <input type="text" id="searchName" placeholder="Søk på navn">
-    <input type="date" id="searchDate">
-    <button id="searchBtn">Søk</button>
-    <button id="clearBtn">Nullstill</button>
-  </div>
-
-  <div id="searchResults"></div>
-
-  <script>
-    // Initialiser Supabase
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Tidtaking funksjonalitet
-    let timerRunning = false;
-    let timerInterval;
-    let secondsElapsed = 0;
-    const timerBtn = document.getElementById('startStopTimerBtn');
-    const timerDisplay = document.getElementById('timerDisplay');
-
-    timerBtn.addEventListener('click', function () {
-      if (!timerRunning) {
-        secondsElapsed = 0;
-        timerInterval = setInterval(() => {
-          secondsElapsed++;
-          const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-          const sec = String(secondsElapsed % 60).padStart(2, '0');
-          timerDisplay.textContent = `Tid: ${min}:${sec}`;
-        }, 1000);
-        timerRunning = true;
-        timerBtn.textContent = 'Stopp tidtaking';
-      } else {
-        clearInterval(timerInterval);
-        timerRunning = false;
-        timerBtn.textContent = 'Start tidtaking';
-      }
-    });
-
-    // Funksjon for å hente kompassretning basert på grader
-    function getCompassDirection(deg) {
-      const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
-      const i = Math.round(deg / 45) % 8; // Beregn hvilken retning
-      return dirs[i];
-    }
-
-    // Hent værdata
-    async function fetchWeather() {
-      const output = document.getElementById('weatherData');
-      const forecast = document.getElementById('hourlyForecast');
-      const shootingDate = document.getElementById('shootingDate').value;
-      const shootingLocation = document.getElementById('shootingLocation').value;
-
-      if (!shootingDate || !shootingLocation) {
-        output.textContent = 'Vennligst fyll inn både dato og sted.';
-        return;
-      }
-
-      output.textContent = 'Henter værdata...';
-      try {
-        const geoRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(shootingLocation)}`);
-        const geoData = await geoRes.json();
-        if (!geoData.length) {
-          output.textContent = 'Sted ikke funnet. Prøv et annet sted.';
-          forecast.innerHTML = '';
-          return;
-        }
-        const { lat, lon } = geoData[0];
-
-        const weatherRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-          headers: { 'User-Agent': 'skyteanalyse/1.0 kontakt@example.com' }
-        });
-        const data = await weatherRes.json();
-
-        const forecasts = data.properties.timeseries.filter(f => {
-          const dt = new Date(f.time);
-          const h = dt.getHours();
-          return f.time.startsWith(shootingDate) && h >= 5 && h <= 15;
-        });
-
-        if (!forecasts.length) {
-          output.textContent = 'Ingen værdata for valgt dato.';
-          forecast.innerHTML = '';
-          return;
-        }
-
-        const now = forecasts[0].data.instant.details;
-        const windDir = forecasts[0].data.instant.details.wind_from_direction;
-        output.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${windDir}deg);'></span> (${getCompassDirection(windDir)})`;
-
-        const hourly = forecasts.map(item => {
-          const time = new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const d = item.data.instant.details;
-          return `${time}: ${d.air_temperature}°C, ${d.wind_speed} m/s <span class='wind-arrow' style='transform: rotate(${item.data.instant.details.wind_from_direction}deg);'></span> (${getCompassDirection(item.data.instant.details.wind_from_direction)})`;
-        }).join('<br>');
-
-        forecast.innerHTML = `<strong>Vær time for time (${shootingDate} 05–15):</strong><br>${hourly}`;
-      } catch (e) {
-        output.textContent = 'Klarte ikke hente værdata.';
-        forecast.innerHTML = '';
-      }
-    }
-
-    // Historikk søk
-    document.getElementById('searchBtn').addEventListener('click', async () => {
-      const name = document.getElementById('searchName').value.trim();
-      const date = document.getElementById('searchDate').value;
-      const resultsContainer = document.getElementById('searchResults');
-
-      // Bygg spørringen basert på input
-      let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-
-      // Legg til betingelser for søket
-      if (name) {
-        query = query.ilike('navn', `%${name}%`);
-      }
-      if (date) {
-        query = query.eq('dato', date);
-      }
-
-      // Hent data fra Supabase
-      const { data, error } = await query;
-
-      // Sjekk for feil
-      if (error) {
-        console.log(error);
-        resultsContainer.innerHTML = 'Feil ved henting av data.';
-        return;
-      }
-
-      // Hvis ingen resultater, vis melding
-      if (!data.length) {
-        resultsContainer.innerHTML = 'Ingen resultater funnet.';
-        return;
-      }
-
-      // Lag tabell med resultatene
-      const rows = data.map(r => `
         <tr>
-          <td>${r.navn}</td>
-          <td>${r.dato}</td>
-          <td>${r.serie}</td>
-          <td>${r.sted}</td>
-          <td>${r.skudd}</td>
-          <td>${r.poeng}</td>
-          <td>${r.tid}</td>
-          <td>${r.vindretning}</td>
-          <td>${r.skrumelding}</td>
-          <td><img src='${r.miniatur_dataurl}' width='80'></td>
+          <th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th>
         </tr>
-      `).join('');
-
-      // Sett resultatene i HTML
-      resultsContainer.innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-    });
-
-    // Nullstill søk
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchDate').value = '';
-      document.getElementById('searchResults').innerHTML = '';
-    });
-  </script>
-</body>
-</html>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+});
