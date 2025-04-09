@@ -165,7 +165,8 @@
   <script>
     const supabase = window.supabase.createClient(
       "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // <-- Lim inn hele nøkkelen din her
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
     );
 
     window.addEventListener('DOMContentLoaded', () => {
