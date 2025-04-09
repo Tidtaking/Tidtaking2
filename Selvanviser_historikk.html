@@ -15,17 +15,12 @@
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
-  <h1>Historikk - Søk etter Skyteinformasjon</h1>
+  <h1>Historikk - Skyteinformasjon</h1>
 
-  <!-- Søkekontroller -->
-  <div id="searchControls">
-    <input type="text" id="searchName" placeholder="Søk på navn">
-    <input type="text" id="searchLocation" placeholder="Søk på sted">
-    <input type="date" id="searchDate">
-    <button id="searchBtn">Søk</button>
-    <button id="clearBtn">Nullstill</button>
+  <div>
+    <button id="loadBtn">Last alle resultater</button>
   </div>
-  
+
   <!-- Resultatvisning -->
   <div id="searchResults"></div>
 
@@ -35,54 +30,28 @@
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     window.addEventListener('DOMContentLoaded', () => {
-      const searchBtn = document.getElementById('searchBtn');
-      const clearBtn = document.getElementById('clearBtn');
+      const loadBtn = document.getElementById('loadBtn');
       const resultsContainer = document.getElementById('searchResults');
-      
-      searchBtn.addEventListener('click', async () => {
-        const name = document.getElementById('searchName').value.trim();
-        const location = document.getElementById('searchLocation').value.trim();
-        const date = document.getElementById('searchDate').value;
 
-        console.log('Søker med følgende kriterier:');
-        console.log('Navn:', name);
-        console.log('Sted:', location);
-        console.log('Dato:', date);
+      loadBtn.addEventListener('click', async () => {
+        resultsContainer.innerHTML = "Laster resultater...";
 
-        // Bygg spørring
-        let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+        const { data, error } = await supabase
+          .from('selvanviser')
+          .select('*')
+          .order('dato', { ascending: false });
 
-        // Legg til filtre hvis de er angitt
-        if (name) {
-          query = query.ilike('navn', `%${name}%`);
-        }
-        if (location) {
-          query = query.ilike('sted', `%${location}%`);
-        }
-        if (date) {
-          query = query.eq('dato', date);
-        }
-
-        console.log('Spørring:', query); // Se spørringen som blir sendt til Supabase
-        
-        // Kjør spørringen mot Supabase
-        const { data, error } = await query;
         if (error) {
           console.error('Feil ved henting av data:', error);
           resultsContainer.innerHTML = 'Feil ved henting av data.';
           return;
         }
 
-        console.log('Data hentet:', data); // Se resultatene fra spørringen
-        
-        // Hvis det ikke er noen resultater
         if (!data || data.length === 0) {
-          console.log("Ingen resultater funnet.");
           resultsContainer.innerHTML = 'Ingen resultater funnet.';
           return;
         }
 
-        // Bygg HTML for resultatene
         const rows = data.map(r => `
           <tr>
             <td>${r.navn}</td>
@@ -98,7 +67,6 @@
           </tr>
         `).join('');
 
-        // Sett inn resultatene i resultatboksen
         resultsContainer.innerHTML = `
           <table>
             <thead>
@@ -107,14 +75,6 @@
             <tbody>${rows}</tbody>
           </table>
         `;
-      });
-
-      // Funksjon for å nullstille søket
-      clearBtn.addEventListener('click', () => {
-        document.getElementById('searchName').value = '';
-        document.getElementById('searchLocation').value = '';
-        document.getElementById('searchDate').value = '';
-        resultsContainer.innerHTML = '';
       });
     });
   </script>
