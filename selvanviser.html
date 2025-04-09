@@ -31,11 +31,13 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
 
+  <!-- Tidtakerkontroller -->
   <div id="timerControls">
     <button id="startStopTimerBtn">Start tidtaking</button>
     <div id="timerDisplay">Tid: 00:00</div>
   </div>
 
+  <!-- Utøverinformasjon og værdata -->
   <div id="competitionInfo">
     <input type="text" id="nameInput" placeholder="Navn på utøver" required>
     <input type="date" id="shootingDate" required>
@@ -44,6 +46,8 @@
     <div id="weatherData">Værdata vises her.</div>
     <div id="hourlyForecast"></div>
     <div id="adjustmentSuggestion" style="margin-top: 10px; font-size: 0.95em; font-weight: bold;"></div>
+
+    <!-- Manuelle skrumeldingsknapper -->
     <div id="adjustmentControls">
       <h4>Manuell skrumelding</h4>
       <div>
@@ -60,23 +64,23 @@
     </div>
   </div>
 
+  <!-- Tabell for lagring av resultater -->
   <div id="seriesTableContainer">
     <h2>Resultater</h2>
     <div id="controls">
       <button id="undoShotBtn" disabled>Angre skudd</button>
       <button id="saveSeriesBtn" disabled>Lagre serie</button>
     </div>
-
     <table id="resultTable">
       <thead>
         <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
       </thead>
       <tbody></tbody>
     </table>
-
     <canvas id="targetCanvas" width="600" height="600"></canvas>
   </div>
 
+  <!-- Historikk søk -->
   <div id="searchControls">
     <input type="text" id="searchName" placeholder="Søk på navn">
     <input type="date" id="searchDate">
@@ -87,7 +91,7 @@
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      // Tidtaking funksjon
+      // Tidtaker
       const timerBtn = document.getElementById('startStopTimerBtn');
       const timerDisplay = document.getElementById('timerDisplay');
       let timerRunning = false;
