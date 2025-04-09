@@ -88,6 +88,7 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Historikk - Søk etter Skyteinformasjon</h1>
 
+  <!-- Søkekontroller -->
   <div id="searchControls">
     <input type="text" id="searchName" placeholder="Søk på navn">
     <input type="text" id="searchLocation" placeholder="Søk på sted">
@@ -96,8 +97,10 @@
     <button id="clearBtn">Nullstill</button>
   </div>
 
+  <!-- Resultatvisning -->
   <div id="searchResults"></div>
 
+  <!-- Bilde-modal -->
   <div id="imageModal" class="modal" onclick="this.style.display='none'">
     <button onclick="document.getElementById('imageModal').style.display='none'">✕</button>
     <a id="downloadLink" download>
@@ -105,6 +108,7 @@
     </a>
   </div>
 
+  <!-- Treffprosent-modal -->
   <div id="hitStatsModal" class="modal" style="display:none;">
     <button onclick="document.getElementById('hitStatsModal').style.display='none'">✕</button>
     <div id="hitStatsContent" style="background: white; padding: 20px; border-radius: 10px; max-width: 90%; text-align: center;"></div>
@@ -112,7 +116,7 @@
 
   <script>
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     window.addEventListener('DOMContentLoaded', () => {
