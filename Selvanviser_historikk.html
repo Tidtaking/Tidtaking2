@@ -1,91 +1,65 @@
-<!DOCTYPE html>
-<html lang="no">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Historikk Søk - Selvanviser</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
-    h1 { margin-top: 20px; }
-    #controls, #searchResults { margin: 15px; }
-    button, input, select { font-size: 18px; padding: 10px 16px; margin: 5px; cursor: pointer; }
-    table { margin: 0 auto; border-collapse: collapse; font-size: 1em; }
-    th, td { padding: 8px 12px; border: 1px solid #ccc; }
-    .logo { max-width: 120px; margin-bottom: 10px; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body>
-  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
-  <h1>Historikk Søk - Selvanviser</h1>
+document.getElementById('searchBtn').addEventListener('click', async () => {
+  const name = document.getElementById('searchName').value.trim();
+  const location = document.getElementById('searchLocation').value.trim();
+  const date = document.getElementById('searchDate').value;
+  const resultsContainer = document.getElementById('searchResults');
 
-  <div id="searchControls">
-    <input type="text" id="searchName" placeholder="Søk på navn">
-    <input type="text" id="searchLocation" placeholder="Søk på sted">
-    <input type="date" id="searchDate">
-    <button id="searchBtn">Søk</button>
-    <button id="clearBtn">Nullstill</button>
-  </div>
+  console.log('Søker med følgende kriterier:');
+  console.log('Navn:', name);
+  console.log('Sted:', location);
+  console.log('Dato:', date);
 
-  <div id="searchResults"></div>
+  let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+  
+  // Bygg søkekriteriene
+  if (name) {
+    query = query.ilike('navn', `%${name}%`);
+  }
+  if (location) {
+    query = query.ilike('sted', `%${location}%`);
+  }
+  if (date) {
+    query = query.eq('dato', date);
+  }
 
-  <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  console.log('Spørring:', query); // Sjekk spørringen før den kjøres
+  
+  // Kjør spørringen
+  const { data, error } = await query;
+  if (error) {
+    console.error('Feil ved henting av data:', error);
+    resultsContainer.innerHTML = 'Feil ved henting av data.';
+    return;
+  }
+  console.log('Data hentet:', data);
 
-    document.getElementById('searchBtn').addEventListener('click', async () => {
-      const name = document.getElementById('searchName').value.trim();
-      const location = document.getElementById('searchLocation').value.trim();
-      const date = document.getElementById('searchDate').value;
-      const resultsContainer = document.getElementById('searchResults');
+  if (!data.length) {
+    resultsContainer.innerHTML = 'Ingen resultater funnet.';
+    return;
+  }
 
-      let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-      if (name) query = query.ilike('navn', `%${name}%`);
-      if (location) query = query.ilike('sted', `%${location}%`);
-      if (date) query = query.eq('dato', date);
+  // Vis resultater
+  const rows = data.map(r => `
+    <tr>
+      <td>${r.navn}</td>
+      <td>${r.dato}</td>
+      <td>${r.serie}</td>
+      <td>${r.sted}</td>
+      <td>${r.skudd}</td>
+      <td>${r.poeng}</td>
+      <td>${r.tid}</td>
+      <td>${r.vindretning}</td>
+      <td>${r.skrumelding}</td>
+      <td><img src="${r.miniatur_dataurl}" width="80"></td>
+    </tr>
+  `).join('');
 
-      const { data, error } = await query;
-      if (error) {
-        resultsContainer.innerHTML = 'Feil ved henting av data.';
-        return;
-      }
-      if (!data.length) {
-        resultsContainer.innerHTML = 'Ingen resultater funnet.';
-        return;
-      }
-
-      const rows = data.map(r => `
-        <tr>
-          <td>${r.navn}</td>
-          <td>${r.dato}</td>
-          <td>${r.serie}</td>
-          <td>${r.sted}</td>
-          <td>${r.skudd}</td>
-          <td>${r.poeng}</td>
-          <td>${r.tid}</td>
-          <td>${r.vindretning}</td>
-          <td>${r.skrumelding}</td>
-          <td><img src="${r.miniatur_dataurl}" width="80"></td>
-        </tr>
-      `).join('');
-
-      resultsContainer.innerHTML = `
-        <table>
-          <thead>
-            <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vindretning</th><th>Skrumelding</th><th>Miniatyr</th></tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-    });
-
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchLocation').value = '';
-      document.getElementById('searchDate').value = '';
-      document.getElementById('searchResults').innerHTML = '';
-    });
-  </script>
-</body>
-</html>
+  resultsContainer.innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vindretning</th><th>Skrumelding</th><th>Miniatyr</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+});
