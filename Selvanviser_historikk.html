@@ -42,6 +42,9 @@
       border: 1px solid #ccc;
       text-align: center;
     }
+    th.sortable {
+      cursor: pointer;
+    }
     img.thumbnail {
       cursor: pointer;
       max-width: 80px;
@@ -157,7 +160,19 @@
           <button id="deleteBtn">Slett valgte</button>
           <table>
             <thead>
-              <tr><th></th><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vindretning</th><th>Skrumelding</th><th>Miniatyr</th></tr>
+              <tr>
+                <th></th>
+                <th>Navn</th>
+                <th id="sortDateHeader" class="sortable">Dato ▲▼</th>
+                <th>Serie</th>
+                <th>Sted</th>
+                <th>Skudd</th>
+                <th>Poeng</th>
+                <th>Tid</th>
+                <th>Vindretning</th>
+                <th>Skrumelding</th>
+                <th>Miniatyr</th>
+              </tr>
             </thead>
             <tbody>${rows}</tbody>
           </table>
@@ -181,6 +196,26 @@
         document.getElementById('selectAllBtn').addEventListener('click', () => {
           document.querySelectorAll('.selectRow').forEach(cb => cb.checked = true);
         });
+
+        // Sorter dato frontend
+        let currentSortAsc = false;
+        const sortHeader = document.getElementById('sortDateHeader');
+        sortHeader.addEventListener('click', () => {
+          currentSortAsc = !currentSortAsc;
+          const tbody = resultsContainer.querySelector('tbody');
+          const rowsArray = Array.from(tbody.querySelectorAll('tr'));
+
+          rowsArray.sort((a, b) => {
+            const dateA = new Date(a.cells[2].innerText);
+            const dateB = new Date(b.cells[2].innerText);
+            return currentSortAsc ? dateA - dateB : dateB - dateA;
+          });
+
+          tbody.innerHTML = '';
+          rowsArray.forEach(row => tbody.appendChild(row));
+
+          sortHeader.innerHTML = `Dato ${currentSortAsc ? '▲' : '▼'}`;
+        });
       }
     });
 
@@ -193,7 +228,8 @@
       modal.style.display = 'flex';
     }
   </script>
-   <div class="nav-links">
+
+  <div class="nav-links">
     <a href="https://tidtaking.github.io/Tidtaking2/">Oppsett konkurranse</a>
     <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
     <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
