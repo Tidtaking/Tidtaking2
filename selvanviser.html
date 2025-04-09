@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Utvidet analyse av skyting</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,17 +13,8 @@
       padding: 10px;
       background: #f5f5f5;
     }
-
-    h1 {
-      margin-top: 20px;
-      font-size: 2em;
-    }
-
-    .logo {
-      max-width: 120px;
-      margin-bottom: 10px;
-    }
-
+    h1 { margin-top: 20px; font-size: 2em; }
+    .logo { max-width: 120px; margin-bottom: 10px; }
     #targetCanvas {
       background: #fff;
       border: 2px solid #333;
@@ -32,19 +24,14 @@
       max-width: 600px;
       aspect-ratio: 1 / 1;
     }
-
-    #competitionInfo,
-    #controls,
-    #timerControls,
-    #adjustmentControls {
+    #competitionInfo, #controls, #timerControls, #adjustmentControls {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 10px;
       margin: 15px 0;
     }
-
-    button, input, select, textarea {
+    button, input {
       font-size: 1rem;
       padding: 0.75em 1em;
       margin: 4px;
@@ -53,28 +40,19 @@
       box-sizing: border-box;
       cursor: pointer;
     }
-
     table {
       margin: 0 auto;
       border-collapse: collapse;
       font-size: 1em;
       width: 100%;
-      max-width: 100%;
       overflow-x: auto;
       display: block;
     }
-
     th, td {
       padding: 8px 12px;
       border: 1px solid #ccc;
       text-align: center;
     }
-
-    #hourlyForecast {
-      margin-top: 10px;
-      font-size: 0.9em;
-    }
-
     .wind-arrow {
       display: inline-block;
       width: 0;
@@ -85,33 +63,20 @@
       margin-left: 6px;
       transform-origin: center;
     }
-
     @media (max-width: 600px) {
-      h1 {
-        font-size: 1.5em;
-      }
-
-      .logo {
-        max-width: 80px;
-      }
-
-      th, td {
-        padding: 6px 8px;
-        font-size: 0.9em;
-      }
+      h1 { font-size: 1.5em; }
+      .logo { max-width: 80px; }
+      th, td { padding: 6px 8px; font-size: 0.9em; }
     }
-
     .nav-links {
       margin-top: 20px;
     }
-
     .nav-links a {
       color: #333;
       text-decoration: none;
       font-size: 1rem;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo" />
@@ -162,22 +127,11 @@
     <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk">Selvanviser historikk</a>
   </div>
 
-  <!-- Hele JavaScript-blokken er samlet her -->
   <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-    window.addEventListener('DOMContentLoaded', () => {
-      // Hele koden din for canvas, tidtaking, skuddregistrering, værdata og lagring går her
-      // Du har allerede hele logikken, og nå er den korrekt pakket inn
-
-      // Eksempel for å vise at alt funker:
-      document.getElementById('shootingDate').value = new Date().toISOString().split('T')[0];
-      console.log("App klar – Supabase koblet til:", supabaseUrl);
-
-
-
+    const supabase = window.supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    );
 
     window.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('targetCanvas');
@@ -359,5 +313,6 @@
         document.getElementById('undoShotBtn').disabled = true;
       });
     });
+  </script>
 </body>
 </html>
