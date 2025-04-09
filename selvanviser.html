@@ -162,11 +162,10 @@
     <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk">Selvanviser historikk</a>
   </div>
 
-  <!-- JS start -->
   <script>
     const supabase = window.supabase.createClient(
       "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // <-- Lim inn hele nøkkelen din her
     );
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -176,6 +175,8 @@
       const centerY = canvas.height / 2;
       const R = canvas.width / 2;
       const ringWidth = R / 10;
+      const dateInput = document.getElementById('shootingDate');
+      dateInput.value = new Date().toISOString().split('T')[0];
 
       let currentShots = [];
       let seriesCount = 0;
@@ -185,7 +186,11 @@
       let adjustment = { up: 0, down: 0, left: 0, right: 0 };
       let timerRunning = false;
 
-      document.getElementById('shootingDate').value = new Date().toISOString().split('T')[0];
+      function getCompassDirection(deg) {
+        const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
+        const i = Math.round(deg / 45) % 8;
+        return dirs[i];
+      }
 
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -204,15 +209,6 @@
         }
       }
 
-      function computeScore(x, y) {
-        const dx = x - centerX;
-        const dy = y - centerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > R) return 0;
-        const ring = Math.floor(distance / ringWidth);
-        return 10 - ring;
-      }
-
       function drawShot(shot, index) {
         ctx.beginPath();
         ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
@@ -221,81 +217,136 @@
         ctx.stroke();
         ctx.fillStyle = 'black';
         ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
         ctx.fillText(index + 1, shot.x, shot.y - 10);
       }
 
-      function redrawShots() {
-        drawTarget();
-        currentShots.forEach((shot, i) => drawShot(shot, i));
+      function computeScore(x, y) {
+        const dx = x - centerX;
+        const dy = y - centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const ring = Math.floor(distance / ringWidth);
+        return (distance > R) ? 0 : 10 - ring;
       }
-
-      drawTarget();
-
-      canvas.addEventListener('click', e => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-        const score = computeScore(x, y);
-        currentShots.push({ score, x, y });
-        redrawShots();
-        document.getElementById('undoShotBtn').disabled = false;
-        document.getElementById('saveSeriesBtn').disabled = false;
-      });
-
-      document.getElementById('undoShotBtn').addEventListener('click', () => {
-        currentShots.pop();
-        redrawShots();
-        document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
-      });
-
-      document.getElementById('adjUp').addEventListener('click', () => {
-        adjustment.up++; adjustment.down = 0;
-        updateAdjustmentDisplay();
-      });
-
-      document.getElementById('adjDown').addEventListener('click', () => {
-        adjustment.down++; adjustment.up = 0;
-        updateAdjustmentDisplay();
-      });
-
-      document.getElementById('adjLeft').addEventListener('click', () => {
-        adjustment.left++; adjustment.right = 0;
-        updateAdjustmentDisplay();
-      });
-
-      document.getElementById('adjRight').addEventListener('click', () => {
-        adjustment.right++; adjustment.left = 0;
-        updateAdjustmentDisplay();
-      });
 
       function updateAdjustmentDisplay() {
         document.getElementById('manualAdjustmentDisplay').textContent =
           `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
       }
 
+      drawTarget();
+
+      canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        const score = computeScore(x, y);
+        currentShots.push({ x, y, score });
+        drawTarget();
+        currentShots.forEach(drawShot);
+        document.getElementById('saveSeriesBtn').disabled = false;
+        document.getElementById('undoShotBtn').disabled = false;
+      });
+
+      document.getElementById('undoShotBtn').addEventListener('click', () => {
+        currentShots.pop();
+        drawTarget();
+        currentShots.forEach(drawShot);
+        document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
+      });
+
+      ['adjUp', 'adjDown', 'adjLeft', 'adjRight'].forEach(id => {
+        document.getElementById(id).addEventListener('click', () => {
+          const dir = id.replace('adj', '').toLowerCase();
+          Object.keys(adjustment).forEach(k => adjustment[k] = (k === dir) ? adjustment[k] + 1 : 0);
+          updateAdjustmentDisplay();
+        });
+      });
+
       document.getElementById('startStopTimerBtn').addEventListener('click', () => {
         const display = document.getElementById('timerDisplay');
         const btn = document.getElementById('startStopTimerBtn');
-
         if (!timerRunning) {
           timerRunning = true;
           btn.textContent = 'Stopp tidtaking';
           timerInterval = setInterval(() => {
             secondsElapsed++;
-            const minutes = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-            const seconds = String(secondsElapsed % 60).padStart(2, '0');
-            display.textContent = `Tid: ${minutes}:${seconds}`;
+            const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const sec = String(secondsElapsed % 60).padStart(2, '0');
+            display.textContent = `Tid: ${min}:${sec}`;
           }, 1000);
         } else {
-          timerRunning = false;
           clearInterval(timerInterval);
+          timerRunning = false;
           btn.textContent = 'Start tidtaking';
         }
       });
 
-      // Hent værdata + lagre serie logikk legges inn her (kan kopieres fra din tidligere kode)
+      document.getElementById('fetchWeatherBtn').addEventListener('click', async () => {
+        const location = document.getElementById('shootingLocation').value;
+        const date = document.getElementById('shootingDate').value;
+        const weatherBox = document.getElementById('weatherData');
+        const forecastBox = document.getElementById('hourlyForecast');
+        if (!location || !date) return alert('Fyll inn sted og dato');
+        weatherBox.textContent = 'Henter værdata...';
+        try {
+          const geo = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(location)}`);
+          const geoData = await geo.json();
+          const { lat, lon } = geoData[0];
+          const weather = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+            headers: { 'User-Agent': 'skyteapp/1.0 kontakt@example.com' }
+          });
+          const data = await weather.json();
+          const series = data.properties.timeseries.filter(e => e.time.startsWith(date));
+          const now = series[0]?.data.instant.details;
+          const windDir = now?.wind_from_direction;
+          lastWindDir = windDir;
+          weatherBox.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${windDir}deg);"></span> (${getCompassDirection(windDir)})`;
+          forecastBox.innerHTML = series.map(f => {
+            const h = new Date(f.time).getHours();
+            if (h < 5 || h > 15) return '';
+            const d = f.data.instant.details;
+            return `${h}:00 - ${d.air_temperature}°C, ${d.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${d.wind_from_direction}deg);"></span>`;
+          }).join('<br>');
+        } catch {
+          weatherBox.textContent = 'Kunne ikke hente værdata';
+          forecastBox.textContent = '';
+        }
+      });
+
+      document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
+        const name = document.getElementById('nameInput').value || 'Ukjent';
+        const date = document.getElementById('shootingDate').value;
+        const location = document.getElementById('shootingLocation').value || 'Ukjent';
+        const time = document.getElementById('timerDisplay').textContent.replace('Tid: ', '');
+        const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+        const treff = currentShots.filter(s => s.score >= 7.8).length;
+        const total = currentShots.reduce((sum, s) => sum + s.score, 0);
+        seriesCount++;
+
+        await supabase.from('selvanviser').insert({
+          navn: name,
+          dato: date,
+          sted: location,
+          serie: seriesCount,
+          skudd: currentShots.length,
+          poeng: total,
+          treff: treff,
+          tid: time,
+          vindretning: getCompassDirection(lastWindDir ?? 0),
+          vindgrader: lastWindDir ?? 0,
+          skrumelding: adjText,
+          skudddata: currentShots
+        });
+
+        alert('Serie lagret!');
+        currentShots = [];
+        drawTarget();
+        updateAdjustmentDisplay();
+        secondsElapsed = 0;
+        document.getElementById('timerDisplay').textContent = 'Tid: 00:00';
+        document.getElementById('saveSeriesBtn').disabled = true;
+        document.getElementById('undoShotBtn').disabled = true;
+      });
     });
   </script>
 </body>
