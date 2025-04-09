@@ -1,69 +1,31 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Utvidet analyse av skyting</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 10px;
-      background: #f5f5f5;
+    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
+    h1 { margin-top: 20px; }
+    table { margin: 0 auto; border-collapse: collapse; font-size: 1em; }
+    th, td { padding: 8px 12px; border: 1px solid #ccc; text-align: center; }
+    .logo { max-width: 120px; margin-bottom: 10px; }
+    .modal {
+      display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%;
+      height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8);
     }
-    h1 {
-      margin-top: 20px;
+    .modal-content {
+      margin: 5% auto; display: flex; flex-direction: column; align-items: center;
+      background-color: white; padding: 20px; max-width: 90%;
     }
-    table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      font-size: 1em;
-      background: white;
+    .modal-content img {
+      max-width: 100%; height: auto;
     }
-    th, td {
-      padding: 8px 12px;
-      border: 1px solid #ccc;
+    .close {
+      color: #aaa; font-size: 28px; font-weight: bold; position: absolute; top: 10px; right: 20px; cursor: pointer;
     }
-    .logo {
-      max-width: 120px;
-      margin-bottom: 10px;
-    }
-    img.thumbnail {
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    img.thumbnail:hover {
-      transform: scale(1.05);
-    }
-
-    /* Modal-stil for bildevisning */
-    #imageModal {
-      display: none;
-      position: fixed;
-      z-index: 9999;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0, 0, 0, 0.9);
-      justify-content: center;
-      align-items: center;
-    }
-    #modalImage {
-      max-width: 90%;
-      max-height: 90%;
-      cursor: zoom-in;
-      transition: transform 0.2s ease-in-out;
-    }
-    #downloadBtn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: #fff;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
+    #deleteBtn {
+      margin-top: 10px;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -79,15 +41,19 @@
     <input type="date" id="searchDate">
     <button id="searchBtn">Søk</button>
     <button id="clearBtn">Nullstill</button>
+    <button id="deleteBtn">Slett valgte</button>
   </div>
   
   <!-- Resultatvisning -->
   <div id="searchResults"></div>
 
-  <!-- Modal for større bilde -->
-  <div id="imageModal">
-    <button id="downloadBtn">Last ned</button>
-    <img id="modalImage" src="" alt="Full størrelse">
+  <!-- Modal for bildevisning -->
+  <div id="imageModal" class="modal">
+    <span class="close" id="closeModal">&times;</span>
+    <div class="modal-content">
+      <img id="modalImage" src="" alt="Full størrelse bilde" />
+      <a id="downloadLink" href="#" download="bilde.jpg">Last ned</a>
+    </div>
   </div>
 
   <script>
@@ -95,99 +61,106 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    window.addEventListener('DOMContentLoaded', () => {
-      const searchBtn = document.getElementById('searchBtn');
-      const clearBtn = document.getElementById('clearBtn');
-      const resultsContainer = document.getElementById('searchResults');
-      const modal = document.getElementById('imageModal');
-      const modalImg = document.getElementById('modalImage');
-      const downloadBtn = document.getElementById('downloadBtn');
-      
-      searchBtn.addEventListener('click', async () => {
-        const name = document.getElementById('searchName').value.trim();
-        const location = document.getElementById('searchLocation').value.trim();
-        const date = document.getElementById('searchDate').value;
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const resultsContainer = document.getElementById('searchResults');
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const closeModal = document.getElementById('closeModal');
+    const downloadLink = document.getElementById('downloadLink');
 
-        let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+    function openModal(src) {
+      modal.style.display = 'block';
+      modalImage.src = src;
+      downloadLink.href = src;
+    }
 
-        if (name) query = query.ilike('navn', `%${name}%`);
-        if (location) query = query.ilike('sted', `%${location}%`);
-        if (date) query = query.eq('dato', date);
+    closeModal.onclick = () => {
+      modal.style.display = 'none';
+    };
 
-        const { data, error } = await query;
-        if (error) {
-          resultsContainer.innerHTML = 'Feil ved henting av data.';
-          return;
-        }
+    window.onclick = (e) => {
+      if (e.target == modal) modal.style.display = 'none';
+    };
 
-        if (!data || data.length === 0) {
-          resultsContainer.innerHTML = 'Ingen resultater funnet.';
-          return;
-        }
+    searchBtn.addEventListener('click', async () => {
+      const name = document.getElementById('searchName').value.trim();
+      const location = document.getElementById('searchLocation').value.trim();
+      const date = document.getElementById('searchDate').value;
 
-        const rows = data.map(r => `
-          <tr>
-            <td>${r.navn}</td>
-            <td>${r.dato}</td>
-            <td>${r.serie}</td>
-            <td>${r.sted}</td>
-            <td>${r.skudd}</td>
-            <td>${r.poeng}</td>
-            <td>${r.tid}</td>
-            <td>${r.vindretning}</td>
-            <td>${r.skrumelding}</td>
-            <td><img src="${r.miniatur_dataurl}" width="80" class="thumbnail" data-full="${r.miniatur_dataurl}"></td>
-          </tr>
-        `).join('');
+      let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+      if (name) query = query.ilike('navn', `%${name}%`);
+      if (location) query = query.ilike('sted', `%${location}%`);
+      if (date) query = query.eq('dato', date);
 
-        resultsContainer.innerHTML = `
-          <table>
-            <thead>
-              <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vindretning</th><th>Skrumelding</th><th>Miniatyr</th></tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        `;
-      });
+      const { data, error } = await query;
+      if (error) {
+        console.error('Feil ved henting av data:', error);
+        resultsContainer.innerHTML = 'Feil ved henting av data.';
+        return;
+      }
 
-      clearBtn.addEventListener('click', () => {
-        document.getElementById('searchName').value = '';
-        document.getElementById('searchLocation').value = '';
-        document.getElementById('searchDate').value = '';
-        resultsContainer.innerHTML = '';
-      });
+      if (!data || data.length === 0) {
+        resultsContainer.innerHTML = 'Ingen resultater funnet.';
+        return;
+      }
 
-      // Modal logikk
-      document.addEventListener('click', e => {
-        if (e.target.classList.contains('thumbnail')) {
-          const fullImageUrl = e.target.getAttribute('data-full');
-          modal.style.display = 'flex';
-          modalImg.src = fullImageUrl;
-          modalImg.style.transform = 'scale(1)';
-          scale = 1;
-          downloadBtn.onclick = () => {
-            const a = document.createElement('a');
-            a.href = fullImageUrl;
-            a.download = 'bilde.jpg';
-            a.click();
-          };
-        } else if (e.target === modal) {
-          modal.style.display = 'none';
-        }
-      });
+      const rows = data.map(r => `
+        <tr>
+          <td><input type="checkbox" class="selectRow" data-id="${r.id}"></td>
+          <td>${r.navn}</td>
+          <td>${r.dato}</td>
+          <td>${r.serie}</td>
+          <td>${r.sted}</td>
+          <td>${r.skudd}</td>
+          <td>${r.poeng}</td>
+          <td>${r.tid}</td>
+          <td>${r.vindretning}</td>
+          <td>${r.skrumelding}</td>
+          <td><img src="${r.miniatur_dataurl}" width="80" style="cursor:pointer;" onclick="openModal('${r.miniatur_dataurl}')"></td>
+        </tr>
+      `).join('');
 
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') modal.style.display = 'none';
-      });
+      resultsContainer.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Velg</th><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th>
+              <th>Poeng</th><th>Tid</th><th>Vindretning</th><th>Skrumelding</th><th>Miniatyr</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    });
 
-      // Zoom-funksjonalitet
-      let scale = 1;
-      modalImg.addEventListener('wheel', e => {
-        e.preventDefault();
-        scale += e.deltaY * -0.001;
-        scale = Math.min(Math.max(1, scale), 5);
-        modalImg.style.transform = `scale(${scale})`;
-      });
+    clearBtn.addEventListener('click', () => {
+      document.getElementById('searchName').value = '';
+      document.getElementById('searchLocation').value = '';
+      document.getElementById('searchDate').value = '';
+      resultsContainer.innerHTML = '';
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      const checkboxes = document.querySelectorAll('.selectRow:checked');
+      const idsToDelete = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+      if (idsToDelete.length === 0) {
+        alert("Ingen rader valgt for sletting.");
+        return;
+      }
+
+      if (!confirm(`Er du sikker på at du vil slette ${idsToDelete.length} rad(er)?`)) return;
+
+      const { error } = await supabase.from('selvanviser').delete().in('id', idsToDelete);
+      if (error) {
+        alert("Feil ved sletting: " + error.message);
+        return;
+      }
+
+      alert("Sletting fullført.");
+      searchBtn.click(); // Oppdater visning
     });
   </script>
 </body>
