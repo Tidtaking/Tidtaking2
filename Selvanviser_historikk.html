@@ -45,6 +45,11 @@
     th.sortable {
       cursor: pointer;
     }
+    .clickableName {
+      color: blue;
+      text-decoration: underline;
+      cursor: pointer;
+    }
     img.thumbnail {
       cursor: pointer;
       max-width: 80px;
@@ -73,6 +78,9 @@
       cursor: pointer;
       padding: 5px 10px;
     }
+    #hitStatsContent h2 {
+      margin-top: 0;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -98,6 +106,13 @@
     <a id="downloadLink" download>
       <img id="modalImage" src="">
     </a>
+  </div>
+
+  <!-- Treffprosent-modal -->
+  <div id="hitStatsModal" class="modal" style="display:none;">
+    <button onclick="document.getElementById('hitStatsModal').style.display='none'">&#10005;</button>
+    <div id="hitStatsContent" style="background: white; padding: 20px; border-radius: 10px; max-width: 90%; text-align: center;">
+    </div>
   </div>
 
   <script>
@@ -140,9 +155,9 @@
         }
 
         const rows = data.map(r => `
-          <tr>
+          <tr data-id="${r.id}" data-navn="${r.navn}">
             <td><input type="checkbox" class="selectRow" data-id="${r.id}"></td>
-            <td>${r.navn}</td>
+            <td class="clickableName">${r.navn}</td>
             <td>${r.dato}</td>
             <td>${r.serie}</td>
             <td>${r.sted}</td>
@@ -197,7 +212,6 @@
           document.querySelectorAll('.selectRow').forEach(cb => cb.checked = true);
         });
 
-        // Sorter dato frontend
         let currentSortAsc = false;
         const sortHeader = document.getElementById('sortDateHeader');
         sortHeader.addEventListener('click', () => {
@@ -213,8 +227,37 @@
 
           tbody.innerHTML = '';
           rowsArray.forEach(row => tbody.appendChild(row));
-
           sortHeader.innerHTML = `Dato ${currentSortAsc ? '▲' : '▼'}`;
+        });
+
+        // Treffprosent-visning
+        document.querySelectorAll('.clickableName').forEach(cell => {
+          cell.addEventListener('click', async () => {
+            const clickedName = cell.textContent;
+            const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
+            const selvanviserIds = matchingRows.map(row => row.dataset.id);
+
+            const { data: skuddData, error } = await supabase
+              .from('skudd')
+              .select('poeng, selvanviser_id')
+              .in('selvanviser_id', selvanviserIds);
+
+            if (error || !skuddData) {
+              alert("Feil ved henting av skudddata.");
+              return;
+            }
+
+            const antallSkudd = skuddData.length;
+            const antallTreff = skuddData.filter(s => s.poeng > 7.8).length;
+
+            if (antallSkudd === 0) {
+              alert(`${clickedName} har ingen registrerte skudd.`);
+              return;
+            }
+
+            const treffProsent = Math.round((antallTreff / antallSkudd) * 100);
+            showHitStatsModal(clickedName, antallTreff, antallSkudd, treffProsent);
+          });
         });
       }
     });
@@ -226,6 +269,26 @@
       img.src = src;
       downloadLink.href = src;
       modal.style.display = 'flex';
+    }
+
+    function showHitStatsModal(navn, antallTreff, antallSkudd, treffProsent) {
+      const content = document.getElementById('hitStatsContent');
+
+      let color;
+      if (treffProsent >= 85) color = 'green';
+      else if (treffProsent >= 70) color = 'goldenrod';
+      else color = 'red';
+
+      content.innerHTML = `
+        <h2>Statistikk for ${navn}</h2>
+        <div style="margin: 20px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${color} ${treffProsent}%, #ddd ${treffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
+          ${treffProsent}%
+        </div>
+        <p><strong>${antallTreff}</strong> treff av <strong>${antallSkudd}</strong> skudd</p>
+        <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 15px; padding: 8px 12px;">Lukk</button>
+      `;
+
+      document.getElementById('hitStatsModal').style.display = 'flex';
     }
   </script>
 
