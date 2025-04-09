@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Utvidet analyse av skyting</title>
   <style>
     body {
@@ -88,7 +88,6 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Historikk - Søk etter Skyteinformasjon</h1>
 
-  <!-- Søkekontroller -->
   <div id="searchControls">
     <input type="text" id="searchName" placeholder="Søk på navn">
     <input type="text" id="searchLocation" placeholder="Søk på sted">
@@ -97,10 +96,8 @@
     <button id="clearBtn">Nullstill</button>
   </div>
 
-  <!-- Resultatvisning -->
   <div id="searchResults"></div>
 
-  <!-- Bilde-modal -->
   <div id="imageModal" class="modal" onclick="this.style.display='none'">
     <button onclick="document.getElementById('imageModal').style.display='none'">✕</button>
     <a id="downloadLink" download>
@@ -108,7 +105,6 @@
     </a>
   </div>
 
-  <!-- Treffprosent-modal -->
   <div id="hitStatsModal" class="modal" style="display:none;">
     <button onclick="document.getElementById('hitStatsModal').style.display='none'">✕</button>
     <div id="hitStatsContent" style="background: white; padding: 20px; border-radius: 10px; max-width: 90%; text-align: center;"></div>
@@ -227,6 +223,17 @@
           cell.addEventListener('click', async () => {
             const clickedName = cell.textContent;
 
+            const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
+            let visSkudd = 0;
+            let visTreff = 0;
+            matchingRows.forEach(row => {
+              const skudd = parseInt(row.cells[5].innerText);
+              const treff = parseInt(row.cells[6].innerText);
+              if (!isNaN(skudd)) visSkudd += skudd;
+              if (!isNaN(treff)) visTreff += treff;
+            });
+            const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
+
             const { data: allRecords, error } = await supabase
               .from('selvanviser')
               .select('skudd, treff')
@@ -249,8 +256,8 @@
               return;
             }
 
-            const treffProsent = Math.round((totalTreff / totalSkudd) * 100);
-            showHitStatsModal(clickedName, totalTreff, totalSkudd, treffProsent);
+            const totalProsent = Math.round((totalTreff / totalSkudd) * 100);
+            showHitStatsModal(clickedName, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent);
           });
         });
       }
@@ -265,16 +272,30 @@
       modal.style.display = 'flex';
     }
 
-    function showHitStatsModal(navn, antallTreff, antallSkudd, treffProsent) {
+    function showHitStatsModal(navn, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent) {
       const content = document.getElementById('hitStatsContent');
-      let color = treffProsent >= 85 ? 'green' : treffProsent >= 70 ? 'goldenrod' : 'red';
+      const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
+      const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+
       content.innerHTML = `
         <h2>Statistikk for ${navn}</h2>
-        <div style="margin: 20px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${color} ${treffProsent}%, #ddd ${treffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
-          ${treffProsent}%
+        <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;">
+          <div style="text-align:center;">
+            <h3>Viste rader</h3>
+            <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${visColor} ${visProsent ?? 0}%, #ddd ${visProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+              ${visProsent ?? '–'}%
+            </div>
+            <p>${visTreff} treff av ${visSkudd} skudd</p>
+          </div>
+          <div style="text-align:center;">
+            <h3>Totalt</h3>
+            <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent}%, #ddd ${totalProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+              ${totalProsent}%
+            </div>
+            <p>${totalTreff} treff av ${totalSkudd} skudd</p>
+          </div>
         </div>
-        <p><strong>${antallTreff}</strong> treff av <strong>${antallSkudd}</strong> skudd</p>
-        <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 15px; padding: 8px 12px;">Lukk</button>
+        <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
       `;
       document.getElementById('hitStatsModal').style.display = 'flex';
     }
