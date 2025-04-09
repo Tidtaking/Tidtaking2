@@ -99,14 +99,12 @@
       let adjustment = { up: 0, down: 0, left: 0, right: 0 };
       let timerRunning = false;
 
-      // Funksjon for å hente kompassretning
       function getCompassDirection(deg) {
         const dirs = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
         const i = Math.round(deg / 45) % 8;
         return dirs[i];
       }
 
-      // Tegn målet
       function drawTarget() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let j = 10; j >= 1; j--) {
@@ -124,7 +122,6 @@
         }
       }
 
-      // Beregn score
       function computeScore(x, y) {
         const dx = x - centerX;
         const dy = y - centerY;
@@ -134,7 +131,6 @@
         return 10 - ring;
       }
 
-      // Tegn skudd
       function drawShot(shot, index) {
         ctx.beginPath();
         ctx.arc(shot.x, shot.y, 5, 0, 2 * Math.PI);
@@ -148,16 +144,13 @@
         ctx.fillText(index + 1, shot.x, shot.y - 10);
       }
 
-      // Redraw skudd
       function redrawShots() {
         drawTarget();
         currentShots.forEach((shot, i) => drawShot(shot, i));
       }
 
-      // Tegn mål
       drawTarget();
 
-      // Skuddregistrering
       canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -169,54 +162,50 @@
         document.getElementById('saveSeriesBtn').disabled = false;
       });
 
-      // Angre skudd
       document.getElementById('undoShotBtn').addEventListener('click', () => {
         currentShots.pop();
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
       });
 
-      // Tid taker
-      document.getElementById('startStopTimerBtn').addEventListener('click', () => {
-        if (!timerRunning) {
-          timerInterval = setInterval(() => {
-            secondsElapsed++;
-            const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-            const sec = String(secondsElapsed % 60).padStart(2, '0');
-            document.getElementById('timerDisplay').textContent = `Tid: ${min}:${sec}`;
-          }, 1000);
-          timerRunning = true;
-          document.getElementById('startStopTimerBtn').textContent = 'Stopp tidtaking';
-        } else {
-          clearInterval(timerInterval);
-          timerRunning = false;
-          document.getElementById('startStopTimerBtn').textContent = 'Start tidtaking';
-        }
+      // Skrumelding-knapper funksjonalitet
+      const manualDisplay = document.getElementById('manualAdjustmentDisplay');
+      document.getElementById('adjUp').addEventListener('click', () => {
+        adjustment.up++;
+        adjustment.down = 0;
+        manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
       });
 
-      // Lagre serie
+      document.getElementById('adjDown').addEventListener('click', () => {
+        adjustment.down++;
+        adjustment.up = 0;
+        manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+      });
+
+      document.getElementById('adjLeft').addEventListener('click', () => {
+        adjustment.left++;
+        adjustment.right = 0;
+        manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+      });
+
+      document.getElementById('adjRight').addEventListener('click', () => {
+        adjustment.right++;
+        adjustment.left = 0;
+        manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+      });
+
       document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
         const adjText = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
         const treff = currentShots.filter(s => s.score >= 7.8).length;
         const table = document.getElementById('resultTable').querySelector('tbody');
-        const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
-        const place = document.getElementById('shootingLocation').value || 'Ukjent';
-        const timeText = document.getElementById('timerDisplay').textContent.replace('Tid: ', '') || '00:00';
+        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
+        const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
+        const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
         const name = document.getElementById('nameInput').value || 'Ukjent';
         seriesCount++;
         const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${date}</td>
-          <td>${seriesCount}</td>
-          <td>${place}</td>
-          <td>${currentShots.length}</td>
-          <td>${total} (${treff} treff)</td>
-          <td>${timeText}</td>
-          <td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td>
-          <td><img src="" id="preview-${seriesCount}" width="100"></td>
-          <td>${adjText}</td>
-        `;
+        row.innerHTML = `<td>${date}</td><td>${seriesCount}</td><td>${place}</td><td>${currentShots.length}</td><td>${total} (${treff} treff)</td><td>${timeText}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td><img src="" id="preview-${seriesCount}" width="100"></td><td>${adjText}</td>`;
 
         const previewCanvas = document.createElement('canvas');
         previewCanvas.width = 100;
@@ -271,7 +260,6 @@
         console.log('Supabase insert:', insertResult);
       });
 
-      // Hent værdata
       async function fetchWeather() {
         const output = document.getElementById('weatherData');
         const forecast = document.getElementById('hourlyForecast');
