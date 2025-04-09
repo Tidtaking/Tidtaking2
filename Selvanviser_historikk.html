@@ -237,6 +237,29 @@
       if (!isNaN(treff)) totalTreff += treff;
     });
 
+    const allRows = Array.from(document.querySelectorAll('tbody tr'));
+    const allNameRows = allRows.filter(row => row.dataset.navn === clickedName);
+    let fullSkudd = 0;
+    let fullTreff = 0;
+    allNameRows.forEach(row => {
+      const skudd = parseInt(row.cells[5].innerText);
+      const treff = parseInt(row.cells[6].innerText);
+      if (!isNaN(skudd)) fullSkudd += skudd;
+      if (!isNaN(treff)) fullTreff += treff;
+    });
+
+    if (totalSkudd === 0 || fullSkudd === 0) {
+      alert(`${clickedName} har ingen skudd registrert.`);
+      return;
+    }
+
+    const visningstreffProsent = Math.round((totalTreff / totalSkudd) * 100);
+    const totalTreffProsent = Math.round((fullTreff / fullSkudd) * 100);
+
+    showHitStatsModal(clickedName, totalTreff, totalSkudd, visningstreffProsent, fullTreff, fullSkudd, totalTreffProsent);
+  });
+});
+
     // Hent ALLE rader i tabellen med samme navn, også de som er skjult (hvis søk er aktivt)
     const allRows = Array.from(document.querySelectorAll('tbody tr'));
     const allNameRows = allRows.filter(row => row.dataset.navn === clickedName);
@@ -289,7 +312,6 @@
   `;
   document.getElementById('hitStatsModal').style.display = 'flex';
 }
-      `;
       document.getElementById('hitStatsModal').style.display = 'flex';
     }
   </script>
