@@ -181,55 +181,18 @@
         }
       }
 
-      // Historikk-søk
-      document.getElementById('searchBtn').addEventListener('click', async () => {
-        const name = document.getElementById('searchName').value.trim();
-        const date = document.getElementById('searchDate').value;
-        const resultsContainer = document.getElementById('searchResults');
-
-        let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-        if (name) query = query.ilike('navn', `%${name}%`);
-        if (date) query = query.eq('dato', date);
-
-        const { data, error } = await query;
-        if (error) {
-          resultsContainer.innerHTML = 'Feil ved henting av data.';
-          return;
-        }
-        if (!data.length) {
-          resultsContainer.innerHTML = 'Ingen resultater funnet.';
-          return;
-        }
-
-        const rows = data.map(r => `
-          <tr>
-            <td>${r.navn}</td>
-            <td>${r.dato}</td>
-            <td>${r.serie}</td>
-            <td>${r.sted}</td>
-            <td>${r.skudd}</td>
-            <td>${r.poeng}</td>
-            <td>${r.tid}</td>
-            <td>${r.vindretning}</td>
-            <td>${r.skrumelding}</td>
-            <td><img src='${r.miniatur_dataurl}' width='80'></td>
-          </tr>
-        `).join('');
-
-        resultsContainer.innerHTML = `
-          <table>
-            <thead>
-              <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        `;
-      });
-
-      document.getElementById('clearBtn').addEventListener('click', () => {
-        document.getElementById('searchName').value = '';
-        document.getElementById('searchDate').value = '';
-        document.getElementById('searchResults').innerHTML = '';
+      // Manuelle skrumeldingsknapper
+      let adjustment = { up: 0, down: 0, left: 0, right: 0 };
+      const manualDisplay = document.getElementById('manualAdjustmentDisplay');
+      document.querySelectorAll('#adjustmentControls button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dir = btn.id;
+          if (dir === 'adjUp') { adjustment.up++; adjustment.down = 0; }
+          else if (dir === 'adjDown') { adjustment.down++; adjustment.up = 0; }
+          else if (dir === 'adjLeft') { adjustment.left++; adjustment.right = 0; }
+          else if (dir === 'adjRight') { adjustment.right++; adjustment.left = 0; }
+          manualDisplay.textContent = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
+        });
       });
 
       // Lagre resultat i Supabase
@@ -238,9 +201,9 @@
         const total = currentShots.reduce((sum, s) => sum + s.score, 0);
         const treff = currentShots.filter(s => s.score >= 7.8).length;
         const table = document.getElementById('resultTable').querySelector('tbody');
-        const date = document.getElementById('shootingDate')?.value || new Date().toISOString().split('T')[0];
-        const place = document.getElementById('shootingLocation')?.value || 'Ukjent';
-        const timeText = document.getElementById('timerDisplay')?.textContent.replace('Tid: ', '') || '00:00';
+        const date = document.getElementById('shootingDate').value || new Date().toISOString().split('T')[0];
+        const place = document.getElementById('shootingLocation').value || 'Ukjent';
+        const timeText = document.getElementById('timerDisplay').textContent.replace('Tid: ', '') || '00:00';
         const name = document.getElementById('nameInput').value || 'Ukjent'; // Save name
         seriesCount++;
         const row = document.createElement('tr');
