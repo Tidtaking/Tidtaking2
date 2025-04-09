@@ -167,11 +167,13 @@
           const ids = Array.from(document.querySelectorAll('.selectRow:checked')).map(cb => cb.dataset.id);
           if (ids.length === 0) return alert('Ingen rader valgt.');
 
+          if (!confirm(`Er du sikker på at du vil slette ${ids.length} rad(er)?`)) return;
+
           const { error } = await supabase.from('selvanviser').delete().in('id', ids);
           if (error) {
             alert('Feil ved sletting: ' + error.message);
           } else {
-            alert('Rad(er) slettet.');
+            alert(`${ids.length} rad(er) slettet.`);
             fetchData();
           }
         });
@@ -191,20 +193,5 @@
       modal.style.display = 'flex';
     }
   </script>
-   <div class="nav-links">
-    <a href="https://tidtaking.github.io/Tidtaking2/">Oppsett konkurranse</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/live.html">Livevisning</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html">Rundetider</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/skyting.html">Skyteregistrering</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/maal.html">Målregistrering</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html">Strafferunder</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/starter.html">Starter</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/import">Import</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/resultat">Resultater målgang</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/sim">Simulator</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/historikk">Historikk</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/huskeliste">Huskeliste</a>
-    <a href="https://tidtaking.github.io/Tidtaking2/selvanviser">Selvanviser</a>
-  </div>
 </body>
 </html>
