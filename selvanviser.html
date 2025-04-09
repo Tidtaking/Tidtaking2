@@ -31,81 +31,99 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Utvidet analyse av skyting</h1>
 
-  <!-- resterende HTML beholdes uendret frem til scriptet -->
+  <div id="timerControls">
+    <button id="startStopTimerBtn">Start tidtaking</button>
+    <div id="timerDisplay">Tid: 00:00</div>
+  </div>
+
+  <div id="searchControls">
+    <input type="text" id="searchName" placeholder="Søk på navn">
+    <input type="date" id="searchDate">
+    <button id="searchBtn">Søk</button>
+    <button id="clearBtn">Nullstill</button>
+  </div>
+  <div id="searchResults"></div>
 
   <script>
-    document.getElementById('startStopTimerBtn').addEventListener('click', function () {
+    window.addEventListener('DOMContentLoaded', () => {
+      const timerBtn = document.getElementById('startStopTimerBtn');
       const timerDisplay = document.getElementById('timerDisplay');
-      if (!window.timerRunning) {
-        window.secondsElapsed = 0;
-        window.timerInterval = setInterval(() => {
-          window.secondsElapsed++;
-          const min = String(Math.floor(window.secondsElapsed / 60)).padStart(2, '0');
-          const sec = String(window.secondsElapsed % 60).padStart(2, '0');
-          timerDisplay.textContent = `Tid: ${min}:${sec}`;
-        }, 1000);
-        window.timerRunning = true;
-        this.textContent = 'Stopp tidtaking';
-      } else {
-        clearInterval(window.timerInterval);
-        window.timerRunning = false;
-        this.textContent = 'Start tidtaking';
-      }
-    });
+      let timerRunning = false;
+      let timerInterval;
+      let secondsElapsed = 0;
 
-    const supabase = window.supabase.createClient(
-      "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
-    );
+      timerBtn.addEventListener('click', function () {
+        if (!timerRunning) {
+          secondsElapsed = 0;
+          timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const min = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const sec = String(secondsElapsed % 60).padStart(2, '0');
+            timerDisplay.textContent = `Tid: ${min}:${sec}`;
+          }, 1000);
+          timerRunning = true;
+          timerBtn.textContent = 'Stopp tidtaking';
+        } else {
+          clearInterval(timerInterval);
+          timerRunning = false;
+          timerBtn.textContent = 'Start tidtaking';
+        }
+      });
 
-    document.getElementById('searchBtn').addEventListener('click', async () => {
-      const name = document.getElementById('searchName').value.trim();
-      const date = document.getElementById('searchDate').value;
-      const resultsContainer = document.getElementById('searchResults');
+      const supabase = window.supabase.createClient(
+        "https://chzfewhbfkdtcizdxyzk.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+      );
 
-      let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-      if (name) query = query.ilike('navn', `%${name}%`);
-      if (date) query = query.eq('dato', date);
+      document.getElementById('searchBtn').addEventListener('click', async () => {
+        const name = document.getElementById('searchName').value.trim();
+        const date = document.getElementById('searchDate').value;
+        const resultsContainer = document.getElementById('searchResults');
 
-      const { data, error } = await query;
-      if (error) {
-        resultsContainer.innerHTML = 'Feil ved henting av data.';
-        return;
-      }
-      if (!data.length) {
-        resultsContainer.innerHTML = 'Ingen resultater funnet.';
-        return;
-      }
+        let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+        if (name) query = query.ilike('navn', `%${name}%`);
+        if (date) query = query.eq('dato', date);
 
-      const rows = data.map(r => `
-        <tr>
-          <td>${r.navn}</td>
-          <td>${r.dato}</td>
-          <td>${r.serie}</td>
-          <td>${r.sted}</td>
-          <td>${r.skudd}</td>
-          <td>${r.poeng}</td>
-          <td>${r.tid}</td>
-          <td>${r.vindretning}</td>
-          <td>${r.skrumelding}</td>
-          <td><img src='${r.miniatur_dataurl}' width='80'></td>
-        </tr>
-      `).join('');
+        const { data, error } = await query;
+        if (error) {
+          resultsContainer.innerHTML = 'Feil ved henting av data.';
+          return;
+        }
+        if (!data.length) {
+          resultsContainer.innerHTML = 'Ingen resultater funnet.';
+          return;
+        }
 
-      resultsContainer.innerHTML = `
-        <table>
-          <thead>
-            <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
-    });
+        const rows = data.map(r => `
+          <tr>
+            <td>${r.navn}</td>
+            <td>${r.dato}</td>
+            <td>${r.serie}</td>
+            <td>${r.sted}</td>
+            <td>${r.skudd}</td>
+            <td>${r.poeng}</td>
+            <td>${r.tid}</td>
+            <td>${r.vindretning}</td>
+            <td>${r.skrumelding}</td>
+            <td><img src='${r.miniatur_dataurl}' width='80'></td>
+          </tr>
+        `).join('');
 
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      document.getElementById('searchName').value = '';
-      document.getElementById('searchDate').value = '';
-      document.getElementById('searchResults').innerHTML = '';
+        resultsContainer.innerHTML = `
+          <table>
+            <thead>
+              <tr><th>Navn</th><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Vind</th><th>Skrudd</th><th>Miniatyr</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      });
+
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        document.getElementById('searchName').value = '';
+        document.getElementById('searchDate').value = '';
+        document.getElementById('searchResults').innerHTML = '';
+      });
     });
   </script>
 </body>
