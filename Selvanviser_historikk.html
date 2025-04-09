@@ -224,21 +224,31 @@
         });
 
         document.querySelectorAll('.clickableName').forEach(cell => {
-          cell.addEventListener('click', () => {
+          cell.addEventListener('click', async () => {
             const clickedName = cell.textContent;
-            const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
+
+            const { data: allRecords, error } = await supabase
+              .from('selvanviser')
+              .select('skudd, treff')
+              .ilike('navn', clickedName);
+
+            if (error || !allRecords) {
+              alert('Kunne ikke hente data for ' + clickedName);
+              return;
+            }
+
             let totalSkudd = 0;
             let totalTreff = 0;
-            matchingRows.forEach(row => {
-              const skudd = parseInt(row.cells[5].innerText);
-              const treff = parseInt(row.cells[6].innerText);
-              if (!isNaN(skudd)) totalSkudd += skudd;
-              if (!isNaN(treff)) totalTreff += treff;
+            allRecords.forEach(r => {
+              if (!isNaN(r.skudd)) totalSkudd += r.skudd;
+              if (!isNaN(r.treff)) totalTreff += r.treff;
             });
+
             if (totalSkudd === 0) {
               alert(`${clickedName} har ingen skudd registrert.`);
               return;
             }
+
             const treffProsent = Math.round((totalTreff / totalSkudd) * 100);
             showHitStatsModal(clickedName, totalTreff, totalSkudd, treffProsent);
           });
