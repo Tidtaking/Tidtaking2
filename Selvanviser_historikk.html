@@ -72,11 +72,12 @@
           resultsContainer.innerHTML = 'Feil ved henting av data.';
           return;
         }
-        
+
         console.log('Data hentet:', data); // Se resultatene fra spørringen
         
         // Hvis det ikke er noen resultater
         if (!data || data.length === 0) {
+          console.log("Ingen resultater funnet.");
           resultsContainer.innerHTML = 'Ingen resultater funnet.';
           return;
         }
