@@ -5,10 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Utvidet analyse av skyting</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 10px; background: #f5f5f5; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background: #f5f5f5;
+    }
     h1 { margin-top: 20px; }
-    table { margin: 0 auto; border-collapse: collapse; font-size: 1em; }
-    th, td { padding: 8px 12px; border: 1px solid #ccc; }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      font-size: 1em;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+    }
     .logo { max-width: 120px; margin-bottom: 10px; }
 
     /* Modal stil */
@@ -17,21 +30,35 @@
       position: fixed;
       z-index: 1000;
       left: 0; top: 0; width: 100%; height: 100%;
-      background-color: rgba(0,0,0,0.8);
+      background-color: rgba(0, 0, 0, 0.9);
       justify-content: center;
       align-items: center;
+      flex-direction: column;
     }
     #modalImage {
-      max-width: 90%;
-      max-height: 90%;
+      max-width: 95vw;
+      max-height: 90vh;
+      object-fit: contain;
+      cursor: zoom-in;
+      transition: transform 0.3s ease;
     }
-    #imageModal span {
+    #modalToolbar {
       position: absolute;
       top: 20px;
       right: 30px;
-      font-size: 2em;
-      color: white;
+      display: flex;
+      gap: 10px;
+    }
+    #modalToolbar button {
+      padding: 10px;
+      font-size: 1em;
       cursor: pointer;
+    }
+    #closeModal {
+      font-size: 1.8em;
+      color: white;
+      background: transparent;
+      border: none;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -40,7 +67,6 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Historikk - Søk etter Skyteinformasjon</h1>
 
-  <!-- Søkekontroller -->
   <div id="searchControls">
     <input type="text" id="searchName" placeholder="Søk på navn">
     <input type="text" id="searchLocation" placeholder="Søk på sted">
@@ -48,20 +74,23 @@
     <button id="searchBtn">Søk</button>
     <button id="clearBtn">Nullstill</button>
   </div>
-  
-  <!-- Resultatvisning -->
+
   <div id="searchResults"></div>
 
-  <!-- Modal for større bilde -->
+  <!-- Modal med verktøylinje -->
   <div id="imageModal">
-    <span id="closeModal">&times;</span>
+    <div id="modalToolbar">
+      <button id="downloadBtn">Last ned</button>
+      <button id="closeModal">&times;</button>
+    </div>
     <img id="modalImage" src="" alt="Stort bilde">
   </div>
 
   <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabase = window.supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    );
 
     window.addEventListener('DOMContentLoaded', () => {
       const searchBtn = document.getElementById('searchBtn');
@@ -71,6 +100,9 @@
       const imageModal = document.getElementById('imageModal');
       const modalImage = document.getElementById('modalImage');
       const closeModal = document.getElementById('closeModal');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      let currentImageSrc = "";
 
       searchBtn.addEventListener('click', async () => {
         const name = document.getElementById('searchName').value.trim();
@@ -78,7 +110,6 @@
         const date = document.getElementById('searchDate').value;
 
         let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
-
         if (name) query = query.ilike('navn', `%${name}%`);
         if (location) query = query.ilike('sted', `%${location}%`);
         if (date) query = query.eq('dato', date);
@@ -119,10 +150,10 @@
           </table>
         `;
 
-        // Legg til klikk på bilder
         document.querySelectorAll('.thumbnail').forEach(img => {
           img.addEventListener('click', () => {
-            modalImage.src = img.src;
+            currentImageSrc = img.src;
+            modalImage.src = currentImageSrc;
             imageModal.style.display = 'flex';
           });
         });
@@ -135,7 +166,6 @@
         resultsContainer.innerHTML = '';
       });
 
-      // Lukk modal
       closeModal.addEventListener('click', () => {
         imageModal.style.display = 'none';
         modalImage.src = '';
@@ -145,6 +175,26 @@
         if (e.target === imageModal) {
           imageModal.style.display = 'none';
           modalImage.src = '';
+        }
+      });
+
+      downloadBtn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = currentImageSrc;
+        a.download = 'bilde.jpg';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
+
+      // Zoom-funksjon (klikk for å zoome)
+      modalImage.addEventListener('click', () => {
+        if (modalImage.style.transform === 'scale(2)') {
+          modalImage.style.transform = 'scale(1)';
+          modalImage.style.cursor = 'zoom-in';
+        } else {
+          modalImage.style.transform = 'scale(2)';
+          modalImage.style.cursor = 'zoom-out';
         }
       });
     });
