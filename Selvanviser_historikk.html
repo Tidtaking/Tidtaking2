@@ -249,23 +249,7 @@
       if (!isNaN(treff)) fullTreff += treff;
     });
 
-    if (totalSkudd === 0) {
-      alert(`${clickedName} har ingen skudd registrert.`);
-      return;
-    }
-
-    const visningstreffProsent = Math.round((totalTreff / totalSkudd) * 100);
-    const totalTreffProsent = Math.round((fullTreff / fullSkudd) * 100);
-
-    showHitStatsModal(clickedName, totalTreff, totalSkudd, visningstreffProsent, fullTreff, fullSkudd, totalTreffProsent);
-  });
-});
-            if (totalSkudd === 0) {
-              alert(`${clickedName} har ingen skudd registrert.`);
-              return;
-            }
-            const treffProsent = Math.round((totalTreff / totalSkudd) * 100);
-            showHitStatsModal(clickedName, totalTreff, totalSkudd, treffProsent);
+    
           });
         });
       }
@@ -304,12 +288,7 @@
     <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 15px; padding: 8px 12px;">Lukk</button>
   `;
   document.getElementById('hitStatsModal').style.display = 'flex';
-}</h2>
-        <div style="margin: 20px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${color} ${treffProsent}%, #ddd ${treffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
-          ${treffProsent}%
-        </div>
-        <p><strong>${antallTreff}</strong> treff av <strong>${antallSkudd}</strong> skudd</p>
-        <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 15px; padding: 8px 12px;">Lukk</button>
+}
       `;
       document.getElementById('hitStatsModal').style.display = 'flex';
     }
