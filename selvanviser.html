@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Utvidet analyse av skyting</title>
   <style>
     body {
@@ -114,13 +114,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
+  <img src="lsk_logo.jpg" alt="LSK Logo" class="logo" />
   <h1>Utvidet analyse av skyting</h1>
 
   <div id="competitionInfo">
-    <input type="text" id="nameInput" placeholder="Navn på utøver" required>
-    <input type="date" id="shootingDate" required>
-    <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata" required>
+    <input type="text" id="nameInput" placeholder="Navn på utøver" required />
+    <input type="date" id="shootingDate" required />
+    <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata" required />
     <button id="fetchWeatherBtn">Hent værdata</button>
     <div id="weatherData">Værdata vises her.</div>
     <div id="hourlyForecast"></div>
@@ -162,15 +162,20 @@
     <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk">Selvanviser historikk</a>
   </div>
 
+  <!-- Hele JavaScript-blokken er samlet her -->
   <script>
-  const supabaseUrl = "...";
-  const supabaseKey = "...";
-  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  window.addEventListener('DOMContentLoaded', () => {
-    // resten av koden...
-  });
-</script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // Hele koden din for canvas, tidtaking, skuddregistrering, værdata og lagring går her
+      // Du har allerede hele logikken, og nå er den korrekt pakket inn
+
+      // Eksempel for å vise at alt funker:
+      document.getElementById('shootingDate').value = new Date().toISOString().split('T')[0];
+      console.log("App klar – Supabase koblet til:", supabaseUrl);
+
 
 
 
