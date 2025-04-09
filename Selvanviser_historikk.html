@@ -49,9 +49,10 @@
         console.log('Sted:', location);
         console.log('Dato:', date);
 
+        // Bygg spørring
         let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
 
-        // Legg til søkefilter for navn, sted og dato
+        // Legg til filtre hvis de er angitt
         if (name) {
           query = query.ilike('navn', `%${name}%`);
         }
