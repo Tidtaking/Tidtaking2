@@ -12,53 +12,58 @@
       padding: 10px;
       background: #f5f5f5;
     }
-    h1 { margin-top: 20px; }
+    h1 {
+      margin-top: 20px;
+    }
     table {
       margin: 0 auto;
       border-collapse: collapse;
       font-size: 1em;
+      background: white;
     }
     th, td {
       padding: 8px 12px;
       border: 1px solid #ccc;
     }
-    .logo { max-width: 120px; margin-bottom: 10px; }
+    .logo {
+      max-width: 120px;
+      margin-bottom: 10px;
+    }
+    img.thumbnail {
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    img.thumbnail:hover {
+      transform: scale(1.05);
+    }
 
-    /* Modal stil */
+    /* Modal-stil for bildevisning */
     #imageModal {
       display: none;
       position: fixed;
-      z-index: 1000;
-      left: 0; top: 0; width: 100%; height: 100%;
+      z-index: 9999;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
       background-color: rgba(0, 0, 0, 0.9);
       justify-content: center;
       align-items: center;
-      flex-direction: column;
     }
     #modalImage {
-      max-width: 95vw;
-      max-height: 90vh;
-      object-fit: contain;
+      max-width: 90%;
+      max-height: 90%;
       cursor: zoom-in;
-      transition: transform 0.3s ease;
+      transition: transform 0.2s ease-in-out;
     }
-    #modalToolbar {
+    #downloadBtn {
       position: absolute;
       top: 20px;
-      right: 30px;
-      display: flex;
-      gap: 10px;
-    }
-    #modalToolbar button {
-      padding: 10px;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    #closeModal {
-      font-size: 1.8em;
-      color: white;
-      background: transparent;
+      right: 20px;
+      background: #fff;
       border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -67,6 +72,7 @@
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
   <h1>Historikk - Søk etter Skyteinformasjon</h1>
 
+  <!-- Søkekontroller -->
   <div id="searchControls">
     <input type="text" id="searchName" placeholder="Søk på navn">
     <input type="text" id="searchLocation" placeholder="Søk på sted">
@@ -74,42 +80,36 @@
     <button id="searchBtn">Søk</button>
     <button id="clearBtn">Nullstill</button>
   </div>
-
+  
+  <!-- Resultatvisning -->
   <div id="searchResults"></div>
 
-  <!-- Modal med verktøylinje -->
+  <!-- Modal for større bilde -->
   <div id="imageModal">
-    <div id="modalToolbar">
-      <button id="downloadBtn">Last ned</button>
-      <button id="closeModal">&times;</button>
-    </div>
-    <img id="modalImage" src="" alt="Stort bilde">
+    <button id="downloadBtn">Last ned</button>
+    <img id="modalImage" src="" alt="Full størrelse">
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
-      "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    );
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     window.addEventListener('DOMContentLoaded', () => {
       const searchBtn = document.getElementById('searchBtn');
       const clearBtn = document.getElementById('clearBtn');
       const resultsContainer = document.getElementById('searchResults');
-
-      const imageModal = document.getElementById('imageModal');
-      const modalImage = document.getElementById('modalImage');
-      const closeModal = document.getElementById('closeModal');
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
       const downloadBtn = document.getElementById('downloadBtn');
-
-      let currentImageSrc = "";
-
+      
       searchBtn.addEventListener('click', async () => {
         const name = document.getElementById('searchName').value.trim();
         const location = document.getElementById('searchLocation').value.trim();
         const date = document.getElementById('searchDate').value;
 
         let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+
         if (name) query = query.ilike('navn', `%${name}%`);
         if (location) query = query.ilike('sted', `%${location}%`);
         if (date) query = query.eq('dato', date);
@@ -117,7 +117,6 @@
         const { data, error } = await query;
         if (error) {
           resultsContainer.innerHTML = 'Feil ved henting av data.';
-          console.error(error);
           return;
         }
 
@@ -137,7 +136,7 @@
             <td>${r.tid}</td>
             <td>${r.vindretning}</td>
             <td>${r.skrumelding}</td>
-            <td><img src="${r.miniatur_dataurl}" width="80" class="thumbnail" style="cursor:pointer;" alt="Miniatyr"></td>
+            <td><img src="${r.miniatur_dataurl}" width="80" class="thumbnail" data-full="${r.miniatur_dataurl}"></td>
           </tr>
         `).join('');
 
@@ -149,14 +148,6 @@
             <tbody>${rows}</tbody>
           </table>
         `;
-
-        document.querySelectorAll('.thumbnail').forEach(img => {
-          img.addEventListener('click', () => {
-            currentImageSrc = img.src;
-            modalImage.src = currentImageSrc;
-            imageModal.style.display = 'flex';
-          });
-        });
       });
 
       clearBtn.addEventListener('click', () => {
@@ -166,36 +157,36 @@
         resultsContainer.innerHTML = '';
       });
 
-      closeModal.addEventListener('click', () => {
-        imageModal.style.display = 'none';
-        modalImage.src = '';
-      });
-
-      imageModal.addEventListener('click', (e) => {
-        if (e.target === imageModal) {
-          imageModal.style.display = 'none';
-          modalImage.src = '';
+      // Modal logikk
+      document.addEventListener('click', e => {
+        if (e.target.classList.contains('thumbnail')) {
+          const fullImageUrl = e.target.getAttribute('data-full');
+          modal.style.display = 'flex';
+          modalImg.src = fullImageUrl;
+          modalImg.style.transform = 'scale(1)';
+          scale = 1;
+          downloadBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = fullImageUrl;
+            a.download = 'bilde.jpg';
+            a.click();
+          };
+        } else if (e.target === modal) {
+          modal.style.display = 'none';
         }
       });
 
-      downloadBtn.addEventListener('click', () => {
-        const a = document.createElement('a');
-        a.href = currentImageSrc;
-        a.download = 'bilde.jpg';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') modal.style.display = 'none';
       });
 
-      // Zoom-funksjon (klikk for å zoome)
-      modalImage.addEventListener('click', () => {
-        if (modalImage.style.transform === 'scale(2)') {
-          modalImage.style.transform = 'scale(1)';
-          modalImage.style.cursor = 'zoom-in';
-        } else {
-          modalImage.style.transform = 'scale(2)';
-          modalImage.style.cursor = 'zoom-out';
-        }
+      // Zoom-funksjonalitet
+      let scale = 1;
+      modalImg.addEventListener('wheel', e => {
+        e.preventDefault();
+        scale += e.deltaY * -0.001;
+        scale = Math.min(Math.max(1, scale), 5);
+        modalImg.style.transform = `scale(${scale})`;
       });
     });
   </script>
