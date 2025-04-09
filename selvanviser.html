@@ -318,6 +318,24 @@
       }
 
       document.getElementById('fetchWeatherBtn').addEventListener('click', fetchWeather);
+      document.getElementById('startStopTimerBtn').addEventListener('click', () => {
+        const display = document.getElementById('timerDisplay');
+
+        if (!timerRunning) {
+          timerRunning = true;
+          document.getElementById('startStopTimerBtn').textContent = 'Stopp tidtaking';
+          timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const minutes = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const seconds = String(secondsElapsed % 60).padStart(2, '0');
+            display.textContent = `Tid: ${minutes}:${seconds}`;
+          }, 1000);
+        } else {
+          timerRunning = false;
+          clearInterval(timerInterval);
+          document.getElementById('startStopTimerBtn').textContent = 'Start tidtaking';
+        }
+      });
     });
   </script>
    <div class="nav-links">
