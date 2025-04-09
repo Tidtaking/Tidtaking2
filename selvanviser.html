@@ -245,6 +245,7 @@
         table.appendChild(row);
         currentShots = [];
         adjustment = { up: 0, down: 0, left: 0, right: 0 };
+        manualDisplay.textContent = `Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0`;
         redrawShots();
         document.getElementById('saveSeriesBtn').disabled = true;
         document.getElementById('undoShotBtn').disabled = true;
