@@ -318,6 +318,7 @@
       }
 
       document.getElementById('fetchWeatherBtn').addEventListener('click', fetchWeather);
+      document.getElementById('shootingDate').value = new Date().toISOString().split('T')[0];
       document.getElementById('startStopTimerBtn').addEventListener('click', () => {
         const display = document.getElementById('timerDisplay');
 
