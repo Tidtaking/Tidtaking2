@@ -75,7 +75,7 @@
         console.log('Data hentet:', data); // Se resultatene fra spørringen
         
         // Hvis det ikke er noen resultater
-        if (!data.length) {
+        if (!data || data.length === 0) {
           resultsContainer.innerHTML = 'Ingen resultater funnet.';
           return;
         }
