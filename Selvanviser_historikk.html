@@ -83,6 +83,34 @@
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+function showHitStatsModal(navn, antallTreff, antallSkudd, visningstreffProsent, totalTreff, totalSkudd, totalTreffProsent) {
+  const content = document.getElementById('hitStatsContent');
+  let farge1 = visningstreffProsent >= 85 ? 'green' : visningstreffProsent >= 70 ? 'goldenrod' : 'red';
+  let farge2 = totalTreffProsent >= 85 ? 'green' : totalTreffProsent >= 70 ? 'goldenrod' : 'red';
+
+  content.innerHTML = `
+    <h2>Statistikk for ${navn}</h2>
+    <p><strong>Synlige resultater:</strong></p>
+    <div style="margin: 10px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${farge1} ${visningstreffProsent}%, #ddd ${visningstreffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
+      ${visningstreffProsent}%
+    </div>
+    <p><strong>${antallTreff}</strong> treff av <strong>${antallSkudd}</strong> skudd (i synlig tabell)</p>
+
+    <hr style="margin:20px 0;">
+
+    <p><strong>Total historikk (vises i tabellen):</strong></p>
+    <div style="margin: 10px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${farge2} ${totalTreffProsent}%, #ddd ${totalTreffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
+      ${totalTreffProsent}%
+    </div>
+    <p><strong>${totalTreff}</strong> treff av <strong>${totalSkudd}</strong> skudd (totalt)</p>
+
+    <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 15px; padding: 8px 12px;">Lukk</button>
+  `;
+  document.getElementById('hitStatsModal').style.display = 'flex';
+}
+</script>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
