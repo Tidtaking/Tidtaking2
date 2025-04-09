@@ -237,17 +237,6 @@
       if (!isNaN(treff)) totalTreff += treff;
     });
 
-    
-  });
-});
-
-    
-  });
-});
-});
-});
-});
-
     const allRows = Array.from(document.querySelectorAll('tbody tr'));
     const allNameRows = allRows.filter(row => row.dataset.navn === clickedName);
     let fullSkudd = 0;
@@ -270,48 +259,5 @@
     showHitStatsModal(clickedName, totalTreff, totalSkudd, visningstreffProsent, fullTreff, fullSkudd, totalTreffProsent);
   });
 });
-
-    
-
-    
-          });
-        });
-      }
-    });
-
-    function showImage(src) {
-      const modal = document.getElementById('imageModal');
-      const img = document.getElementById('modalImage');
-      const downloadLink = document.getElementById('downloadLink');
-      img.src = src;
-      downloadLink.href = src;
-      modal.style.display = 'flex';
-    }
-
-    function showHitStatsModal(navn, antallTreff, antallSkudd, visningstreffProsent, totalTreff, totalSkudd, totalTreffProsent) {
-  const content = document.getElementById('hitStatsContent');
-  let farge1 = visningstreffProsent >= 85 ? 'green' : visningstreffProsent >= 70 ? 'goldenrod' : 'red';
-  let farge2 = totalTreffProsent >= 85 ? 'green' : totalTreffProsent >= 70 ? 'goldenrod' : 'red';
-
-  content.innerHTML = `
-    <h2>Statistikk for ${navn}</h2>
-    <p><strong>Synlige resultater:</strong></p>
-    <div style="margin: 10px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${farge1} ${visningstreffProsent}%, #ddd ${visningstreffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
-      ${visningstreffProsent}%
-    </div>
-    <p><strong>${antallTreff}</strong> treff av <strong>${antallSkudd}</strong> skudd (i synlig tabell)</p>
-
-    <hr style="margin:20px 0;">
-
-    <p><strong>Total historikk (vises i tabellen):</strong></p>
-    <div style="margin: 10px auto; width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(${farge2} ${totalTreffProsent}%, #ddd ${totalTreffProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2em;">
-      ${totalTreffProsent}%
-    </div>
-    <p><strong>${totalTreff}</strong> treff av <strong>${totalSkudd}</strong> skudd (totalt)</p>
-
-    <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 15px; padding: 8px 12px;">Lukk</button>
-  `;
-  document.getElementById('hitStatsModal').style.display = 'flex';
-}</script>
 </body>
 </html>
