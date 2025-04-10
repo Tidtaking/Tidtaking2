@@ -116,6 +116,16 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+    function parseTidTilSekunder(tidStr) {
+      if (!tidStr || typeof tidStr !== 'string') return null;
+      const parts = tidStr.trim().split(':');
+      if (parts.length !== 2) return null;
+      const min = parseInt(parts[0], 10);
+      const sek = parseInt(parts[1], 10);
+      if (isNaN(min) || isNaN(sek)) return null;
+      return min * 60 + sek;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       const searchBtn = document.getElementById('searchBtn');
       const clearBtn = document.getElementById('clearBtn');
@@ -241,11 +251,10 @@
               const skudd = parseInt(row.cells[5].innerText);
               const treff = parseInt(row.cells[6].innerText);
               const tidStr = row.cells[8].innerText;
-              const tid = parseFloat(tidStr.replace(',', '.'));
-
+              const sekunder = parseTidTilSekunder(tidStr);
               if (!isNaN(skudd)) visSkudd += skudd;
               if (!isNaN(treff)) visTreff += treff;
-              if (!isNaN(tid)) visTider.push(tid);
+              if (sekunder !== null) visTider.push(sekunder);
             });
 
             const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
@@ -268,11 +277,8 @@
             allRecords.forEach(r => {
               if (!isNaN(r.skudd)) totalSkudd += r.skudd;
               if (!isNaN(r.treff)) totalTreff += r.treff;
-              if (r.tid) {
-            const tParsed = parseFloat(String(r.tid).replace(',', '.'));
-            if (!isNaN(tParsed) && tParsed > 0) totalTider.push(tParsed);
-
-              }
+              const sekunder = parseTidTilSekunder(r.tid);
+              if (sekunder !== null) totalTider.push(sekunder);
             });
 
             const totalProsent = totalSkudd > 0 ? Math.round((totalTreff / totalSkudd) * 100) : null;
