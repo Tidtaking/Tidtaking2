@@ -91,7 +91,8 @@
   <div id="searchControls">
     <input type="text" id="searchName" placeholder="Søk på navn">
     <input type="text" id="searchLocation" placeholder="Søk på sted">
-    <input type="date" id="searchDate">
+    <input type="date" id="startDate" placeholder="Fra dato">
+    <input type="date" id="endDate" placeholder="Til dato">
     <button id="searchBtn">Søk</button>
     <button id="clearBtn">Nullstill</button>
   </div>
@@ -124,19 +125,27 @@
       clearBtn.addEventListener('click', () => {
         document.getElementById('searchName').value = '';
         document.getElementById('searchLocation').value = '';
-        document.getElementById('searchDate').value = '';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
         resultsContainer.innerHTML = '';
       });
 
       async function fetchData() {
         const name = document.getElementById('searchName').value.trim();
         const location = document.getElementById('searchLocation').value.trim();
-        const date = document.getElementById('searchDate').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
 
         let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
         if (name) query = query.ilike('navn', `%${name}%`);
         if (location) query = query.ilike('sted', `%${location}%`);
-        if (date) query = query.eq('dato', date);
+        if (startDate && endDate) {
+          query = query.gte('dato', startDate).lte('dato', endDate);
+        } else if (startDate) {
+          query = query.gte('dato', startDate);
+        } else if (endDate) {
+          query = query.lte('dato', endDate);
+        }
 
         const { data, error } = await query;
         if (error || !data) {
