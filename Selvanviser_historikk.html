@@ -235,13 +235,21 @@
             const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
             let visSkudd = 0;
             let visTreff = 0;
+            let visTider = [];
+
             matchingRows.forEach(row => {
               const skudd = parseInt(row.cells[5].innerText);
               const treff = parseInt(row.cells[6].innerText);
+              const tidStr = row.cells[8].innerText;
+              const tid = parseFloat(tidStr.replace(',', '.'));
+
               if (!isNaN(skudd)) visSkudd += skudd;
               if (!isNaN(treff)) visTreff += treff;
+              if (!isNaN(tid)) visTider.push(tid);
             });
+
             const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
+            const visSnittTid = visTider.length > 0 ? (visTider.reduce((a, b) => a + b, 0) / visTider.length).toFixed(1) : null;
 
             const { data: allRecords, error } = await supabase
               .from('selvanviser')
@@ -255,18 +263,24 @@
 
             let totalSkudd = 0;
             let totalTreff = 0;
-            let tider = [];
+            let totalTider = [];
 
             allRecords.forEach(r => {
               if (!isNaN(r.skudd)) totalSkudd += r.skudd;
               if (!isNaN(r.treff)) totalTreff += r.treff;
-              if (r.tid && !isNaN(parseFloat(r.tid))) tider.push(parseFloat(r.tid));
+              if (r.tid) {
+                const t = parseFloat(String(r.tid).replace(',', '.'));
+                if (!isNaN(t)) totalTider.push(t);
+              }
             });
 
-            const snittTid = tider.length > 0 ? (tider.reduce((a, b) => a + b, 0) / tider.length).toFixed(1) : null;
-            const totalProsent = Math.round((totalTreff / totalSkudd) * 100);
+            const totalProsent = totalSkudd > 0 ? Math.round((totalTreff / totalSkudd) * 100) : null;
+            const totalSnittTid = totalTider.length > 0 ? (totalTider.reduce((a, b) => a + b, 0) / totalTider.length).toFixed(1) : null;
 
-            showHitStatsModal(clickedName, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent, snittTid);
+            showHitStatsModal(clickedName, {
+              visTreff, visSkudd, visProsent, visSnittTid,
+              totalTreff, totalSkudd, totalProsent, totalSnittTid
+            });
           });
         });
       }
@@ -281,11 +295,16 @@
       modal.style.display = 'flex';
     }
 
-    function showHitStatsModal(navn, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent, snittTid) {
-      const content = document.getElementById('hitStatsContent');
+    function showHitStatsModal(navn, stats) {
+      const {
+        visTreff, visSkudd, visProsent, visSnittTid,
+        totalTreff, totalSkudd, totalProsent, totalSnittTid
+      } = stats;
+
       const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
       const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
 
+      const content = document.getElementById('hitStatsContent');
       content.innerHTML = `
         <h2>Statistikk for ${navn}</h2>
         <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;">
@@ -295,14 +314,15 @@
               ${visProsent ?? '–'}%
             </div>
             <p>${visTreff} treff av ${visSkudd} skudd</p>
+            ${visSnittTid !== null ? `<p>Snittid: ${visSnittTid} sek</p>` : '<p>Ingen tider</p>'}
           </div>
           <div style="text-align:center;">
             <h3>Totalt</h3>
             <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent}%, #ddd ${totalProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
-              ${totalProsent}%
+              ${totalProsent ?? '–'}%
             </div>
             <p>${totalTreff} treff av ${totalSkudd} skudd</p>
-            ${snittTid !== null ? `<p>Snittid: ${snittTid} sek</p>` : '<p>Ingen tider registrert</p>'}
+            ${totalSnittTid !== null ? `<p>Snittid: ${totalSnittTid} sek</p>` : '<p>Ingen tider</p>'}
           </div>
         </div>
         <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
