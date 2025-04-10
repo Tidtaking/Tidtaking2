@@ -175,23 +175,28 @@
 
 document.getElementById('adjUp').addEventListener('click', () => {
   adjustment.up++;
+  adjustment.down = Math.max(0, adjustment.down - 1);
   updateAdjustmentDisplay();
 });
 
 document.getElementById('adjDown').addEventListener('click', () => {
   adjustment.down++;
+  adjustment.up = Math.max(0, adjustment.up - 1);
   updateAdjustmentDisplay();
 });
 
 document.getElementById('adjLeft').addEventListener('click', () => {
   adjustment.left++;
+  adjustment.right = Math.max(0, adjustment.right - 1);
   updateAdjustmentDisplay();
 });
 
 document.getElementById('adjRight').addEventListener('click', () => {
   adjustment.right++;
+  adjustment.left = Math.max(0, adjustment.left - 1);
   updateAdjustmentDisplay();
 });
+
 
 
       document.getElementById('startStopTimerBtn').addEventListener('click', () => {
