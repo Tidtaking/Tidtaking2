@@ -236,34 +236,87 @@ document.getElementById('adjRight').addEventListener('click', () => {
       });
 
       document.getElementById('fetchWeatherBtn').addEventListener('click', async () => {
-        const loc = document.getElementById('shootingLocation').value;
-        const date = document.getElementById('shootingDate').value;
-        const weatherBox = document.getElementById('weatherData');
-        const forecastBox = document.getElementById('hourlyForecast');
-        if (!loc || !date) return alert('Fyll inn sted og dato');
-        weatherBox.textContent = 'Henter værdata...';
-        try {
-          const geo = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(loc)}`);
-          const { lat, lon } = (await geo.json())[0];
-          const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
-            headers: { 'User-Agent': 'skyteapp/1.0 kontakt@example.com' }
-          });
-          const data = await res.json();
-          const series = data.properties.timeseries.filter(e => e.time.startsWith(date));
-          const now = series[0]?.data.instant.details;
-          lastWindDir = now.wind_from_direction;
-          weatherBox.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${lastWindDir}deg);"></span> (${getCompassDirection(lastWindDir)})`;
-          forecastBox.innerHTML = series.map(f => {
-            const h = new Date(f.time).getHours();
-            if (h < 5 || h > 15) return '';
-            const d = f.data.instant.details;
-            return `${h}:00 - ${d.air_temperature}°C, ${d.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${d.wind_from_direction}deg);"></span>`;
-          }).join('<br>');
-        } catch {
-          weatherBox.textContent = "Klarte ikke hente værdata";
-          forecastBox.innerHTML = '';
+  const date = document.getElementById('shootingDate').value;
+  const weatherBox = document.getElementById('weatherData');
+  const forecastBox = document.getElementById('hourlyForecast');
+  const locationInput = document.getElementById('shootingLocation');
+
+  weatherBox.textContent = 'Henter posisjon...';
+  forecastBox.innerHTML = '';
+
+  if (!date) {
+    alert("Velg dato først");
+    return;
+  }
+
+  // Hjelpefunksjon for å hente og vise værdata
+  async function fetchWeather(lat, lon) {
+    weatherBox.textContent = 'Henter værdata...';
+    try {
+      const res = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, {
+        headers: {
+          'User-Agent': 'skyteapp/1.0 kontakt@example.com',
+          'X-User-Agent': 'skyteapp/1.0 kontakt@example.com'
         }
       });
+
+      const data = await res.json();
+      const series = data.properties.timeseries.filter(e => e.time.startsWith(date));
+
+      if (!series.length) throw new Error("Ingen data for valgt dato");
+
+      const now = series[0].data.instant.details;
+      lastWindDir = now.wind_from_direction;
+
+      weatherBox.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s 
+        <span class="wind-arrow" style="transform: rotate(${lastWindDir}deg);"></span> 
+        (${getCompassDirection(lastWindDir)})`;
+
+      forecastBox.innerHTML = series.map(f => {
+        const h = new Date(f.time).getHours();
+        if (h < 5 || h > 15) return '';
+        const d = f.data.instant.details;
+        return `${h}:00 - ${d.air_temperature}°C, ${d.wind_speed} m/s 
+          <span class="wind-arrow" style="transform: rotate(${d.wind_from_direction}deg);"></span>`;
+      }).join('<br>');
+
+    } catch (e) {
+      console.error("Værdata-feil:", e);
+      weatherBox.textContent = "Klarte ikke hente værdata";
+    }
+  }
+
+  // 1. Prøv geolokasjon
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lon = pos.coords.longitude.toFixed(6);
+      locationInput.value = `GPS: ${lat}, ${lon}`;
+      await fetchWeather(lat, lon);
+    }, async (err) => {
+      console.warn("Geolokasjon feilet, prøver sted:", err);
+      const sted = locationInput.value;
+      if (!sted) {
+        weatherBox.textContent = "Fikk ikke tilgang til posisjon. Fyll inn sted manuelt.";
+        return;
+      }
+      weatherBox.textContent = "Prøver sted: " + sted;
+      try {
+        const geo = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(sted)}`);
+        const geoJson = await geo.json();
+        if (!geoJson.length) throw new Error("Fant ikke sted");
+        const { lat, lon } = geoJson[0];
+        await fetchWeather(lat, lon);
+      } catch (e) {
+        console.error("Geokoding-feil:", e);
+        weatherBox.textContent = "Klarte ikke hente posisjon for stedet";
+      }
+    });
+  } else {
+    weatherBox.textContent = "Geolokasjon støttes ikke. Skriv inn sted.";
+  }
+});
+
 
       document.getElementById('saveSeriesBtn').addEventListener('click', async () => {
         const navn = document.getElementById('nameInput').value || 'Ukjent';
