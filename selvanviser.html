@@ -44,13 +44,18 @@
   <h1>Utvidet analyse av skyting</h1>
 
   <div id="competitionInfo">
-    <input type="text" id="nameInput" placeholder="Navn på utøver" required />
-    <input type="date" id="shootingDate" required />
-    <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata" required />
-    <button id="fetchWeatherBtn">Hent værdata</button>
-    <div id="weatherData">Værdata vises her.</div>
-    <div id="hourlyForecast"></div>
-  </div>
+  <input type="text" id="nameInput" placeholder="Navn på utøver" required />
+  <input type="date" id="shootingDate" required />
+  <input type="text" id="shootingLocation" placeholder="Sted for vær/vinddata" required />
+  <button id="fetchWeatherBtn">Hent værdata</button>
+</div>
+
+<!-- Flytt værdataene hit, utenfor flex-containeren -->
+<div style="margin-top: 10px;">
+  <div id="weatherData">Værdata vises her.</div>
+  <div id="hourlyForecast"></div>
+</div>
+
 
   <div id="adjustmentControls">
     <h4 style="width: 100%;">Manuell skrumelding</h4>
