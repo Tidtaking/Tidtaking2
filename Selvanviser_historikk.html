@@ -269,8 +269,9 @@
               if (!isNaN(r.skudd)) totalSkudd += r.skudd;
               if (!isNaN(r.treff)) totalTreff += r.treff;
               if (r.tid) {
-                const t = parseFloat(String(r.tid).replace(',', '.'));
-                if (!isNaN(t)) totalTider.push(t);
+            const tParsed = parseFloat(String(r.tid).replace(',', '.'));
+            if (!isNaN(tParsed) && tParsed > 0) totalTider.push(tParsed);
+
               }
             });
 
