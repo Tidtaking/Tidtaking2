@@ -281,7 +281,7 @@ document.getElementById('adjRight').addEventListener('click', () => {
         seriesCount++;
 
         const preview = document.createElement('canvas');
-        preview.width = 200; preview.height = 200;
+        preview.width = 100; preview.height = 100;
         const pctx = preview.getContext('2d');
         const scale = preview.width / canvas.width;
         pctx.fillStyle = '#fff';
