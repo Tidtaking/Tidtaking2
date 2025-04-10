@@ -173,13 +173,26 @@
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
       });
 
-      ['adjUp','adjDown','adjLeft','adjRight'].forEach(id => {
-        document.getElementById(id).addEventListener('click', () => {
-          const dir = id.replace('adj', '').toLowerCase();
-          Object.keys(adjustment).forEach(k => adjustment[k] = (k === dir) ? adjustment[k] + 1 : 0);
-          updateAdjustmentDisplay();
-        });
-      });
+document.getElementById('adjUp').addEventListener('click', () => {
+  adjustment.up++;
+  updateAdjustmentDisplay();
+});
+
+document.getElementById('adjDown').addEventListener('click', () => {
+  adjustment.down++;
+  updateAdjustmentDisplay();
+});
+
+document.getElementById('adjLeft').addEventListener('click', () => {
+  adjustment.left++;
+  updateAdjustmentDisplay();
+});
+
+document.getElementById('adjRight').addEventListener('click', () => {
+  adjustment.right++;
+  updateAdjustmentDisplay();
+});
+
 
       document.getElementById('startStopTimerBtn').addEventListener('click', () => {
         const btn = document.getElementById('startStopTimerBtn');
