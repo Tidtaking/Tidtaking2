@@ -229,62 +229,80 @@
         });
 
         document.querySelectorAll('.clickableName').forEach(cell => {
-          cell.addEventListener('click', async () => {
-            const clickedName = cell.textContent;
+  cell.addEventListener('click', async () => {
+    const clickedName = cell.textContent;
 
-            const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
-            let visSkudd = 0;
-            let visTreff = 0;
-            matchingRows.forEach(row => {
-              const skudd = parseInt(row.cells[5].innerText);
-              const treff = parseInt(row.cells[6].innerText);
-              if (!isNaN(skudd)) visSkudd += skudd;
-              if (!isNaN(treff)) visTreff += treff;
-            });
-            const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
-
-            const { data: allRecords, error } = await supabase
-              .from('selvanviser')
-              .select('skudd, treff')
-              .ilike('navn', clickedName);
-
-            if (error || !allRecords) {
-              alert('Kunne ikke hente data for ' + clickedName);
-              return;
-            }
-
-            let totalSkudd = 0;
-            let totalTreff = 0;
-            allRecords.forEach(r => {
-              if (!isNaN(r.skudd)) totalSkudd += r.skudd;
-              if (!isNaN(r.treff)) totalTreff += r.treff;
-            });
-
-            if (totalSkudd === 0) {
-              alert(`${clickedName} har ingen skudd registrert.`);
-              return;
-            }
-
-            const totalProsent = Math.round((totalTreff / totalSkudd) * 100);
-            showHitStatsModal(clickedName, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent);
-          });
-        });
-      }
+    const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
+    let visSkudd = 0;
+    let visTreff = 0;
+    matchingRows.forEach(row => {
+      const skudd = parseInt(row.cells[5].innerText);
+      const treff = parseInt(row.cells[6].innerText);
+      if (!isNaN(skudd)) visSkudd += skudd;
+      if (!isNaN(treff)) visTreff += treff;
     });
+    const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
 
-    function showImage(src) {
-      const modal = document.getElementById('imageModal');
-      const img = document.getElementById('modalImage');
-      const downloadLink = document.getElementById('downloadLink');
-      img.src = src;
-      downloadLink.href = src;
-      modal.style.display = 'flex';
+    const { data: allRecords, error } = await supabase
+      .from('selvanviser')
+      .select('skudd, treff, tid')
+      .ilike('navn', clickedName);
+
+    if (error || !allRecords) {
+      alert('Kunne ikke hente data for ' + clickedName);
+      return;
     }
 
-    function showHitStatsModal(navn, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent) {
-      const content = document.getElementById('hitStatsContent');
-      const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
-      const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+    let totalSkudd = 0;
+    let totalTreff = 0;
+    let tider = [];
+
+    allRecords.forEach(r => {
+      if (!isNaN(r.skudd)) totalSkudd += r.skudd;
+      if (!isNaN(r.treff)) totalTreff += r.treff;
+      if (r.tid && !isNaN(parseFloat(r.tid))) tider.push(parseFloat(r.tid));
+    });
+
+    if (totalSkudd === 0) {
+      alert(`${clickedName} har ingen skudd registrert.`);
+      return;
+    }
+
+    const totalProsent = Math.round((totalTreff / totalSkudd) * 100);
+    const snittTid = tider.length > 0 ? (tider.reduce((a, b) => a + b, 0) / tider.length).toFixed(1) : null;
+
+    showHitStatsModal(clickedName, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent, snittTid);
+  });
+});
+
+function showHitStatsModal(navn, visTreff, visSkudd, visProsent, totalTreff, totalSkudd, totalProsent, snittTid) {
+  const content = document.getElementById('hitStatsContent');
+  const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
+  const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+
+  content.innerHTML = `
+    <h2>Statistikk for ${navn}</h2>
+    <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;">
+      <div style="text-align:center;">
+        <h3>Viste rader</h3>
+        <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${visColor} ${visProsent ?? 0}%, #ddd ${visProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+          ${visProsent ?? '–'}%
+        </div>
+        <p>${visTreff} treff av ${visSkudd} skudd</p>
+      </div>
+      <div style="text-align:center;">
+        <h3>Totalt</h3>
+        <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent}%, #ddd ${totalProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+          ${totalProsent}%
+        </div>
+        <p>${totalTreff} treff av ${totalSkudd} skudd</p>
+        ${snittTid !== null ? `<p>Snittid: ${snittTid} sek</p>` : '<p>Ingen tider registrert</p>'}
+      </div>
+    </div>
+    <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
+  `;
+  document.getElementById('hitStatsModal').style.display = 'flex';
+}
 
       content.innerHTML = `
         <h2>Statistikk for ${navn}</h2>
