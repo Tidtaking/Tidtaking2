@@ -174,28 +174,41 @@
       });
 
 document.getElementById('adjUp').addEventListener('click', () => {
-  adjustment.up++;
-  adjustment.down = Math.max(0, adjustment.down - 1);
+  if (adjustment.down > 0) {
+    adjustment.down--;
+  } else {
+    adjustment.up++;
+  }
   updateAdjustmentDisplay();
 });
 
 document.getElementById('adjDown').addEventListener('click', () => {
-  adjustment.down++;
-  adjustment.up = Math.max(0, adjustment.up - 1);
+  if (adjustment.up > 0) {
+    adjustment.up--;
+  } else {
+    adjustment.down++;
+  }
   updateAdjustmentDisplay();
 });
 
 document.getElementById('adjLeft').addEventListener('click', () => {
-  adjustment.left++;
-  adjustment.right = Math.max(0, adjustment.right - 1);
+  if (adjustment.right > 0) {
+    adjustment.right--;
+  } else {
+    adjustment.left++;
+  }
   updateAdjustmentDisplay();
 });
 
 document.getElementById('adjRight').addEventListener('click', () => {
-  adjustment.right++;
-  adjustment.left = Math.max(0, adjustment.left - 1);
+  if (adjustment.left > 0) {
+    adjustment.left--;
+  } else {
+    adjustment.right++;
+  }
   updateAdjustmentDisplay();
 });
+
 
 
 
