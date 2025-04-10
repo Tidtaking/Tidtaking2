@@ -292,46 +292,65 @@ const supabase = window.supabase.createClient(
         });
       }
 
-      document.getElementById('exportCSV').addEventListener('click', () => {
-        const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
-        if (rows.length === 0) return alert('Ingen data å eksportere.');
+document.getElementById('exportPDF').addEventListener('click', () => {
+  const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
+  if (rows.length === 0) return alert('Ingen data å eksportere.');
 
-        const headers = Array.from(document.querySelectorAll('#searchResults table thead th')).slice(1, -1).map(th => th.innerText);
-        const csv = [
-          headers.join(';'),
-          ...rows.map(row => Array.from(row.cells).slice(1, -1).map(td => td.innerText.replace(/[\n\r;]/g, ' ')).join(';'))
-        ].join('\n');
+  const headers = Array.from(document.querySelectorAll('#searchResults table thead th'))
+    .slice(1) // Fjern første kolonne (checkbox)
+    .map(th => th.innerText);
 
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'skytestatistikk.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-      });
+  const data = rows.map(row => {
+    const cells = Array.from(row.cells).slice(1); // Fjern første kolonne (checkbox)
+    return cells.map((td, i) => {
+      if (i === headers.length - 1) {
+        // Siste kolonne er bildet
+        const img = td.querySelector('img');
+        return { image: img?.src || '', content: '' };
+      }
+      return td.innerText.replace(/\n/g, ' ');
+    });
+  });
 
-      document.getElementById('exportPDF').addEventListener('click', () => {
-        const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
-        if (rows.length === 0) return alert('Ingen data å eksportere.');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape' });
 
-        const headers = Array.from(document.querySelectorAll('#searchResults table thead th')).slice(1, -1).map(th => th.innerText);
-        const data = rows.map(row => Array.from(row.cells).slice(1, -1).map(td => td.innerText.replace(/\n/g, ' ')));
+  doc.setFontSize(12);
+  doc.text("Skytestatistikk", 14, 15);
 
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'landscape' });
+  doc.autoTable({
+    head: [headers],
+    body: data,
+    startY: 20,
+    styles: { fontSize: 8 },
+    didDrawCell: function (data) {
+      const cell = data.cell;
+      const value = data.row.raw[data.column.index];
 
-        doc.setFontSize(12);
-        doc.text("Skytestatistikk", 14, 15);
-        doc.autoTable({
-          head: [headers],
-          body: data,
-          startY: 20,
-          styles: { fontSize: 8 },
-        });
+      if (typeof value === 'object' && value.image) {
+        const imgProps = doc.getImageProperties(value.image);
+        const ratio = imgProps.width / imgProps.height;
+        const cellWidth = cell.width;
+        const cellHeight = cell.height;
+        let w = cellHeight * ratio;
+        let h = cellHeight;
 
-        doc.save('skytestatistikk.pdf');
-      });
+        if (w > cellWidth) {
+          w = cellWidth;
+          h = w / ratio;
+        }
+
+        const x = cell.x + (cell.width - w) / 2;
+        const y = cell.y + (cell.height - h) / 2;
+
+        doc.addImage(value.image, 'PNG', x, y, w, h);
+      }
+    }
+  });
+
+  doc.save('skytestatistikk_med_bilder.pdf');
+});
+
     });
 
     function showImage(src) {
