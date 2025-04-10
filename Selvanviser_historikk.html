@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Utvidet analyse av skyting</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -82,7 +87,6 @@
       margin-top: 0;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <img src="lsk_logo.jpg" alt="LSK Logo" class="logo">
@@ -95,6 +99,11 @@
     <input type="date" id="endDate" placeholder="Til dato">
     <button id="searchBtn">Søk</button>
     <button id="clearBtn">Nullstill</button>
+  </div>
+
+  <div style="text-align: center; margin-bottom: 10px;">
+    <button id="exportCSV">Eksporter til CSV</button>
+    <button id="exportPDF">Eksporter til PDF</button>
   </div>
 
   <div id="searchResults"></div>
@@ -112,9 +121,10 @@
   </div>
 
   <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabase = window.supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    );
 
     function parseTidTilSekunder(tidStr) {
       if (!tidStr || typeof tidStr !== 'string') return null;
@@ -241,11 +251,8 @@
         document.querySelectorAll('.clickableName').forEach(cell => {
           cell.addEventListener('click', async () => {
             const clickedName = cell.textContent;
-
             const matchingRows = Array.from(document.querySelectorAll(`tr[data-navn="${clickedName}"]`));
-            let visSkudd = 0;
-            let visTreff = 0;
-            let visTider = [];
+            let visSkudd = 0, visTreff = 0, visTider = [];
 
             matchingRows.forEach(row => {
               const skudd = parseInt(row.cells[5].innerText);
@@ -260,20 +267,12 @@
             const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
             const visSnittTid = visTider.length > 0 ? (visTider.reduce((a, b) => a + b, 0) / visTider.length).toFixed(1) : null;
 
-            const { data: allRecords, error } = await supabase
+            const { data: allRecords } = await supabase
               .from('selvanviser')
               .select('skudd, treff, tid')
               .ilike('navn', clickedName);
 
-            if (error || !allRecords) {
-              alert('Kunne ikke hente data for ' + clickedName);
-              return;
-            }
-
-            let totalSkudd = 0;
-            let totalTreff = 0;
-            let totalTider = [];
-
+            let totalSkudd = 0, totalTreff = 0, totalTider = [];
             allRecords.forEach(r => {
               if (!isNaN(r.skudd)) totalSkudd += r.skudd;
               if (!isNaN(r.treff)) totalTreff += r.treff;
@@ -291,6 +290,47 @@
           });
         });
       }
+
+      document.getElementById('exportCSV').addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
+        if (rows.length === 0) return alert('Ingen data å eksportere.');
+
+        const headers = Array.from(document.querySelectorAll('#searchResults table thead th')).slice(1, -1).map(th => th.innerText);
+        const csv = [
+          headers.join(';'),
+          ...rows.map(row => Array.from(row.cells).slice(1, -1).map(td => td.innerText.replace(/[\n\r;]/g, ' ')).join(';'))
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'skytestatistikk.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('exportPDF').addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
+        if (rows.length === 0) return alert('Ingen data å eksportere.');
+
+        const headers = Array.from(document.querySelectorAll('#searchResults table thead th')).slice(1, -1).map(th => th.innerText);
+        const data = rows.map(row => Array.from(row.cells).slice(1, -1).map(td => td.innerText.replace(/\n/g, ' ')));
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
+
+        doc.setFontSize(12);
+        doc.text("Skytestatistikk", 14, 15);
+        doc.autoTable({
+          head: [headers],
+          body: data,
+          startY: 20,
+          styles: { fontSize: 8 },
+        });
+
+        doc.save('skytestatistikk.pdf');
+      });
     });
 
     function showImage(src) {
