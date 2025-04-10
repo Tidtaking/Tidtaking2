@@ -83,9 +83,12 @@
     <canvas id="targetCanvas" width="600" height="600"></canvas>
   </div>
 
-  <div class="nav-links">
-    <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk">Selvanviser historikk</a>
-  </div>
+<div id="historyLinkContainer" style="margin-top: 20px;">
+  <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk'">
+    Selvanviser historikk
+  </button>
+</div>
+
 
   <script>
     const supabase = window.supabase.createClient(
