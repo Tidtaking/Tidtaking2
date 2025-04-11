@@ -409,8 +409,10 @@ document.getElementById('exportPDF').addEventListener('click', () => {
   ctx.fillStyle = 'red';
   skudddata.forEach(({ x, y }) => {
     // Merk: x og y må speilvendes!
-    const drawX = centerX - x;
-    const drawY = centerY - y;
+    const scale = 2.5; // Prøv deg frem!
+const drawX = centerX + x / scale;
+const drawY = centerY - y / scale;
+
     ctx.beginPath();
     ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
     ctx.fill();
