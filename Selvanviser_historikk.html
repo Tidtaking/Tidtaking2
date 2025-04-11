@@ -398,39 +398,40 @@ function drawCombinedShots(skudddata) {
   const R = canvas.width / 2;
   const ringWidth = R / 10;
 
-  // Tegn blink med nummererte ringer (10 innerst til 1 ytterst)
+  // Tegn ringene
   for (let j = 1; j <= 10; j++) {
+    // Tegn bakgrunn for sirklene
     ctx.beginPath();
     ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
-
-    // Velg bakgrunnsfarge for sirklene
-    ctx.fillStyle = '#D3D3D3'; // Lys grå bakgrunnsfarge for alle sirkler
+    ctx.fillStyle = '#fff'; // Hvite ringene
     ctx.fill();
 
-    // Fremhev kun 8-poengs ringen med tykkere linje
-    ctx.strokeStyle = (j === 8) ? '#000000' : '#CCCCCC'; // Tykk linje for 8 poeng, lysere for andre
-    ctx.lineWidth = (j === 8) ? 3 : 1; // Kun 8 poeng med tykkere linje
+    // Fremhev 8 poeng-ringen med tykkere linje
+    ctx.strokeStyle = (j === 8) ? '#000' : '#ccc'; // Svart linje for 8 poeng
+    ctx.lineWidth = (j === 8) ? 2 : 1; // Øk linjetykkelsen for 8 poeng
     ctx.stroke();
 
-    // Nummer midt i toppen av hver ring: 11 - j gir 10 innerst, 1 ytterst
-    ctx.fillStyle = '#000000'; // Svart farge for nummeret
+    // Skriv nummer på toppen av hver ring (10 innerst til 1 ytterst)
+    ctx.fillStyle = '#000'; // Nummer i svart
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(11 - j, centerX, centerY - j * ringWidth + 15);
   }
 
-  // Tegn skudd (justert for plassering)
-  ctx.fillStyle = 'red'; // Rød farge for skudd
+  // Tegn skudd
+  ctx.fillStyle = 'red'; // Skuddfarge
   const originalCanvasSize = 600;
 
   skudddata.forEach(({ x, y }) => {
+    // Justering av skudddata (x, y) for korrekt plassering
     const offsetX = x - originalCanvasSize / 2;
     const offsetY = y - originalCanvasSize / 2;
 
     const drawX = centerX + offsetX;
     const drawY = centerY + offsetY;
 
+    // Tegn skudd som små sirkler
     ctx.beginPath();
     ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -438,7 +439,6 @@ function drawCombinedShots(skudddata) {
 
   return canvas;
 }
-
 
 
 async function showHitStatsModal(navn, stats) {
