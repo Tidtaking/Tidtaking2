@@ -406,21 +406,20 @@ for (let j = 1; j <= 10; j++) {
   ctx.beginPath();
   ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
 
-  // Bakgrunn
-  ctx.fillStyle = '#f5f5f5';
-  ctx.fill();
+  // Ingen fyll – bare ringkant
+  ctx.fillStyle = 'transparent';
 
   // Kantstrek – uthev kun 8’eren
-  ctx.strokeStyle = (score === 8) ? '#000' : '#aaa';
+  ctx.strokeStyle = (score === 8) ? '#000' : '#ccc';
   ctx.lineWidth = (score === 8) ? 3 : 1;
   ctx.stroke();
 
-  // Tekst
+  // Tekst (nummerering)
   ctx.fillStyle = '#000';
   ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(score, centerX, centerY - radius - 10);
+  ctx.fillText(score, centerX, centerY - radius - 12);
 }
   
   // Tegn skudd (justert for plassering)
