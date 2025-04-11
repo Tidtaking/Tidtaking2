@@ -398,26 +398,29 @@ function drawCombinedShots(skudddata) {
   const R = canvas.width / 2;
   const ringWidth = R / 10;
 
-// Tegn ringene med nummerering
-for (let j = 10; j >= 1; j--) {
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
+// Tegn ringene med riktig rekkefølge og nummerering
+for (let j = 1; j <= 10; j++) {
+  const score = 11 - j; // 10 innerst, 1 ytterst
+  const radius = j * ringWidth;
 
-  // Lys grå fyll
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+
+  // Bakgrunn
   ctx.fillStyle = '#f5f5f5';
   ctx.fill();
 
-  // Kantlinjer
-  ctx.strokeStyle = (j === 8) ? '#000' : '#aaa';  // 8’eren får tydelig svart strek
-  ctx.lineWidth = (j === 8) ? 3 : 1;
+  // Kantstrek – uthev kun 8’eren
+  ctx.strokeStyle = (score === 8) ? '#000' : '#aaa';
+  ctx.lineWidth = (score === 8) ? 3 : 1;
   ctx.stroke();
 
-  // Tall utenfor sirkelen
+  // Tekst
   ctx.fillStyle = '#000';
   ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(11 - j, centerX, centerY - j * ringWidth - 10);
+  ctx.fillText(score, centerX, centerY - radius - 10);
 }
   
   // Tegn skudd (justert for plassering)
