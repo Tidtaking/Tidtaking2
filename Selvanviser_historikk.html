@@ -395,26 +395,36 @@ function drawCombinedShots(skudddata) {
 
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
+  const R = canvas.width / 2;
+  const ringWidth = R / 10;
 
-  // Tegn blink
-  for (let r = 50; r <= 250; r += 50) {
+  // Tegn blink med nummererte ringer og annenhver grå/hvit
+  for (let j = 10; j >= 1; j--) {
     ctx.beginPath();
-    ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
-    ctx.strokeStyle = '#ccc';
-    ctx.lineWidth = 1;
+    ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
+    ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
+    ctx.fill();
+    ctx.strokeStyle = (j === 8 || j === 10) ? '#000' : '#999';
+    ctx.lineWidth = (j === 8 || j === 10) ? 2 : 1;
     ctx.stroke();
+
+    // Skriv tall i toppen av ringen
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(j, centerX, centerY - j * ringWidth + 15);
   }
 
   // Tegn skudd
   ctx.fillStyle = 'red';
-  const originalCanvasSize = 600; // Samme som i skyte-app
+
+  const originalCanvasSize = 600; // opprinnelig størrelse skudd ble lagret med
   skudddata.forEach(({ x, y }) => {
     const offsetX = x - originalCanvasSize / 2;
     const offsetY = y - originalCanvasSize / 2;
 
-    const scale = 1; // 1 hvis begge bruker samme størrelse
-    const drawX = centerX + offsetX * scale;
-    const drawY = centerY + offsetY * scale;
+    const drawX = centerX + offsetX;
+    const drawY = centerY + offsetY;
 
     ctx.beginPath();
     ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
