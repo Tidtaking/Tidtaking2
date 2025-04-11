@@ -398,22 +398,22 @@ function drawCombinedShots(skudddata) {
   const R = canvas.width / 2;
   const ringWidth = R / 10;
 
-  // Tegn ringene med nummerering
-for (let j = 1; j <= 10; j++) {
+ // Tegn ringene med nummerering
+for (let j = 10; j >= 1; j--) {
   ctx.beginPath();
   ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
 
-  // Fyll ringene
-  ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
+  // Fyll sirkel med transparent gråfarge
+  ctx.fillStyle = j % 2 === 0 ? '#f2f2f2' : '#ffffff';
   ctx.fill();
 
-  // Fremhev 8-poengsringen med tykkere linje
-  ctx.strokeStyle = (j === 8) ? '#000' : '#ccc'; // 8-poengsringen er svart
-  ctx.lineWidth = (j === 8) ? 3 : 1; // Tykk linje for 8-poengsringen
+  // Tegn ringkant
+  ctx.strokeStyle = j === 8 ? '#000' : '#999';
+  ctx.lineWidth = j === 8 ? 2 : 1;
   ctx.stroke();
 
-  // Nummer midt i toppen av hver ring
-  ctx.fillStyle = '#000'; // Nummer i svart
+  // Nummer
+  ctx.fillStyle = '#000';
   ctx.font = 'bold 14px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
