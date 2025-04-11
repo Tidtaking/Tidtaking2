@@ -400,18 +400,19 @@ function drawCombinedShots(skudddata) {
 
   // Tegn ringene
   for (let j = 1; j <= 10; j++) {
-    // Tegn bakgrunn for sirklene
     ctx.beginPath();
     ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
-    ctx.fillStyle = '#fff'; // Hvite ringene
+
+    // Hvit bakgrunn på sirklene
+    ctx.fillStyle = '#fff'; 
     ctx.fill();
 
-    // Fremhev 8 poeng-ringen med tykkere linje
-    ctx.strokeStyle = (j === 8) ? '#000' : '#ccc'; // Svart linje for 8 poeng
-    ctx.lineWidth = (j === 8) ? 2 : 1; // Øk linjetykkelsen for 8 poeng
+    // Fremhev 8-poengsringen med tykkere linje
+    ctx.strokeStyle = (j === 8) ? '#000' : '#ccc'; // 8-poengsringen svart, andre grå
+    ctx.lineWidth = (j === 8) ? 2 : 1; // Tykke linjer for 8 poeng
     ctx.stroke();
 
-    // Skriv nummer på toppen av hver ring (10 innerst til 1 ytterst)
+    // Nummer på toppen av hver ring
     ctx.fillStyle = '#000'; // Nummer i svart
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
@@ -420,18 +421,15 @@ function drawCombinedShots(skudddata) {
   }
 
   // Tegn skudd
-  ctx.fillStyle = 'red'; // Skuddfarge
-  const originalCanvasSize = 600;
+  ctx.fillStyle = 'red'; 
 
   skudddata.forEach(({ x, y }) => {
-    // Justering av skudddata (x, y) for korrekt plassering
-    const offsetX = x - originalCanvasSize / 2;
-    const offsetY = y - originalCanvasSize / 2;
+    const offsetX = x - 600 / 2;
+    const offsetY = y - 600 / 2;
 
     const drawX = centerX + offsetX;
     const drawY = centerY + offsetY;
 
-    // Tegn skudd som små sirkler
     ctx.beginPath();
     ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -439,7 +437,6 @@ function drawCombinedShots(skudddata) {
 
   return canvas;
 }
-
 
 async function showHitStatsModal(navn, stats) {
   const {
