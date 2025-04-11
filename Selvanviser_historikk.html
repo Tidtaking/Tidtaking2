@@ -428,9 +428,17 @@ async function showHitStatsModal(navn, stats) {
   let alleSkudd = [];
   skuddRecords.forEach(record => {
     try {
-      const parsed = JSON.parse(record.skudddata);
+      let parsed = Array.isArray(record.skudddata)
+        ? record.skudddata
+        : JSON.parse(record.skudddata);
+
+      // Filtrer bort eventuelle ugyldige punkt
+      parsed = parsed.filter(p => typeof p.x === 'number' && typeof p.y === 'number');
+
       alleSkudd = alleSkudd.concat(parsed);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Feil ved parsing av skudddata:", record.skudddata);
+    }
   });
 
   const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
@@ -465,18 +473,17 @@ async function showHitStatsModal(navn, stats) {
   `;
 
   if (alleSkudd.length > 0) {
-    setTimeout(() => {
-      const container = document.getElementById('skuddCanvasContainer');
-      if (container) {
-        container.innerHTML = '';
-        const canvas = drawCombinedShots(alleSkudd);
-        container.appendChild(canvas);
-      }
-    }, 0);
+    const canvas = drawCombinedShots(alleSkudd);
+    const container = document.getElementById('skuddCanvasContainer');
+    container.innerHTML = '';
+    container.appendChild(canvas);
+  } else {
+    console.log("Ingen skudddata funnet for", navn);
   }
 
   document.getElementById('hitStatsModal').style.display = 'flex';
-} // <== DENNE } ER VIKTIG
+}
+
   </script>
 </body>
 </html>
