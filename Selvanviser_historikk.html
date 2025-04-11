@@ -112,71 +112,7 @@
     #hitStatsContent h2 {
       margin-top: 0;
     }
-    @media screen and (max-width: 768px) {
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  thead {
-    display: none;
-  }
-
-  tr {
-    margin-bottom: 10px;
-    background: white;
-    padding: 10px;
-    border-radius: 5px;
-  }
-
-  td {
-    text-align: left;
-    padding-left: 50%;
-    position: relative;
-    border: none;
-    border-bottom: 1px solid #eee;
-  }
-
-  td::before {
-    position: absolute;
-    top: 8px;
-    left: 10px;
-    width: 45%;
-    padding-right: 10px;
-    white-space: nowrap;
-    font-weight: bold;
-  }
-
-  td:nth-child(2)::before { content: "Navn"; }
-  td:nth-child(3)::before { content: "Dato"; }
-  td:nth-child(4)::before { content: "Serie"; }
-  td:nth-child(5)::before { content: "Sted"; }
-  td:nth-child(6)::before { content: "Skudd"; }
-  td:nth-child(7)::before { content: "Treff"; }
-  td:nth-child(8)::before { content: "Poeng"; }
-  td:nth-child(9)::before { content: "Tid"; }
-  td:nth-child(10)::before { content: "Vindretning"; }
-  td:nth-child(11)::before { content: "Skrumelding"; }
-  td:nth-child(12)::before { content: "Miniatyr"; }
-
-  #searchControls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  #searchControls input,
-  #searchControls button {
-    width: 100%;
-    font-size: 1.1em;
-  }
-
-  .modal button {
-    font-size: 1.2em;
-    padding: 6px 12px;
-  }
-}
-
+  
   </style>
 </head>
 <body>
