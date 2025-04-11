@@ -389,8 +389,8 @@ document.getElementById('exportPDF').addEventListener('click', () => {
 
 function drawCombinedShots(skudddata) {
   const canvas = document.createElement('canvas');
-  canvas.width = 300;
-  canvas.height = 300;
+  canvas.width = 300;  // Redusert størrelse på canvas
+  canvas.height = 300;  // Redusert størrelse på canvas
   const ctx = canvas.getContext('2d');
 
   const centerX = canvas.width / 2;
@@ -423,9 +423,11 @@ function drawCombinedShots(skudddata) {
   // Tegn skudd (justert for plassering)
   ctx.fillStyle = 'red'; 
 
+  const scale = 300 / 600; // Skalering fra 600px til 300px
+
   skudddata.forEach(({ x, y }) => {
-    const offsetX = x - 300 / 2;
-    const offsetY = y - 300 / 2;
+    const offsetX = (x - 600 / 2) * scale;  // Skalering av x
+    const offsetY = (y - 600 / 2) * scale;  // Skalering av y
 
     const drawX = centerX + offsetX;
     const drawY = centerY + offsetY;
@@ -437,6 +439,7 @@ function drawCombinedShots(skudddata) {
 
   return canvas;
 }
+
 
 
 async function showHitStatsModal(navn, stats) {
