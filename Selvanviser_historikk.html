@@ -408,8 +408,8 @@ document.getElementById('exportPDF').addEventListener('click', () => {
   // Tegn skudd
   ctx.fillStyle = 'red';
   skudddata.forEach(({ x, y }) => {
-    // Merk: y må speilvendes!
-    const drawX = centerX + x;
+    // Merk: x og y må speilvendes!
+    const drawX = centerX - x;
     const drawY = centerY - y;
     ctx.beginPath();
     ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
