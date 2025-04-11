@@ -402,18 +402,21 @@ function drawCombinedShots(skudddata) {
   for (let j = 1; j <= 10; j++) {
     ctx.beginPath();
     ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
-    ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
+
+    // Fyll sirklene med farge (alternativ farge mellom hvit og lys grå)
+    ctx.fillStyle = (j % 2 === 0) ? '#f0f0f0' : '#ffffff'; // Lys grå og hvit
     ctx.fill();
 
-    // Fremhev ringene fra 8 og oppover
-    ctx.strokeStyle = j >= 8 ? '#000' : '#999';
-    ctx.lineWidth = j >= 8 ? 2 : 1;
+    // Fremhev kun 8-poengs ringen med tykkere linje
+    ctx.strokeStyle = (j === 8) ? '#000000' : '#cccccc'; // Mørkere for 8 poeng, lysere for andre
+    ctx.lineWidth = (j === 8) ? 2 : 1; // Kun 8 poeng med tykkere linje
     ctx.stroke();
 
     // Nummer midt i toppen av hver ring: 11 - j gir 10 innerst, 1 ytterst
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = '#000000';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText(11 - j, centerX, centerY - j * ringWidth + 15);
   }
 
