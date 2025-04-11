@@ -112,7 +112,44 @@
     #hitStatsContent h2 {
       margin-top: 0;
     }
-  
+  @media screen and (max-width: 768px) {
+  #searchControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #searchControls input,
+  #searchControls button {
+    width: 100%;
+    font-size: 1.1em;
+  }
+
+  #exportCSV,
+  #exportPDF {
+    width: 100%;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+  }
+
+  #searchResults {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 900px; /* behold bredde slik at scroll trengs */
+  }
+
+  th, td {
+    font-size: 0.95em;
+    padding: 8px;
+  }
+
+  .modal button {
+    font-size: 1.2em;
+    padding: 6px 12px;
+  }
+}
+
   </style>
 </head>
 <body>
