@@ -1,9 +1,9 @@
-
+<!-- Hele HTML-filen med støtte for stående skyting -->
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Utvidet analyse av skyting</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -44,18 +44,20 @@
   <h1>Utvidet analyse av skyting</h1>
 
   <div id="competitionInfo">
-  <input type="text" id="nameInput" placeholder="Navn på utøver" required />
-  <input type="date" id="shootingDate" required />
-  <input type="text" id="shootingLocation" placeholder="Sted/Konkurranse" required />
-  <button id="fetchWeatherBtn">Hent værdata</button>
-</div>
+    <input type="text" id="nameInput" placeholder="Navn på utøver" required />
+    <input type="date" id="shootingDate" required />
+    <input type="text" id="shootingLocation" placeholder="Sted/Konkurranse" required />
+    <button id="fetchWeatherBtn">Hent værdata</button>
+    <label style="display: flex; align-items: center; gap: 6px;">
+      <input type="checkbox" id="standingShooting" />
+      Stående skyting
+    </label>
+  </div>
 
-<!-- Flytt værdataene hit, utenfor flex-containeren -->
-<div style="margin-top: 10px;">
-  <div id="weatherData">Værdata vises her.</div>
-  <div id="hourlyForecast"></div>
-</div>
-
+  <div style="margin-top: 10px;">
+    <div id="weatherData">Værdata vises her.</div>
+    <div id="hourlyForecast"></div>
+  </div>
 
   <div id="adjustmentControls">
     <h4 style="width: 100%;">Manuell skrumelding</h4>
@@ -75,7 +77,10 @@
 
     <table id="resultTable">
       <thead>
-        <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th></tr>
+        <tr>
+          <th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th>
+          <th>Tid</th><th>Retning</th><th>Skrudd</th><th>Stilling</th><th>Miniatyr</th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -88,12 +93,11 @@
     <canvas id="targetCanvas" width="600" height="600"></canvas>
   </div>
 
-<div id="historyLinkContainer" style="margin-top: 20px;">
-  <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk'">
-    Selvanviser historikk
-  </button>
-</div>
-
+  <div id="historyLinkContainer" style="margin-top: 20px;">
+    <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk'">
+      Selvanviser historikk
+    </button>
+  </div>
 
   <script>
     const supabase = window.supabase.createClient(
@@ -182,44 +186,15 @@
         document.getElementById('saveSeriesBtn').disabled = currentShots.length === 0;
       });
 
-document.getElementById('adjUp').addEventListener('click', () => {
-  if (adjustment.down > 0) {
-    adjustment.down--;
-  } else {
-    adjustment.up++;
-  }
-  updateAdjustmentDisplay();
-});
-
-document.getElementById('adjDown').addEventListener('click', () => {
-  if (adjustment.up > 0) {
-    adjustment.up--;
-  } else {
-    adjustment.down++;
-  }
-  updateAdjustmentDisplay();
-});
-
-document.getElementById('adjLeft').addEventListener('click', () => {
-  if (adjustment.right > 0) {
-    adjustment.right--;
-  } else {
-    adjustment.left++;
-  }
-  updateAdjustmentDisplay();
-});
-
-document.getElementById('adjRight').addEventListener('click', () => {
-  if (adjustment.left > 0) {
-    adjustment.left--;
-  } else {
-    adjustment.right++;
-  }
-  updateAdjustmentDisplay();
-});
-
-
-
+      ['adjUp', 'adjDown', 'adjLeft', 'adjRight'].forEach(dir => {
+        document.getElementById(dir).addEventListener('click', () => {
+          if (dir === 'adjUp') adjustment.down > 0 ? adjustment.down-- : adjustment.up++;
+          if (dir === 'adjDown') adjustment.up > 0 ? adjustment.up-- : adjustment.down++;
+          if (dir === 'adjLeft') adjustment.right > 0 ? adjustment.right-- : adjustment.left++;
+          if (dir === 'adjRight') adjustment.left > 0 ? adjustment.left-- : adjustment.right++;
+          updateAdjustmentDisplay();
+        });
+      });
 
       document.getElementById('startStopTimerBtn').addEventListener('click', () => {
         const btn = document.getElementById('startStopTimerBtn');
@@ -236,7 +211,7 @@ document.getElementById('adjRight').addEventListener('click', () => {
         } else {
           clearInterval(timerInterval);
           timerRunning = false;
-          btn.textContent = "Start tidtaking";
+          btn.textContent = "Start skytetid";
         }
       });
 
@@ -276,7 +251,8 @@ document.getElementById('adjRight').addEventListener('click', () => {
         const sted = document.getElementById('shootingLocation').value || 'Ukjent';
         const tid = document.getElementById('timerDisplay').textContent.replace("Tid: ", "");
         const skrumelding = `Opp: ${adjustment.up} | Ned: ${adjustment.down} | Venstre: ${adjustment.left} | Høyre: ${adjustment.right}`;
-        const treff = currentShots.filter(s => s.score >= 7.8).length;
+        const standing = document.getElementById('standingShooting').checked;
+        const treff = currentShots.filter(s => standing ? s.score > 0 : s.score >= 7.8).length;
         const poeng = currentShots.reduce((sum, s) => sum + s.score, 0);
         seriesCount++;
 
@@ -303,14 +279,26 @@ document.getElementById('adjRight').addEventListener('click', () => {
         const dataUrl = preview.toDataURL();
 
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${dato}</td><td>${seriesCount}</td><td>${sted}</td><td>${currentShots.length}</td><td>${poeng} (${treff})</td><td>${tid}</td><td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td><td>${skrumelding}</td><td><img src="${dataUrl}" width="80"></td>`;
+        row.innerHTML = `
+          <td>${dato}</td>
+          <td>${seriesCount}</td>
+          <td>${sted}</td>
+          <td>${currentShots.length}</td>
+          <td>${poeng} (${treff})</td>
+          <td>${tid}</td>
+          <td><span class='wind-arrow' style='transform: rotate(${lastWindDir ?? 0}deg);'></span> ${getCompassDirection(lastWindDir ?? 0)}</td>
+          <td>${skrumelding}</td>
+          <td>${standing ? 'Stående' : 'Liggende'}</td>
+          <td><img src="${dataUrl}" width="80"></td>
+        `;
         document.querySelector('#resultTable tbody').appendChild(row);
 
         await supabase.from('selvanviser').insert({
           navn, dato, sted, serie: seriesCount, skudd: currentShots.length,
           poeng, treff, tid, vindretning: getCompassDirection(lastWindDir ?? 0),
           vindgrader: lastWindDir ?? 0, skrumelding, skudddata: currentShots,
-          miniatur_dataurl: dataUrl
+          miniatur_dataurl: dataUrl,
+          stilling: standing
         });
 
         alert("Serie lagret!");
