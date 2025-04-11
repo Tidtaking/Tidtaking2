@@ -399,26 +399,26 @@ function drawCombinedShots(skudddata) {
   const ringWidth = R / 10;
 
   // Tegn ringene med nummerering
-  for (let j = 1; j <= 10; j++) {
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
+for (let j = 1; j <= 10; j++) {
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
 
-    // Fyll ringene
-    ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
-    ctx.fill();
+  // Fyll ringene
+  ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
+  ctx.fill();
 
-    // Fremhev 8-poengsringen med tykkere linje
-    ctx.strokeStyle = (j === 8) ? '#000' : '#ccc'; // 8-poengsringen er svart
-    ctx.lineWidth = (j === 8) ? 3 : 1; // Tykk linje for 8-poengsringen
-    ctx.stroke();
+  // Fremhev 8-poengsringen med tykkere linje
+  ctx.strokeStyle = (j === 8) ? '#000' : '#ccc'; // 8-poengsringen er svart
+  ctx.lineWidth = (j === 8) ? 3 : 1; // Tykk linje for 8-poengsringen
+  ctx.stroke();
 
-    // Nummer midt i toppen av hver ring
-    ctx.fillStyle = '#000'; // Nummer i svart
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(11 - j, centerX, centerY - j * ringWidth + 15);
-  }
+  // Nummer midt i toppen av hver ring
+  ctx.fillStyle = '#000'; // Nummer i svart
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(11 - j, centerX, centerY - j * ringWidth + 15);
+}
 
   // Tegn skudd (justert for plassering)
   ctx.fillStyle = 'red'; 
