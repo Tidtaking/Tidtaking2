@@ -403,17 +403,17 @@ function drawCombinedShots(skudddata) {
     ctx.beginPath();
     ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
 
-    // Fyll sirklene med farge (alternativ farge mellom hvit og lys grå)
-    ctx.fillStyle = (j % 2 === 0) ? '#f0f0f0' : '#ffffff'; // Lys grå og hvit
+    // Velg bakgrunnsfarge for sirklene
+    ctx.fillStyle = '#D3D3D3'; // Lys grå bakgrunnsfarge for alle sirkler
     ctx.fill();
 
     // Fremhev kun 8-poengs ringen med tykkere linje
-    ctx.strokeStyle = (j === 8) ? '#000000' : '#cccccc'; // Mørkere for 8 poeng, lysere for andre
-    ctx.lineWidth = (j === 8) ? 2 : 1; // Kun 8 poeng med tykkere linje
+    ctx.strokeStyle = (j === 8) ? '#000000' : '#CCCCCC'; // Tykk linje for 8 poeng, lysere for andre
+    ctx.lineWidth = (j === 8) ? 3 : 1; // Kun 8 poeng med tykkere linje
     ctx.stroke();
 
     // Nummer midt i toppen av hver ring: 11 - j gir 10 innerst, 1 ytterst
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#000000'; // Svart farge for nummeret
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -421,7 +421,7 @@ function drawCombinedShots(skudddata) {
   }
 
   // Tegn skudd (justert for plassering)
-  ctx.fillStyle = 'red';
+  ctx.fillStyle = 'red'; // Rød farge for skudd
   const originalCanvasSize = 600;
 
   skudddata.forEach(({ x, y }) => {
@@ -438,6 +438,7 @@ function drawCombinedShots(skudddata) {
 
   return canvas;
 }
+
 
 
 async function showHitStatsModal(navn, stats) {
