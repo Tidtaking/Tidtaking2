@@ -405,18 +405,18 @@ document.getElementById('exportPDF').addEventListener('click', () => {
     ctx.stroke();
   }
 
-  // Tegn skudd
-  ctx.fillStyle = 'red';
-  skudddata.forEach(({ x, y }) => {
-    // Merk: x og y må speilvendes!
-    const scale = 2; // Prøv deg frem!
-const drawX = centerX + x / scale;
-const drawY = centerY - y / scale;
+// Tegn skudd
+ctx.fillStyle = 'red';
+skudddata.forEach(({ x, y }) => {
+  const scale = 2;
+  const drawX = centerX + x / scale;
+  const drawY = centerY + y / scale; // <-- IKKE speil y, test uten minus!
 
-    ctx.beginPath();
-    ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
-    ctx.fill();
-  });
+  ctx.beginPath();
+  ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
+  ctx.fill();
+});
+
 
   return canvas;
 }
