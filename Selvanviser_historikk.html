@@ -387,7 +387,7 @@ document.getElementById('exportPDF').addEventListener('click', () => {
       modal.style.display = 'flex';
     }
 
-   function drawCombinedShots(skudddata) {
+function drawCombinedShots(skudddata) {
   const canvas = document.createElement('canvas');
   canvas.width = 600;
   canvas.height = 600;
@@ -396,7 +396,7 @@ document.getElementById('exportPDF').addEventListener('click', () => {
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
 
-  // Tegn blink-sirkler
+  // Tegn blink
   for (let r = 50; r <= 250; r += 50) {
     ctx.beginPath();
     ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
@@ -405,19 +405,21 @@ document.getElementById('exportPDF').addEventListener('click', () => {
     ctx.stroke();
   }
 
-// Justert canvas plotting:
-ctx.fillStyle = 'red';
-const scale = 2; // juster denne hvis nødvendig (eks. 1.5 eller 2.5)
+  // Tegn skudd
+  ctx.fillStyle = 'red';
+  const originalCanvasSize = 600; // Samme som i skyte-app
+  skudddata.forEach(({ x, y }) => {
+    const offsetX = x - originalCanvasSize / 2;
+    const offsetY = y - originalCanvasSize / 2;
 
-skudddata.forEach(({ x, y }) => {
-  const drawX = centerX + x / scale;
-  const drawY = centerY - y / scale; // SPEILVENN y!
+    const scale = 1; // 1 hvis begge bruker samme størrelse
+    const drawX = centerX + offsetX * scale;
+    const drawY = centerY + offsetY * scale;
 
-  ctx.beginPath();
-  ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
-  ctx.fill();
-});
-
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
   return canvas;
 }
