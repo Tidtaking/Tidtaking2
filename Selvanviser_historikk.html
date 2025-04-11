@@ -398,30 +398,27 @@ function drawCombinedShots(skudddata) {
   const R = canvas.width / 2;
   const ringWidth = R / 10;
 
-  // Tegn blink: 10 (innerst) til 1 (ytterst)
-  for (let i = 1; i <= 10; i++) {
-    const poeng = 11 - i; // Starter med 10 poeng innerst
-
+  // Tegn blink med nummererte ringer og annenhver grå/hvit
+  for (let j = 1; j >= 10; j--) {
     ctx.beginPath();
-    ctx.arc(centerX, centerY, i * ringWidth, 0, 2 * Math.PI);
-
-    ctx.fillStyle = i % 2 === 0 ? '#eee' : '#fff';
+    ctx.arc(centerX, centerY, j * ringWidth, 0, 2 * Math.PI);
+    ctx.fillStyle = (j % 2 === 0) ? '#eee' : '#fff';
     ctx.fill();
-
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = (poeng === 8) ? 2 : 1;
+    ctx.strokeStyle = (j === 8 || j === 10) ? '#000' : '#999';
+    ctx.lineWidth = (j === 8 || j === 10) ? 2 : 1;
     ctx.stroke();
 
+    // Skriv tall i toppen av ringen
     ctx.fillStyle = '#000';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(poeng, centerX, centerY - i * ringWidth + ringWidth / 2);
+    ctx.fillText(j, centerX, centerY - j * ringWidth + 15);
   }
 
   // Tegn skudd
   ctx.fillStyle = 'red';
-  const originalCanvasSize = 600;
+
+  const originalCanvasSize = 600; // opprinnelig størrelse skudd ble lagret med
   skudddata.forEach(({ x, y }) => {
     const offsetX = x - originalCanvasSize / 2;
     const offsetY = y - originalCanvasSize / 2;
