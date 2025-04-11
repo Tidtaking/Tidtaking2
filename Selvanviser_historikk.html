@@ -387,39 +387,89 @@ document.getElementById('exportPDF').addEventListener('click', () => {
       modal.style.display = 'flex';
     }
 
-    function showHitStatsModal(navn, stats) {
-      const {
-        visTreff, visSkudd, visProsent, visSnittTid,
-        totalTreff, totalSkudd, totalProsent, totalSnittTid
-      } = stats;
+   function drawCombinedShots(skudddata) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 600;
+  canvas.height = 600;
+  const ctx = canvas.getContext('2d');
 
-      const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
-      const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
 
-      const content = document.getElementById('hitStatsContent');
-      content.innerHTML = `
-        <h2>Statistikk for ${navn}</h2>
-        <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;">
-          <div style="text-align:center;">
-            <h3>Viste rader</h3>
-            <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${visColor} ${visProsent ?? 0}%, #ddd ${visProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
-              ${visProsent ?? '–'}%
-            </div>
-            <p>${visTreff} treff av ${visSkudd} skudd</p>
-            ${visSnittTid !== null ? `<p>Snittid: ${visSnittTid} sek</p>` : '<p>Ingen tider</p>'}
-          </div>
-          <div style="text-align:center;">
-            <h3>Totalt</h3>
-            <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent}%, #ddd ${totalProsent}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
-              ${totalProsent ?? '–'}%
-            </div>
-            <p>${totalTreff} treff av ${totalSkudd} skudd</p>
-            ${totalSnittTid !== null ? `<p>Snittid: ${totalSnittTid} sek</p>` : '<p>Ingen tider</p>'}
-          </div>
+  for (let r = 50; r <= 250; r += 50) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = 'red';
+  skudddata.forEach(({ x, y }) => {
+    ctx.beginPath();
+    ctx.arc(centerX + x, centerY + y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  return canvas;
+}
+
+async function showHitStatsModal(navn, stats) {
+  const {
+    visTreff, visSkudd, visProsent, visSnittTid,
+    totalTreff, totalSkudd, totalProsent, totalSnittTid
+  } = stats;
+
+  const { data: skuddRecords } = await supabase
+    .from('selvanviser')
+    .select('skudddata')
+    .ilike('navn', navn);
+
+  let alleSkudd = [];
+  skuddRecords.forEach(record => {
+    try {
+      const parsed = JSON.parse(record.skudddata);
+      alleSkudd = alleSkudd.concat(parsed);
+    } catch (e) {}
+  });
+
+  const canvas = drawCombinedShots(alleSkudd);
+  const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
+  const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+
+  const content = document.getElementById('hitStatsContent');
+  content.innerHTML = `
+    <h2>Statistikk for ${navn}</h2>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 30px;">
+      <div style="text-align:center;">
+        <h3>Viste rader</h3>
+        <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${visColor} ${visProsent ?? 0}%, #ddd ${visProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+          ${visProsent ?? '–'}%
         </div>
-        <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
-      `;
-      document.getElementById('hitStatsModal').style.display = 'flex';
+        <p>${visTreff} treff av ${visSkudd} skudd</p>
+        ${visSnittTid !== null ? `<p>Snittid: ${visSnittTid} sek</p>` : '<p>Ingen tider</p>'}
+      </div>
+      <div style="text-align:center;">
+        <h3>Totalt</h3>
+        <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent ?? 0}%, #ddd ${totalProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+          ${totalProsent ?? '–'}%
+        </div>
+        <p>${totalTreff} treff av ${totalSkudd} skudd</p>
+        ${totalSnittTid !== null ? `<p>Snittid: ${totalSnittTid} sek</p>` : '<p>Ingen tider</p>'}
+      </div>
+      <div style="text-align:center;">
+        <h3>Alle skudd</h3>
+        <div id="skuddCanvasContainer"></div>
+      </div>
+    </div>
+    <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
+  `;
+
+  if (alleSkudd.length > 0) {
+    document.getElementById('skuddCanvasContainer').appendChild(canvas);
+  }
+
+  document.getElementById('hitStatsModal').style.display = 'flex';
     }
   </script>
 </body>
