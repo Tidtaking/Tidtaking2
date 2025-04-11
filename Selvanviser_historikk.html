@@ -464,18 +464,19 @@ async function showHitStatsModal(navn, stats) {
     <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
   `;
 
- if (alleSkudd.length > 0) {
-  // Vent litt slik at innerHTML er rendret før vi legger til canvas
-  setTimeout(() => {
-    const container = document.getElementById('skuddCanvasContainer');
-    if (container) {
-      container.innerHTML = '';
-      const canvas = drawCombinedShots(alleSkudd);
-      container.appendChild(canvas);
-    }
-  }, 0);
-}
+  if (alleSkudd.length > 0) {
+    setTimeout(() => {
+      const container = document.getElementById('skuddCanvasContainer');
+      if (container) {
+        container.innerHTML = '';
+        const canvas = drawCombinedShots(alleSkudd);
+        container.appendChild(canvas);
+      }
+    }, 0);
+  }
 
+  document.getElementById('hitStatsModal').style.display = 'flex';
+} // <== DENNE } ER VIKTIG
   </script>
 </body>
 </html>
