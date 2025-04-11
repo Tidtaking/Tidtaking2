@@ -396,6 +396,7 @@ document.getElementById('exportPDF').addEventListener('click', () => {
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
 
+  // Tegn blink-sirkler
   for (let r = 50; r <= 250; r += 50) {
     ctx.beginPath();
     ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
@@ -404,14 +405,20 @@ document.getElementById('exportPDF').addEventListener('click', () => {
     ctx.stroke();
   }
 
+  // Tegn skudd
   ctx.fillStyle = 'red';
   skudddata.forEach(({ x, y }) => {
+    // Merk: y må speilvendes!
+    const drawX = centerX + x;
+    const drawY = centerY - y;
     ctx.beginPath();
-    ctx.arc(centerX + x, centerY + y, 4, 0, Math.PI * 2);
+    ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
     ctx.fill();
   });
 
   return canvas;
+}
+
 }
 
 async function showHitStatsModal(navn, stats) {
