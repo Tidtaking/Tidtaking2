@@ -459,18 +459,22 @@ async function showHitStatsModal(navn, stats) {
       </div>
       <div style="text-align:center;">
         <h3>Alle skudd</h3>
-        <div id="skuddCanvasContainer"></div>
+        <div id="skuddCanvasContainer" style="min-height: 600px;"></div>
       </div>
     </div>
     <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
   `;
 
   if (alleSkudd.length > 0) {
-    document.getElementById('skuddCanvasContainer').appendChild(canvas);
+    requestAnimationFrame(() => {
+      const container = document.getElementById('skuddCanvasContainer');
+      if (container) container.appendChild(canvas);
+    });
   }
 
   document.getElementById('hitStatsModal').style.display = 'flex';
-    }
+}
+
   </script>
 </body>
 </html>
