@@ -398,6 +398,7 @@ function drawCombinedShots(skudddata) {
   const R = canvas.width / 2;
   const ringWidth = R / 10;
 
+
 // Tegn ringene med riktig rekkefølge og nummerering
 for (let j = 1; j <= 10; j++) {
   const score = 11 - j; // 10 innerst, 1 ytterst
@@ -409,17 +410,17 @@ for (let j = 1; j <= 10; j++) {
   // Ingen fyll – bare ringkant
   ctx.fillStyle = 'transparent';
 
-  // Kantstrek – uthev kun 8’eren
+  // Kantstrek – uthev 8’eren
   ctx.strokeStyle = (score === 8) ? '#000' : '#ccc';
   ctx.lineWidth = (score === 8) ? 3 : 1;
   ctx.stroke();
 
-  // Tekst (nummerering)
+  // Tekst midt i hver ring – litt *inni* ringen
   ctx.fillStyle = '#000';
   ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(score, centerX, centerY - radius - 12);
+  ctx.fillText(score, centerX, centerY - radius + ringWidth / 2);
 }
   
   // Tegn skudd (justert for plassering)
