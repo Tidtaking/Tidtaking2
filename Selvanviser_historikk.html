@@ -464,16 +464,16 @@ async function showHitStatsModal(navn, stats) {
     <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
   `;
 
-  if (alleSkudd.length > 0) {
-  requestAnimationFrame(() => {
+ if (alleSkudd.length > 0) {
+  // Vent litt slik at innerHTML er rendret før vi legger til canvas
+  setTimeout(() => {
     const container = document.getElementById('skuddCanvasContainer');
-    container.innerHTML = '';
-    const canvas = drawCombinedShots(alleSkudd);
-    container.appendChild(canvas);
-  });
-}
-
-  document.getElementById('hitStatsModal').style.display = 'flex';
+    if (container) {
+      container.innerHTML = '';
+      const canvas = drawCombinedShots(alleSkudd);
+      container.appendChild(canvas);
+    }
+  }, 0);
 }
 
   </script>
