@@ -389,8 +389,8 @@ document.getElementById('exportPDF').addEventListener('click', () => {
 
 function drawCombinedShots(skudddata) {
   const canvas = document.createElement('canvas');
-  canvas.width = 600;
-  canvas.height = 600;
+  canvas.width = 300;
+  canvas.height = 300;
   const ctx = canvas.getContext('2d');
 
   const centerX = canvas.width / 2;
@@ -424,8 +424,8 @@ function drawCombinedShots(skudddata) {
   ctx.fillStyle = 'red'; 
 
   skudddata.forEach(({ x, y }) => {
-    const offsetX = x - 600 / 2;
-    const offsetY = y - 600 / 2;
+    const offsetX = x - 300 / 2;
+    const offsetY = y - 300 / 2;
 
     const drawX = centerX + offsetX;
     const drawY = centerY + offsetY;
