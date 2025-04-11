@@ -433,7 +433,6 @@ async function showHitStatsModal(navn, stats) {
     } catch (e) {}
   });
 
-  const canvas = drawCombinedShots(alleSkudd);
   const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
   const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
 
@@ -469,9 +468,10 @@ async function showHitStatsModal(navn, stats) {
   requestAnimationFrame(() => {
     const container = document.getElementById('skuddCanvasContainer');
     container.innerHTML = '';
+    const canvas = drawCombinedShots(alleSkudd);
     container.appendChild(canvas);
   });
-  }
+}
 
   document.getElementById('hitStatsModal').style.display = 'flex';
 }
