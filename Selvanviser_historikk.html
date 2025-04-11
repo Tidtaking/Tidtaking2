@@ -405,12 +405,13 @@ document.getElementById('exportPDF').addEventListener('click', () => {
     ctx.stroke();
   }
 
-// Tegn skudd
+// Justert canvas plotting:
 ctx.fillStyle = 'red';
+const scale = 2; // juster denne hvis nødvendig (eks. 1.5 eller 2.5)
+
 skudddata.forEach(({ x, y }) => {
-  const scale = 2;
   const drawX = centerX + x / scale;
-  const drawY = centerY + y / scale; // <-- IKKE speil y, test uten minus!
+  const drawY = centerY - y / scale; // SPEILVENN y!
 
   ctx.beginPath();
   ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
