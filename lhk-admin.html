@@ -256,10 +256,34 @@ async function lagreSpillere() {
     visSpillerKnapper(); // 👈 Gå til visning etter lagring
   }
 }
-function visSpillerKnapper() {
+async function visSpillerKnapper() {
+  if (!aktivKampId) return;
+
   const container = document.getElementById("spillereContainer");
   container.innerHTML = "";
 
+  const { data } = await client
+    .from("spiller")
+    .select("*")
+    .eq("kamp_id", aktivKampId)
+    .order("drakt");
+
+  spillere.length = 0;
+
+  if (!data || data.length === 0) {
+    // Ingen lagrede spillere – bruk standard
+    for (let i = 1; i <= 16; i++) {
+      spillere.push({
+        kamp_id: aktivKampId,
+        drakt: i,
+        navn: `Spiller ${i}`
+      });
+    }
+  } else {
+    spillere.push(...data);
+  }
+
+  // Vis kun knapper
   spillere.forEach(spiller => {
     const btn = document.createElement("button");
     btn.textContent = `${spiller.drakt} ${spiller.navn}`;
@@ -275,6 +299,7 @@ function visSpillerKnapper() {
   container.appendChild(document.createElement("br"));
   container.appendChild(redigerBtn);
 }
+
 
 
 function velgSpiller(spiller) {
