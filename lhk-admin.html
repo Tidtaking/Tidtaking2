@@ -17,7 +17,7 @@
       background: #fff;
       padding: 1rem;
       border-radius: 10px;
-      max-width: 600px;
+      max-width: 800px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -34,15 +34,26 @@
       background: #0057b8;
       color: white;
     }
+    .spiller-valg button {
+      display: inline-block;
+      margin: 3px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid #888;
+      background: #eee;
+      cursor: pointer;
+    }
+    .spiller-valg button.aktiv {
+      background: #0057b8;
+      color: white;
+      font-weight: bold;
+    }
     button.delete {
       background: #e74c3c;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-    }
-    button.delete:hover {
-      background: #c0392b;
     }
   </style>
 </head>
@@ -64,10 +75,27 @@
   </div>
 
   <div class="section">
+    <h3>Spillervalg (valgfritt)</h3>
+    <div class="spiller-valg" id="spillereContainer">
+      <!-- Knappene lages med JS -->
+    </div>
+  </div>
+
+  <div class="section">
     <h3>Registrer mål</h3>
-    <input type="text" id="spiller" placeholder="Spillernavn (valgfritt)" />
     <button onclick="registrerMaal('hjemme')">+ LHK</button>
     <button onclick="registrerMaal('borte')">+ Bortelag</button>
+  </div>
+
+  <div class="section">
+    <h3>Kort og timeout</h3>
+    <button onclick="registrerKort('hjemme', 'gult')">🟨 Gult LHK</button>
+    <button onclick="registrerKort('hjemme', 'rødt')">🟥 Rødt LHK</button>
+    <button onclick="registrerTimeout('hjemme')">⏱ Timeout LHK</button>
+    <br />
+    <button onclick="registrerKort('borte', 'gult')">🟨 Gult Bortelag</button>
+    <button onclick="registrerKort('borte', 'rødt')">🟥 Rødt Bortelag</button>
+    <button onclick="registrerTimeout('borte')">⏱ Timeout Bortelag</button>
   </div>
 
   <div class="section">
@@ -99,35 +127,120 @@
   </div>
 
   <div class="section">
-    <h3>Mållogg</h3>
+    <h3>Hendelseslogg</h3>
     <table>
       <thead>
-        <tr><th>Tid</th><th>Lag</th><th>Spiller</th><th></th></tr>
+        <tr><th>Kamptid</th><th>Lag</th><th>Hendelse</th><th>Spiller</th></tr>
       </thead>
-      <tbody id="maalListe"></tbody>
+      <tbody id="hendelseslogg"></tbody>
     </table>
   </div>
 
-  <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-    let aktivKampId = null;
-    let klokkeInterval = null;
-    let kampData = null;
+ <script>
+const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function opprettKamp() {
-      const hjemmelag = document.getElementById("hjemmelag").value.trim();
-      const bortelag = document.getElementById("bortelag").value.trim();
-      if (!hjemmelag || !bortelag) return alert("Fyll inn begge lag");
-      const { data, error } = await client.from("kamp").insert({ hjemmelag, bortelag }).select().single();
-      if (error) return alert("Feil: " + error.message);
-      aktivKampId = data.id;
-      document.getElementById("hjemmelag").value = "";
-      document.getElementById("bortelag").value = "";
-      await lastKamper();
+let aktivKampId = null;
+let kampData = null;
+let klokkeInterval = null;
+let valgtSpiller = null;
+
+const spillere = Array.from({ length: 16 }, (_, i) => ({
+  drakt: i + 1,
+  navn: `Spiller ${i + 1}`
+}));
+
+function lagSpillerKnapper() {
+  const container = document.getElementById("spillereContainer");
+  container.innerHTML = "";
+  spillere.forEach(spiller => {
+    const btn = document.createElement("button");
+    btn.textContent = `${spiller.drakt} ${spiller.navn}`;
+    btn.onclick = () => velgSpiller(spiller);
+    container.appendChild(btn);
+  });
+}
+
+function velgSpiller(spiller) {
+  valgtSpiller = spiller;
+  document.querySelectorAll("#spillereContainer button").forEach(btn => {
+    btn.classList.remove("aktiv");
+    if (btn.textContent.startsWith(`${spiller.drakt} `)) btn.classList.add("aktiv");
+  });
+}
+
+function kampTidspunktTekst() {
+  if (!kampData) return "--:--";
+  const nå = Date.now();
+  const start = new Date(kampData.start_tid).getTime();
+  const brukt = kampData.er_paused ? kampData.tid_brukt : kampData.tid_brukt + Math.floor((nå - start) / 1000);
+  const min = Math.floor(brukt / 60).toString().padStart(2, "0");
+  const sek = (brukt % 60).toString().padStart(2, "0");
+  return `${min}:${sek}`;
+}
+
+async function loggHendelse(type, lag, ekstra = {}) {
+  const spiller = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : null;
+  await client.from("hendelse").insert({
+    kamp_id: aktivKampId,
+    type,
+    lag,
+    spiller,
+    ...ekstra
+  });
+  hentLogg();
+}
+
+async function registrerMaal(lag) {
+  const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
+  await client.from("maal").insert({ kamp_id: aktivKampId, spiller: spillerNavn, lag });
+  await client.from("kamp").update({ [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1 }).eq("id", aktivKampId);
+  await loggHendelse("maal", lag);
+  hentKampData();
+}
+
+async function registrerKort(lag, korttype) {
+  await loggHendelse("kort", lag, { korttype });
+}
+
+async function registrerTimeout(lag) {
+  await loggHendelse("timeout", lag);
+}
+
+async function registrerUtvisning(lag) {
+  const nå = new Date().toISOString();
+  await client.from("utvisning").insert({ kamp_id: aktivKampId, lag, start_tid: nå });
+  await loggHendelse("utvisning", lag);
+  hentUtvisninger();
+}
+
+async function hentLogg() {
+  const { data } = await client.from("hendelse").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
+  const tbody = document.getElementById("hendelseslogg");
+  tbody.innerHTML = "";
+  (data || []).forEach(h => {
+    const tidspunkt = kampTidspunktTekst(); // kampklokketid
+    let beskrivelse = "";
+    if (h.type === "kort") {
+      beskrivelse = h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort";
+    } else if (h.type === "timeout") {
+      beskrivelse = "⏱ Timeout";
+    } else if (h.type === "utvisning") {
+      beskrivelse = "🚨 Utvisning";
+    } else if (h.type === "maal") {
+      beskrivelse = "🎯 Mål";
     }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${tidspunkt}</td>
+      <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+      <td>${beskrivelse}</td>
+      <td>${h.spiller || ""}</td>`;
+    tbody.appendChild(tr);
+  });
+}
 
     async function lastKamper() {
       const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
@@ -154,172 +267,9 @@
       hentMaallogg();
       hentUtvisninger();
     }
-
-    async function hentKampData() {
-      const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-      if (!data) return;
-      kampData = data;
-      document.getElementById("hjemmescore").textContent = data.hjemmescore;
-      document.getElementById("bortescore").textContent = data.bortescore;
-      document.getElementById("omgangVisning").textContent = data.omgang;
-      document.getElementById("omgangLengde").value = data.omgang_lengde / 60;
-      visKlokke(data.start_tid, data.omgang_lengde, data.er_paused, data.tid_brukt);
-    }
-
-    function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
-      if (klokkeInterval) clearInterval(klokkeInterval);
-      const visning = document.getElementById("klokkeVisning");
-      function oppdater() {
-        const nå = new Date();
-        const startTid = new Date(startTidStr);
-        let brukt = tidBrukt;
-        if (!erPaused) {
-          brukt += Math.floor((nå.getTime() - startTid.getTime()) / 1000);
-        }
-        let gjenstående = Math.max(0, omgangLengde - brukt);
-        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
-        const sek = (gjenstående % 60).toString().padStart(2, "0");
-        visning.textContent = `${min}:${sek}`;
-      }
-      oppdater();
-      if (!erPaused) klokkeInterval = setInterval(oppdater, 1000);
-    }
-
-    async function startPauseKamp() {
-      const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-      if (!data) return;
-      const nå = new Date();
-      let nyTidBrukt = data.tid_brukt;
-      if (!data.er_paused) {
-        const bruktNå = Math.floor((nå.getTime() - new Date(data.start_tid).getTime()) / 1000);
-        nyTidBrukt += bruktNå;
-      }
-      await client.from("kamp").update({
-        er_paused: !data.er_paused,
-        tid_brukt: nyTidBrukt,
-        start_tid: data.er_paused ? new Date().toISOString() : data.start_tid,
-        omgang_lengde: parseInt(document.getElementById("omgangLengde").value) * 60
-      }).eq("id", aktivKampId);
-      hentKampData();
-    }
-
-    async function nullstillTid() {
-      await client.from("kamp").update({
-        er_paused: true,
-        tid_brukt: 0,
-        start_tid: new Date().toISOString()
-      }).eq("id", aktivKampId);
-      hentKampData();
-    }
-
-    async function nyOmgang() {
-      const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-      const omgang = (data?.omgang || 1) + 1;
-      const nå = new Date().toISOString();
-      const lengde = parseInt(document.getElementById("omgangLengde").value) * 60;
-      await client.from("kamp").update({
-        omgang,
-        start_tid: nå,
-        er_paused: false,
-        tid_brukt: 0,
-        omgang_lengde: lengde
-      }).eq("id", aktivKampId);
-      hentKampData();
-    }
-
-    async function registrerMaal(lag) {
-      const spiller = document.getElementById("spiller").value.trim() || "Ukjent";
-      await client.from("maal").insert({ kamp_id: aktivKampId, spiller, lag });
-      const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
-      const { data } = await client.from("kamp").select(felt).eq("id", aktivKampId).single();
-      await client.from("kamp").update({ [felt]: (data[felt] || 0) + 1 }).eq("id", aktivKampId);
-      document.getElementById("spiller").value = "";
-      hentKampData();
-      hentMaallogg();
-    }
-
-    async function hentMaallogg() {
-      const { data } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
-      const tbody = document.getElementById("maalListe");
-      tbody.innerHTML = "";
-      (data || []).forEach(m => {
-        const tidspunkt = new Date(m.tidspunkt).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${tidspunkt}</td><td>${m.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${m.spiller}</td>
-          <td><button class="delete" onclick="slettMaal('${m.id}', '${m.lag}')">Slett</button></td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function slettMaal(id, lag) {
-      if (!confirm("Slette mål?")) return;
-      await client.from("maal").delete().eq("id", id);
-      const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
-      const { data } = await client.from("kamp").select(felt).eq("id", aktivKampId).single();
-      const nyScore = Math.max(0, (data[felt] || 1) - 1);
-      await client.from("kamp").update({ [felt]: nyScore }).eq("id", aktivKampId);
-      hentKampData();
-      hentMaallogg();
-    }
-
-    async function registrerUtvisning(lag) {
-      const nå = new Date();
-      const slutt = new Date(nå.getTime() + 2 * 60 * 1000);
-      await client.from("utvisning").insert({
-        kamp_id: aktivKampId,
-        lag,
-        start_tid: nå.toISOString(),
-        slutt_tid: slutt.toISOString()
-      });
-      hentUtvisninger();
-    }
-
-    async function hentUtvisninger() {
-      const { data } = await client
-        .from("utvisning")
-        .select("*")
-        .eq("kamp_id", aktivKampId)
-        .order("start_tid");
-
-      const tbody = document.getElementById("utvisningListe");
-      tbody.innerHTML = "";
-
-      if (!kampData) return;
-
-      const kampStart = new Date(kampData.start_tid);
-      const erPaused = kampData.er_paused;
-      const bruktTid = kampData.tid_brukt;
-
-      (data || []).forEach(u => {
-        const slutt = new Date(u.slutt_tid).getTime();
-        let nåTid = Date.now();
-        if (erPaused) {
-          nåTid = kampStart.getTime() + bruktTid * 1000;
-        }
-        const sek = Math.max(0, Math.floor((slutt - nåTid) / 1000));
-        const min = Math.floor(sek / 60).toString().padStart(2, "0");
-        const rest = (sek % 60).toString().padStart(2, "0");
-        if (sek > 0) {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${u.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-            <td>${new Date(u.start_tid).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}</td>
-            <td>${min}:${rest}</td>
-            <td><button class="delete" onclick="slettUtvisning('${u.id}')">Slett</button></td>
-          `;
-          tbody.appendChild(tr);
-        }
-      });
-    }
-
-    async function slettUtvisning(id) {
-      if (!confirm("Slette denne utvisningen?")) return;
-      await client.from("utvisning").delete().eq("id", id);
-      hentUtvisninger();
-    }
-
     setInterval(hentUtvisninger, 1000);
     lastKamper();
+   hentLogg(); // legg til på slutten av funksjonen
   </script>
 </body>
 </html>
