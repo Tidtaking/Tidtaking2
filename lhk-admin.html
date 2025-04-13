@@ -76,9 +76,7 @@
 
   <div class="section">
     <h3>Spillervalg (valgfritt)</h3>
-    <div class="spiller-valg" id="spillereContainer">
-      <!-- Knappene lages med JS -->
-    </div>
+    <div class="spiller-valg" id="spillereContainer"></div>
   </div>
 
   <div class="section">
@@ -91,8 +89,7 @@
     <h3>Kort og timeout</h3>
     <button onclick="registrerKort('hjemme', 'gult')">🟨 Gult LHK</button>
     <button onclick="registrerKort('hjemme', 'rødt')">🟥 Rødt LHK</button>
-    <button onclick="registrerTimeout('hjemme')">⏱ Timeout LHK</button>
-    <br />
+    <button onclick="registrerTimeout('hjemme')">⏱ Timeout LHK</button><br />
     <button onclick="registrerKort('borte', 'gult')">🟨 Gult Bortelag</button>
     <button onclick="registrerKort('borte', 'rødt')">🟥 Rødt Bortelag</button>
     <button onclick="registrerTimeout('borte')">⏱ Timeout Bortelag</button>
@@ -136,15 +133,13 @@
     </table>
   </div>
 
-
- <script>
+  <script>
 const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const client = supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseKey = "din-nøkkel-her";
+const client = supabase.createClient(supabaseUrl, supabaseKey);
 
 let aktivKampId = null;
 let kampData = null;
-let klokkeInterval = null;
 let valgtSpiller = null;
 
 const spillere = Array.from({ length: 16 }, (_, i) => ({
@@ -180,6 +175,7 @@ function kampTidspunktTekst() {
   const sek = (brukt % 60).toString().padStart(2, "0");
   return `${min}:${sek}`;
 }
+
 async function hentKampData() {
   const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
   if (data) {
@@ -189,14 +185,9 @@ async function hentKampData() {
     document.getElementById("omgangVisning").textContent = data.omgang;
   }
 }
-   async function hentMaallogg() {
-  const { data } = await client
-    .from("maal")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("id", { ascending: true });
 
-  // Vis gjerne målene på skjermen – her logger vi bare til konsollen foreløpig
+async function hentMaallogg() {
+  const { data } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("id", { ascending: true });
   console.log("Mållogg:", data);
 }
 
@@ -240,90 +231,93 @@ async function hentLogg() {
   const tbody = document.getElementById("hendelseslogg");
   tbody.innerHTML = "";
   (data || []).forEach(h => {
-    const tidspunkt = kampTidspunktTekst(); // kampklokketid
-    let beskrivelse = "";
-    if (h.type === "kort") {
-      beskrivelse = h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort";
-    } else if (h.type === "timeout") {
-      beskrivelse = "⏱ Timeout";
-    } else if (h.type === "utvisning") {
-      beskrivelse = "🚨 Utvisning";
-    } else if (h.type === "maal") {
-      beskrivelse = "🎯 Mål";
-    }
+    const tidspunkt = kampTidspunktTekst();
+    let beskrivelse = h.type === "kort" ? (h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort") :
+                      h.type === "timeout" ? "⏱ Timeout" :
+                      h.type === "utvisning" ? "🚨 Utvisning" :
+                      h.type === "maal" ? "🎯 Mål" : "";
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${tidspunkt}</td>
-      <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-      <td>${beskrivelse}</td>
-      <td>${h.spiller || ""}</td>`;
+    tr.innerHTML = `<td>${tidspunkt}</td><td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${beskrivelse}</td><td>${h.spiller || ""}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-async function lastKamper() {
-  const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
-  const select = document.getElementById("kampSelect");
-  select.innerHTML = "";
-
-  (data || []).forEach(k => {
-    const option = document.createElement("option");
-    option.value = k.id;
-    option.text = `${k.hjemmelag} vs ${k.bortelag}`;
-    select.appendChild(option);
-  });
-
-  if (data && data.length) {
-    aktivKampId = data[0].id;
-    select.value = aktivKampId;
-    hentKampData();
-    hentMaallogg();
-    hentUtvisninger();
-    hentLogg(); // 👈 Flyttet hit!
-  }
-}
-   async function hentUtvisninger() {
-  const { data } = await client
-    .from("utvisning")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("start_tid");
-
+async function hentUtvisninger() {
+  if (!kampData) return;
+  const { data } = await client.from("utvisning").select("*").eq("kamp_id", aktivKampId).order("start_tid");
   const tbody = document.getElementById("utvisningListe");
   tbody.innerHTML = "";
-
   const nå = Date.now();
-
   (data || []).forEach(utv => {
     const start = new Date(utv.start_tid).getTime();
     const bruktTid = kampData.er_paused ? kampData.tid_brukt : kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
     const utvisningsStartSek = Math.floor((start - new Date(kampData.start_tid).getTime()) / 1000);
     const sekIgjen = 120 - (bruktTid - utvisningsStartSek);
     const gjenstående = sekIgjen > 0 ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}` : "Ferdig";
-
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${utv.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-      <td>${new Date(utv.start_tid).toLocaleTimeString()}</td>
-      <td>${gjenstående}</td>
-      <td><button class="delete" onclick="slettUtvisning(${utv.id})">❌</button></td>
-    `;
+    tr.innerHTML = `<td>${utv.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${new Date(utv.start_tid).toLocaleTimeString()}</td><td>${gjenstående}</td><td><button class="delete" onclick="slettUtvisning(${utv.id})">❌</button></td>`;
     tbody.appendChild(tr);
   });
 }
-   async function slettUtvisning(id) {
+
+async function slettUtvisning(id) {
   await client.from("utvisning").delete().eq("id", id);
   hentUtvisninger();
 }
 
-    async function velgKamp() {
-      aktivKampId = document.getElementById("kampSelect").value;
-      hentKampData();
-      hentMaallogg();
-      hentUtvisninger();
-    }
-    setInterval(hentUtvisninger, 1000);
+async function velgKamp() {
+  aktivKampId = document.getElementById("kampSelect").value;
+  await hentKampData();
+  hentMaallogg();
+  hentUtvisninger();
+  hentLogg();
+}
+
+async function lastKamper() {
+  const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+  const select = document.getElementById("kampSelect");
+  select.innerHTML = "";
+  (data || []).forEach(k => {
+    const option = document.createElement("option");
+    option.value = k.id;
+    option.text = `${k.hjemmelag} vs ${k.bortelag}`;
+    select.appendChild(option);
+  });
+  if (data && data.length) {
+    aktivKampId = data[0].id;
+    select.value = aktivKampId;
+    await hentKampData();
+    hentMaallogg();
+    hentUtvisninger();
+    hentLogg();
+    setInterval(hentUtvisninger, 1000); // starter først nå
+  }
+}
+
+async function opprettKamp() {
+  const hjemmelag = document.getElementById("hjemmelag").value;
+  const bortelag = document.getElementById("bortelag").value;
+  const { error } = await client.from("kamp").insert({
+    hjemmelag,
+    bortelag,
+    hjemmescore: 0,
+    bortescore: 0,
+    omgang: 1,
+    er_paused: true,
+    start_tid: null,
+    tid_brukt: 0
+  });
+  if (error) {
+    alert("Feil ved opprettelse av kamp");
+    console.error(error);
+  } else {
     lastKamper();
+  }
+}
+
+// Init
+lagSpillerKnapper();
+lastKamper();
   </script>
 </body>
 </html>
