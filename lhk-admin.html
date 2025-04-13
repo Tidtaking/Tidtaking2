@@ -51,13 +51,6 @@
   <h1>LHK Admin</h1>
 
   <div class="section">
-    <h3>Opprett ny kamp</h3>
-    <input type="text" id="hjemmelag" placeholder="Hjemmelag" />
-    <input type="text" id="bortelag" placeholder="Bortelag" />
-    <button onclick="opprettKamp()">➕ Opprett kamp</button>
-  </div>
-
-  <div class="section">
     <h3>Velg aktiv kamp</h3>
     <select id="kampSelect" onchange="velgKamp()"></select>
     <div class="score">LHK: <span id="hjemmescore">0</span> – Bortelag: <span id="bortescore">0</span></div>
@@ -80,6 +73,7 @@
     <div>
       <button onclick="startPauseKamp()">▶️ Start / Pause</button>
       <button onclick="nyOmgang()">🔁 Ny omgang</button>
+      <button onclick="nullstillTid()">🛑 Nullstill tid</button>
     </div>
   </div>
 
@@ -96,7 +90,6 @@
   <script>
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-
     const client = supabase.createClient(supabaseUrl, supabaseKey);
 
     let aktivKampId = null;
@@ -104,10 +97,6 @@
 
     async function lastKamper() {
       const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
-      if (error) {
-        console.log("KAMP ERROR:", error);
-        return alert("Feil ved henting av kamp: " + error.message);
-      }
       const select = document.getElementById("kampSelect");
       select.innerHTML = "";
       (data || []).forEach(k => {
@@ -124,18 +113,6 @@
       }
     }
 
-    async function opprettKamp() {
-      const hjemmelag = document.getElementById("hjemmelag").value.trim();
-      const bortelag = document.getElementById("bortelag").value.trim();
-      if (!hjemmelag || !bortelag) return alert("Fyll inn begge lag");
-      const { data, error } = await client.from("kamp").insert({ hjemmelag, bortelag }).select().single();
-      if (error) return alert("Feil: " + error.message);
-      aktivKampId = data.id;
-      document.getElementById("hjemmelag").value = "";
-      document.getElementById("bortelag").value = "";
-      await lastKamper();
-    }
-
     async function velgKamp() {
       aktivKampId = document.getElementById("kampSelect").value;
       hentKampData();
@@ -149,17 +126,19 @@
       document.getElementById("bortescore").textContent = data.bortescore;
       document.getElementById("omgangVisning").textContent = data.omgang;
       document.getElementById("omgangLengde").value = data.omgang_lengde / 60;
-      visKlokke(data.start_tid, data.omgang_lengde, data.er_paused);
+      visKlokke(data.start_tid, data.omgang_lengde, data.er_paused, data.tid_brukt);
     }
 
-    function visKlokke(startTidStr, omgangLengde, erPaused) {
+    function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
       if (klokkeInterval) clearInterval(klokkeInterval);
       const visning = document.getElementById("klokkeVisning");
       function oppdater() {
         const nå = new Date();
         const startTid = new Date(startTidStr);
-        let brukt = erPaused ? (Date.now() - startTid.getTime()) : (nå.getTime() - startTid.getTime());
-        brukt = Math.floor(brukt / 1000);
+        let brukt = tidBrukt;
+        if (!erPaused) {
+          brukt += Math.floor((nå.getTime() - startTid.getTime()) / 1000);
+        }
         let gjenstående = Math.max(0, omgangLengde - brukt);
         const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
         const sek = (gjenstående % 60).toString().padStart(2, "0");
@@ -172,13 +151,26 @@
     async function startPauseKamp() {
       const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
       if (!data) return;
-      const nyPaused = !data.er_paused;
-      const nyStart = nyPaused ? data.start_tid : new Date().toISOString();
-      const lengde = parseInt(document.getElementById("omgangLengde").value) * 60;
+      const nå = new Date();
+      let nyTidBrukt = data.tid_brukt;
+      if (!data.er_paused) {
+        const bruktNå = Math.floor((nå.getTime() - new Date(data.start_tid).getTime()) / 1000);
+        nyTidBrukt += bruktNå;
+      }
       await client.from("kamp").update({
-        er_paused: nyPaused,
-        start_tid: nyStart,
-        omgang_lengde: lengde
+        er_paused: !data.er_paused,
+        tid_brukt: nyTidBrukt,
+        start_tid: data.er_paused ? new Date().toISOString() : data.start_tid,
+        omgang_lengde: parseInt(document.getElementById("omgangLengde").value) * 60
+      }).eq("id", aktivKampId);
+      hentKampData();
+    }
+
+    async function nullstillTid() {
+      await client.from("kamp").update({
+        er_paused: true,
+        tid_brukt: 0,
+        start_tid: new Date().toISOString()
       }).eq("id", aktivKampId);
       hentKampData();
     }
@@ -192,20 +184,18 @@
         omgang,
         start_tid: nå,
         er_paused: false,
+        tid_brukt: 0,
         omgang_lengde: lengde
       }).eq("id", aktivKampId);
       hentKampData();
     }
 
     async function registrerMaal(lag) {
-      if (!aktivKampId) return alert("Velg en kamp først");
-      const spiller = document.getElementById("spiller").value.trim();
-      const spillerNavn = spiller || "Ukjent";
-      await client.from("maal").insert({ kamp_id: aktivKampId, spiller: spillerNavn, lag });
+      const spiller = document.getElementById("spiller").value.trim() || "Ukjent";
+      await client.from("maal").insert({ kamp_id: aktivKampId, spiller, lag });
       const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
       const { data } = await client.from("kamp").select(felt).eq("id", aktivKampId).single();
-      const nyScore = (data[felt] || 0) + 1;
-      await client.from("kamp").update({ [felt]: nyScore }).eq("id", aktivKampId);
+      await client.from("kamp").update({ [felt]: (data[felt] || 0) + 1 }).eq("id", aktivKampId);
       document.getElementById("spiller").value = "";
       hentKampData();
       hentMaallogg();
@@ -225,8 +215,7 @@
     }
 
     async function slettMaal(maalId, lag) {
-      const bekreft = confirm("Er du sikker på at du vil slette dette målet?");
-      if (!bekreft) return;
+      if (!confirm("Er du sikker på at du vil slette dette målet?")) return;
       await client.from("maal").delete().eq("id", maalId);
       const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
       const { data } = await client.from("kamp").select(felt).eq("id", aktivKampId).single();
