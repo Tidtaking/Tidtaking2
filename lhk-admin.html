@@ -498,7 +498,7 @@ async function lastKamper() {
     select.value = aktivKampId;
 
     await hentKampData();
-    await lagSpillerKnapper(); // 👈 Veldig viktig å gjøre dette ETTER aktivKampId er satt
+    await visSpillerKnapper(); // 👈 Veldig viktig å gjøre dette ETTER aktivKampId er satt
     hentMaallogg();
     hentUtvisninger();
     hentLogg();
