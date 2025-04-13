@@ -156,10 +156,7 @@ const spillere = Array.from({ length: 16 }, (_, i) => ({
 }));
 
 async function lagSpillerKnapper() {
-  if (!aktivKampId) {
-    console.warn("Ingen aktiv kamp valgt – hopper over spillerhenting");
-    return;
-  }
+  if (!aktivKampId) return;
 
   const { data } = await client
     .from("spiller")
@@ -167,19 +164,18 @@ async function lagSpillerKnapper() {
     .eq("kamp_id", aktivKampId)
     .order("drakt");
 
-
   if (!data || data.length === 0) {
-    // Hvis ingen spillere finnes – lag default og lagre
-    const standardSpillere = Array.from({ length: 16 }, (_, i) => ({
+    // Ingen lagret – bruk standard og vis
+    spillere = Array.from({ length: 16 }, (_, i) => ({
       kamp_id: aktivKampId,
       drakt: i + 1,
-      navn: `Spiller ${i + 1}`
+      navn: `Spiller ${i + 1}`,
+      ny: true // 👈 merk at de ikke er lagret
     }));
-    await client.from("spiller").insert(standardSpillere);
-    return lagSpillerKnapper();
+  } else {
+    spillere = data;
   }
 
-  spillere = data; // global liste
   const container = document.getElementById("spillereContainer");
   container.innerHTML = "";
 
@@ -193,7 +189,7 @@ async function lagSpillerKnapper() {
     inputDrakt.style.width = "50px";
     inputDrakt.oninput = () => {
       spiller.drakt = parseInt(inputDrakt.value);
-      knapp.textContent = `${spiller.drakt} ${spiller.navn}`;
+      btn.textContent = `${spiller.drakt} ${spiller.navn}`;
     };
 
     const inputNavn = document.createElement("input");
@@ -201,17 +197,17 @@ async function lagSpillerKnapper() {
     inputNavn.value = spiller.navn;
     inputNavn.oninput = () => {
       spiller.navn = inputNavn.value;
-      knapp.textContent = `${spiller.drakt} ${spiller.navn}`;
+      btn.textContent = `${spiller.drakt} ${spiller.navn}`;
     };
 
-    const knapp = document.createElement("button");
-    knapp.textContent = `${spiller.drakt} ${spiller.navn}`;
-    knapp.onclick = () => velgSpiller(spiller);
-    knapp.style.marginLeft = "5px";
+    const btn = document.createElement("button");
+    btn.textContent = `${spiller.drakt} ${spiller.navn}`;
+    btn.onclick = () => velgSpiller(spiller);
+    btn.style.marginLeft = "5px";
 
     wrapper.appendChild(inputDrakt);
     wrapper.appendChild(inputNavn);
-    wrapper.appendChild(knapp);
+    wrapper.appendChild(btn);
     container.appendChild(wrapper);
   });
 
@@ -222,16 +218,29 @@ async function lagSpillerKnapper() {
   lagreBtn.onclick = lagreSpillere;
   container.appendChild(lagreBtn);
 }
+
 async function lagreSpillere() {
-  for (const s of spillere) {
-    await client
-      .from("spiller")
-      .update({ drakt: s.drakt, navn: s.navn })
-      .eq("id", s.id);
+  for (const spiller of spillere) {
+    if (spiller.id) {
+      // Oppdater eksisterende spiller
+      await client
+        .from("spiller")
+        .update({ drakt: spiller.drakt, navn: spiller.navn })
+        .eq("id", spiller.id);
+    } else {
+      // Ny spiller – sett kamp_id og legg inn
+      await client
+        .from("spiller")
+        .insert({
+          kamp_id: aktivKampId,
+          drakt: spiller.drakt,
+          navn: spiller.navn
+        });
+    }
   }
   alert("Spillere lagret!");
+  lagSpillerKnapper(); // Last inn på nytt for å hente id-er
 }
-lagSpillerKnapper();
 
 
 function velgSpiller(spiller) {
