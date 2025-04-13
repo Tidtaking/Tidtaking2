@@ -261,24 +261,27 @@ async function hentLogg() {
   });
 }
 
-    async function lastKamper() {
-      const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
-      const select = document.getElementById("kampSelect");
-      select.innerHTML = "";
-      (data || []).forEach(k => {
-        const option = document.createElement("option");
-        option.value = k.id;
-        option.text = `${k.hjemmelag} vs ${k.bortelag}`;
-        select.appendChild(option);
-      });
-if (data && data.length) {
-        aktivKampId = data[0].id;
-        select.value = aktivKampId;
-        hentKampData();
-        hentMaallogg();
-        hentUtvisninger();
-      }
-    }
+async function lastKamper() {
+  const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+  const select = document.getElementById("kampSelect");
+  select.innerHTML = "";
+
+  (data || []).forEach(k => {
+    const option = document.createElement("option");
+    option.value = k.id;
+    option.text = `${k.hjemmelag} vs ${k.bortelag}`;
+    select.appendChild(option);
+  });
+
+  if (data && data.length) {
+    aktivKampId = data[0].id;
+    select.value = aktivKampId;
+    hentKampData();
+    hentMaallogg();
+    hentUtvisninger();
+    hentLogg(); // 👈 Flyttet hit!
+  }
+}
    async function hentUtvisninger() {
   const { data } = await client
     .from("utvisning")
@@ -321,7 +324,6 @@ if (data && data.length) {
     }
     setInterval(hentUtvisninger, 1000);
     lastKamper();
-   hentLogg(); // legg til på slutten av funksjonen
   </script>
 </body>
 </html>
