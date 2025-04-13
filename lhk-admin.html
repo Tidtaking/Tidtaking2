@@ -51,6 +51,13 @@
   <h1>LHK Admin</h1>
 
   <div class="section">
+    <h3>Opprett ny kamp</h3>
+    <input type="text" id="hjemmelag" placeholder="Hjemmelag" />
+    <input type="text" id="bortelag" placeholder="Bortelag" />
+    <button onclick="opprettKamp()">➕ Opprett kamp</button>
+  </div>
+
+  <div class="section">
     <h3>Velg aktiv kamp</h3>
     <select id="kampSelect" onchange="velgKamp()"></select>
     <div class="score">LHK: <span id="hjemmescore">0</span> – Bortelag: <span id="bortescore">0</span></div>
@@ -94,6 +101,18 @@
 
     let aktivKampId = null;
     let klokkeInterval = null;
+
+    async function opprettKamp() {
+      const hjemmelag = document.getElementById("hjemmelag").value.trim();
+      const bortelag = document.getElementById("bortelag").value.trim();
+      if (!hjemmelag || !bortelag) return alert("Fyll inn begge lag");
+      const { data, error } = await client.from("kamp").insert({ hjemmelag, bortelag }).select().single();
+      if (error) return alert("Feil: " + error.message);
+      aktivKampId = data.id;
+      document.getElementById("hjemmelag").value = "";
+      document.getElementById("bortelag").value = "";
+      await lastKamper();
+    }
 
     async function lastKamper() {
       const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
