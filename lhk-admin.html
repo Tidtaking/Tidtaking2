@@ -372,15 +372,31 @@ async function hentMaallogg() {
 
 async function loggHendelse(type, lag, ekstra = {}) {
   const spiller = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : null;
+
+  // Kalkuler kamptid basert på kampData
+  let kamptid = "--:--";
+  if (kampData) {
+    const nå = Date.now();
+    const brukt = kampData.er_paused
+      ? kampData.tid_brukt
+      : kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
+    const min = Math.floor(brukt / 60).toString().padStart(2, "0");
+    const sek = (brukt % 60).toString().padStart(2, "0");
+    kamptid = `${min}:${sek}`;
+  }
+
   await client.from("hendelse").insert({
     kamp_id: aktivKampId,
     type,
     lag,
     spiller,
+    kamptid,
     ...ekstra
   });
+
   hentLogg();
 }
+
 
 async function registrerMaal(lag) {
   const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
