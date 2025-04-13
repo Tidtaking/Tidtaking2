@@ -40,7 +40,7 @@
   </div>
 
   <script>
-    const supabase = supabase.createClient(
+    const client = supabase.createClient(
       "https://chzfewhbfkdtcizdxyzk.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
     );
@@ -48,7 +48,11 @@
     let aktivKampId = null;
 
     async function lastKamper() {
-      const { data } = await supabase.from("kamp").select("*").order("opprettet", { ascending: false });
+      const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+      if (error) {
+        console.error("Feil ved henting av kamper:", error);
+        return;
+      }
       const select = document.getElementById("kampSelect");
       select.innerHTML = "";
       data.forEach(k => {
@@ -65,17 +69,20 @@
     }
 
     async function opprettKamp() {
-      const hjemmelag = document.getElementById("hjemmelag").value;
-      const bortelag = document.getElementById("bortelag").value;
+      const hjemmelag = document.getElementById("hjemmelag").value.trim();
+      const bortelag = document.getElementById("bortelag").value.trim();
       if (!hjemmelag || !bortelag) return alert("Fyll inn begge lag");
-      const { data, error } = await supabase.from("kamp").insert({ hjemmelag, bortelag }).select().single();
+      const { data, error } = await client.from("kamp").insert({ hjemmelag, bortelag }).select().single();
       if (error) return alert("Feil: " + error.message);
       aktivKampId = data.id;
       await lastKamper();
+      document.getElementById("hjemmelag").value = "";
+      document.getElementById("bortelag").value = "";
     }
 
     async function hentScore() {
-      const { data } = await supabase.from("kamp").select("*").eq("id", aktivKampId).single();
+      const { data, error } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+      if (error) return console.error(error);
       document.getElementById("hjemmescore").textContent = data.hjemmescore;
       document.getElementById("bortescore").textContent = data.bortescore;
     }
@@ -88,12 +95,16 @@
     async function registrerMaal(lag) {
       const spiller = document.getElementById("spiller").value.trim();
       if (!spiller || !aktivKampId) return alert("Velg kamp og skriv inn spiller");
-      await supabase.from("maal").insert({ kamp_id: aktivKampId, spiller, lag });
+      
+      const { error: insertError } = await client.from("maal").insert({ kamp_id: aktivKampId, spiller, lag });
+      if (insertError) return alert("Feil ved registrering av mål: " + insertError.message);
 
       const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
-      const { data } = await supabase.from("kamp").select(felt).eq("id", aktivKampId).single();
+      const { data, error } = await client.from("kamp").select(felt).eq("id", aktivKampId).single();
       const nyScore = (data[felt] || 0) + 1;
-      await supabase.from("kamp").update({ [felt]: nyScore }).eq("id", aktivKampId);
+
+      const { error: updateError } = await client.from("kamp").update({ [felt]: nyScore }).eq("id", aktivKampId);
+      if (updateError) return alert("Feil ved oppdatering av score");
 
       hentScore();
       document.getElementById("spiller").value = "";
