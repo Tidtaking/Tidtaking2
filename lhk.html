@@ -183,7 +183,7 @@
   tbody.innerHTML = "";
 
   data.forEach((h) => {
-    let kamptid = "--:--";
+   const kamptid = h.kamptid || "--:--";
 
     if (h.tidspunkt && kampData.start_tid) {
       const tidspunkt = new Date(h.tidspunkt).getTime();
