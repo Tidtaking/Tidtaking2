@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LHK – Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 1rem; }
+    h1 { color: #0057b8; }
+    .score { font-size: 2.5rem; margin: 1rem; }
+    button { font-size: 1.5rem; margin: 0.5rem; padding: 0.5rem 1rem; }
+  </style>
+</head>
+<body>
+  <h1>LHK – Adminside</h1>
+  <div>
+    <div>Hjemme: <span id="hjemmescore">0</span></div>
+    <div>Borte: <span id="bortescore">0</span></div>
+  </div>
+  <div>
+    <button onclick="endreScore('hjemmescore', 1)">+ Hjemme</button>
+    <button onclick="endreScore('hjemmescore', -1)">− Hjemme</button>
+    <button onclick="endreScore('bortescore', 1)">+ Borte</button>
+    <button onclick="endreScore('bortescore', -1)">− Borte</button>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_KEY = 'YOUR_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const kampId = 'SETT-INN-DIN-KAMP-ID-HER'; // F.eks. kopiert fra Supabase-konsollen
+
+    async function hentKamp() {
+      const { data } = await supabase.from('kamp').select('*').eq('id', kampId).single();
+      oppdaterUI(data);
+    }
+
+    function oppdaterUI(data) {
+      document.getElementById('hjemmescore').textContent = data.hjemmescore;
+      document.getElementById('bortescore').textContent = data.bortescore;
+    }
+
+    async function endreScore(felt, delta) {
+      const span = document.getElementById(felt);
+      let nyScore = Math.max(0, parseInt(span.textContent) + delta);
+
+      const oppdatering = felt === 'hjemmescore'
+        ? { hjemmescore: nyScore }
+        : { bortescore: nyScore };
+
+      const { error } = await supabase
+        .from('kamp')
+        .update(oppdatering)
+        .eq('id', kampId);
+
+      if (!error) span.textContent = nyScore;
+    }
+
+    hentKamp();
+  </script>
+</body>
+</html>
