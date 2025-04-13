@@ -65,7 +65,7 @@
 
   <div class="section">
     <h3>Registrer mål</h3>
-    <input type="text" id="spiller" placeholder="Spillernavn" />
+    <input type="text" id="spiller" placeholder="Spillernavn (valgfritt)" />
     <button onclick="registrerMaal('hjemme')">+ LHK</button>
     <button onclick="registrerMaal('borte')">+ Bortelag</button>
   </div>
@@ -130,8 +130,6 @@
       document.getElementById("bortelag").value = "";
 
       await lastKamper();
-
-      // Sett valgt kamp og hent data
       document.getElementById("kampSelect").value = aktivKampId;
       hentScore();
       hentMaallogg();
@@ -151,10 +149,11 @@
     }
 
     async function registrerMaal(lag) {
+      if (!aktivKampId) return alert("Velg en kamp først");
       const spiller = document.getElementById("spiller").value.trim();
-      if (!spiller || !aktivKampId) return alert("Velg kamp og skriv inn spiller");
+      const spillerNavn = spiller || "Ukjent";
 
-      const { error: insertError } = await client.from("maal").insert({ kamp_id: aktivKampId, spiller, lag });
+      const { error: insertError } = await client.from("maal").insert({ kamp_id: aktivKampId, spiller: spillerNavn, lag });
       if (insertError) return alert("Feil ved registrering av mål: " + insertError.message);
 
       const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
