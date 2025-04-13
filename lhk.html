@@ -33,6 +33,12 @@
       background: #0057b8;
       color: white;
     }
+    select {
+      font-size: 1rem;
+      margin-top: 1rem;
+      padding: 0.5rem;
+      border-radius: 5px;
+    }
     @media (max-width: 600px) {
       .score {
         font-size: 2.2rem;
@@ -46,6 +52,8 @@
 <body>
   <img src="logo-lhk.jpg" alt="LHK-logo" class="logo" />
   <h1>Livescore</h1>
+
+  <select id="kampVelger" onchange="velgKamp()"></select>
 
   <div class="score">
     <span id="hjemmescore">0</span> – <span id="bortescore">0</span>
@@ -68,26 +76,53 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
     );
 
-    const kampId = "SETT-INN-DIN-KAMP-ID"; // ← Sett inn riktig kamp-ID her
+    let aktivKampId = null;
+    let kanal = null;
+
+    async function lastKamper() {
+      const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+      if (error) return alert("Feil ved lasting av kamper");
+
+      const velger = document.getElementById("kampVelger");
+      velger.innerHTML = "";
+      data.forEach(k => {
+        const option = document.createElement("option");
+        option.value = k.id;
+        option.text = `${k.hjemmelag} vs ${k.bortelag}`;
+        velger.appendChild(option);
+      });
+
+      if (data.length) {
+        aktivKampId = data[0].id;
+        velger.value = aktivKampId;
+        hentData();
+        abonner();
+      }
+    }
+
+    function velgKamp() {
+      aktivKampId = document.getElementById("kampVelger").value;
+      hentData();
+      abonner();
+    }
 
     async function hentData() {
-      // Hent score
-      const { data: kamp } = await client.from("kamp").select("*").eq("id", kampId).single();
+      if (!aktivKampId) return;
+      const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
       if (kamp) {
         document.getElementById("hjemmescore").textContent = kamp.hjemmescore;
         document.getElementById("bortescore").textContent = kamp.bortescore;
       }
 
-      // Hent mållogg
       const { data: maal } = await client
         .from("maal")
         .select("*")
-        .eq("kamp_id", kampId)
+        .eq("kamp_id", aktivKampId)
         .order("tidspunkt", { ascending: true });
 
       const tbody = document.getElementById("maalListe");
       tbody.innerHTML = "";
-      maal.forEach(m => {
+      (maal || []).forEach(m => {
         const tr = document.createElement("tr");
         const tidspunkt = new Date(m.tidspunkt).toLocaleTimeString("no-NO", {
           hour: "2-digit", minute: "2-digit"
@@ -97,13 +132,16 @@
       });
     }
 
-    client
-      .channel("live-kamp")
-      .on("postgres_changes", { event: "*", schema: "public", table: "kamp", filter: `id=eq.${kampId}` }, hentData)
-      .on("postgres_changes", { event: "*", schema: "public", table: "maal", filter: `kamp_id=eq.${kampId}` }, hentData)
-      .subscribe();
+    function abonner() {
+      if (kanal) kanal.unsubscribe();
 
-    hentData();
+      kanal = client.channel("live-" + aktivKampId)
+        .on("postgres_changes", { event: "*", schema: "public", table: "kamp", filter: `id=eq.${aktivKampId}` }, hentData)
+        .on("postgres_changes", { event: "*", schema: "public", table: "maal", filter: `kamp_id=eq.${aktivKampId}` }, hentData)
+        .subscribe();
+    }
+
+    lastKamper();
   </script>
 </body>
 </html>
