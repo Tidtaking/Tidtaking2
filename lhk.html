@@ -181,14 +181,18 @@
   const tbody = document.getElementById("hendelsesListe");
   tbody.innerHTML = "";
 
-  data.forEach((h, index) => {
-    const tidspunkt = new Date(h.tidspunkt).getTime();
-    let sek = Math.floor((tidspunkt - startTid) / 1000);
-    if (sek < 0 || isNaN(sek)) sek = 0;
+  data.forEach((h) => {
+    let kamptid = "--:--";
 
-    const min = Math.floor(sek / 60).toString().padStart(2, "0");
-    const s = (sek % 60).toString().padStart(2, "0");
-    const kamptid = `${min}:${s}`;
+    if (h.tidspunkt && kampData.start_tid) {
+      const tidspunkt = new Date(h.tidspunkt).getTime();
+      let sek = Math.floor((tidspunkt - startTid) / 1000);
+      if (sek < 0 || isNaN(sek)) sek = 0;
+
+      const min = Math.floor(sek / 60).toString().padStart(2, "0");
+      const s = (sek % 60).toString().padStart(2, "0");
+      kamptid = `${min}:${s}`;
+    }
 
     let beskrivelse = "";
     if (h.type === "maal") {
