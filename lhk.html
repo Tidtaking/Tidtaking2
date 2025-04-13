@@ -166,17 +166,57 @@
     }
 
     async function hentMaallogg() {
-      const { data: maal } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
-      const tbody = document.getElementById("maalListe");
-      tbody.innerHTML = "";
-      (maal || []).forEach((m, i) => {
-        const tidspunkt = new Date(m.tidspunkt).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
-        const tr = document.createElement("tr");
-        if (m.lag === "hjemme") tr.classList.add("lhk-mål");
-        tr.innerHTML = `<td>${i + 1}</td><td>${tidspunkt}</td><td>${m.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${m.spiller}</td>`;
-        tbody.appendChild(tr);
-      });
+  const { data: hendelser } = await client
+    .from("hendelse")
+    .select("*")
+    .eq("kamp_id", aktivKampId)
+    .order("tidspunkt");
+
+  const tbody = document.getElementById("maalListe");
+  tbody.innerHTML = "";
+
+  (hendelser || []).forEach((h, i) => {
+    let ikon = "";
+    let tekst = "";
+
+    switch (h.type) {
+      case "maal":
+        ikon = "🎯";
+        tekst = "Mål";
+        break;
+      case "kort":
+        ikon = h.korttype === "rødt" ? "🟥" : "🟨";
+        tekst = `${h.korttype === "rødt" ? "Rødt" : "Gult"} kort`;
+        break;
+      case "timeout":
+        ikon = "⏱";
+        tekst = "Timeout";
+        break;
+      case "utvisning":
+        ikon = "🚨";
+        tekst = "Utvisning";
+        break;
     }
+
+    const tidspunkt = new Date(h.tidspunkt).toLocaleTimeString("no-NO", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+
+    const tr = document.createElement("tr");
+    if (h.type === "maal" && h.lag === "hjemme") tr.classList.add("lhk-mål");
+
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${tidspunkt}</td>
+      <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+      <td>${ikon} ${tekst}${h.spiller ? " – " + h.spiller : ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 
     async function hentUtvisninger() {
       if (!aktivKampId || !kampData) return;
