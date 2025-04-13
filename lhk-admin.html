@@ -156,11 +156,17 @@ const spillere = Array.from({ length: 16 }, (_, i) => ({
 }));
 
 async function lagSpillerKnapper() {
+  if (!aktivKampId) {
+    console.warn("Ingen aktiv kamp valgt – hopper over spillerhenting");
+    return;
+  }
+
   const { data } = await client
     .from("spiller")
     .select("*")
     .eq("kamp_id", aktivKampId)
     .order("drakt");
+
 
   if (!data || data.length === 0) {
     // Hvis ingen spillere finnes – lag default og lagre
