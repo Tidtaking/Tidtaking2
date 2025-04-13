@@ -96,6 +96,11 @@
     let kampData = null;
     let klokkeInterval = null;
     let kanal = null;
+    
+function oppdaterScoreVisning() {
+  document.getElementById("hjemmescore").textContent = kampData?.hjemmescore ?? "0";
+  document.getElementById("bortescore").textContent = kampData?.bortescore ?? "0";
+}
 
     async function lastKamper() {
       const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
@@ -134,18 +139,18 @@
       abonner();
     }
 
-    async function hentData() {
-      const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-      if (!kamp) return;
+  async function hentData() {
+  const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+  if (!kamp) return;
 
-      kampData = kamp;
-      document.getElementById("hjemmescore").textContent = kamp.hjemmescore;
-      document.getElementById("bortescore").textContent = kamp.bortescore;
-      document.getElementById("omgang").textContent = kamp.omgang;
-      visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
-      hentUtvisninger();
-      hentHendelser();
-    }
+  kampData = kamp;
+  document.getElementById("omgang").textContent = kamp.omgang;
+  visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
+  oppdaterScoreVisning(); // 🔁
+  hentUtvisninger();
+  hentHendelser();
+}
+
 
     function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
       if (klokkeInterval) clearInterval(klokkeInterval);
