@@ -1,55 +1,82 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LHK – Livescore</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; background: #f2f2f2; padding: 1rem; }
-    h1 { color: #0057b8; }
-    .score {
-      font-size: 4rem;
-      margin: 2rem;
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
+      text-align: center;
+      padding: 1rem;
+    }
+    .logo {
+      max-width: 150px;
+      margin: 1rem auto;
+    }
+    h1 {
+      color: #0057b8;
+    }
+    .scoreboard {
+      font-size: 3rem;
+      margin-top: 2rem;
       display: flex;
       justify-content: center;
-      gap: 4rem;
+      gap: 3rem;
+    }
+    .team {
+      text-align: center;
+    }
+    .team span {
+      display: block;
+      font-size: 4rem;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
 <body>
-  <h1>LHK – Livescore</h1>
-  <div class="score">
-    <div><strong>LHK</strong><br><span id="hjemmescore">0</span></div>
-    <div><strong>Bortelag</strong><br><span id="bortescore">0</span></div>
+  <img src="logo-lhk.jpg" alt="LHK-logo" class="logo" />
+  <h1>Livescore</h1>
+
+  <div class="scoreboard">
+    <div class="team">
+      <strong>LHK</strong>
+      <span id="hjemmescore">0</span>
+    </div>
+    <div class="team">
+      <strong>Bortelag</strong>
+      <span id="bortescore">0</span>
+    </div>
   </div>
 
   <script>
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const kampId = "SETT-INN-DIN-KAMP-ID";
 
-    const kampId = 'SAMME-ID-SOM-PÅ-ADMIN';
-
-    async function init() {
-      const { data } = await supabase.from('kamp').select('*').eq('id', kampId).single();
-      oppdaterUI(data);
-
-      supabase
-        .channel('kamp-oppdatering')
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'kamp', filter: `id=eq.${kampId}` },
-          (payload) => {
-            oppdaterUI(payload.new);
-          }
-        )
-        .subscribe();
-    }
+    const client = supabase.createClient(supabaseUrl, supabaseKey);
 
     function oppdaterUI(data) {
       document.getElementById('hjemmescore').textContent = data.hjemmescore;
       document.getElementById('bortescore').textContent = data.bortescore;
+    }
+
+    async function init() {
+      const { data } = await client.from('kamp').select('*').eq('id', kampId).single();
+      if (data) oppdaterUI(data);
+
+      client
+        .channel('kamp-livescore')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'kamp', filter: `id=eq.${kampId}` },
+          payload => {
+            oppdaterUI(payload.new);
+          }
+        )
+        .subscribe();
     }
 
     init();
