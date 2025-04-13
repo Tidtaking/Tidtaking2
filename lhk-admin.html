@@ -271,15 +271,26 @@
       hentUtvisninger();
     }
 
-    async function hentUtvisninger() {
-      const { data } = await client.from("utvisning").select("*").eq("kamp_id", aktivKampId).order("start_tid");
-      const tbody = document.getElementById("utvisningListe");
-      tbody.innerHTML = "";
+   async function hentUtvisninger() {
+  if (!kampData) return; // <-- legger til denne linjen
 
-      const kampStart = new Date(kampData.start_tid);
-      const bruktTotal = kampData.er_paused
-        ? kampData.tid_brukt
-        : kampData.tid_brukt + Math.floor((Date.now() - kampStart.getTime()) / 1000);
+  const { data } = await client
+    .from("utvisning")
+    .select("*")
+    .eq("kamp_id", aktivKampId)
+    .order("start_tid");
+
+  const tbody = document.getElementById("utvisningListe");
+  tbody.innerHTML = "";
+
+  const kampStart = new Date(kampData.start_tid);
+  const bruktTotal = kampData.er_paused
+    ? kampData.tid_brukt
+    : kampData.tid_brukt + Math.floor((Date.now() - kampStart.getTime()) / 1000);
+
+  // resten uendret...
+}
+
 
       (data || []).forEach(u => {
         const utvStart = new Date(u.start_tid);
