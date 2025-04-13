@@ -276,9 +276,11 @@ async function hentLogg() {
 }
 
 async function slettHendelse(id) {
+  console.log("Sletter HENDELSE med id:", id);
   await client.from("hendelse").delete().eq("id", id);
   hentLogg();
 }
+
 
 async function hentUtvisninger() {
   if (!kampData) return;
@@ -300,9 +302,11 @@ async function hentUtvisninger() {
 }
 
 async function slettUtvisning(id) {
+  console.log("Sletter UTVISNING med id:", id);
   await client.from("utvisning").delete().eq("id", id);
   hentUtvisninger();
 }
+
 
 async function velgKamp() {
   aktivKampId = document.getElementById("kampSelect").value;
