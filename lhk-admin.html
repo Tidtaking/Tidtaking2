@@ -181,7 +181,7 @@ async function lagSpillerKnapper() {
     spillere.push(...data);
   }
 
-  spillere.forEach(spiller => {
+  spillere.forEach((spiller, index) => {
     const wrapper = document.createElement("div");
     wrapper.style.marginBottom = "5px";
 
@@ -217,12 +217,29 @@ async function lagSpillerKnapper() {
     container.appendChild(wrapper);
   });
 
+  const leggTilBtn = document.createElement("button");
+  leggTilBtn.textContent = "➕ Legg til spiller";
+  leggTilBtn.onclick = () => {
+    const nySpiller = {
+      kamp_id: aktivKampId,
+      drakt: spillere.length + 1,
+      navn: `Spiller ${spillere.length + 1}`
+    };
+    spillere.push(nySpiller);
+    lagSpillerKnapper();
+  };
+  leggTilBtn.style.marginTop = "1rem";
+
   const lagreBtn = document.createElement("button");
   lagreBtn.textContent = "💾 Lagre spillere";
   lagreBtn.onclick = lagreSpillere;
-  lagreBtn.style.marginTop = "1rem";
+  lagreBtn.style.marginLeft = "10px";
+
+  container.appendChild(document.createElement("br"));
+  container.appendChild(leggTilBtn);
   container.appendChild(lagreBtn);
 }
+
 
 async function lagreSpillere() {
   if (!aktivKampId || !spillere || spillere.length === 0) return;
@@ -271,7 +288,6 @@ async function visSpillerKnapper() {
   spillere.length = 0;
 
   if (!data || data.length === 0) {
-    // Ingen lagrede spillere – bruk standard
     for (let i = 1; i <= 16; i++) {
       spillere.push({
         kamp_id: aktivKampId,
@@ -283,8 +299,7 @@ async function visSpillerKnapper() {
     spillere.push(...data);
   }
 
-  // Vis kun knapper
-  spillere.forEach(spiller => {
+  spillere.slice(0, 16).forEach(spiller => {
     const btn = document.createElement("button");
     btn.textContent = `${spiller.drakt} ${spiller.navn}`;
     btn.onclick = () => velgSpiller(spiller);
@@ -296,10 +311,10 @@ async function visSpillerKnapper() {
   redigerBtn.textContent = "✏️ Rediger spillere";
   redigerBtn.onclick = lagSpillerKnapper;
   redigerBtn.style.marginTop = "1rem";
+
   container.appendChild(document.createElement("br"));
   container.appendChild(redigerBtn);
 }
-
 
 
 function velgSpiller(spiller) {
