@@ -122,6 +122,7 @@
         .on("postgres_changes", { event: "*", schema: "public", table: "kamp", filter: `id=eq.${aktivKampId}` }, hentData)
         .on("postgres_changes", { event: "*", schema: "public", table: "hendelse", filter: `kamp_id=eq.${aktivKampId}` }, hentHendelser)
         .on("postgres_changes", { event: "*", schema: "public", table: "utvisning", filter: `kamp_id=eq.${aktivKampId}` }, hentUtvisninger)
+        .on("postgres_changes", { event: "*", schema: "public", table: "maal", filter: `kamp_id=eq.${aktivKampId}` }, hentData)
         .subscribe(() => {
           document.getElementById("status").textContent = "🟢 Tilkoblet";
         });
