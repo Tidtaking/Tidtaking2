@@ -26,14 +26,18 @@
   </div>
 
   <script>
-  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const kampId = "SETT_INN_DIN_KAMP_ID_HER"; // ← Lim inn riktig kamp-ID her
 
-    const kampId = 'SETT-INN-DIN-KAMP-ID-HER'; // F.eks. kopiert fra Supabase-konsollen
+    const client = supabase.createClient(supabaseUrl, supabaseKey);
 
     async function hentKamp() {
-      const { data } = await supabase.from('kamp').select('*').eq('id', kampId).single();
+      const { data, error } = await client.from('kamp').select('*').eq('id', kampId).single();
+      if (error) {
+        console.error('Feil ved henting av kamp:', error);
+        return;
+      }
       oppdaterUI(data);
     }
 
@@ -50,12 +54,16 @@
         ? { hjemmescore: nyScore }
         : { bortescore: nyScore };
 
-      const { error } = await supabase
+      const { error } = await client
         .from('kamp')
-        .update(oppdatering)
+        .update({ ...oppdatering, oppdatert: new Date().toISOString() })
         .eq('id', kampId);
 
-      if (!error) span.textContent = nyScore;
+      if (error) {
+        console.error('Feil ved oppdatering:', error);
+      } else {
+        span.textContent = nyScore;
+      }
     }
 
     hentKamp();
