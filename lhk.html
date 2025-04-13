@@ -102,6 +102,7 @@ function oppdaterScoreVisning() {
   document.getElementById("bortescore").textContent = kampData?.bortescore ?? "0";
 }
 
+
     async function lastKamper() {
       const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
       const velger = document.getElementById("kampVelger");
@@ -165,37 +166,44 @@ async function abonner() {
       abonner();
     }
 
-  async function hentData() {
-  const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-  if (!kamp) return;
+async function hentData() {
+  const { data: kamp, error } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+  if (error || !kamp) {
+    console.error("Feil ved lasting av kamp:", error);
+    return;
+  }
 
   kampData = kamp;
   document.getElementById("omgang").textContent = kamp.omgang;
+  oppdaterScoreVisning();
   visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
-  oppdaterScoreVisning(); // 🔁
   hentUtvisninger();
   hentHendelser();
 }
 
 
-    function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
-      if (klokkeInterval) clearInterval(klokkeInterval);
-      const visning = document.getElementById("klokke");
-      function oppdater() {
-        const nå = new Date();
-        const startTid = new Date(startTidStr);
-        let brukt = tidBrukt;
-        if (!erPaused) {
-          brukt += Math.floor((nå.getTime() - startTid.getTime()) / 1000);
-        }
-        const gjenstående = Math.max(0, omgangLengde - brukt);
-        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
-        const sek = (gjenstående % 60).toString().padStart(2, "0");
-        visning.textContent = `${min}:${sek}`;
-      }
-      oppdater();
-      if (!kampData.er_paused) klokkeInterval = setInterval(oppdater, 1000);
+
+   function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
+  if (klokkeInterval) clearInterval(klokkeInterval);
+  const visning = document.getElementById("klokke");
+
+  function oppdater() {
+    let brukt = tidBrukt;
+    if (!erPaused) {
+      const nå = new Date();
+      const startTid = new Date(startTidStr);
+      brukt += Math.floor((nå - startTid) / 1000);
     }
+    const gjenstående = Math.max(0, omgangLengde - brukt);
+    const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
+    const sek = (gjenstående % 60).toString().padStart(2, "0");
+    visning.textContent = `${min}:${sek}`;
+  }
+
+  oppdater();
+  if (!erPaused) klokkeInterval = setInterval(oppdater, 1000);
+}
+
 
    async function hentHendelser() {
   const { data } = await client
