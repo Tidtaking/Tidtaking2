@@ -223,26 +223,38 @@ async function lagSpillerKnapper() {
 
 
 async function lagreSpillere() {
-  for (const spiller of spillere) {
-    if (spiller.id) {
-      // Oppdater eksisterende spiller
-      await client
-        .from("spiller")
-        .update({ drakt: spiller.drakt, navn: spiller.navn })
-        .eq("id", spiller.id);
-    } else {
-      // Ny spiller – sett kamp_id og legg inn
-      await client
-        .from("spiller")
-        .insert({
-          kamp_id: aktivKampId,
-          drakt: spiller.drakt,
-          navn: spiller.navn
-        });
-    }
+  if (!aktivKampId || !spillere || spillere.length === 0) return;
+
+  // Fjern gamle spillere for denne kampen
+  const { error: slettError } = await client
+    .from("spiller")
+    .delete()
+    .eq("kamp_id", aktivKampId);
+
+  if (slettError) {
+    alert("Feil ved sletting av gamle spillere");
+    console.error(slettError);
+    return;
   }
-  alert("Spillere lagret!");
-  lagSpillerKnapper(); // Last inn på nytt for å hente id-er
+
+  // Sett kamp_id på alle spillere før lagring
+  const spillereMedKampId = spillere.map(s => ({
+    kamp_id: aktivKampId,
+    drakt: s.drakt,
+    navn: s.navn
+  }));
+
+  // Sett inn nye
+  const { error: lagreError } = await client
+    .from("spiller")
+    .insert(spillereMedKampId);
+
+  if (lagreError) {
+    alert("Feil ved lagring av spillere");
+    console.error(lagreError);
+  } else {
+    alert("Spillere lagret!");
+  }
 }
 
 
