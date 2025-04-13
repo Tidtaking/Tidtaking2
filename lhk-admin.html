@@ -85,6 +85,15 @@
   </div>
 
   <div class="section">
+    <h3>Utvisninger</h3>
+    <div>
+      <button onclick="registrerUtvisning('hjemme')">🚨 LHK</button>
+      <button onclick="registrerUtvisning('borte')">🚨 Bortelag</button>
+    </div>
+    <div id="utvisningListe" style="margin-top: 1rem;"></div>
+  </div>
+
+  <div class="section">
     <h3>Mållogg</h3>
     <table>
       <thead>
@@ -115,7 +124,7 @@
     }
 
     async function lastKamper() {
-      const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+      const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
       const select = document.getElementById("kampSelect");
       select.innerHTML = "";
       (data || []).forEach(k => {
@@ -129,6 +138,7 @@
         select.value = aktivKampId;
         hentKampData();
         hentMaallogg();
+        hentUtvisninger();
       }
     }
 
@@ -136,6 +146,7 @@
       aktivKampId = document.getElementById("kampSelect").value;
       hentKampData();
       hentMaallogg();
+      hentUtvisninger();
     }
 
     async function hentKampData() {
@@ -244,6 +255,42 @@
       hentMaallogg();
     }
 
+    async function registrerUtvisning(lag) {
+      const nå = new Date();
+      const slutt = new Date(nå.getTime() + 2 * 60 * 1000);
+      await client.from("utvisning").insert({
+        kamp_id: aktivKampId,
+        lag,
+        start_tid: nå.toISOString(),
+        slutt_tid: slutt.toISOString()
+      });
+      hentUtvisninger();
+    }
+
+    async function hentUtvisninger() {
+      const nå = new Date().toISOString();
+      const { data } = await client
+        .from("utvisning")
+        .select("*")
+        .eq("kamp_id", aktivKampId)
+        .gt("slutt_tid", nå)
+        .order("start_tid");
+
+      const liste = document.getElementById("utvisningListe");
+      liste.innerHTML = "";
+      (data || []).forEach(u => {
+        const slutt = new Date(u.slutt_tid).getTime();
+        const nåTid = Date.now();
+        const sek = Math.max(0, Math.floor((slutt - nåTid) / 1000));
+        const min = Math.floor(sek / 60).toString().padStart(2, "0");
+        const rest = (sek % 60).toString().padStart(2, "0");
+        const div = document.createElement("div");
+        div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${rest}`;
+        liste.appendChild(div);
+      });
+    }
+
+    setInterval(hentUtvisninger, 1000);
     lastKamper();
   </script>
 </body>
