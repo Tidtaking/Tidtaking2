@@ -400,14 +400,29 @@ async function loggHendelse(type, lag, ekstra = {}) {
 
 async function registrerMaal(lag) {
   const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
-  await client.from("maal").insert({ kamp_id: aktivKampId, spiller: spillerNavn, lag });
-await client.from("kamp").update({
-  [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1,
-  oppdatert: new Date().toISOString() // <-- Tving endring
-}).eq("id", aktivKampId);
+
+  // Registrer i maal-tabellen
+  await client.from("maal").insert({
+    kamp_id: aktivKampId,
+    spiller: spillerNavn,
+    lag
+  });
+
+  // Oppdater score i kamp-tabellen og sett oppdatert-feltet
+  await client
+    .from("kamp")
+    .update({
+      [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1,
+      oppdatert: new Date().toISOString()
+    })
+    .eq("id", aktivKampId);
+
+  // Logg hendelse
   await loggHendelse("maal", lag);
-  hentKampData();
+
+  hentKampData(); // Oppdater admin-visning
 }
+
 
 async function registrerKort(lag, korttype) {
   await loggHendelse("kort", lag, { korttype });
