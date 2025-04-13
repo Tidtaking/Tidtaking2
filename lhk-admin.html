@@ -180,7 +180,15 @@ function kampTidspunktTekst() {
   const sek = (brukt % 60).toString().padStart(2, "0");
   return `${min}:${sek}`;
 }
-
+async function hentKampData() {
+  const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+  if (data) {
+    kampData = data;
+    document.getElementById("hjemmescore").textContent = data.hjemmescore;
+    document.getElementById("bortescore").textContent = data.bortescore;
+    document.getElementById("omgangVisning").textContent = data.omgang;
+  }
+}
 async function loggHendelse(type, lag, ekstra = {}) {
   const spiller = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : null;
   await client.from("hendelse").insert({
