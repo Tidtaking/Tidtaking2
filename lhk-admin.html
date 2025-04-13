@@ -94,19 +94,23 @@
   </div>
 
   <script>
-    const client = supabase.createClient(
-      "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    );
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+
+    const client = supabase.createClient(supabaseUrl, supabaseKey);
 
     let aktivKampId = null;
     let klokkeInterval = null;
 
     async function lastKamper() {
-      const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+      const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+      if (error) {
+        console.log("KAMP ERROR:", error);
+        return alert("Feil ved henting av kamp: " + error.message);
+      }
       const select = document.getElementById("kampSelect");
       select.innerHTML = "";
-      data.forEach(k => {
+      (data || []).forEach(k => {
         const option = document.createElement("option");
         option.value = k.id;
         option.text = `${k.hjemmelag} vs ${k.bortelag}`;
