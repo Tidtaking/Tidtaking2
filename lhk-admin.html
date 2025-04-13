@@ -175,6 +175,15 @@ function kampTidspunktTekst() {
   const sek = (brukt % 60).toString().padStart(2, "0");
   return `${min}:${sek}`;
 }
+function nullstillTid() {
+  if (!kampData) return;
+  client.from("kamp").update({
+    start_tid: null,
+    tid_brukt: 0,
+    er_paused: true
+  }).eq("id", aktivKampId);
+  hentKampData(); // oppdater visning
+}
 
 async function hentKampData() {
   const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
