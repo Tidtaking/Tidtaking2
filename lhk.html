@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LHK – Livescore</title>
+  <title>LHK – Visning</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
@@ -93,98 +93,9 @@
     const client = supabase.createClient(supabaseUrl, supabaseKey);
 
     let aktivKampId = null;
-    let kanal = null;
+    let kampData = null;
     let klokkeInterval = null;
-
-    async function hentData() {
-      const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-      if (kamp) {
-        document.getElementById("hjemmescore").textContent = kamp.hjemmescore;
-        document.getElementById("bortescore").textContent = kamp.bortescore;
-        document.getElementById("omgang").textContent = kamp.omgang;
-        visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
-        hentUtvisninger(); // hent med en gang
-      }
-
-      const { data: maal } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
-      const tbody = document.getElementById("maalListe");
-      tbody.innerHTML = "";
-      (maal || []).forEach((m, i) => {
-        const tidspunkt = new Date(m.tidspunkt);
-        const kampStart = new Date(kamp.start_tid);
-        const målTid = Math.floor((tidspunkt - kampStart) / 1000) + (kamp?.tid_brukt || 0);
-        const minutt = Math.floor(målTid / 60).toString().padStart(2, "0");
-        const sekund = (målTid % 60).toString().padStart(2, "0");
-
-        const tr = document.createElement("tr");
-        if (m.lag === "hjemme") tr.classList.add("lhk-mål");
-
-        tr.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${minutt}:${sekund}</td>
-          <td><strong>${m.lag === "hjemme" ? "LHK" : "Bortelag"}</strong></td>
-          <td>${m.spiller}</td>`;
-        tbody.appendChild(tr);
-      });
-
-      if (tbody.lastChild) {
-        tbody.lastChild.scrollIntoView({ behavior: "smooth", block: "end" });
-      }
-    }
-
-    function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
-      if (klokkeInterval) clearInterval(klokkeInterval);
-      const visning = document.getElementById("klokke");
-
-      function oppdater() {
-        const nå = new Date();
-        const startTid = new Date(startTidStr);
-        let brukt = tidBrukt;
-        if (!erPaused) {
-          brukt += Math.floor((nå.getTime() - startTid.getTime()) / 1000);
-        }
-        let gjenstående = Math.max(0, omgangLengde - brukt);
-        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
-        const sek = (gjenstående % 60).toString().padStart(2, "0");
-        visning.textContent = `${min}:${sek}`;
-      }
-
-      oppdater();
-      if (!erPaused) klokkeInterval = setInterval(oppdater, 1000);
-    }
-
-    async function hentUtvisninger() {
-      if (!aktivKampId) return;
-      const nå = new Date().toISOString();
-      const { data } = await client
-        .from("utvisning")
-        .select("*")
-        .eq("kamp_id", aktivKampId)
-        .gt("slutt_tid", nå)
-        .order("start_tid");
-
-      const container = document.getElementById("utvisningVisning");
-      container.innerHTML = "";
-
-      const nåMillis = Date.now();
-      (data || []).forEach(u => {
-        const slutt = new Date(u.slutt_tid).getTime();
-        const sek = Math.max(0, Math.floor((slutt - nåMillis) / 1000));
-        const min = Math.floor(sek / 60).toString().padStart(2, "0");
-        const rest = (sek % 60).toString().padStart(2, "0");
-
-        const div = document.createElement("div");
-        div.className = "utvisning-linje";
-        div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${rest}`;
-        container.appendChild(div);
-      });
-    }
-
-    async function velgKamp() {
-      aktivKampId = document.getElementById("kampVelger").value;
-      hentData();
-      abonner();
-    }
+    let kanal = null;
 
     async function lastKamper() {
       const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
@@ -212,17 +123,95 @@
         .on("postgres_changes", { event: "*", schema: "public", table: "maal", filter: `kamp_id=eq.${aktivKampId}` }, hentData)
         .on("postgres_changes", { event: "*", schema: "public", table: "utvisning", filter: `kamp_id=eq.${aktivKampId}` }, hentUtvisninger)
         .subscribe((status) => {
-          const statusEl = document.getElementById("status");
-          if (status === "SUBSCRIBED") {
-            statusEl.textContent = "🟢 Tilkoblet";
-            statusEl.style.color = "green";
-          }
+          document.getElementById("status").textContent = "🟢 Tilkoblet";
         });
     }
 
-    // Oppdater utvisninger hvert sekund
-    setInterval(hentUtvisninger, 1000);
+    async function velgKamp() {
+      aktivKampId = document.getElementById("kampVelger").value;
+      hentData();
+      abonner();
+    }
 
+    async function hentData() {
+      const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+      if (!kamp) return;
+
+      kampData = kamp;
+      document.getElementById("hjemmescore").textContent = kamp.hjemmescore;
+      document.getElementById("bortescore").textContent = kamp.bortescore;
+      document.getElementById("omgang").textContent = kamp.omgang;
+      visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
+      hentUtvisninger();
+      hentMaallogg();
+    }
+
+    function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
+      if (klokkeInterval) clearInterval(klokkeInterval);
+      const visning = document.getElementById("klokke");
+      function oppdater() {
+        const nå = new Date();
+        const startTid = new Date(startTidStr);
+        let brukt = tidBrukt;
+        if (!erPaused) {
+          brukt += Math.floor((nå.getTime() - startTid.getTime()) / 1000);
+        }
+        const gjenstående = Math.max(0, omgangLengde - brukt);
+        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
+        const sek = (gjenstående % 60).toString().padStart(2, "0");
+        visning.textContent = `${min}:${sek}`;
+      }
+      oppdater();
+      if (!kampData.er_paused) klokkeInterval = setInterval(oppdater, 1000);
+    }
+
+    async function hentMaallogg() {
+      const { data: maal } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
+      const tbody = document.getElementById("maalListe");
+      tbody.innerHTML = "";
+      (maal || []).forEach((m, i) => {
+        const tidspunkt = new Date(m.tidspunkt).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+        const tr = document.createElement("tr");
+        if (m.lag === "hjemme") tr.classList.add("lhk-mål");
+        tr.innerHTML = `<td>${i + 1}</td><td>${tidspunkt}</td><td>${m.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${m.spiller}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function hentUtvisninger() {
+      if (!aktivKampId || !kampData) return;
+      const { data } = await client
+        .from("utvisning")
+        .select("*")
+        .eq("kamp_id", aktivKampId)
+        .order("start_tid");
+
+      const container = document.getElementById("utvisningVisning");
+      container.innerHTML = "";
+
+      const kampStart = new Date(kampData.start_tid);
+      const erPaused = kampData.er_paused;
+      const bruktTid = kampData.tid_brukt;
+
+      (data || []).forEach(u => {
+        const slutt = new Date(u.slutt_tid).getTime();
+        let nåTid = Date.now();
+        if (erPaused) {
+          nåTid = kampStart.getTime() + bruktTid * 1000;
+        }
+        const sek = Math.max(0, Math.floor((slutt - nåTid) / 1000));
+        if (sek > 0) {
+          const min = Math.floor(sek / 60).toString().padStart(2, "0");
+          const rest = (sek % 60).toString().padStart(2, "0");
+          const div = document.createElement("div");
+          div.className = "utvisning-linje";
+          div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${rest}`;
+          container.appendChild(div);
+        }
+      });
+    }
+
+    setInterval(hentUtvisninger, 1000);
     lastKamper();
   </script>
 </body>
