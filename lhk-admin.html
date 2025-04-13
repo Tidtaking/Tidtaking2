@@ -128,21 +128,22 @@
     <table>
       <thead>
         <tr>
+          <th>🗹</th>
           <th>Kamptid</th>
           <th>Lag</th>
           <th>Hendelse</th>
           <th>Spiller</th>
-          <th></th>
         </tr>
       </thead>
       <tbody id="hendelseslogg"></tbody>
     </table>
+    <button onclick="slettValgteHendelser()">🗑 Slett valgte hendelser</button>
   </div>
 
   <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const client = supabase.createClient(supabaseUrl, supabaseKey);
+   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+const client = supabase.createClient(supabaseUrl, supabaseKey);
 
 let aktivKampId = null;
 let kampData = null;
@@ -183,23 +184,6 @@ function kampTidspunktTekst() {
   return `${min}:${sek}`;
 }
 
-function startKlokkeOppdatering() {
-  if (klokkeInterval) clearInterval(klokkeInterval);
-
-  klokkeInterval = setInterval(() => {
-    if (!kampData) return;
-    const nå = Date.now();
-    const brukt = kampData.er_paused
-      ? kampData.tid_brukt
-      : kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
-    const omgangLengdeMin = parseInt(document.getElementById("omgangLengde").value || "20");
-    const totalSek = omgangLengdeMin * 60;
-    const igjen = totalSek - brukt;
-    const visning = igjen <= 0 ? "00:00" : `${String(Math.floor(igjen / 60)).padStart(2, '0')}:${String(igjen % 60).padStart(2, '0')}`;
-    document.getElementById("klokkeVisning").textContent = visning;
-  }, 500);
-}
-
 async function hentKampData() {
   const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
   if (data) {
@@ -207,7 +191,6 @@ async function hentKampData() {
     document.getElementById("hjemmescore").textContent = data.hjemmescore;
     document.getElementById("bortescore").textContent = data.bortescore;
     document.getElementById("omgangVisning").textContent = data.omgang;
-    startKlokkeOppdatering();
   }
 }
 
@@ -265,22 +248,33 @@ async function hentLogg() {
                       h.type === "maal" ? "🎯 Mål" : "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td><input type="checkbox" class="hendelse-sjekkboks" data-id="${h.id}"></td>
       <td>${tidspunkt}</td>
       <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
       <td>${beskrivelse}</td>
       <td>${h.spiller || ""}</td>
-      <td><button class="delete" onclick="slettHendelse(${h.id})">❌</button></td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-async function slettHendelse(id) {
-  console.log("Sletter HENDELSE med id:", id);
-  await client.from("hendelse").delete().eq("id", id);
-  hentLogg();
-}
+async function slettValgteHendelser() {
+  const checkbokser = document.querySelectorAll(".hendelse-sjekkboks:checked");
+  const idListe = Array.from(checkbokser).map(cb => parseInt(cb.dataset.id));
 
+  if (idListe.length === 0) {
+    alert("Ingen hendelser valgt.");
+    return;
+  }
+
+  const { error } = await client.from("hendelse").delete().in("id", idListe);
+  if (error) {
+    alert("Feil ved sletting");
+    console.error(error);
+  } else {
+    hentLogg();
+  }
+}
 
 async function hentUtvisninger() {
   if (!kampData) return;
@@ -290,7 +284,8 @@ async function hentUtvisninger() {
   const nå = Date.now();
   (data || []).forEach(utv => {
     const start = new Date(utv.start_tid).getTime();
-    const bruktTid = kampData.er_paused ? kampData.tid_brukt :
+    const bruktTid = kampData.er_paused ?
+      kampData.tid_brukt :
       kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
     const utvisningsStartSek = Math.floor((start - new Date(kampData.start_tid).getTime()) / 1000);
     const sekIgjen = 120 - (bruktTid - utvisningsStartSek);
@@ -302,11 +297,9 @@ async function hentUtvisninger() {
 }
 
 async function slettUtvisning(id) {
-  console.log("Sletter UTVISNING med id:", id);
   await client.from("utvisning").delete().eq("id", id);
   hentUtvisninger();
 }
-
 
 async function velgKamp() {
   aktivKampId = document.getElementById("kampSelect").value;
@@ -362,14 +355,12 @@ async function startPauseKamp() {
   if (!kampData) return;
   const nå = new Date();
   if (kampData.er_paused) {
-    const nyStart = nå.toISOString();
     await client.from("kamp").update({
       er_paused: false,
-      start_tid: nyStart
+      start_tid: nå.toISOString()
     }).eq("id", aktivKampId);
   } else {
-    const startTid = new Date(kampData.start_tid);
-    const ekstraTid = Math.floor((nå - startTid) / 1000);
+    const ekstraTid = Math.floor((nå - new Date(kampData.start_tid)) / 1000);
     await client.from("kamp").update({
       er_paused: true,
       tid_brukt: kampData.tid_brukt + ekstraTid,
@@ -400,9 +391,10 @@ async function nullstillTid() {
   await hentKampData();
 }
 
-// Init
+// Start alt
 lagSpillerKnapper();
 lastKamper();
-  </script>
+</script>
 </body>
 </html>
+
