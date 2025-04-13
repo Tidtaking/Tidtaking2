@@ -126,9 +126,16 @@
   <div class="section">
     <h3>Hendelseslogg</h3>
     <table>
-      <thead>
-        <tr><th>Kamptid</th><th>Lag</th><th>Hendelse</th><th>Spiller</th></tr>
-      </thead>
+     <thead>
+  <tr>
+    <th>Kamptid</th>
+    <th>Lag</th>
+    <th>Hendelse</th>
+    <th>Spiller</th>
+    <th></th> <!-- for slett-knapp -->
+  </tr>
+</thead>
+
       <tbody id="hendelseslogg"></tbody>
     </table>
   </div>
@@ -245,10 +252,25 @@ async function hentLogg() {
                       h.type === "timeout" ? "⏱ Timeout" :
                       h.type === "utvisning" ? "🚨 Utvisning" :
                       h.type === "maal" ? "🎯 Mål" : "";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${tidspunkt}</td><td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${beskrivelse}</td><td>${h.spiller || ""}</td>`;
-    tbody.appendChild(tr);
+   const tr = document.createElement("tr");
+tr.innerHTML = `
+  <td>${tidspunkt}</td>
+  <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+  <td>${beskrivelse}</td>
+  <td>${h.spiller || ""}</td>
+  <td><button class="delete" onclick="slettHendelse(${h.id})">❌</button></td>
+`;
+tbody.appendChild(tr);
+
   });
+}
+async function slettHendelse(id) {
+  const { error } = await client.from("hendelse").delete().eq("id", id);
+  if (error) {
+    console.error("Kunne ikke slette hendelse:", error);
+  } else {
+    hentLogg(); // oppdater visning
+  }
 }
 
 async function hentUtvisninger() {
