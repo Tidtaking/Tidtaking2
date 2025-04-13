@@ -120,7 +120,7 @@ function oppdaterScoreVisning() {
       }
     }
 
-    async function abonner() {
+   async function abonner() {
   if (kanal) await kanal.unsubscribe();
 
   kanal = client.channel("live-kamp-" + aktivKampId)
@@ -132,7 +132,8 @@ function oppdaterScoreVisning() {
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "utvisning", filter: `kamp_id=eq.${aktivKampId}` }, () => {
       hentUtvisninger();
-    });
+    })
+    .on("broadcast", { event: "dummy" }, () => {}); // 👈 VIKTIG!
 
   const { error } = await kanal.subscribe();
   if (error) {
@@ -142,6 +143,7 @@ function oppdaterScoreVisning() {
     document.getElementById("status").textContent = "🟢 Tilkoblet";
   }
 }
+
 
     async function velgKamp() {
       aktivKampId = document.getElementById("kampVelger").value;
