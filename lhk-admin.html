@@ -85,7 +85,7 @@
   </div>
 
   <div class="section">
-    <h3>Utvisninger</h3>
+    <h3>Utvisningslogg</h3>
     <div>
       <button onclick="registrerUtvisning('hjemme')">🚨 LHK</button>
       <button onclick="registrerUtvisning('borte')">🚨 Bortelag</button>
@@ -97,6 +97,7 @@
       <tbody id="utvisningListe"></tbody>
     </table>
   </div>
+
   <div class="section">
     <h3>Mållogg</h3>
     <table>
@@ -108,10 +109,9 @@
   </div>
 
   <script>
-    const client = supabase.createClient(
-      "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
-    );
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const client = supabase.createClient(supabaseUrl, supabaseKey);
 
     let aktivKampId = null;
     let klokkeInterval = null;
@@ -182,7 +182,7 @@
         visning.textContent = `${min}:${sek}`;
       }
       oppdater();
-      if (!kampData.er_paused) klokkeInterval = setInterval(oppdater, 1000);
+      if (!erPaused) klokkeInterval = setInterval(oppdater, 1000);
     }
 
     async function startPauseKamp() {
@@ -191,7 +191,8 @@
       const nå = new Date();
       let nyTidBrukt = data.tid_brukt;
       if (!data.er_paused) {
-        nyTidBrukt += Math.floor((nå.getTime() - new Date(data.start_tid).getTime()) / 1000);
+        const bruktNå = Math.floor((nå.getTime() - new Date(data.start_tid).getTime()) / 1000);
+        nyTidBrukt += bruktNå;
       }
       await client.from("kamp").update({
         er_paused: !data.er_paused,
@@ -262,53 +263,52 @@
     }
 
     async function registrerUtvisning(lag) {
-      const nå = new Date().toISOString();
+      const nå = new Date();
+      const slutt = new Date(nå.getTime() + 2 * 60 * 1000);
       await client.from("utvisning").insert({
         kamp_id: aktivKampId,
         lag,
-        start_tid: nå
+        start_tid: nå.toISOString(),
+        slutt_tid: slutt.toISOString()
       });
       hentUtvisninger();
     }
 
-   async function hentUtvisninger() {
-  if (!kampData) return; // <-- legger til denne linjen
+    async function hentUtvisninger() {
+      const { data } = await client
+        .from("utvisning")
+        .select("*")
+        .eq("kamp_id", aktivKampId)
+        .order("start_tid");
 
-  const { data } = await client
-    .from("utvisning")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("start_tid");
+      const tbody = document.getElementById("utvisningListe");
+      tbody.innerHTML = "";
 
-  const tbody = document.getElementById("utvisningListe");
-  tbody.innerHTML = "";
+      if (!kampData) return;
 
-  const kampStart = new Date(kampData.start_tid);
-  const bruktTotal = kampData.er_paused
-    ? kampData.tid_brukt
-    : kampData.tid_brukt + Math.floor((Date.now() - kampStart.getTime()) / 1000);
-
-  // resten uendret...
-}
-
+      const kampStart = new Date(kampData.start_tid);
+      const erPaused = kampData.er_paused;
+      const bruktTid = kampData.tid_brukt;
 
       (data || []).forEach(u => {
-        const utvStart = new Date(u.start_tid);
-        const sekSidenStart = bruktTotal - Math.floor((utvStart.getTime() - kampStart.getTime()) / 1000);
-        const gjenstående = 120 - sekSidenStart;
-        if (gjenstående <= 0) return;
-
-        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
-        const sek = (gjenstående % 60).toString().padStart(2, "0");
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${u.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-          <td>${new Date(u.start_tid).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}</td>
-          <td>${min}:${sek}</td>
-          <td><button class="delete" onclick="slettUtvisning('${u.id}')">Slett</button></td>
-        `;
-        tbody.appendChild(tr);
+        const slutt = new Date(u.slutt_tid).getTime();
+        let nåTid = Date.now();
+        if (erPaused) {
+          nåTid = kampStart.getTime() + bruktTid * 1000;
+        }
+        const sek = Math.max(0, Math.floor((slutt - nåTid) / 1000));
+        const min = Math.floor(sek / 60).toString().padStart(2, "0");
+        const rest = (sek % 60).toString().padStart(2, "0");
+        if (sek > 0) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${u.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+            <td>${new Date(u.start_tid).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}</td>
+            <td>${min}:${rest}</td>
+            <td><button class="delete" onclick="slettUtvisning('${u.id}')">Slett</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
       });
     }
 
