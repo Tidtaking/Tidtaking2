@@ -150,7 +150,7 @@ let kampData = null;
 let valgtSpiller = null;
 let klokkeInterval = null;
 
-const spillere = Array.from({ length: 16 }, (_, i) => ({
+let spillere = Array.from({ length: 16 }, (_, i) => ({
   drakt: i + 1,
   navn: `Spiller ${i + 1}`
 }));
