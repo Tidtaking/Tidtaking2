@@ -267,14 +267,54 @@ async function slettValgteHendelser() {
     return;
   }
 
+  // Hent de valgte hendelsene
+  const { data: hendelser, error: hentError } = await client
+    .from("hendelse")
+    .select("*")
+    .in("id", idListe);
+
+  if (hentError) {
+    alert("Feil ved henting av hendelser");
+    console.error(hentError);
+    return;
+  }
+
+  // Tell opp mål per lag
+  const maalHjemme = hendelser.filter(h => h.type === "maal" && h.lag === "hjemme").length;
+  const maalBorte = hendelser.filter(h => h.type === "maal" && h.lag === "borte").length;
+
+  // Oppdater score i kamp-tabellen hvis nødvendig
+  if (maalHjemme || maalBorte) {
+    await client.from("kamp").update({
+      hjemmescore: kampData.hjemmescore - maalHjemme,
+      bortescore: kampData.bortescore - maalBorte
+    }).eq("id", aktivKampId);
+  }
+
+  // Slett fra maal-tabellen hvis det er mål som slettes
+  const maalSpillere = hendelser
+    .filter(h => h.type === "maal")
+    .map(h => h.spiller); // vi antar spiller + kamp_id er unikt
+
+  for (const spiller of maalSpillere) {
+    await client
+      .from("maal")
+      .delete()
+      .eq("kamp_id", aktivKampId)
+      .eq("spiller", spiller);
+  }
+
+  // Slett hendelser
   const { error } = await client.from("hendelse").delete().in("id", idListe);
   if (error) {
-    alert("Feil ved sletting");
+    alert("Feil ved sletting av hendelser");
     console.error(error);
   } else {
-    await hentLogg(); // ← viktig: oppdater visning direkte
+    await hentKampData();
+    await hentLogg();
   }
 }
+
 
 
 async function hentUtvisninger() {
