@@ -189,6 +189,17 @@ async function hentKampData() {
     document.getElementById("omgangVisning").textContent = data.omgang;
   }
 }
+   async function hentMaallogg() {
+  const { data } = await client
+    .from("maal")
+    .select("*")
+    .eq("kamp_id", aktivKampId)
+    .order("id", { ascending: true });
+
+  // Vis gjerne målene på skjermen – her logger vi bare til konsollen foreløpig
+  console.log("Mållogg:", data);
+}
+
 async function loggHendelse(type, lag, ekstra = {}) {
   const spiller = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : null;
   await client.from("hendelse").insert({
@@ -260,7 +271,7 @@ async function hentLogg() {
         option.text = `${k.hjemmelag} vs ${k.bortelag}`;
         select.appendChild(option);
       });
-      if (data.length) {
+if (data && data.length) {
         aktivKampId = data[0].id;
         select.value = aktivKampId;
         hentKampData();
