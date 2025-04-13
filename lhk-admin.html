@@ -85,12 +85,17 @@
   </div>
 
   <div class="section">
-    <h3>Utvisninger</h3>
+    <h3>Utvisningslogg</h3>
     <div>
       <button onclick="registrerUtvisning('hjemme')">🚨 LHK</button>
       <button onclick="registrerUtvisning('borte')">🚨 Bortelag</button>
     </div>
-    <div id="utvisningListe" style="margin-top: 1rem;"></div>
+    <table>
+      <thead>
+        <tr><th>Lag</th><th>Start</th><th>Gjenstående</th><th></th></tr>
+      </thead>
+      <tbody id="utvisningListe"></tbody>
+    </table>
   </div>
 
   <div class="section">
@@ -110,6 +115,7 @@
 
     let aktivKampId = null;
     let klokkeInterval = null;
+    let kampData = null;
 
     async function opprettKamp() {
       const hjemmelag = document.getElementById("hjemmelag").value.trim();
@@ -152,6 +158,7 @@
     async function hentKampData() {
       const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
       if (!data) return;
+      kampData = data;
       document.getElementById("hjemmescore").textContent = data.hjemmescore;
       document.getElementById("bortescore").textContent = data.bortescore;
       document.getElementById("omgangVisning").textContent = data.omgang;
@@ -244,9 +251,9 @@
       });
     }
 
-    async function slettMaal(maalId, lag) {
-      if (!confirm("Er du sikker på at du vil slette dette målet?")) return;
-      await client.from("maal").delete().eq("id", maalId);
+    async function slettMaal(id, lag) {
+      if (!confirm("Slette mål?")) return;
+      await client.from("maal").delete().eq("id", id);
       const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
       const { data } = await client.from("kamp").select(felt).eq("id", aktivKampId).single();
       const nyScore = Math.max(0, (data[felt] || 1) - 1);
@@ -268,26 +275,47 @@
     }
 
     async function hentUtvisninger() {
-      const nå = new Date().toISOString();
       const { data } = await client
         .from("utvisning")
         .select("*")
         .eq("kamp_id", aktivKampId)
-        .gt("slutt_tid", nå)
         .order("start_tid");
 
-      const liste = document.getElementById("utvisningListe");
-      liste.innerHTML = "";
+      const tbody = document.getElementById("utvisningListe");
+      tbody.innerHTML = "";
+
+      if (!kampData) return;
+
+      const kampStart = new Date(kampData.start_tid);
+      const erPaused = kampData.er_paused;
+      const bruktTid = kampData.tid_brukt;
+
       (data || []).forEach(u => {
         const slutt = new Date(u.slutt_tid).getTime();
-        const nåTid = Date.now();
+        let nåTid = Date.now();
+        if (erPaused) {
+          nåTid = kampStart.getTime() + bruktTid * 1000;
+        }
         const sek = Math.max(0, Math.floor((slutt - nåTid) / 1000));
         const min = Math.floor(sek / 60).toString().padStart(2, "0");
         const rest = (sek % 60).toString().padStart(2, "0");
-        const div = document.createElement("div");
-        div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${rest}`;
-        liste.appendChild(div);
+        if (sek > 0) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${u.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+            <td>${new Date(u.start_tid).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}</td>
+            <td>${min}:${rest}</td>
+            <td><button class="delete" onclick="slettUtvisning('${u.id}')">Slett</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
       });
+    }
+
+    async function slettUtvisning(id) {
+      if (!confirm("Slette denne utvisningen?")) return;
+      await client.from("utvisning").delete().eq("id", id);
+      hentUtvisninger();
     }
 
     setInterval(hentUtvisninger, 1000);
