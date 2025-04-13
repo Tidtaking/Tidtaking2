@@ -6,90 +6,100 @@
   <title>LHK – Admin</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      text-align: center;
-      padding: 1rem;
+    body { font-family: sans-serif; background: #f2f2f2; padding: 1rem; text-align: center; }
+    .logo { max-width: 150px; margin: 1rem auto; }
+    select, input, button {
+      font-size: 1rem; padding: 0.5rem; margin: 0.5rem; border-radius: 5px;
     }
-    .logo {
-      max-width: 150px;
-      margin: 1rem auto;
-    }
-    h1 {
-      color: #0057b8;
-      margin-top: 0;
-    }
-    .score {
-      font-size: 2.5rem;
-      margin: 1rem 0;
-    }
-    button {
-      font-size: 1.5rem;
-      margin: 0.5rem;
-      padding: 1rem;
-      width: 45%;
-      max-width: 200px;
-      border: none;
-      border-radius: 10px;
-      background-color: #0057b8;
-      color: white;
-    }
-    button:active {
-      background-color: #003f8a;
-    }
+    .score { font-size: 2rem; margin: 1rem; }
+    .section { margin-top: 2rem; background: #fff; padding: 1rem; border-radius: 10px; }
   </style>
 </head>
 <body>
   <img src="logo-lhk.jpg" alt="LHK-logo" class="logo" />
-  <h1>LHK – Admin</h1>
+  <h1>LHK Admin</h1>
 
-  <div class="score">LHK: <span id="hjemmescore">0</span></div>
-  <div class="score">Bortelag: <span id="bortescore">0</span></div>
+  <div class="section">
+    <h3>Opprett ny kamp</h3>
+    <input type="text" id="hjemmelag" placeholder="Hjemmelag" />
+    <input type="text" id="bortelag" placeholder="Bortelag" />
+    <button onclick="opprettKamp()">➕ Opprett kamp</button>
+  </div>
 
-  <div>
-    <button onclick="endreScore('hjemmescore', 1)">+ LHK</button>
-    <button onclick="endreScore('hjemmescore', -1)">− LHK</button><br />
-    <button onclick="endreScore('bortescore', 1)">+ Bortelag</button>
-    <button onclick="endreScore('bortescore', -1)">− Bortelag</button>
+  <div class="section">
+    <h3>Velg aktiv kamp</h3>
+    <select id="kampSelect" onchange="velgKamp()"></select>
+    <div class="score">LHK: <span id="hjemmescore">0</span> – Bortelag: <span id="bortescore">0</span></div>
+  </div>
+
+  <div class="section">
+    <h3>Registrer mål</h3>
+    <input type="text" id="spiller" placeholder="Spillernavn" />
+    <button onclick="registrerMaal('hjemme')">+ Hjemme</button>
+    <button onclick="registrerMaal('borte')">+ Borte</button>
   </div>
 
   <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const kampId = "SETT-INN-DIN-KAMP-ID";
+    const supabase = supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+    );
 
-    const client = supabase.createClient(supabaseUrl, supabaseKey);
+    let aktivKampId = null;
 
-    async function hentKamp() {
-      const { data, error } = await client.from('kamp').select('*').eq('id', kampId).single();
-      if (error) return console.error(error);
-      oppdaterUI(data);
+    async function lastKamper() {
+      const { data } = await supabase.from("kamp").select("*").order("opprettet", { ascending: false });
+      const select = document.getElementById("kampSelect");
+      select.innerHTML = "";
+      data.forEach(k => {
+        const option = document.createElement("option");
+        option.value = k.id;
+        option.text = `${k.hjemmelag} vs ${k.bortelag}`;
+        select.appendChild(option);
+      });
+      if (data.length) {
+        aktivKampId = data[0].id;
+        select.value = aktivKampId;
+        hentScore();
+      }
     }
 
-    function oppdaterUI(data) {
-      document.getElementById('hjemmescore').textContent = data.hjemmescore;
-      document.getElementById('bortescore').textContent = data.bortescore;
+    async function opprettKamp() {
+      const hjemmelag = document.getElementById("hjemmelag").value;
+      const bortelag = document.getElementById("bortelag").value;
+      if (!hjemmelag || !bortelag) return alert("Fyll inn begge lag");
+      const { data, error } = await supabase.from("kamp").insert({ hjemmelag, bortelag }).select().single();
+      if (error) return alert("Feil: " + error.message);
+      aktivKampId = data.id;
+      await lastKamper();
     }
 
-    async function endreScore(felt, delta) {
-      const current = parseInt(document.getElementById(felt).textContent);
-      const ny = Math.max(0, current + delta);
-
-      const update = felt === 'hjemmescore'
-        ? { hjemmescore: ny }
-        : { bortescore: ny };
-
-      const { error } = await client
-        .from('kamp')
-        .update({ ...update, oppdatert: new Date().toISOString() })
-        .eq('id', kampId);
-
-      if (!error) document.getElementById(felt).textContent = ny;
+    async function hentScore() {
+      const { data } = await supabase.from("kamp").select("*").eq("id", aktivKampId).single();
+      document.getElementById("hjemmescore").textContent = data.hjemmescore;
+      document.getElementById("bortescore").textContent = data.bortescore;
     }
 
-    hentKamp();
+    async function velgKamp() {
+      aktivKampId = document.getElementById("kampSelect").value;
+      hentScore();
+    }
+
+    async function registrerMaal(lag) {
+      const spiller = document.getElementById("spiller").value.trim();
+      if (!spiller || !aktivKampId) return alert("Velg kamp og skriv inn spiller");
+      await supabase.from("maal").insert({ kamp_id: aktivKampId, spiller, lag });
+
+      const felt = lag === "hjemme" ? "hjemmescore" : "bortescore";
+      const { data } = await supabase.from("kamp").select(felt).eq("id", aktivKampId).single();
+      const nyScore = (data[felt] || 0) + 1;
+      await supabase.from("kamp").update({ [felt]: nyScore }).eq("id", aktivKampId);
+
+      hentScore();
+      document.getElementById("spiller").value = "";
+    }
+
+    lastKamper();
   </script>
 </body>
 </html>
