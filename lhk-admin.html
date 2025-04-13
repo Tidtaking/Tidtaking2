@@ -159,7 +159,7 @@ async function lagSpillerKnapper() {
   if (!aktivKampId) return;
 
   const container = document.getElementById("spillereContainer");
-  container.innerHTML = "";
+  container.innerHTML = ""; // 🔁 Fjern eksisterende knapper/inputs
 
   const { data } = await client
     .from("spiller")
@@ -167,17 +167,23 @@ async function lagSpillerKnapper() {
     .eq("kamp_id", aktivKampId)
     .order("drakt");
 
+  // Tøm arrayen før du fyller det
+  spillere.length = 0;
+
   if (!data || data.length === 0) {
-    // Ingen lagrede spillere – bruk midlertidige
-    spillere = Array.from({ length: 16 }, (_, i) => ({
-      kamp_id: aktivKampId,
-      drakt: i + 1,
-      navn: `Spiller ${i + 1}`
-    }));
+    // Ingen lagret – bruk standard
+    for (let i = 1; i <= 16; i++) {
+      spillere.push({
+        kamp_id: aktivKampId,
+        drakt: i,
+        navn: `Spiller ${i}`
+      });
+    }
   } else {
-    spillere = data;
+    spillere.push(...data); // Fyll fra Supabase
   }
 
+  // Tegn spillerknapper med redigerbare felt
   spillere.forEach(spiller => {
     const wrapper = document.createElement("div");
     wrapper.style.marginBottom = "5px";
@@ -214,12 +220,14 @@ async function lagSpillerKnapper() {
     container.appendChild(wrapper);
   });
 
+  // Lagre-knapp
   const lagreBtn = document.createElement("button");
   lagreBtn.textContent = "💾 Lagre spillere";
   lagreBtn.onclick = lagreSpillere;
   lagreBtn.style.marginTop = "1rem";
   container.appendChild(lagreBtn);
 }
+
 
 
 async function lagreSpillere() {
