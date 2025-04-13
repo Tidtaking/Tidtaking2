@@ -4,115 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LHK – Livescore</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-      text-align: center;
-    }
-
-    .container {
-      max-width: 500px;
-      margin: auto;
-      padding: 1rem;
-    }
-
-    .logo {
-      max-width: 200px;
-      margin: 1rem auto;
-    }
-
-    .scoreboard {
-      display: flex;
-      justify-content: space-around;
-      margin: 2rem 0;
-    }
-
-    .team {
-      background: white;
-      border-radius: 10px;
-      padding: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      flex: 1;
-      margin: 0 0.5rem;
-    }
-
-    .team h2 {
-      margin: 0.5rem 0;
-    }
-
+    body { font-family: sans-serif; text-align: center; background: #f2f2f2; padding: 1rem; }
+    h1 { color: #0057b8; }
     .score {
-      font-size: 3rem;
-      margin: 1rem 0;
-    }
-
-    .buttons {
+      font-size: 4rem;
+      margin: 2rem;
       display: flex;
       justify-content: center;
-      gap: 1rem;
-    }
-
-    button {
-      font-size: 1.5rem;
-      padding: 0.5rem 1rem;
-      border-radius: 10px;
-      border: none;
-      background-color: #0057b8;
-      color: white;
-    }
-
-    button:active {
-      background-color: #003f8a;
-    }
-
-    .reset-btn {
-      background-color: #aaa;
-      margin-top: 2rem;
+      gap: 4rem;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <img src="logo-lhk.jpg" alt="Lørenskog Håndballklubb" class="logo">
-
-    <div class="scoreboard">
-      <div class="team" id="home">
-        <h2>LHK</h2>
-        <div class="score" id="homeScore">0</div>
-        <div class="buttons">
-          <button onclick="changeScore('home', 1)">+</button>
-          <button onclick="changeScore('home', -1)">−</button>
-        </div>
-      </div>
-      <div class="team" id="away">
-        <h2>Bortelag</h2>
-        <div class="score" id="awayScore">0</div>
-        <div class="buttons">
-          <button onclick="changeScore('away', 1)">+</button>
-          <button onclick="changeScore('away', -1)">−</button>
-        </div>
-      </div>
-    </div>
-
-    <button class="reset-btn" onclick="resetScores()">Nullstill</button>
+  <h1>LHK – Livescore</h1>
+  <div class="score">
+    <div><strong>LHK</strong><br><span id="hjemmescore">0</span></div>
+    <div><strong>Bortelag</strong><br><span id="bortescore">0</span></div>
   </div>
 
   <script>
-    let scores = { home: 0, away: 0 };
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_KEY = 'YOUR_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function changeScore(team, delta) {
-      scores[team] += delta;
-      if (scores[team] < 0) scores[team] = 0;
-      document.getElementById(team + 'Score').textContent = scores[team];
+    const kampId = 'SAMME-ID-SOM-PÅ-ADMIN';
+
+    async function init() {
+      const { data } = await supabase.from('kamp').select('*').eq('id', kampId).single();
+      oppdaterUI(data);
+
+      supabase
+        .channel('kamp-oppdatering')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'kamp', filter: `id=eq.${kampId}` },
+          (payload) => {
+            oppdaterUI(payload.new);
+          }
+        )
+        .subscribe();
     }
 
-    function resetScores() {
-      scores = { home: 0, away: 0 };
-      document.getElementById('homeScore').textContent = '0';
-      document.getElementById('awayScore').textContent = '0';
+    function oppdaterUI(data) {
+      document.getElementById('hjemmescore').textContent = data.hjemmescore;
+      document.getElementById('bortescore').textContent = data.bortescore;
     }
+
+    init();
   </script>
 </body>
 </html>
