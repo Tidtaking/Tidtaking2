@@ -51,16 +51,17 @@
       margin-top: 1rem;
       border-radius: 5px;
     }
+    .section h3 {
+      margin-top: 2rem;
+    }
+    .utvisning-linje {
+      margin: 0.3rem 0;
+      font-weight: bold;
+    }
     @media (max-width: 600px) {
-      .score {
-        font-size: 2rem;
-      }
-      .klokke {
-        font-size: 1.5rem;
-      }
-      th, td {
-        font-size: 0.9rem;
-      }
+      .score { font-size: 2rem; }
+      .klokke { font-size: 1.5rem; }
+      th, td { font-size: 0.9rem; }
     }
   </style>
 </head>
@@ -73,6 +74,11 @@
 
   <div class="klokke">⏱️ <span id="klokke">--:--</span> | Omgang: <span id="omgang">-</span></div>
   <div class="score"><span id="hjemmescore">0</span> – <span id="bortescore">0</span></div>
+
+  <div class="section">
+    <h3>Utvisninger</h3>
+    <div id="utvisningVisning"></div>
+  </div>
 
   <table>
     <thead>
@@ -97,6 +103,7 @@
         document.getElementById("bortescore").textContent = kamp.bortescore;
         document.getElementById("omgang").textContent = kamp.omgang;
         visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
+        hentUtvisninger(); // hent med en gang
       }
 
       const { data: maal } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
@@ -120,7 +127,6 @@
         tbody.appendChild(tr);
       });
 
-      // Scroll til nyeste mål
       if (tbody.lastChild) {
         tbody.lastChild.scrollIntoView({ behavior: "smooth", block: "end" });
       }
@@ -145,6 +151,33 @@
 
       oppdater();
       if (!erPaused) klokkeInterval = setInterval(oppdater, 1000);
+    }
+
+    async function hentUtvisninger() {
+      if (!aktivKampId) return;
+      const nå = new Date().toISOString();
+      const { data } = await client
+        .from("utvisning")
+        .select("*")
+        .eq("kamp_id", aktivKampId)
+        .gt("slutt_tid", nå)
+        .order("start_tid");
+
+      const container = document.getElementById("utvisningVisning");
+      container.innerHTML = "";
+
+      const nåMillis = Date.now();
+      (data || []).forEach(u => {
+        const slutt = new Date(u.slutt_tid).getTime();
+        const sek = Math.max(0, Math.floor((slutt - nåMillis) / 1000));
+        const min = Math.floor(sek / 60).toString().padStart(2, "0");
+        const rest = (sek % 60).toString().padStart(2, "0");
+
+        const div = document.createElement("div");
+        div.className = "utvisning-linje";
+        div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${rest}`;
+        container.appendChild(div);
+      });
     }
 
     async function velgKamp() {
@@ -177,6 +210,7 @@
       kanal = client.channel("live-kamp-" + aktivKampId)
         .on("postgres_changes", { event: "*", schema: "public", table: "kamp", filter: `id=eq.${aktivKampId}` }, hentData)
         .on("postgres_changes", { event: "*", schema: "public", table: "maal", filter: `kamp_id=eq.${aktivKampId}` }, hentData)
+        .on("postgres_changes", { event: "*", schema: "public", table: "utvisning", filter: `kamp_id=eq.${aktivKampId}` }, hentUtvisninger)
         .subscribe((status) => {
           const statusEl = document.getElementById("status");
           if (status === "SUBSCRIBED") {
@@ -185,6 +219,9 @@
           }
         });
     }
+
+    // Oppdater utvisninger hvert sekund
+    setInterval(hentUtvisninger, 1000);
 
     lastKamper();
   </script>
