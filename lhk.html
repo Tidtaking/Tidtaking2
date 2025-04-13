@@ -20,6 +20,21 @@
       font-size: 3rem;
       margin: 1rem 0;
     }
+    .status {
+      font-size: 0.9rem;
+      color: #333;
+      margin-top: -1rem;
+      margin-bottom: 1rem;
+    }
+    .live {
+      color: green;
+    }
+    .offline {
+      color: red;
+    }
+    .updating {
+      color: #888;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -54,6 +69,7 @@
   <h1>Livescore</h1>
 
   <select id="kampVelger" onchange="velgKamp()"></select>
+  <div class="status" id="statusText">🟢 Tilkoblet</div>
 
   <div class="score">
     <span id="hjemmescore">0</span> – <span id="bortescore">0</span>
@@ -78,13 +94,18 @@
 
     let aktivKampId = null;
     let kanal = null;
+    const statusEl = document.getElementById("statusText");
 
     async function lastKamper() {
       const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
-      if (error) return alert("Feil ved lasting av kamper");
-
       const velger = document.getElementById("kampVelger");
       velger.innerHTML = "";
+
+      if (error || !data) {
+        velger.innerHTML = `<option>Ingen kamper</option>`;
+        return;
+      }
+
       data.forEach(k => {
         const option = document.createElement("option");
         option.value = k.id;
@@ -107,7 +128,11 @@
     }
 
     async function hentData() {
+      statusEl.textContent = "🔄 Oppdaterer...";
+      statusEl.className = "status updating";
+
       if (!aktivKampId) return;
+
       const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
       if (kamp) {
         document.getElementById("hjemmescore").textContent = kamp.hjemmescore;
@@ -123,13 +148,16 @@
       const tbody = document.getElementById("maalListe");
       tbody.innerHTML = "";
       (maal || []).forEach(m => {
-        const tr = document.createElement("tr");
         const tidspunkt = new Date(m.tidspunkt).toLocaleTimeString("no-NO", {
           hour: "2-digit", minute: "2-digit"
         });
+        const tr = document.createElement("tr");
         tr.innerHTML = `<td>${tidspunkt}</td><td>${m.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${m.spiller}</td>`;
         tbody.appendChild(tr);
       });
+
+      statusEl.textContent = "🟢 Tilkoblet";
+      statusEl.className = "status live";
     }
 
     function abonner() {
@@ -138,7 +166,16 @@
       kanal = client.channel("live-" + aktivKampId)
         .on("postgres_changes", { event: "*", schema: "public", table: "kamp", filter: `id=eq.${aktivKampId}` }, hentData)
         .on("postgres_changes", { event: "*", schema: "public", table: "maal", filter: `kamp_id=eq.${aktivKampId}` }, hentData)
-        .subscribe();
+        .on("broadcast", { event: "disconnect" }, () => {
+          statusEl.textContent = "🔴 Mistet tilkobling";
+          statusEl.className = "status offline";
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            statusEl.textContent = "🟢 Tilkoblet";
+            statusEl.className = "status live";
+          }
+        });
     }
 
     lastKamper();
