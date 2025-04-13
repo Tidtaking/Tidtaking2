@@ -123,28 +123,39 @@ function oppdaterScoreVisning() {
 async function abonner() {
   if (kanal) await kanal.unsubscribe();
 
-  kanal = client.channel("live-kamp-" + aktivKampId, {
-    config: { broadcast: { self: true } }
-  })
-    .on("postgres_changes", { event: "*", schema: "public", table: "kamp", filter: `id=eq.${aktivKampId}` }, () => {
-      hentData();
+  kanal = client.channel(`kamp-${aktivKampId}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "kamp",
+      filter: `id=eq.${aktivKampId}`
+    }, payload => {
+      kampData = payload.new;
+      oppdaterScoreVisning();
+      visKlokke(kampData.start_tid, kampData.omgang_lengde, kampData.er_paused, kampData.tid_brukt);
     })
-    .on("postgres_changes", { event: "*", schema: "public", table: "hendelse", filter: `kamp_id=eq.${aktivKampId}` }, () => {
-      hentHendelser();
-    })
-    .on("postgres_changes", { event: "*", schema: "public", table: "utvisning", filter: `kamp_id=eq.${aktivKampId}` }, () => {
-      hentUtvisninger();
-    })
-    .on("broadcast", { event: "dummy" }, () => {}); // VIKTIG
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "hendelse",
+      filter: `kamp_id=eq.${aktivKampId}`
+    }, hentHendelser)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "utvisning",
+      filter: `kamp_id=eq.${aktivKampId}`
+    }, hentUtvisninger);
 
   const { error } = await kanal.subscribe();
   if (error) {
-    console.error("Feil ved tilkobling til kanal:", error);
     document.getElementById("status").textContent = "🔴 Ikke tilkoblet";
+    console.error("Kanal-abonnement feilet:", error);
   } else {
     document.getElementById("status").textContent = "🟢 Tilkoblet";
   }
 }
+
 
 
 
