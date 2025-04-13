@@ -183,6 +183,24 @@ function kampTidspunktTekst() {
   const sek = (brukt % 60).toString().padStart(2, "0");
   return `${min}:${sek}`;
 }
+function startKlokkeOppdatering() {
+  if (klokkeInterval) clearInterval(klokkeInterval);
+
+  klokkeInterval = setInterval(() => {
+    if (!kampData) return;
+    const nå = Date.now();
+    const brukt = kampData.er_paused
+      ? kampData.tid_brukt
+      : kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
+    const omgangLengdeMin = parseInt(document.getElementById("omgangLengde").value || "20");
+    const totalSek = omgangLengdeMin * 60;
+    const igjen = totalSek - brukt;
+    const visning = igjen <= 0
+      ? "00:00"
+      : `${String(Math.floor(igjen / 60)).padStart(2, '0')}:${String(igjen % 60).padStart(2, '0')}`;
+    document.getElementById("klokkeVisning").textContent = visning;
+  }, 500);
+}
 
 async function hentKampData() {
   const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
@@ -191,8 +209,10 @@ async function hentKampData() {
     document.getElementById("hjemmescore").textContent = data.hjemmescore;
     document.getElementById("bortescore").textContent = data.bortescore;
     document.getElementById("omgangVisning").textContent = data.omgang;
+    startKlokkeOppdatering(); // 👈 legg til denne!
   }
 }
+
 
 async function hentMaallogg() {
   const { data } = await client.from("maal").select("*").eq("kamp_id", aktivKampId).order("id", { ascending: true });
