@@ -260,7 +260,7 @@ async function hentLogg() {
 
 async function slettValgteHendelser() {
   const checkbokser = document.querySelectorAll(".hendelse-sjekkboks:checked");
-  const idListe = Array.from(checkbokser).map(cb => cb.dataset.id); // Ikke parseInt!
+  const idListe = Array.from(checkbokser).map(cb => cb.dataset.id);
 
   if (idListe.length === 0) {
     alert("Ingen hendelser valgt.");
@@ -272,9 +272,10 @@ async function slettValgteHendelser() {
     alert("Feil ved sletting");
     console.error(error);
   } else {
-    hentLogg();
+    await hentLogg(); // ← viktig: oppdater visning direkte
   }
 }
+
 
 async function hentUtvisninger() {
   if (!kampData) return;
