@@ -159,7 +159,7 @@ async function lagSpillerKnapper() {
   if (!aktivKampId) return;
 
   const container = document.getElementById("spillereContainer");
-  container.innerHTML = ""; // 🔁 Fjern eksisterende knapper/inputs
+  container.innerHTML = "";
 
   const { data } = await client
     .from("spiller")
@@ -167,11 +167,9 @@ async function lagSpillerKnapper() {
     .eq("kamp_id", aktivKampId)
     .order("drakt");
 
-  // Tøm arrayen før du fyller det
   spillere.length = 0;
 
   if (!data || data.length === 0) {
-    // Ingen lagret – bruk standard
     for (let i = 1; i <= 16; i++) {
       spillere.push({
         kamp_id: aktivKampId,
@@ -180,10 +178,9 @@ async function lagSpillerKnapper() {
       });
     }
   } else {
-    spillere.push(...data); // Fyll fra Supabase
+    spillere.push(...data);
   }
 
-  // Tegn spillerknapper med redigerbare felt
   spillere.forEach(spiller => {
     const wrapper = document.createElement("div");
     wrapper.style.marginBottom = "5px";
@@ -220,7 +217,6 @@ async function lagSpillerKnapper() {
     container.appendChild(wrapper);
   });
 
-  // Lagre-knapp
   const lagreBtn = document.createElement("button");
   lagreBtn.textContent = "💾 Lagre spillere";
   lagreBtn.onclick = lagreSpillere;
@@ -228,12 +224,9 @@ async function lagSpillerKnapper() {
   container.appendChild(lagreBtn);
 }
 
-
-
 async function lagreSpillere() {
   if (!aktivKampId || !spillere || spillere.length === 0) return;
 
-  // Fjern gamle spillere for denne kampen
   const { error: slettError } = await client
     .from("spiller")
     .delete()
@@ -245,14 +238,12 @@ async function lagreSpillere() {
     return;
   }
 
-  // Sett kamp_id på alle spillere før lagring
   const spillereMedKampId = spillere.map(s => ({
     kamp_id: aktivKampId,
     drakt: s.drakt,
     navn: s.navn
   }));
 
-  // Sett inn nye
   const { error: lagreError } = await client
     .from("spiller")
     .insert(spillereMedKampId);
@@ -262,7 +253,27 @@ async function lagreSpillere() {
     console.error(lagreError);
   } else {
     alert("Spillere lagret!");
+    visSpillerKnapper(); // 👈 Gå til visning etter lagring
   }
+}
+function visSpillerKnapper() {
+  const container = document.getElementById("spillereContainer");
+  container.innerHTML = "";
+
+  spillere.forEach(spiller => {
+    const btn = document.createElement("button");
+    btn.textContent = `${spiller.drakt} ${spiller.navn}`;
+    btn.onclick = () => velgSpiller(spiller);
+    btn.classList.add("spiller-knapp");
+    container.appendChild(btn);
+  });
+
+  const redigerBtn = document.createElement("button");
+  redigerBtn.textContent = "✏️ Rediger spillere";
+  redigerBtn.onclick = lagSpillerKnapper;
+  redigerBtn.style.marginTop = "1rem";
+  container.appendChild(document.createElement("br"));
+  container.appendChild(redigerBtn);
 }
 
 
