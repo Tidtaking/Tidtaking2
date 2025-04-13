@@ -166,34 +166,23 @@
       if (!kampData.er_paused) klokkeInterval = setInterval(oppdater, 1000);
     }
 
-    async function hentHendelser() {
+   async function hentHendelser() {
   const { data } = await client
     .from("hendelse")
     .select("*")
     .eq("kamp_id", aktivKampId)
     .order("tidspunkt", { ascending: true });
 
-  if (!data || !kampData || !kampData.start_tid) return;
+  if (!data) return;
 
   let hjem = 0;
   let bort = 0;
 
-  const startTid = new Date(kampData.start_tid).getTime();
   const tbody = document.getElementById("hendelsesListe");
   tbody.innerHTML = "";
 
   data.forEach((h) => {
-   const kamptid = h.kamptid || "--:--";
-
-    if (h.tidspunkt && kampData.start_tid) {
-      const tidspunkt = new Date(h.tidspunkt).getTime();
-      let sek = Math.floor((tidspunkt - startTid) / 1000);
-      if (sek < 0 || isNaN(sek)) sek = 0;
-
-      const min = Math.floor(sek / 60).toString().padStart(2, "0");
-      const s = (sek % 60).toString().padStart(2, "0");
-      kamptid = `${min}:${s}`;
-    }
+    const kamptid = h.kamptid || "--:--";
 
     let beskrivelse = "";
     if (h.type === "maal") {
@@ -219,7 +208,6 @@
     tbody.appendChild(tr);
   });
 }
-
 
     async function hentUtvisninger() {
       if (!aktivKampId || !kampData) return;
