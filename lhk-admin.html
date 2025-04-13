@@ -126,28 +126,28 @@
   <div class="section">
     <h3>Hendelseslogg</h3>
     <table>
-     <thead>
-  <tr>
-    <th>Kamptid</th>
-    <th>Lag</th>
-    <th>Hendelse</th>
-    <th>Spiller</th>
-    <th></th> <!-- for slett-knapp -->
-  </tr>
-</thead>
-
+      <thead>
+        <tr>
+          <th>Kamptid</th>
+          <th>Lag</th>
+          <th>Hendelse</th>
+          <th>Spiller</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody id="hendelseslogg"></tbody>
     </table>
   </div>
 
   <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const client = supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+const supabaseKey = "DIN_SUPABASE_ANON_NØKKEL_HER"; // 🔒 Bytt ut med ekte nøkkel
+const client = supabase.createClient(supabaseUrl, supabaseKey);
 
 let aktivKampId = null;
 let kampData = null;
 let valgtSpiller = null;
+let klokkeInterval = null;
 
 const spillere = Array.from({ length: 16 }, (_, i) => ({
   drakt: i + 1,
@@ -182,14 +182,22 @@ function kampTidspunktTekst() {
   const sek = (brukt % 60).toString().padStart(2, "0");
   return `${min}:${sek}`;
 }
-function nullstillTid() {
-  if (!kampData) return;
-  client.from("kamp").update({
-    start_tid: null,
-    tid_brukt: 0,
-    er_paused: true
-  }).eq("id", aktivKampId);
-  hentKampData(); // oppdater visning
+
+function startKlokkeOppdatering() {
+  if (klokkeInterval) clearInterval(klokkeInterval);
+
+  klokkeInterval = setInterval(() => {
+    if (!kampData) return;
+    const nå = Date.now();
+    const brukt = kampData.er_paused
+      ? kampData.tid_brukt
+      : kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
+    const omgangLengdeMin = parseInt(document.getElementById("omgangLengde").value || "20");
+    const totalSek = omgangLengdeMin * 60;
+    const igjen = totalSek - brukt;
+    const visning = igjen <= 0 ? "00:00" : `${String(Math.floor(igjen / 60)).padStart(2, '0')}:${String(igjen % 60).padStart(2, '0')}`;
+    document.getElementById("klokkeVisning").textContent = visning;
+  }, 500);
 }
 
 async function hentKampData() {
@@ -199,6 +207,7 @@ async function hentKampData() {
     document.getElementById("hjemmescore").textContent = data.hjemmescore;
     document.getElementById("bortescore").textContent = data.bortescore;
     document.getElementById("omgangVisning").textContent = data.omgang;
+    startKlokkeOppdatering();
   }
 }
 
@@ -222,7 +231,9 @@ async function loggHendelse(type, lag, ekstra = {}) {
 async function registrerMaal(lag) {
   const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
   await client.from("maal").insert({ kamp_id: aktivKampId, spiller: spillerNavn, lag });
-  await client.from("kamp").update({ [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1 }).eq("id", aktivKampId);
+  await client.from("kamp").update({
+    [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1
+  }).eq("id", aktivKampId);
   await loggHendelse("maal", lag);
   hentKampData();
 }
@@ -252,25 +263,21 @@ async function hentLogg() {
                       h.type === "timeout" ? "⏱ Timeout" :
                       h.type === "utvisning" ? "🚨 Utvisning" :
                       h.type === "maal" ? "🎯 Mål" : "";
-   const tr = document.createElement("tr");
-tr.innerHTML = `
-  <td>${tidspunkt}</td>
-  <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-  <td>${beskrivelse}</td>
-  <td>${h.spiller || ""}</td>
-  <td><button class="delete" onclick="slettHendelse(${h.id})">❌</button></td>
-`;
-tbody.appendChild(tr);
-
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${tidspunkt}</td>
+      <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+      <td>${beskrivelse}</td>
+      <td>${h.spiller || ""}</td>
+      <td><button class="delete" onclick="slettHendelse(${h.id})">❌</button></td>
+    `;
+    tbody.appendChild(tr);
   });
 }
+
 async function slettHendelse(id) {
-  const { error } = await client.from("hendelse").delete().eq("id", id);
-  if (error) {
-    console.error("Kunne ikke slette hendelse:", error);
-  } else {
-    hentLogg(); // oppdater visning
-  }
+  await client.from("hendelse").delete().eq("id", id);
+  hentLogg();
 }
 
 async function hentUtvisninger() {
@@ -281,7 +288,8 @@ async function hentUtvisninger() {
   const nå = Date.now();
   (data || []).forEach(utv => {
     const start = new Date(utv.start_tid).getTime();
-    const bruktTid = kampData.er_paused ? kampData.tid_brukt : kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
+    const bruktTid = kampData.er_paused ? kampData.tid_brukt :
+      kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
     const utvisningsStartSek = Math.floor((start - new Date(kampData.start_tid).getTime()) / 1000);
     const sekIgjen = 120 - (bruktTid - utvisningsStartSek);
     const gjenstående = sekIgjen > 0 ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}` : "Ferdig";
@@ -321,7 +329,7 @@ async function lastKamper() {
     hentMaallogg();
     hentUtvisninger();
     hentLogg();
-    setInterval(hentUtvisninger, 1000); // starter først nå
+    setInterval(hentUtvisninger, 1000);
   }
 }
 
@@ -344,6 +352,48 @@ async function opprettKamp() {
   } else {
     lastKamper();
   }
+}
+
+async function startPauseKamp() {
+  if (!kampData) return;
+  const nå = new Date();
+  if (kampData.er_paused) {
+    const nyStart = nå.toISOString();
+    await client.from("kamp").update({
+      er_paused: false,
+      start_tid: nyStart
+    }).eq("id", aktivKampId);
+  } else {
+    const startTid = new Date(kampData.start_tid);
+    const ekstraTid = Math.floor((nå - startTid) / 1000);
+    await client.from("kamp").update({
+      er_paused: true,
+      tid_brukt: kampData.tid_brukt + ekstraTid,
+      start_tid: null
+    }).eq("id", aktivKampId);
+  }
+  await hentKampData();
+}
+
+async function nyOmgang() {
+  if (!kampData) return;
+  await client.from("kamp").update({
+    omgang: kampData.omgang + 1,
+    tid_brukt: 0,
+    er_paused: true,
+    start_tid: null
+  }).eq("id", aktivKampId);
+  await hentKampData();
+}
+
+async function nullstillTid() {
+  if (!kampData) return;
+  await client.from("kamp").update({
+    tid_brukt: 0,
+    start_tid: null,
+    er_paused: true
+  }).eq("id", aktivKampId);
+  await hentKampData();
 }
 
 // Init
