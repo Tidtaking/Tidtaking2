@@ -86,14 +86,17 @@
   </div>
 
   <div class="section">
-    <h3>Kort og timeout</h3>
-    <button onclick="registrerKort('hjemme', 'gult')">🟨 Gult LHK</button>
-    <button onclick="registrerKort('hjemme', 'rødt')">🟥 Rødt LHK</button>
-    <button onclick="registrerTimeout('hjemme')">⏱ Timeout LHK</button><br />
-    <button onclick="registrerKort('borte', 'gult')">🟨 Gult Bortelag</button>
-    <button onclick="registrerKort('borte', 'rødt')">🟥 Rødt Bortelag</button>
-    <button onclick="registrerTimeout('borte')">⏱ Timeout Bortelag</button>
-  </div>
+  <h3>Kort, timeout og utvisning</h3>
+  <button onclick="registrerKort('hjemme', 'gult')">🟨 Gult LHK</button>
+  <button onclick="registrerKort('hjemme', 'rødt')">🟥 Rødt LHK</button>
+  <button onclick="registrerTimeout('hjemme')">⏱ Timeout LHK</button>
+  <button onclick="registrerUtvisning('hjemme')">🚨 Utvisning LHK</button><br />
+  <button onclick="registrerKort('borte', 'gult')">🟨 Gult Bortelag</button>
+  <button onclick="registrerKort('borte', 'rødt')">🟥 Rødt Bortelag</button>
+  <button onclick="registrerTimeout('borte')">⏱ Timeout Bortelag</button>
+  <button onclick="registrerUtvisning('borte')">🚨 Utvisning Bortelag</button>
+</div>
+
 
   <div class="section">
     <h3>Kampklokke og omgang</h3>
@@ -109,19 +112,6 @@
     </div>
   </div>
 
-  <div class="section">
-    <h3>Utvisningslogg</h3>
-    <div>
-      <button onclick="registrerUtvisning('hjemme')">🚨 LHK</button>
-      <button onclick="registrerUtvisning('borte')">🚨 Bortelag</button>
-    </div>
-    <table>
-      <thead>
-        <tr><th>Lag</th><th>Start</th><th>Gjenstående</th><th></th></tr>
-      </thead>
-      <tbody id="utvisningListe"></tbody>
-    </table>
-  </div>
 
   <div class="section">
     <h3>Hendelseslogg</h3>
@@ -443,13 +433,16 @@ async function registrerUtvisning(lag) {
   await client.from("utvisning").insert({ 
     kamp_id: aktivKampId, 
     lag, 
-    start_tid: new Date().toISOString(),  // Kan beholdes for referanse
-    kamp_tidspunkt: bruktTid              // Viktig: kampens faktiske tid i sekunder
+    start_tid: new Date().toISOString(),
+    kamp_tidspunkt: bruktTid
   });
 
   await loggHendelse("utvisning", lag);
-  hentUtvisninger();
+
+  // Ikke kall hentUtvisninger() mer her, bare hentLogg()
+  hentLogg();
 }
+
 
 
 async function hentLogg() {
@@ -457,7 +450,7 @@ async function hentLogg() {
   const tbody = document.getElementById("hendelseslogg");
   tbody.innerHTML = "";
   (data || []).forEach(h => {
-    const tidspunkt = kampTidspunktTekst();
+const tidspunkt = h.kamptid || "--:--";
     let beskrivelse = h.type === "kort" ? (h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort") :
                       h.type === "timeout" ? "⏱ Timeout" :
                       h.type === "utvisning" ? "🚨 Utvisning" :
@@ -531,50 +524,6 @@ async function slettValgteHendelser() {
   }
 }
 
-
-
-async function hentUtvisninger() {
-  if (!kampData) return;
-
-  const { data } = await client
-    .from("utvisning")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("kamp_tidspunkt");
-
-  const tbody = document.getElementById("utvisningListe");
-  tbody.innerHTML = "";
-
-  let bruktTid = kampData.tid_brukt;
-  if (!kampData.er_paused) {
-    bruktTid += Math.floor((Date.now() - new Date(kampData.start_tid).getTime()) / 1000);
-  }
-
-  data.forEach(utv => {
-    const sekIgjen = 120 - (bruktTid - utv.kamp_tidspunkt);
-
-    const gjenstående = sekIgjen > 0 && sekIgjen <= 120
-      ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}`
-      : "Ferdig";
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${utv.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-      <td>${new Date(utv.start_tid).toLocaleTimeString()}</td>
-      <td>${gjenstående}</td>
-      <td><button class="delete" onclick="slettUtvisning(${utv.id})">❌</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-
-
-async function slettUtvisning(id) {
-  await client.from("utvisning").delete().eq("id", id);
-  hentUtvisninger();
-}
-
 async function velgKamp() {
   aktivKampId = document.getElementById("kampSelect").value;
   await hentKampData();
@@ -605,7 +554,7 @@ async function lastKamper() {
     hentUtvisninger();
     hentLogg();
 
-    setInterval(hentUtvisninger, 1000);
+setInterval(hentLogg, 5000); // oppdater loggen hvert 5. sekund
   }
 }
 
