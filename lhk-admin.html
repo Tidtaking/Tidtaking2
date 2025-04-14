@@ -549,13 +549,12 @@ async function lastKamper() {
     select.value = aktivKampId;
 
     await hentKampData();
-    await visSpillerKnapper(); 
+    await visSpillerKnapper(); // 🔥 Her hentes spillerne riktig fra Supabase
     hentMaallogg();
     hentLogg();
-
-    // hentUtvisninger() fjernet herfra. ✅
   }
 }
+
 
 
 
@@ -621,7 +620,6 @@ async function nullstillTid() {
 }
 
 // Start alt
-lagSpillerKnapper();
 lastKamper();
 </script>
 </body>
