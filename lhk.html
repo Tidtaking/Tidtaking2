@@ -248,35 +248,29 @@ async function hentData() {
   });
 }
 
-    async function hentUtvisninger() {
+async function hentUtvisninger() {
   if (!aktivKampId || !kampData) return;
 
   const { data } = await client
     .from("utvisning")
     .select("*")
     .eq("kamp_id", aktivKampId)
-    .order("start_tid");
+    .order("kamp_tidspunkt");
 
   const container = document.getElementById("utvisningVisning");
+  if (!container) return;
   container.innerHTML = "";
 
-  const kampStartTid = new Date(kampData.start_tid).getTime();
   let bruktTid = kampData.tid_brukt;
-
   if (!kampData.er_paused) {
-    bruktTid += Math.floor((Date.now() - kampStartTid) / 1000);
+    bruktTid += Math.floor((Date.now() - new Date(kampData.start_tid).getTime()) / 1000);
   }
 
-  (data || []).forEach(u => {
-    const utvisningStartTid = new Date(u.start_tid).getTime();
-    const utvisningStartSek = Math.floor((utvisningStartTid - kampStartTid) / 1000);
-    const utvisningTidGått = bruktTid - utvisningStartSek;
-    const sekGjenstår = 120 - utvisningTidGått;
-
+  data.forEach(u => {
+    const sekGjenstår = 120 - (bruktTid - u.kamp_tidspunkt);
     if (sekGjenstår > 0 && sekGjenstår <= 120) {
       const min = Math.floor(sekGjenstår / 60).toString().padStart(2, "0");
       const sek = (sekGjenstår % 60).toString().padStart(2, "0");
-
       const div = document.createElement("div");
       div.className = "utvisning-linje";
       div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${sek}`;
@@ -284,6 +278,7 @@ async function hentData() {
     }
   });
 }
+
 
 
     setInterval(hentUtvisninger, 1000);
