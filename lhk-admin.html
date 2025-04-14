@@ -65,8 +65,24 @@
     <h3>Opprett ny kamp</h3>
     <input type="text" id="hjemmelag" placeholder="Hjemmelag" />
     <input type="text" id="bortelag" placeholder="Bortelag" />
+    <input type="date" id="kampDato" />
     <button onclick="opprettKamp()">➕ Opprett kamp</button>
   </div>
+<div class="section">
+  <h3>Alle kamper</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Dato</th>
+        <th>Lag</th>
+        <th>Score</th>
+        <th>Omgang</th>
+        <th>🗑</th>
+      </tr>
+    </thead>
+    <tbody id="kampTabellBody"></tbody>
+  </table>
+</div>
 
   <div class="section">
     <h3>Velg aktiv kamp</h3>
@@ -534,34 +550,71 @@ async function velgKamp() {
 
 async function lastKamper() {
   const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
+
   const select = document.getElementById("kampSelect");
+  const tabellBody = document.getElementById("kampTabellBody");
   select.innerHTML = "";
+  tabellBody.innerHTML = "";
 
   (data || []).forEach(k => {
+    // Kampvelger dropdown
     const option = document.createElement("option");
     option.value = k.id;
     option.text = `${k.hjemmelag} vs ${k.bortelag}`;
     select.appendChild(option);
+
+    // Kamp-tabell
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${k.dato || "-"}</td>
+      <td>${k.hjemmelag} vs ${k.bortelag}</td>
+      <td>${k.hjemmescore} – ${k.bortescore}</td>
+      <td>${k.omgang}</td>
+      <td><button class="delete" onclick="slettKampMedData('${k.id}')">🗑</button></td>
+    `;
+    tabellBody.appendChild(tr);
   });
 
   if (data && data.length) {
     aktivKampId = data[0].id;
     select.value = aktivKampId;
-
     await hentKampData();
-    await visSpillerKnapper(); // 🔥 Her hentes spillerne riktig fra Supabase
+    await visSpillerKnapper();
     hentMaallogg();
     hentLogg();
   }
 }
+async function slettKampMedData(kampId) {
+  const bekreft = confirm("Er du sikker på at du vil slette denne kampen og all tilhørende data?");
+  if (!bekreft) return;
+
+  const tabeller = ["hendelse", "utvisning", "spiller", "maal"];
+  for (const tabell of tabeller) {
+    await client.from(tabell).delete().eq("kamp_id", kampId);
+  }
+
+  const { error } = await client.from("kamp").delete().eq("id", kampId);
+  if (error) {
+    alert("Feil ved sletting av kamp");
+    console.error(error);
+  } else {
+    alert("Kamp slettet");
+    if (kampId === aktivKampId) aktivKampId = null;
+    lastKamper();
+  }
+}
+
 
 
 async function opprettKamp() {
   const hjemmelag = document.getElementById("hjemmelag").value;
   const bortelag = document.getElementById("bortelag").value;
+  const dato = document.getElementById("kampDato").value || new Date().toISOString().slice(0, 10);
+
   const { error } = await client.from("kamp").insert({
     hjemmelag,
     bortelag,
+    dato,
     hjemmescore: 0,
     bortescore: 0,
     omgang: 1,
@@ -569,6 +622,7 @@ async function opprettKamp() {
     start_tid: null,
     tid_brukt: 0
   });
+
   if (error) {
     alert("Feil ved opprettelse av kamp");
     console.error(error);
@@ -576,6 +630,7 @@ async function opprettKamp() {
     lastKamper();
   }
 }
+
 
 async function startPauseKamp() {
   if (!kampData) return;
