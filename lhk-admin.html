@@ -433,11 +433,24 @@ async function registrerTimeout(lag) {
 }
 
 async function registrerUtvisning(lag) {
-  const nå = new Date().toISOString();
-  await client.from("utvisning").insert({ kamp_id: aktivKampId, lag, start_tid: nå });
+  if (!kampData) return;
+
+  let bruktTid = kampData.tid_brukt;
+  if (!kampData.er_paused) {
+    bruktTid += Math.floor((Date.now() - new Date(kampData.start_tid).getTime()) / 1000);
+  }
+
+  await client.from("utvisning").insert({ 
+    kamp_id: aktivKampId, 
+    lag, 
+    start_tid: new Date().toISOString(),  // Kan beholdes for referanse
+    kamp_tidspunkt: bruktTid              // Viktig: kampens faktiske tid i sekunder
+  });
+
   await loggHendelse("utvisning", lag);
   hentUtvisninger();
 }
+
 
 async function hentLogg() {
   const { data } = await client.from("hendelse").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
@@ -527,26 +540,21 @@ async function hentUtvisninger() {
     .from("utvisning")
     .select("*")
     .eq("kamp_id", aktivKampId)
-    .order("start_tid");
+    .order("kamp_tidspunkt");
 
   const tbody = document.getElementById("utvisningListe");
   tbody.innerHTML = "";
 
-  const kampStartTid = new Date(kampData.start_tid).getTime();
   let bruktTid = kampData.tid_brukt;
-
-  // Viktig: Beregn kun med faktisk kampklokketid, ikke systemtid direkte.
   if (!kampData.er_paused) {
-    bruktTid += Math.floor((Date.now() - kampStartTid) / 1000);
+    bruktTid += Math.floor((Date.now() - new Date(kampData.start_tid).getTime()) / 1000);
   }
 
   data.forEach(utv => {
-    const utvisningStartTid = new Date(utv.start_tid).getTime();
-    const utvisningStartSek = Math.floor((utvisningStartTid - kampStartTid) / 1000);
-    const sekIgjen = 120 - (bruktTid - utvisningStartSek);
+    const sekIgjen = 120 - (bruktTid - utv.kamp_tidspunkt);
 
-    const gjenstående = sekIgjen > 0 && sekIgjen <= 120 
-      ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}` 
+    const gjenstående = sekIgjen > 0 && sekIgjen <= 120
+      ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}`
       : "Ferdig";
 
     const tr = document.createElement("tr");
@@ -559,6 +567,7 @@ async function hentUtvisninger() {
     tbody.appendChild(tr);
   });
 }
+
 
 
 async function slettUtvisning(id) {
