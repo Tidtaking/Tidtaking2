@@ -186,17 +186,14 @@ async function hentData() {
 }
 
 
-
-   function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
+  function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
   if (klokkeInterval) clearInterval(klokkeInterval);
   const visning = document.getElementById("klokke");
 
   function oppdater() {
     let brukt = tidBrukt;
     if (!erPaused) {
-      const nå = new Date();
-      const startTid = new Date(startTidStr);
-      brukt += Math.floor((nå - startTid) / 1000);
+      brukt += Math.floor((Date.now() - new Date(startTidStr)) / 1000);
     }
     const gjenstående = Math.max(0, omgangLengde - brukt);
     const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
@@ -205,11 +202,12 @@ async function hentData() {
   }
 
   oppdater();
-  if (!erPaused) klokkeInterval = setInterval(oppdater, 1000);
+  klokkeInterval = setInterval(oppdater, 1000);
 }
 
 
-   async function hentHendelser() {
+
+  async function hentHendelser() {
   const { data } = await client
     .from("hendelse")
     .select("*")
@@ -250,7 +248,12 @@ async function hentData() {
     `;
     tbody.appendChild(tr);
   });
+
+  // Oppdater alltid scorens visning basert på hendelsene også:
+  document.getElementById("hjemmescore").textContent = hjem;
+  document.getElementById("bortescore").textContent = bort;
 }
+
 
 async function hentUtvisninger() {
   if (!aktivKampId || !kampData) return;
@@ -283,6 +286,13 @@ async function hentUtvisninger() {
   });
 }
 
+// initial oppdatering hvert sekund for klokke og utvisninger:
+setInterval(() => {
+  if (kampData) {
+    visKlokke(kampData.start_tid, kampData.omgang_lengde, kampData.er_paused, kampData.tid_brukt);
+    hentUtvisninger();
+  }
+}, 1000);
 
 
     setInterval(hentUtvisninger, 1000);
