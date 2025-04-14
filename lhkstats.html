@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LHK – Spillerstatistikk</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -18,16 +16,25 @@
       max-width: 150px;
       margin: 1rem auto;
     }
+    h1 {
+      margin: 0.5rem 0 1rem;
+    }
+    .filter {
+      margin: 1rem auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
     select, input, button {
       padding: 0.5rem;
       font-size: 1rem;
-      margin: 0.3rem;
       border-radius: 5px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
+      margin-top: 2rem;
     }
     th, td {
       padding: 0.5rem;
@@ -37,7 +44,7 @@
       background: #0057b8;
       color: white;
     }
-    .export-buttons {
+    .export-btns {
       margin-top: 1rem;
     }
   </style>
@@ -46,136 +53,101 @@
   <img src="logo-lhk.jpg" alt="LHK-logo" class="logo" />
   <h1>Spillerstatistikk</h1>
 
-  <div>
-    <select id="kampDropdown"></select>
-    <select id="lagDropdown">
-      <option value="">Alle lag</option>
-      <option value="hjemme">LHK</option>
-      <option value="borte">Bortelag</option>
-    </select>
-    <input type="text" id="sokefelt" placeholder="Søk på spiller..." oninput="visStatistikk()" />
+  <div class="filter">
+    <select id="kampFilter"></select>
+    <input type="date" id="datoFilter" />
+    <button onclick="hentData()">🔍 Søk</button>
   </div>
 
-  <div class="export-buttons">
-    <button onclick="eksportCSV()">📄 Eksport CSV</button>
-    <button onclick="eksportPDF()">📄 Eksport PDF</button>
+  <div class="export-btns">
+    <button onclick="eksporterCSV()">📃 Eksporter CSV</button>
+    <button onclick="window.print()">📄 Skriv ut / PDF</button>
   </div>
 
   <table>
     <thead>
       <tr>
         <th>Spiller</th>
-        <th>Lag</th>
-        <th>Mål</th>
-        <th>Mål (pr kamp)</th>
+        <th>Mål (totalt)</th>
+        <th>Mål / kamp</th>
+        <th>Utvisninger</th>
         <th>Gule kort</th>
         <th>Røde kort</th>
-        <th>Utvisninger</th>
       </tr>
     </thead>
-    <tbody id="statistikkTabell"></tbody>
+    <tbody id="statistikkBody"></tbody>
   </table>
 
   <script>
-       const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const client = supabase.createClient(supabaseUrl, supabaseKey);
 
-    let alleHendelser = [];
-
-    async function hentData() {
-      const { data: hendelser } = await supabase
-        .from("hendelse")
-        .select("*");
-
-      const { data: kamper } = await supabase
-        .from("kamp")
-        .select("id, hjemmelag, bortelag");
-
-      alleHendelser = hendelser || [];
-
-      const kampDropdown = document.getElementById("kampDropdown");
-      kampDropdown.innerHTML = `<option value="">Alle kamper</option>`;
-      kamper?.forEach(k => {
-        const option = document.createElement("option");
-        option.value = k.id;
-        option.textContent = `${k.hjemmelag} vs ${k.bortelag}`;
-        kampDropdown.appendChild(option);
+    async function hentKamper() {
+      const { data } = await client.from("kamp").select("id, hjemmelag, bortelag, opprettet").order("opprettet", { ascending: false });
+      const kampSelect = document.getElementById("kampFilter");
+      kampSelect.innerHTML = '<option value="">Alle kamper</option>';
+      (data || []).forEach(kamp => {
+        const opt = document.createElement("option");
+        opt.value = kamp.id;
+        opt.textContent = `${kamp.hjemmelag} vs ${kamp.bortelag}`;
+        kampSelect.appendChild(opt);
       });
-
-      visStatistikk();
     }
 
-    function visStatistikk() {
-      const kampValgt = document.getElementById("kampDropdown").value;
-      const lagValgt = document.getElementById("lagDropdown").value;
-      const sok = document.getElementById("sokefelt").value.toLowerCase();
+    async function hentData() {
+      const kampId = document.getElementById("kampFilter").value;
+      const dato = document.getElementById("datoFilter").value;
 
-      const filtrert = alleHendelser.filter(h => {
-        const kampMatch = kampValgt ? h.kamp_id === kampValgt : true;
-        const lagMatch = lagValgt ? h.lag === lagValgt : true;
-        const spillerMatch = h.spiller?.toLowerCase().includes(sok);
-        return kampMatch && lagMatch && spillerMatch;
-      });
+      let query = client.from("hendelse").select("type, spiller, korttype, tidspunkt, kamp_id");
+      if (kampId) query = query.eq("kamp_id", kampId);
+      if (dato) query = query.gte("tidspunkt", dato + "T00:00:00").lte("tidspunkt", dato + "T23:59:59");
 
-      const grupper = {};
-      filtrert.forEach(h => {
+      const { data } = await query;
+      const stats = {};
+
+      (data || []).forEach(h => {
         if (!h.spiller) return;
-        const nøkkel = `${h.spiller}__${h.lag}`;
-        grupper[nøkkel] = grupper[nøkkel] || {
-          spiller: h.spiller,
-          lag: h.lag === "hjemme" ? "LHK" : "Bortelag",
-          maal: 0,
-          gult: 0,
-          rødt: 0,
-          utvisning: 0,
-          kamper: new Set()
-        };
-        if (h.type === "maal") grupper[nøkkel].maal++;
-        if (h.type === "kort" && h.korttype === "gult") grupper[nøkkel].gult++;
-        if (h.type === "kort" && h.korttype === "rødt") grupper[nøkkel].rødt++;
-        if (h.type === "utvisning") grupper[nøkkel].utvisning++;
-        grupper[nøkkel].kamper.add(h.kamp_id);
+        if (!stats[h.spiller]) {
+          stats[h.spiller] = { maal: 0, kamper: new Set(), utvisning: 0, gult: 0, rodt: 0 };
+        }
+        if (h.type === "maal") stats[h.spiller].maal++;
+        if (h.type === "utvisning") stats[h.spiller].utvisning++;
+        if (h.type === "kort" && h.korttype === "gult") stats[h.spiller].gult++;
+        if (h.type === "kort" && h.korttype === "rødt") stats[h.spiller].rodt++;
+        stats[h.spiller].kamper.add(h.kamp_id);
       });
 
-      const tbody = document.getElementById("statistikkTabell");
+      const tbody = document.getElementById("statistikkBody");
       tbody.innerHTML = "";
-      Object.values(grupper).forEach(p => {
+      Object.entries(stats).forEach(([spiller, stat]) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${p.spiller}</td>
-          <td>${p.lag}</td>
-          <td>${p.maal}</td>
-          <td>${(p.maal / p.kamper.size).toFixed(2)}</td>
-          <td>${p.gult}</td>
-          <td>${p.rødt}</td>
-          <td>${p.utvisning}</td>
+          <td>${spiller}</td>
+          <td>${stat.maal}</td>
+          <td>${(stat.maal / stat.kamper.size).toFixed(2)}</td>
+          <td>${stat.utvisning}</td>
+          <td>${stat.gult}</td>
+          <td>${stat.rodt}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function eksportCSV() {
-      let csv = "Spiller,Lag,Mål,Mål per kamp,Gule,Røde,Utvisninger\n";
-      document.querySelectorAll("#statistikkTabell tr").forEach(row => {
-        const cols = [...row.children].map(td => td.textContent);
-        csv += cols.join(",") + "\n";
-      });
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "spillerstatistikk.csv";
-      a.click();
+    function eksporterCSV() {
+      const rows = Array.from(document.querySelectorAll("table tr"));
+      const csv = rows.map(row =>
+        Array.from(row.querySelectorAll("th,td")).map(cell => cell.innerText).join(",")
+      ).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "spillerstatistikk.csv";
+      link.click();
     }
 
-    function eksportPDF() {
-      const doc = new jsPDF();
-      doc.text("Spillerstatistikk", 14, 16);
-      doc.autoTable({ html: "#statistikkTabell", startY: 20 });
-      doc.save("spillerstatistikk.pdf");
-    }
-
+    hentKamper();
     hentData();
   </script>
 </body>
