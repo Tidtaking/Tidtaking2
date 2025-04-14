@@ -549,14 +549,14 @@ async function lastKamper() {
     select.value = aktivKampId;
 
     await hentKampData();
-    await visSpillerKnapper(); // 👈 Veldig viktig å gjøre dette ETTER aktivKampId er satt
+    await visSpillerKnapper(); 
     hentMaallogg();
-    hentUtvisninger();
     hentLogg();
 
-setInterval(hentLogg, 5000); // oppdater loggen hvert 5. sekund
+    // hentUtvisninger() fjernet herfra. ✅
   }
 }
+
 
 
 async function opprettKamp() {
