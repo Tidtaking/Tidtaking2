@@ -140,7 +140,10 @@ async function abonner() {
       schema: "public",
       table: "hendelse",
       filter: `kamp_id=eq.${aktivKampId}`
-    }, hentHendelser)
+    }, () => {
+      hentHendelser();
+      hentData(); // Oppdaterer også mål umiddelbart
+    })
     .on("postgres_changes", {
       event: "*",
       schema: "public",
@@ -156,6 +159,7 @@ async function abonner() {
     document.getElementById("status").textContent = "🟢 Tilkoblet";
   }
 }
+
 
 
 
