@@ -447,7 +447,7 @@ async function hentLogg() {
   const tbody = document.getElementById("hendelseslogg");
   tbody.innerHTML = "";
   (data || []).forEach(h => {
-const tidspunkt = h.kamptid || "--:--";
+    const tidspunkt = h.kamptid || "--:--";
     let beskrivelse = h.type === "kort" ? (h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort") :
                       h.type === "timeout" ? "⏱ Timeout" :
                       h.type === "utvisning" ? "🚨 Utvisning" :
@@ -462,6 +462,8 @@ const tidspunkt = h.kamptid || "--:--";
     `;
     tbody.appendChild(tr);
   });
+} // 👈 denne linjen manglet!
+
 
 async function slettValgteHendelser() {
   const checkbokser = document.querySelectorAll(".hendelse-sjekkboks:checked");
