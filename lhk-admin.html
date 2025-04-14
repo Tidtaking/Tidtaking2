@@ -391,12 +391,14 @@ async function loggHendelse(type, lag, ekstra = {}) {
 async function registrerMaal(lag) {
   const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
 
-  // Registrer i maal-tabellen
-  await client.from("maal").insert({
-    kamp_id: aktivKampId,
-    spiller: spillerNavn,
-    lag
-  });
+await client
+  .from("kamp")
+  .update({
+    [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1,
+    oppdatert: new Date().toISOString()
+  })
+  .eq("id", aktivKampId);
+
 
   // Oppdater score i kamp-tabellen og sett oppdatert-feltet
   await client
@@ -494,11 +496,12 @@ async function slettValgteHendelser() {
 
   // Oppdater score i kamp-tabellen hvis nødvendig
   if (maalHjemme || maalBorte) {
-    await client.from("kamp").update({
-      hjemmescore: kampData.hjemmescore - maalHjemme,
-      bortescore: kampData.bortescore - maalBorte
-    }).eq("id", aktivKampId);
-  }
+await client.from("kamp").update({
+  hjemmescore: kampData.hjemmescore - maalHjemme,
+  bortescore: kampData.bortescore - maalBorte,
+  oppdatert: new Date().toISOString()
+}).eq("id", aktivKampId);
+
 
   // Slett fra maal-tabellen hvis det er mål som slettes
   const maalSpillere = hendelser
@@ -585,18 +588,21 @@ async function startPauseKamp() {
   if (kampData.er_paused) {
     await client.from("kamp").update({
       er_paused: false,
-      start_tid: nå.toISOString()
+      start_tid: nå.toISOString(),
+      oppdatert: nå.toISOString()
     }).eq("id", aktivKampId);
   } else {
     const ekstraTid = Math.floor((nå - new Date(kampData.start_tid)) / 1000);
     await client.from("kamp").update({
       er_paused: true,
       tid_brukt: kampData.tid_brukt + ekstraTid,
-      start_tid: null
+      start_tid: null,
+      oppdatert: nå.toISOString()
     }).eq("id", aktivKampId);
   }
   await hentKampData();
 }
+
 
 async function nyOmgang() {
   if (!kampData) return;
@@ -604,20 +610,24 @@ async function nyOmgang() {
     omgang: kampData.omgang + 1,
     tid_brukt: 0,
     er_paused: true,
-    start_tid: null
+    start_tid: null,
+    oppdatert: new Date().toISOString()
   }).eq("id", aktivKampId);
   await hentKampData();
 }
+
 
 async function nullstillTid() {
   if (!kampData) return;
   await client.from("kamp").update({
     tid_brukt: 0,
     start_tid: null,
-    er_paused: true
+    er_paused: true,
+    oppdatert: new Date().toISOString()
   }).eq("id", aktivKampId);
   await hentKampData();
 }
+
 
 // Start alt
 lastKamper();
