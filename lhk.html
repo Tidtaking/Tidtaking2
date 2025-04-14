@@ -130,16 +130,15 @@ async function abonner() {
   if (kanal) await kanal.unsubscribe();
 
   kanal = client.channel(`kamp-${aktivKampId}`)
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "kamp",
-      filter: `id=eq.${aktivKampId}`
-    }, payload => {
-      kampData = payload.new;
-      oppdaterScoreVisning();
-      visKlokke(kampData.start_tid, kampData.omgang_lengde, kampData.er_paused, kampData.tid_brukt);
-    })
+.on("postgres_changes", {
+  event: "*",
+  schema: "public",
+  table: "kamp",
+  filter: `id=eq.${aktivKampId}`
+}, async () => {
+  await hentData();
+})
+
     .on("postgres_changes", {
       event: "*",
       schema: "public",
@@ -191,16 +190,19 @@ async function hentData() {
 }
 
 
-  function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
+function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
   if (klokkeInterval) clearInterval(klokkeInterval);
   const visning = document.getElementById("klokke");
 
   function oppdater() {
-    let brukt = tidBrukt;
-    if (!erPaused) {
-      brukt += Math.floor((Date.now() - new Date(startTidStr)) / 1000);
+    if (!kampData) return;
+    const start = new Date(kampData.start_tid).getTime();
+    const nå = Date.now();
+    let brukt = kampData.tid_brukt;
+    if (!kampData.er_paused) {
+      brukt += Math.floor((nå - start) / 1000);
     }
-    const gjenstående = Math.max(0, omgangLengde - brukt);
+    const gjenstående = Math.max(0, kampData.omgang_lengde - brukt);
     const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
     const sek = (gjenstående % 60).toString().padStart(2, "0");
     visning.textContent = `${min}:${sek}`;
@@ -209,6 +211,7 @@ async function hentData() {
   oppdater();
   klokkeInterval = setInterval(oppdater, 1000);
 }
+
 
 
 
@@ -300,8 +303,6 @@ setInterval(() => {
   }
 }, 1000);
 
-
-    setInterval(hentUtvisninger, 1000);
     lastKamper();
   </script>
 </body>
