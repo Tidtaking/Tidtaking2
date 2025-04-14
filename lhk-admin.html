@@ -391,16 +391,12 @@ async function loggHendelse(type, lag, ekstra = {}) {
 async function registrerMaal(lag) {
   const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
 
-await client
-  .from("kamp")
-  .update({
-    [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1,
-    oppdatert: new Date().toISOString()
-  })
-  .eq("id", aktivKampId);
+  await client.from("maal").insert({
+    kamp_id: aktivKampId,
+    spiller: spillerNavn,
+    lag
+  });
 
-
-  // Oppdater score i kamp-tabellen og sett oppdatert-feltet
   await client
     .from("kamp")
     .update({
@@ -409,11 +405,10 @@ await client
     })
     .eq("id", aktivKampId);
 
-  // Logg hendelse
   await loggHendelse("maal", lag);
-
-  hentKampData(); // Oppdater admin-visning
+  hentKampData();
 }
+
 
 
 async function registrerKort(lag, korttype) {
@@ -494,12 +489,13 @@ async function slettValgteHendelser() {
   const maalBorte = hendelser.filter(h => h.type === "maal" && h.lag === "borte").length;
 
   // Oppdater score i kamp-tabellen hvis nødvendig
-  if (maalHjemme || maalBorte) {
-await client.from("kamp").update({
-  hjemmescore: kampData.hjemmescore - maalHjemme,
-  bortescore: kampData.bortescore - maalBorte,
-  oppdatert: new Date().toISOString()
-}).eq("id", aktivKampId);
+if (maalHjemme || maalBorte) {
+  await client.from("kamp").update({
+    hjemmescore: kampData.hjemmescore - maalHjemme,
+    bortescore: kampData.bortescore - maalBorte,
+    oppdatert: new Date().toISOString()
+  }).eq("id", aktivKampId);
+}
 
 
   // Slett fra maal-tabellen hvis det er mål som slettes
@@ -613,6 +609,7 @@ async function nyOmgang() {
   }).eq("id", aktivKampId);
   await hentKampData();
 }
+
 
 
 async function nullstillTid() {
