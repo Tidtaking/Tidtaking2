@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
@@ -6,52 +6,17 @@
   <title>LHK – Visning</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #f2f2f2;
-      text-align: center;
-      padding: 1rem;
-    }
-    .logo {
-      max-width: 150px;
-      margin: 1rem auto;
-    }
-    .score {
-      font-size: 3rem;
-      margin: 0.5rem 0;
-    }
-    .klokke {
-      font-size: 2rem;
-      margin: 0.5rem 0;
-    }
-    .status {
-      font-size: 0.9rem;
-      margin: 0.5rem;
-      color: green;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 2rem;
-    }
-    th, td {
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-    }
-    th {
-      background: #0057b8;
-      color: white;
-    }
-    tr.lhk-mål {
-      background-color: #e0f0ff;
-    }
-    .section h3 {
-      margin-top: 2rem;
-    }
-    .utvisning-linje {
-      margin: 0.3rem 0;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; background: #f2f2f2; text-align: center; padding: 1rem; }
+    .logo { max-width: 150px; margin: 1rem auto; }
+    .score { font-size: 3rem; margin: 0.5rem 0; }
+    .klokke { font-size: 2rem; margin: 0.5rem 0; }
+    .status { font-size: 0.9rem; margin: 0.5rem; color: green; }
+    table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+    th, td { padding: 0.5rem; border: 1px solid #ccc; }
+    th { background: #0057b8; color: white; }
+    tr.lhk-mål { background-color: #e0f0ff; }
+    .section h3 { margin-top: 2rem; }
+    .utvisning-linje { margin: 0.3rem 0; font-weight: bold; }
     @media (max-width: 600px) {
       .score { font-size: 2rem; }
       .klokke { font-size: 1.5rem; }
@@ -85,12 +50,13 @@
       </tr>
     </thead>
     <tbody id="hendelsesListe"></tbody>
-      <div id="historyLinkContainer" style="margin-top: 20px;">
-  <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/lhkstats'">
-    Spillerstatistikk
-  </button>
-</div>
   </table>
+
+  <div style="margin-top: 20px;">
+    <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/lhkstats'">
+      Spillerstatistikk
+    </button>
+  </div>
 
   <script>
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -101,12 +67,6 @@
     let kampData = null;
     let klokkeInterval = null;
     let kanal = null;
-    
-function oppdaterScoreVisning() {
-  document.getElementById("hjemmescore").textContent = kampData?.hjemmescore ?? "0";
-  document.getElementById("bortescore").textContent = kampData?.bortescore ?? "0";
-}
-
 
     async function lastKamper() {
       const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
@@ -121,187 +81,159 @@ function oppdaterScoreVisning() {
       if (data.length) {
         aktivKampId = data[0].id;
         velger.value = aktivKampId;
-        hentData();
+        await hentData();
         abonner();
       }
     }
 
-async function abonner() {
-  if (kanal) await kanal.unsubscribe();
+    async function abonner() {
+      if (kanal) await kanal.unsubscribe();
 
-  kanal = client.channel(`kamp-${aktivKampId}`)
-.on("postgres_changes", {
-  event: "*",
-  schema: "public",
-  table: "kamp",
-  filter: `id=eq.${aktivKampId}`
-}, async () => {
-  await hentData();
-})
+      kanal = client.channel(`kamp-${aktivKampId}`)
+        .on("postgres_changes", {
+          event: "*",
+          schema: "public",
+          table: "kamp",
+          filter: `id=eq.${aktivKampId}`
+        }, async () => {
+          await hentData();
+        })
+        .on("postgres_changes", {
+          event: "*",
+          schema: "public",
+          table: "hendelse",
+          filter: `kamp_id=eq.${aktivKampId}`
+        }, async () => {
+          await hentData();
+        })
+        .on("postgres_changes", {
+          event: "*",
+          schema: "public",
+          table: "utvisning",
+          filter: `kamp_id=eq.${aktivKampId}`
+        }, async () => {
+          await hentUtvisninger();
+        });
 
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "hendelse",
-      filter: `kamp_id=eq.${aktivKampId}`
-    }, () => {
-      hentHendelser();
-      hentData(); // Oppdaterer også mål umiddelbart
-    })
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "utvisning",
-      filter: `kamp_id=eq.${aktivKampId}`
-    }, hentUtvisninger);
-
-  const { error } = await kanal.subscribe();
-  if (error) {
-    document.getElementById("status").textContent = "🔴 Ikke tilkoblet";
-    console.error("Kanal-abonnement feilet:", error);
-  } else {
-    document.getElementById("status").textContent = "🟢 Tilkoblet";
-  }
-}
-
-
-
-
+      const { error } = await kanal.subscribe();
+      document.getElementById("status").textContent = error ? "🔴 Ikke tilkoblet" : "🟢 Tilkoblet";
+    }
 
     async function velgKamp() {
       aktivKampId = document.getElementById("kampVelger").value;
-      hentData();
+      await hentData();
       abonner();
     }
 
-async function hentData() {
-  const { data: kamp, error } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-  if (error || !kamp) {
-    console.error("Feil ved lasting av kamp:", error);
-    return;
-  }
+    async function hentData() {
+      const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+      if (!kamp) return;
 
-  kampData = kamp;
-  document.getElementById("omgang").textContent = kamp.omgang;
-  oppdaterScoreVisning();
-  visKlokke(kamp.start_tid, kamp.omgang_lengde, kamp.er_paused, kamp.tid_brukt);
-  hentUtvisninger();
-  hentHendelser();
-}
+      kampData = kamp;
+      document.getElementById("omgang").textContent = kamp.omgang;
+      document.getElementById("hjemmescore").textContent = kamp.hjemmescore;
+      document.getElementById("bortescore").textContent = kamp.bortescore;
 
-
-function visKlokke(startTidStr, omgangLengde, erPaused, tidBrukt) {
-  if (klokkeInterval) clearInterval(klokkeInterval);
-  const visning = document.getElementById("klokke");
-
-  function oppdater() {
-    if (!kampData) return;
-    const start = new Date(kampData.start_tid).getTime();
-    const nå = Date.now();
-    let brukt = kampData.tid_brukt;
-    if (!kampData.er_paused) {
-      brukt += Math.floor((nå - start) / 1000);
-    }
-    const gjenstående = Math.max(0, kampData.omgang_lengde - brukt);
-    const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
-    const sek = (gjenstående % 60).toString().padStart(2, "0");
-    visning.textContent = `${min}:${sek}`;
-  }
-
-  oppdater();
-  klokkeInterval = setInterval(oppdater, 1000);
-}
-
-
-
-
-  async function hentHendelser() {
-  const { data } = await client
-    .from("hendelse")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("tidspunkt", { ascending: true });
-
-  if (!data) return;
-
-  let hjem = 0;
-  let bort = 0;
-
-  const tbody = document.getElementById("hendelsesListe");
-  tbody.innerHTML = "";
-
-  data.forEach((h) => {
-    const kamptid = h.kamptid || "--:--";
-
-    let beskrivelse = "";
-    if (h.type === "maal") {
-      beskrivelse = "🎯 Mål";
-      if (h.lag === "hjemme") hjem++;
-      else bort++;
-    } else if (h.type === "kort") {
-      beskrivelse = h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort";
-    } else if (h.type === "utvisning") {
-      beskrivelse = "🚨 Utvisning";
-    } else if (h.type === "timeout") {
-      beskrivelse = "⏱ Timeout";
+      visKlokke();
+      await hentUtvisninger();
+      await hentHendelser();
     }
 
-    const tr = document.createElement("tr");
-if (h.lag === "hjemme") tr.classList.add("lhk-mål");
-    tr.innerHTML = `
-      <td>${hjem} – ${bort}</td>
-      <td>${kamptid}</td>
-      <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
-      <td>${beskrivelse}</td>
-      <td>${h.spiller || ""}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+    function visKlokke() {
+      if (klokkeInterval) clearInterval(klokkeInterval);
+      const visning = document.getElementById("klokke");
 
-  // Oppdater alltid scorens visning basert på hendelsene også:
-  document.getElementById("hjemmescore").textContent = hjem;
-  document.getElementById("bortescore").textContent = bort;
-}
+      function oppdater() {
+        if (!kampData) return;
+        const start = new Date(kampData.start_tid).getTime();
+        const nå = Date.now();
+        let brukt = kampData.tid_brukt;
+        if (!kampData.er_paused) {
+          brukt += Math.floor((nå - start) / 1000);
+        }
+        const total = kampData.omgang_lengde || 1200;
+        const gjenstående = Math.max(0, total - brukt);
+        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
+        const sek = (gjenstående % 60).toString().padStart(2, "0");
+        visning.textContent = `${min}:${sek}`;
+      }
 
-
-async function hentUtvisninger() {
-  if (!aktivKampId || !kampData) return;
-
-  const { data } = await client
-    .from("utvisning")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("kamp_tidspunkt");
-
-  const container = document.getElementById("utvisningVisning");
-  if (!container) return;
-  container.innerHTML = "";
-
-  let bruktTid = kampData.tid_brukt;
-  if (!kampData.er_paused) {
-    bruktTid += Math.floor((Date.now() - new Date(kampData.start_tid).getTime()) / 1000);
-  }
-
-  data.forEach(u => {
-    const sekGjenstår = 120 - (bruktTid - u.kamp_tidspunkt);
-    if (sekGjenstår > 0 && sekGjenstår <= 120) {
-      const min = Math.floor(sekGjenstår / 60).toString().padStart(2, "0");
-      const sek = (sekGjenstår % 60).toString().padStart(2, "0");
-      const div = document.createElement("div");
-      div.className = "utvisning-linje";
-      div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${sek}`;
-      container.appendChild(div);
+      oppdater();
+      klokkeInterval = setInterval(oppdater, 1000);
     }
-  });
-}
 
-// initial oppdatering hvert sekund for klokke og utvisninger:
-setInterval(() => {
-  if (kampData) {
-    visKlokke(kampData.start_tid, kampData.omgang_lengde, kampData.er_paused, kampData.tid_brukt);
-    hentUtvisninger();
-  }
-}, 1000);
+    async function hentUtvisninger() {
+      const { data } = await client
+        .from("utvisning")
+        .select("*")
+        .eq("kamp_id", aktivKampId)
+        .order("kamp_tidspunkt");
+
+      const container = document.getElementById("utvisningVisning");
+      container.innerHTML = "";
+
+      if (!kampData) return;
+
+      let bruktTid = kampData.tid_brukt;
+      if (!kampData.er_paused) {
+        bruktTid += Math.floor((Date.now() - new Date(kampData.start_tid).getTime()) / 1000);
+      }
+
+      (data || []).forEach(u => {
+        const sekIgjen = 120 - (bruktTid - u.kamp_tidspunkt);
+        if (sekIgjen > 0 && sekIgjen <= 120) {
+          const min = Math.floor(sekIgjen / 60).toString().padStart(2, "0");
+          const sek = (sekIgjen % 60).toString().padStart(2, "0");
+          const div = document.createElement("div");
+          div.className = "utvisning-linje";
+          div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${sek}`;
+          container.appendChild(div);
+        }
+      });
+    }
+
+    async function hentHendelser() {
+      const { data } = await client
+        .from("hendelse")
+        .select("*")
+        .eq("kamp_id", aktivKampId)
+        .order("tidspunkt", { ascending: true });
+
+      const tbody = document.getElementById("hendelsesListe");
+      tbody.innerHTML = "";
+
+      let hjem = 0, bort = 0;
+
+      (data || []).forEach(h => {
+        const kamptid = h.kamptid || "--:--";
+        let beskrivelse = "";
+
+        if (h.type === "maal") {
+          beskrivelse = "🎯 Mål";
+          h.lag === "hjemme" ? hjem++ : bort++;
+        } else if (h.type === "kort") {
+          beskrivelse = h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort";
+        } else if (h.type === "timeout") {
+          beskrivelse = "⏱ Timeout";
+        } else if (h.type === "utvisning") {
+          beskrivelse = "🚨 Utvisning";
+        }
+
+        const tr = document.createElement("tr");
+        if (h.lag === "hjemme") tr.classList.add("lhk-mål");
+        tr.innerHTML = `
+          <td>${hjem} – ${bort}</td>
+          <td>${kamptid}</td>
+          <td>${h.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+          <td>${beskrivelse}</td>
+          <td>${h.spiller || ""}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("hjemmescore").textContent = hjem;
+      document.getElementById("bortescore").textContent = bort;
+    }
 
     lastKamper();
   </script>
