@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LHK – Spillerstatistikk</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
+      text-align: center;
+      padding: 1rem;
+    }
+    .logo {
+      max-width: 150px;
+      margin: 1rem auto;
+    }
+    select, input, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin: 0.3rem;
+      border-radius: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+    }
+    th {
+      background: #0057b8;
+      color: white;
+    }
+    .export-buttons {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <img src="logo-lhk.jpg" alt="LHK-logo" class="logo" />
+  <h1>Spillerstatistikk</h1>
+
+  <div>
+    <select id="kampDropdown"></select>
+    <select id="lagDropdown">
+      <option value="">Alle lag</option>
+      <option value="hjemme">LHK</option>
+      <option value="borte">Bortelag</option>
+    </select>
+    <input type="text" id="sokefelt" placeholder="Søk på spiller..." oninput="visStatistikk()" />
+  </div>
+
+  <div class="export-buttons">
+    <button onclick="eksportCSV()">📄 Eksport CSV</button>
+    <button onclick="eksportPDF()">📄 Eksport PDF</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Spiller</th>
+        <th>Lag</th>
+        <th>Mål</th>
+        <th>Mål (pr kamp)</th>
+        <th>Gule kort</th>
+        <th>Røde kort</th>
+        <th>Utvisninger</th>
+      </tr>
+    </thead>
+    <tbody id="statistikkTabell"></tbody>
+  </table>
+
+  <script>
+    const supabase = supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    );
+
+    let alleHendelser = [];
+
+    async function hentData() {
+      const { data: hendelser } = await supabase
+        .from("hendelse")
+        .select("*");
+
+      const { data: kamper } = await supabase
+        .from("kamp")
+        .select("id, hjemmelag, bortelag");
+
+      alleHendelser = hendelser || [];
+
+      const kampDropdown = document.getElementById("kampDropdown");
+      kampDropdown.innerHTML = `<option value="">Alle kamper</option>`;
+      kamper?.forEach(k => {
+        const option = document.createElement("option");
+        option.value = k.id;
+        option.textContent = `${k.hjemmelag} vs ${k.bortelag}`;
+        kampDropdown.appendChild(option);
+      });
+
+      visStatistikk();
+    }
+
+    function visStatistikk() {
+      const kampValgt = document.getElementById("kampDropdown").value;
+      const lagValgt = document.getElementById("lagDropdown").value;
+      const sok = document.getElementById("sokefelt").value.toLowerCase();
+
+      const filtrert = alleHendelser.filter(h => {
+        const kampMatch = kampValgt ? h.kamp_id === kampValgt : true;
+        const lagMatch = lagValgt ? h.lag === lagValgt : true;
+        const spillerMatch = h.spiller?.toLowerCase().includes(sok);
+        return kampMatch && lagMatch && spillerMatch;
+      });
+
+      const grupper = {};
+      filtrert.forEach(h => {
+        if (!h.spiller) return;
+        const nøkkel = `${h.spiller}__${h.lag}`;
+        grupper[nøkkel] = grupper[nøkkel] || {
+          spiller: h.spiller,
+          lag: h.lag === "hjemme" ? "LHK" : "Bortelag",
+          maal: 0,
+          gult: 0,
+          rødt: 0,
+          utvisning: 0,
+          kamper: new Set()
+        };
+        if (h.type === "maal") grupper[nøkkel].maal++;
+        if (h.type === "kort" && h.korttype === "gult") grupper[nøkkel].gult++;
+        if (h.type === "kort" && h.korttype === "rødt") grupper[nøkkel].rødt++;
+        if (h.type === "utvisning") grupper[nøkkel].utvisning++;
+        grupper[nøkkel].kamper.add(h.kamp_id);
+      });
+
+      const tbody = document.getElementById("statistikkTabell");
+      tbody.innerHTML = "";
+      Object.values(grupper).forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.spiller}</td>
+          <td>${p.lag}</td>
+          <td>${p.maal}</td>
+          <td>${(p.maal / p.kamper.size).toFixed(2)}</td>
+          <td>${p.gult}</td>
+          <td>${p.rødt}</td>
+          <td>${p.utvisning}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function eksportCSV() {
+      let csv = "Spiller,Lag,Mål,Mål per kamp,Gule,Røde,Utvisninger\n";
+      document.querySelectorAll("#statistikkTabell tr").forEach(row => {
+        const cols = [...row.children].map(td => td.textContent);
+        csv += cols.join(",") + "\n";
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "spillerstatistikk.csv";
+      a.click();
+    }
+
+    function eksportPDF() {
+      const doc = new jsPDF();
+      doc.text("Spillerstatistikk", 14, 16);
+      doc.autoTable({ html: "#statistikkTabell", startY: 20 });
+      doc.save("spillerstatistikk.pdf");
+    }
+
+    hentData();
+  </script>
+</body>
+</html>
