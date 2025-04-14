@@ -600,9 +600,12 @@ async function slettKampMedData(kampId) {
   } else {
     alert("Kamp slettet");
     if (kampId === aktivKampId) aktivKampId = null;
-    lastKamper();
+
+    // 🔁 Vent på at kampoversikten oppdateres
+    await lastKamper();
   }
 }
+
 
 
 
