@@ -244,6 +244,7 @@ async function hentData() {
     }
 
     const tr = document.createElement("tr");
+if (h.lag === "hjemme") tr.classList.add("lhk-mål");
     tr.innerHTML = `
       <td>${hjem} – ${bort}</td>
       <td>${kamptid}</td>
