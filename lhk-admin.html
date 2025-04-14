@@ -521,42 +521,24 @@ async function slettValgteHendelser() {
 
 
 async function hentUtvisninger() {
-  if (!aktivKampId || !kampData) return;
-
-  const { data } = await client
-    .from("utvisning")
-    .select("*")
-    .eq("kamp_id", aktivKampId)
-    .order("start_tid");
-
-  const container = document.getElementById("utvisningVisning");
-  container.innerHTML = "";
-
-  const kampStartTid = new Date(kampData.start_tid).getTime();
-  let bruktTid = kampData.tid_brukt;
-
-  if (!kampData.er_paused) {
-    bruktTid += Math.floor((Date.now() - kampStartTid) / 1000);
-  }
-
-  (data || []).forEach(u => {
-    const utvisningStartTid = new Date(u.start_tid).getTime();
-    const utvisningStartSek = Math.floor((utvisningStartTid - kampStartTid) / 1000);
-    const utvisningTidGått = bruktTid - utvisningStartSek;
-    const sekGjenstår = 120 - utvisningTidGått;
-
-    if (sekGjenstår > 0 && sekGjenstår <= 120) {
-      const min = Math.floor(sekGjenstår / 60).toString().padStart(2, "0");
-      const sek = (sekGjenstår % 60).toString().padStart(2, "0");
-
-      const div = document.createElement("div");
-      div.className = "utvisning-linje";
-      div.textContent = `${u.lag === "hjemme" ? "LHK" : "Bortelag"}: ${min}:${sek}`;
-      container.appendChild(div);
-    }
+  if (!kampData) return;
+  const { data } = await client.from("utvisning").select("*").eq("kamp_id", aktivKampId).order("start_tid");
+  const tbody = document.getElementById("utvisningListe");
+  tbody.innerHTML = "";
+  const nå = Date.now();
+  (data || []).forEach(utv => {
+    const start = new Date(utv.start_tid).getTime();
+    const bruktTid = kampData.er_paused ?
+      kampData.tid_brukt :
+      kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
+    const utvisningsStartSek = Math.floor((start - new Date(kampData.start_tid).getTime()) / 1000);
+    const sekIgjen = 120 - (bruktTid - utvisningsStartSek);
+    const gjenstående = sekIgjen > 0 ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}` : "Ferdig";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${utv.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${new Date(utv.start_tid).toLocaleTimeString()}</td><td>${gjenstående}</td><td><button class="delete" onclick="slettUtvisning(${utv.id})">❌</button></td>`;
+    tbody.appendChild(tr);
   });
 }
-
 
 async function slettUtvisning(id) {
   await client.from("utvisning").delete().eq("id", id);
@@ -665,4 +647,3 @@ lastKamper();
 </script>
 </body>
 </html>
-
