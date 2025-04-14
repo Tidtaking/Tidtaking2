@@ -522,23 +522,44 @@ async function slettValgteHendelser() {
 
 async function hentUtvisninger() {
   if (!kampData) return;
-  const { data } = await client.from("utvisning").select("*").eq("kamp_id", aktivKampId).order("start_tid");
+
+  const { data } = await client
+    .from("utvisning")
+    .select("*")
+    .eq("kamp_id", aktivKampId)
+    .order("start_tid");
+
   const tbody = document.getElementById("utvisningListe");
   tbody.innerHTML = "";
-  const nå = Date.now();
-  (data || []).forEach(utv => {
-    const start = new Date(utv.start_tid).getTime();
-    const bruktTid = kampData.er_paused ?
-      kampData.tid_brukt :
-      kampData.tid_brukt + Math.floor((nå - new Date(kampData.start_tid).getTime()) / 1000);
-    const utvisningsStartSek = Math.floor((start - new Date(kampData.start_tid).getTime()) / 1000);
-    const sekIgjen = 120 - (bruktTid - utvisningsStartSek);
-    const gjenstående = sekIgjen > 0 ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}` : "Ferdig";
+
+  const kampStartTid = new Date(kampData.start_tid).getTime();
+  let bruktTid = kampData.tid_brukt;
+
+  // Viktig: Beregn kun med faktisk kampklokketid, ikke systemtid direkte.
+  if (!kampData.er_paused) {
+    bruktTid += Math.floor((Date.now() - kampStartTid) / 1000);
+  }
+
+  data.forEach(utv => {
+    const utvisningStartTid = new Date(utv.start_tid).getTime();
+    const utvisningStartSek = Math.floor((utvisningStartTid - kampStartTid) / 1000);
+    const sekIgjen = 120 - (bruktTid - utvisningStartSek);
+
+    const gjenstående = sekIgjen > 0 && sekIgjen <= 120 
+      ? `${Math.floor(sekIgjen / 60)}:${(sekIgjen % 60).toString().padStart(2, "0")}` 
+      : "Ferdig";
+
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${utv.lag === "hjemme" ? "LHK" : "Bortelag"}</td><td>${new Date(utv.start_tid).toLocaleTimeString()}</td><td>${gjenstående}</td><td><button class="delete" onclick="slettUtvisning(${utv.id})">❌</button></td>`;
+    tr.innerHTML = `
+      <td>${utv.lag === "hjemme" ? "LHK" : "Bortelag"}</td>
+      <td>${new Date(utv.start_tid).toLocaleTimeString()}</td>
+      <td>${gjenstående}</td>
+      <td><button class="delete" onclick="slettUtvisning(${utv.id})">❌</button></td>
+    `;
     tbody.appendChild(tr);
   });
 }
+
 
 async function slettUtvisning(id) {
   await client.from("utvisning").delete().eq("id", id);
