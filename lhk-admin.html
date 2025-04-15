@@ -67,6 +67,7 @@
     <input type="text" id="bortelag" placeholder="Bortelag" />
     <input type="date" id="kampDato" />
     <button onclick="opprettKamp()">➕ Opprett kamp</button>
+    <button onclick="hentSpillereFraTidligereKamp()">👥 Hent spillere fra valgt kamp</button>
   </div>
 <div class="section">
   <h3>Alle kamper</h3>
@@ -244,6 +245,24 @@ async function lagSpillerKnapper() {
   container.appendChild(document.createElement("br"));
   container.appendChild(leggTilBtn);
   container.appendChild(lagreBtn);
+}
+async function hentSpillereFraTidligereKamp() {
+  const tidligereKampId = document.getElementById("kampSelect").value;
+  if (!tidligereKampId) return;
+
+  const { data, error } = await client
+    .from("spiller")
+    .select("drakt, navn")
+    .eq("kamp_id", tidligereKampId);
+
+  if (error || !data || data.length === 0) {
+    alert("Fant ingen spillere for valgt kamp");
+    console.error(error);
+    return;
+  }
+
+  localStorage.setItem("forrigeSpillere", JSON.stringify(data));
+  alert("Spillere hentet fra valgt kamp! De brukes neste gang du oppretter en ny kamp.");
 }
 
 
@@ -651,25 +670,31 @@ async function opprettKamp() {
     tid_brukt: 0
   }).select().single();
 
-  if (error) {
-    alert("Feil ved opprettelse av kamp");
-    console.error(error);
-    return;
-  }
+  // Etter kamp er opprettet
+if (!error) {
+  const { data: nyKamp } = await client
+    .from("kamp")
+    .select("id")
+    .order("opprettet", { ascending: false })
+    .limit(1)
+    .single();
 
-  const lagret = localStorage.getItem("forrigeSpillere");
-  if (lagret) {
-    const spillere = JSON.parse(lagret).map(s => ({
-      kamp_id: data.id,
+  const lagredeSpillere = JSON.parse(localStorage.getItem("forrigeSpillere") || "[]");
+
+  if (nyKamp?.id && lagredeSpillere.length > 0) {
+    const spillereMedKampId = lagredeSpillere.map(s => ({
+      kamp_id: nyKamp.id,
       drakt: s.drakt,
       navn: s.navn
     }));
-    await client.from("spiller").insert(spillere);
+
+    await client.from("spiller").insert(spillereMedKampId);
     localStorage.removeItem("forrigeSpillere");
   }
 
   lastKamper();
 }
+
 
 
 
