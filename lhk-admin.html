@@ -658,7 +658,7 @@ async function opprettKamp() {
   const bortelag = document.getElementById("bortelag").value;
   const dato = document.getElementById("kampDato").value || new Date().toISOString().slice(0, 10);
 
-  const { data, error } = await client.from("kamp").insert({
+  const { data: nyKamp, error } = await client.from("kamp").insert({
     hjemmelag,
     bortelag,
     dato,
@@ -670,33 +670,42 @@ async function opprettKamp() {
     tid_brukt: 0
   }).select().single();
 
-  if (!error) {
-    const { data: nyKamp } = await client
-      .from("kamp")
-      .select("id")
-      .order("opprettet", { ascending: false })
-      .limit(1)
-      .single();
+  if (error) {
+    alert("Feil ved opprettelse av kamp");
+    console.error(error);
+    return;
+  }
 
-    const lagredeSpillere = JSON.parse(localStorage.getItem("forrigeSpillere") || "[]");
+  // Hent forrige kamp (den nest siste, altså kamp før nyKamp)
+  const { data: kamper } = await client.from("kamp")
+    .select("id")
+    .neq("id", nyKamp.id)
+    .order("opprettet", { ascending: false })
+    .limit(1);
 
-    if (nyKamp?.id && lagredeSpillere.length > 0) {
-      const spillereMedKampId = lagredeSpillere.map(s => ({
+  const forrigeKampId = kamper?.[0]?.id;
+
+  if (forrigeKampId) {
+    const { data: gamleSpillere } = await client
+      .from("spiller")
+      .select("*")
+      .eq("kamp_id", forrigeKampId)
+      .order("drakt");
+
+    if (gamleSpillere?.length) {
+      const spillereMedNyKamp = gamleSpillere.map(s => ({
         kamp_id: nyKamp.id,
         drakt: s.drakt,
         navn: s.navn
       }));
-
-      await client.from("spiller").insert(spillereMedKampId);
-      localStorage.removeItem("forrigeSpillere");
+      await client.from("spiller").insert(spillereMedNyKamp);
     }
-
-    lastKamper();
-  } else {
-    alert("Feil ved opprettelse av kamp");
-    console.error(error);
   }
+
+  alert("Kamp opprettet – spillere kopiert fra forrige kamp.");
+  lastKamper();
 }
+
 
 async function startPauseKamp() {
   if (!kampData) return;
