@@ -548,10 +548,10 @@ async function velgKamp() {
   hentLogg();
 }
 async function slettKampMedData(id) {
-  const bekreft = confirm("Er du sikker på at du vil slette denne kampen og all tilhørende data?");
+  const bekreft = confirm("Er du sikker på at du vil slette denne kampen og all tilhørende data? Spillere beholdes.");
   if (!bekreft) return;
 
-  // Slett tilknyttede rader først
+  // Slett hendelser
   const { error: hendelseError } = await client.from("hendelse").delete().eq("kamp_id", id);
   if (hendelseError) {
     alert("Feil ved sletting fra hendelse-tabellen");
@@ -559,6 +559,7 @@ async function slettKampMedData(id) {
     return;
   }
 
+  // Slett utvisninger
   const { error: utvisningError } = await client.from("utvisning").delete().eq("kamp_id", id);
   if (utvisningError) {
     alert("Feil ved sletting fra utvisning-tabellen");
@@ -566,13 +567,15 @@ async function slettKampMedData(id) {
     return;
   }
 
-  const { error: spillerError } = await client.from("spiller").delete().eq("kamp_id", id);
-  if (spillerError) {
-    alert("Feil ved sletting fra spiller-tabellen");
-    console.error(spillerError);
+  // Slett mål
+  const { error: maalError } = await client.from("maal").delete().eq("kamp_id", id);
+  if (maalError) {
+    alert("Feil ved sletting fra mål-tabellen");
+    console.error(maalError);
     return;
   }
 
+  // Slett selve kampen
   const { error: kampError } = await client.from("kamp").delete().eq("id", id);
   if (kampError) {
     alert("Feil ved sletting fra kamp");
@@ -580,9 +583,10 @@ async function slettKampMedData(id) {
     return;
   }
 
-  alert("Kamp slettet!");
-  lastKamper(); // 👈 Oppdater tabellen etter sletting
+  alert("Kamp slettet! Spillere beholdt.");
+  lastKamper(); // Oppdater visning
 }
+
 // Eksponer funksjonen slik at den er tilgjengelig fra HTML
 window.slettKampMedData = slettKampMedData;
 
