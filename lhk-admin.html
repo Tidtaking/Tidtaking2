@@ -547,43 +547,6 @@ async function velgKamp() {
   hentUtvisninger();
   hentLogg();
 }
-
-async function lastKamper() {
-  const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
-
-  const select = document.getElementById("kampSelect");
-  const tabellBody = document.getElementById("kampTabellBody");
-  select.innerHTML = "";
-  tabellBody.innerHTML = "";
-
-  (data || []).forEach(k => {
-    // Kampvelger dropdown
-    const option = document.createElement("option");
-    option.value = k.id;
-    option.text = `${k.hjemmelag} vs ${k.bortelag}`;
-    select.appendChild(option);
-
-    // Kamp-tabell
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${k.dato || "-"}</td>
-      <td>${k.hjemmelag} vs ${k.bortelag}</td>
-      <td>${k.hjemmescore} – ${k.bortescore}</td>
-      <td>${k.omgang}</td>
-      <td><button class="delete" onclick="slettKampMedData('${k.id}')">🗑</button></td>
-    `;
-    tabellBody.appendChild(tr);
-  });
-
-  if (data && data.length) {
-    aktivKampId = data[0].id;
-    select.value = aktivKampId;
-    await hentKampData();
-    await visSpillerKnapper();
-    hentMaallogg();
-    hentLogg();
-  }
-}
 async function slettKampMedData(id) {
   const bekreft = confirm("Er du sikker på at du vil slette denne kampen og all tilhørende data?");
   if (!bekreft) return;
@@ -620,9 +583,42 @@ async function slettKampMedData(id) {
   alert("Kamp slettet!");
   lastKamper(); // 👈 Oppdater tabellen etter sletting
 }
+async function lastKamper() {
+  const { data } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
 
+  const select = document.getElementById("kampSelect");
+  const tabellBody = document.getElementById("kampTabellBody");
+  select.innerHTML = "";
+  tabellBody.innerHTML = "";
 
+  (data || []).forEach(k => {
+    // Kampvelger dropdown
+    const option = document.createElement("option");
+    option.value = k.id;
+    option.text = `${k.hjemmelag} vs ${k.bortelag}`;
+    select.appendChild(option);
 
+    // Kamp-tabell
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${k.dato || "-"}</td>
+      <td>${k.hjemmelag} vs ${k.bortelag}</td>
+      <td>${k.hjemmescore} – ${k.bortescore}</td>
+      <td>${k.omgang}</td>
+      <td><button class="delete" onclick="slettKampMedData('${k.id}')">🗑</button></td>
+    `;
+    tabellBody.appendChild(tr);
+  });
+
+  if (data && data.length) {
+    aktivKampId = data[0].id;
+    select.value = aktivKampId;
+    await hentKampData();
+    await visSpillerKnapper();
+    hentMaallogg();
+    hentLogg();
+  }
+}
 
 
 
