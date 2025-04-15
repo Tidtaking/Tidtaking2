@@ -234,7 +234,10 @@
       document.getElementById("hjemmescore").textContent = hjem;
       document.getElementById("bortescore").textContent = bort;
     }
-
+// Sørg for at utvisningene teller ned live hvert sekund
+setInterval(() => {
+  if (kampData) hentUtvisninger();
+}, 1000);
     lastKamper();
   </script>
 </body>
