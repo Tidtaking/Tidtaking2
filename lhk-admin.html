@@ -584,22 +584,43 @@ async function lastKamper() {
     hentLogg();
   }
 }
-async function slettKampMedData(kampId) {
-  if (!confirm("Er du sikker på at du vil slette denne kampen og all tilhørende data?")) return;
+async function slettKamp(id) {
+  const bekreft = confirm("Er du sikker på at du vil slette denne kampen og all tilhørende data?");
+  if (!bekreft) return;
 
-  const tabeller = ["hendelse", "maal", "spiller", "utvisning", "kamp"];
-  for (const tabell of tabeller) {
-    const { error } = await client.from(tabell).delete().eq("kamp_id", kampId);
-    if (error) {
-      alert(`Feil ved sletting fra ${tabell}: ${error.message}`);
-      console.error(error);
-      return;
-    }
+  // Slett tilknyttede rader først
+  const { error: hendelseError } = await client.from("hendelse").delete().eq("kamp_id", id);
+  if (hendelseError) {
+    alert("Feil ved sletting fra hendelse-tabellen");
+    console.error(hendelseError);
+    return;
   }
 
-  alert("Kamp slettet");
-  await hentAlleKamper(); // 🔄 oppdater tabellen
+  const { error: utvisningError } = await client.from("utvisning").delete().eq("kamp_id", id);
+  if (utvisningError) {
+    alert("Feil ved sletting fra utvisning-tabellen");
+    console.error(utvisningError);
+    return;
+  }
+
+  const { error: spillerError } = await client.from("spiller").delete().eq("kamp_id", id);
+  if (spillerError) {
+    alert("Feil ved sletting fra spiller-tabellen");
+    console.error(spillerError);
+    return;
+  }
+
+  const { error: kampError } = await client.from("kamp").delete().eq("id", id);
+  if (kampError) {
+    alert("Feil ved sletting fra kamp");
+    console.error(kampError);
+    return;
+  }
+
+  alert("Kamp slettet!");
+  lastKamper(); // 👈 Oppdater tabellen etter sletting
 }
+
 
 
 
