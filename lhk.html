@@ -27,8 +27,8 @@
 <body>
   <img src="logo-lhk.jpg" alt="LHK-logo" class="logo" />
   <h1>Livescore</h1>
-
-  <select id="kampVelger" onchange="velgKamp()"></select>
+<input type="date" id="datoVelger" onchange="filtrerKamperEtterDato()" />
+<select id="kampVelger" onchange="velgKamp()"></select>
   <div class="status" id="status">🟢 Tilkoblet</div>
 
   <div class="klokke">⏱️ <span id="klokke">--:--</span> | Omgang: <span id="omgang">-</span></div>
@@ -234,6 +234,40 @@
       document.getElementById("hjemmescore").textContent = hjem;
       document.getElementById("bortescore").textContent = bort;
     }
+      let alleKamper = [];
+
+async function lastKamper() {
+  const { data } = await client.from("kamp").select("*").order("dato", { ascending: false });
+  alleKamper = data || [];
+  fyllDropdownMedKamper(alleKamper);
+}
+
+function fyllDropdownMedKamper(kamper) {
+  const velger = document.getElementById("kampVelger");
+  velger.innerHTML = "";
+  kamper.forEach(k => {
+    const option = document.createElement("option");
+    option.value = k.id;
+    option.text = `${k.dato || "?"} – ${k.hjemmelag} vs ${k.bortelag}`;
+    velger.appendChild(option);
+  });
+
+  if (kamper.length) {
+    aktivKampId = kamper[0].id;
+    velger.value = aktivKampId;
+    hentData();
+    abonner();
+  }
+}
+
+function filtrerKamperEtterDato() {
+  const valgtDato = document.getElementById("datoVelger").value;
+  if (!valgtDato) return fyllDropdownMedKamper(alleKamper);
+
+  const filtrert = alleKamper.filter(k => k.dato && k.dato.startsWith(valgtDato));
+  fyllDropdownMedKamper(filtrert);
+}
+
 // Sørg for at utvisningene teller ned live hvert sekund
 setInterval(() => {
   if (kampData) hentUtvisninger();
