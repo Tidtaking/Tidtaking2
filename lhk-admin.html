@@ -95,6 +95,13 @@
     <h3>Spillervalg (valgfritt)</h3>
     <div class="spiller-valg" id="spillereContainer"></div>
   </div>
+<div style="margin-top: 1rem;">
+  <button onclick="visImportSpillere()">📥 Hent spillere fra annen kamp</button>
+  <div id="importSpillereContainer" style="display: none; margin-top: 0.5rem;">
+    <select id="kampImportVelger"></select>
+    <button onclick="importerSpillereFraKamp()">Importer</button>
+  </div>
+</div>
 
   <div class="section">
     <h3>Registrer mål</h3>
@@ -161,6 +168,39 @@ let spillere = Array.from({ length: 16 }, (_, i) => ({
   drakt: i + 1,
   navn: `Spiller ${i + 1}`
 }));
+async function visImportSpillere() {
+  const container = document.getElementById("importSpillereContainer");
+  container.style.display = "block";
+
+  const select = document.getElementById("kampImportVelger");
+  select.innerHTML = "";
+
+  const { data } = await client.from("kamp")
+    .select("id, hjemmelag, bortelag, dato")
+    .order("opprettet", { ascending: false });
+
+  data.forEach(k => {
+    const opt = document.createElement("option");
+    opt.value = k.id;
+    opt.text = `${k.dato || "?"} - ${k.hjemmelag} vs ${k.bortelag}`;
+    select.appendChild(opt);
+  });
+}
+
+async function importerSpillereFraKamp() {
+  const valgtKampId = document.getElementById("kampImportVelger").value;
+  if (!valgtKampId) return;
+
+  const { data } = await client.from("spiller").select("*").eq("kamp_id", valgtKampId).order("drakt");
+
+  spillere = data.map(s => ({
+    kamp_id: aktivKampId,
+    drakt: s.drakt,
+    navn: s.navn
+  }));
+
+  lagSpillerKnapper();
+}
 
 async function lagSpillerKnapper() {
   if (!aktivKampId) return;
