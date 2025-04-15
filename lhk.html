@@ -119,11 +119,13 @@
       document.getElementById("status").textContent = error ? "🔴 Ikke tilkoblet" : "🟢 Tilkoblet";
     }
 
-    async function velgKamp() {
-      aktivKampId = document.getElementById("kampVelger").value;
-      await hentData();
-      abonner();
-    }
+async function velgKamp() {
+  aktivKampId = document.getElementById("kampVelger").value;
+  localStorage.setItem("aktivKampId", aktivKampId); // 🔐 Lagre valgt kamp
+  await hentData();
+  abonner();
+}
+
 
     async function hentData() {
       const { data: kamp } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
@@ -239,12 +241,17 @@
 async function lastKamper() {
   const { data } = await client.from("kamp").select("*").order("dato", { ascending: false });
   alleKamper = data || [];
-  fyllDropdownMedKamper(alleKamper);
+
+  const lagretKampId = localStorage.getItem("aktivKampId");
+
+  fyllDropdownMedKamper(alleKamper, lagretKampId);
 }
 
-function fyllDropdownMedKamper(kamper) {
+
+function fyllDropdownMedKamper(kamper, valgtId = null) {
   const velger = document.getElementById("kampVelger");
   velger.innerHTML = "";
+
   kamper.forEach(k => {
     const option = document.createElement("option");
     option.value = k.id;
@@ -253,12 +260,14 @@ function fyllDropdownMedKamper(kamper) {
   });
 
   if (kamper.length) {
-    aktivKampId = kamper[0].id;
+    const match = kamper.find(k => k.id === valgtId) || kamper[0];
+    aktivKampId = match.id;
     velger.value = aktivKampId;
     hentData();
     abonner();
   }
 }
+
 
 function filtrerKamperEtterDato() {
   const valgtDato = document.getElementById("datoVelger").value;
