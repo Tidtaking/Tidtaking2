@@ -206,31 +206,30 @@ async function hentStandardSpillere() {
   const { data, error } = await client
     .from("spiller")
     .select("*")
-    .order("drakt", { ascending: true })
-    .order("id", { ascending: false }); // sikrer at høyeste id kommer først
+    .is("kamp_id", null) // Hent kun "globale" spillere
+    .order("id", { ascending: false });
 
   if (error || !data) {
-    alert("Kunne ikke hente spillere fra Supabase.");
+    alert("Kunne ikke hente standardspillere fra Supabase.");
     console.error(error);
     return;
   }
 
-  // Fjern duplikater basert på draktnummer (behold den første med høyest id)
+  // Fjern duplikater basert på draktnummer (behold nyeste)
   const unikeSpillere = [];
-  const sett = new Set();
+  const bruktDrakt = new Set();
 
   for (const s of data) {
-    if (!sett.has(s.drakt)) {
-      unikeSpillere.push({ drakt: s.drakt, navn: s.navn });
-      sett.add(s.drakt);
+    if (!bruktDrakt.has(s.drakt)) {
+      bruktDrakt.add(s.drakt);
+      unikeSpillere.push({ kamp_id: aktivKampId, drakt: s.drakt, navn: s.navn });
     }
   }
 
-  // Lagre lokalt for neste kamp
-  localStorage.setItem("forrigeSpillere", JSON.stringify(unikeSpillere));
-
-  alert("Spillere hentet og lagret for neste kamp!");
+  spillere = unikeSpillere;
+  lagSpillerKnapper();
 }
+
 
 async function lagSpillerKnapper() {
   if (!aktivKampId) return;
