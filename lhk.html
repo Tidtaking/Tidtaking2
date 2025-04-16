@@ -38,7 +38,9 @@
     <h3>Utvisninger</h3>
     <div id="utvisningVisning"></div>
   </div>
-
+<div style="margin-top: 1rem;">
+  <button onclick="hentHendelser()">🔄 Oppdater hendelser</button>
+</div>
   <table>
     <thead>
       <tr>
@@ -245,6 +247,12 @@ async function velgKamp() {
       document.getElementById("bortescore").textContent = bort;
     }
       let alleKamper = [];
+// Oppdater hendelser hvert 5. sekund
+setInterval(() => {
+  if (aktivKampId) {
+    hentHendelser();
+  }
+}, 5000);
 
 async function lastKamper() {
   const { data } = await client.from("kamp").select("*").order("dato", { ascending: false });
