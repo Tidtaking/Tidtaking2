@@ -108,6 +108,9 @@
     <h3>Registrer mål</h3>
     <button onclick="registrerMaal('hjemme')">+ LHK</button>
     <button onclick="registrerMaal('borte')">+ Bortelag</button>
+    <button onclick="registrerStraffemal('hjemme')">+ Straffe LHK</button>
+    <button onclick="registrerStraffemal('borte')">+ Straffe Bortelag</button>
+
   </div>
 
   <div class="section">
@@ -518,6 +521,27 @@ async function registrerMaal(lag) {
   hentKampData();
 }
 
+async function registrerStraffemal(lag) {
+  const spillerNavn = valgtSpiller ? `${valgtSpiller.drakt} ${valgtSpiller.navn}` : "Ukjent";
+
+  await client.from("maal").insert({
+    kamp_id: aktivKampId,
+    spiller: spillerNavn,
+    lag,
+    type: "straffe" // valgfritt – krever at `maal`-tabellen har en `type`-kolonne
+  });
+
+  await client
+    .from("kamp")
+    .update({
+      [lag === "hjemme" ? "hjemmescore" : "bortescore"]: kampData[lag === "hjemme" ? "hjemmescore" : "bortescore"] + 1,
+      oppdatert: new Date().toISOString()
+    })
+    .eq("id", aktivKampId);
+
+  await loggHendelse("straffe", lag); // 👈 Ny type her
+  hentKampData();
+}
 
 
 async function registrerKort(lag, korttype) {
@@ -558,9 +582,10 @@ async function hentLogg() {
   (data || []).forEach(h => {
     const tidspunkt = h.kamptid || "--:--";
     let beskrivelse = h.type === "kort" ? (h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort") :
-                      h.type === "timeout" ? "⏱ Timeout" :
-                      h.type === "utvisning" ? "🚨 Utvisning" :
-                      h.type === "maal" ? "🎯 Mål" : "";
+                  h.type === "timeout" ? "⏱ Timeout" :
+                  h.type === "utvisning" ? "🚨 Utvisning" :
+                  h.type === "straffe" ? "⚡ Straffemål" :
+                  h.type === "maal" ? "🎯 Mål" : "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" class="hendelse-sjekkboks" data-id="${h.id}"></td>
