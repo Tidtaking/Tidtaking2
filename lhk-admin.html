@@ -585,16 +585,28 @@ async function registrerUtvisning(lag) {
 
 
 async function hentLogg() {
-  const { data } = await client.from("hendelse").select("*").eq("kamp_id", aktivKampId).order("tidspunkt");
+  const { data, error } = await client
+    .from("hendelse")
+    .select("id, type, spiller, lag, kamptid, korttype, tidspunkt")
+    .eq("kamp_id", aktivKampId)
+    .order("tidspunkt");
+
+  if (error) {
+    console.error("Feil ved henting av hendelser:", error);
+    return;
+  }
+
   const tbody = document.getElementById("hendelseslogg");
   tbody.innerHTML = "";
+
   (data || []).forEach(h => {
     const tidspunkt = h.kamptid || "--:--";
     let beskrivelse = h.type === "kort" ? (h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort") :
-                  h.type === "timeout" ? "⏱ Timeout" :
-                  h.type === "utvisning" ? "🚨 Utvisning" :
-                  h.type === "straffe" ? "⚡ Straffemål" :
-                  h.type === "maal" ? "🎯 Mål" : "";
+                      h.type === "timeout" ? "⏱ Timeout" :
+                      h.type === "utvisning" ? "🚨 Utvisning" :
+                      h.type === "straffe" ? "⚡ Straffemål" :
+                      h.type === "maal" ? "🎯 Mål" : "";
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" class="hendelse-sjekkboks" data-id="${h.id}"></td>
@@ -605,7 +617,7 @@ async function hentLogg() {
     `;
     tbody.appendChild(tr);
   });
-} // 👈 denne linjen manglet!
+}
 
 
 async function slettValgteHendelser() {
@@ -617,7 +629,8 @@ async function slettValgteHendelser() {
     return;
   }
 
-  // Hent de valgte hendelsene
+  console.log("Sletter hendelser med ID:", idListe);
+
   const { data: hendelser, error: hentError } = await client
     .from("hendelse")
     .select("*")
@@ -629,24 +642,22 @@ async function slettValgteHendelser() {
     return;
   }
 
-  // Tell opp mål per lag
-  const maalHjemme = hendelser.filter(h => h.type === "maal" && h.lag === "hjemme").length;
-  const maalBorte = hendelser.filter(h => h.type === "maal" && h.lag === "borte").length;
+  const maalHjemme = hendelser.filter(h => (h.type === "maal" || h.type === "straffe") && h.lag === "hjemme").length;
+  const maalBorte = hendelser.filter(h => (h.type === "maal" || h.type === "straffe") && h.lag === "borte").length;
 
-  // Oppdater score i kamp-tabellen hvis nødvendig
-if (maalHjemme || maalBorte) {
-  await client.from("kamp").update({
-    hjemmescore: kampData.hjemmescore - maalHjemme,
-    bortescore: kampData.bortescore - maalBorte,
-    oppdatert: new Date().toISOString()
-  }).eq("id", aktivKampId);
-}
+  // Oppdater score
+  if (maalHjemme || maalBorte) {
+    await client.from("kamp").update({
+      hjemmescore: kampData.hjemmescore - maalHjemme,
+      bortescore: kampData.bortescore - maalBorte,
+      oppdatert: new Date().toISOString()
+    }).eq("id", aktivKampId);
+  }
 
-
-  // Slett fra maal-tabellen hvis det er mål som slettes
+  // Slett fra maal-tabellen
   const maalSpillere = hendelser
-    .filter(h => h.type === "maal")
-    .map(h => h.spiller); // vi antar spiller + kamp_id er unikt
+    .filter(h => h.type === "maal" || h.type === "straffe")
+    .map(h => h.spiller);
 
   for (const spiller of maalSpillere) {
     await client
@@ -656,16 +667,18 @@ if (maalHjemme || maalBorte) {
       .eq("spiller", spiller);
   }
 
-  // Slett hendelser
-  const { error } = await client.from("hendelse").delete().in("id", idListe);
-  if (error) {
+  // Slett fra hendelse-tabellen
+  const { error: slettError } = await client.from("hendelse").delete().in("id", idListe);
+  if (slettError) {
     alert("Feil ved sletting av hendelser");
-    console.error(error);
+    console.error(slettError);
   } else {
+    console.log("Slettet hendelser:", idListe);
     await hentKampData();
     await hentLogg();
   }
 }
+
 
 async function velgKamp() {
   aktivKampId = document.getElementById("kampSelect").value;
