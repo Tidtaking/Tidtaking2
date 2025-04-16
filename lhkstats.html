@@ -66,15 +66,18 @@
 
   <table>
     <thead>
-      <tr>
-        <th>Spiller</th>
-        <th>Mål (totalt)</th>
-        <th>Mål / kamp</th>
-        <th>Utvisninger</th>
-        <th>Gule kort</th>
-        <th>Røde kort</th>
-      </tr>
-    </thead>
+  <tr>
+    <th>Spiller</th>
+    <th>Mål (vanlig)</th>
+    <th>Straffemål</th>
+    <th>Totalt</th>
+    <th>Mål / kamp</th>
+    <th>Utvisninger</th>
+    <th>Gule kort</th>
+    <th>Røde kort</th>
+  </tr>
+</thead>
+
     <tbody id="statistikkBody"></tbody>
   </table>
 
@@ -109,9 +112,10 @@
       (data || []).forEach(h => {
         if (!h.spiller) return;
         if (!stats[h.spiller]) {
-          stats[h.spiller] = { maal: 0, kamper: new Set(), utvisning: 0, gult: 0, rodt: 0 };
+  stats[h.spiller] = { maal: 0, straffe: 0, kamper: new Set(), utvisning: 0, gult: 0, rodt: 0 };
         }
         if (h.type === "maal") stats[h.spiller].maal++;
+        if (h.type === "straffe") stats[h.spiller].straffe++;
         if (h.type === "utvisning") stats[h.spiller].utvisning++;
         if (h.type === "kort" && h.korttype === "gult") stats[h.spiller].gult++;
         if (h.type === "kort" && h.korttype === "rødt") stats[h.spiller].rodt++;
@@ -122,13 +126,16 @@
       tbody.innerHTML = "";
       Object.entries(stats).forEach(([spiller, stat]) => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${spiller}</td>
-          <td>${stat.maal}</td>
-          <td>${(stat.maal / stat.kamper.size).toFixed(2)}</td>
-          <td>${stat.utvisning}</td>
-          <td>${stat.gult}</td>
-          <td>${stat.rodt}</td>
+const totalt = stat.maal + stat.straffe;
+tr.innerHTML = `
+  <td>${spiller}</td>
+  <td>${stat.maal}</td>
+  <td>${stat.straffe}</td>
+  <td>${totalt}</td>
+  <td>${(totalt / stat.kamper.size).toFixed(2)}</td>
+  <td>${stat.utvisning}</td>
+  <td>${stat.gult}</td>
+  <td>${stat.rodt}</td>
         `;
         tbody.appendChild(tr);
       });
