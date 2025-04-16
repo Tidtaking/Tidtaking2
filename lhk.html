@@ -101,11 +101,14 @@
 .on("postgres_changes", {
   event: "*",
   schema: "public",
-  table: "hendelse",
-  filter: `kamp_id=eq.${aktivKampId}`
-}, async () => {
-  await hentHendelser(); // 👈 oppdater kun hendelser
+  table: "hendelse"
+}, async (payload) => {
+  // Bare reager hvis det gjelder aktiv kamp
+  if (payload.new?.kamp_id === aktivKampId || payload.old?.kamp_id === aktivKampId) {
+    await hentHendelser();
+  }
 })
+
 
         .on("postgres_changes", {
           event: "*",
