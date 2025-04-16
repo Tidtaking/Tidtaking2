@@ -100,6 +100,7 @@
   <div id="importSpillereContainer" style="display: none; margin-top: 0.5rem;">
     <select id="kampImportVelger"></select>
     <button onclick="importerSpillereFraKamp()">Importer</button>
+    <button onclick="hentStandardSpillere()">📥 Hent spillere fra Supabase</button>
   </div>
 </div>
 
@@ -200,6 +201,35 @@ async function importerSpillereFraKamp() {
   }));
 
   lagSpillerKnapper();
+}
+async function hentStandardSpillere() {
+  const { data, error } = await client
+    .from("spiller")
+    .select("*")
+    .order("drakt", { ascending: true })
+    .order("id", { ascending: false }); // sikrer at høyeste id kommer først
+
+  if (error || !data) {
+    alert("Kunne ikke hente spillere fra Supabase.");
+    console.error(error);
+    return;
+  }
+
+  // Fjern duplikater basert på draktnummer (behold den første med høyest id)
+  const unikeSpillere = [];
+  const sett = new Set();
+
+  for (const s of data) {
+    if (!sett.has(s.drakt)) {
+      unikeSpillere.push({ drakt: s.drakt, navn: s.navn });
+      sett.add(s.drakt);
+    }
+  }
+
+  // Lagre lokalt for neste kamp
+  localStorage.setItem("forrigeSpillere", JSON.stringify(unikeSpillere));
+
+  alert("Spillere hentet og lagret for neste kamp!");
 }
 
 async function lagSpillerKnapper() {
