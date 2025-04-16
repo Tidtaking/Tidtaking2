@@ -96,7 +96,7 @@
     <div class="spiller-valg" id="spillereContainer"></div>
   </div>
 <div style="margin-top: 1rem;">
-  <button onclick="hentStandardSpillere()">📥 Hent spillere fra Supabase</button>
+  <button onclick="hentGlobaleSpillere()">📥 Hent spillere fra Supabase</button>
   <button onclick="visImportSpillere()">📥 Hent spillere fra annen kamp</button>
   <div id="importSpillereContainer" style="display: none; margin-top: 0.5rem;">
     <select id="kampImportVelger"></select>
@@ -202,33 +202,38 @@ async function importerSpillereFraKamp() {
 
   lagSpillerKnapper();
 }
-async function hentStandardSpillere() {
+async function hentGlobaleSpillere() {
   const { data, error } = await client
     .from("spiller")
     .select("*")
-    .is("kamp_id", null) // Hent kun "globale" spillere
-    .order("id", { ascending: false });
+    .is("kamp_id", null)
+    .order("drakt");
 
-  if (error || !data) {
-    alert("Kunne ikke hente standardspillere fra Supabase.");
+  if (error) {
+    alert("Feil ved henting av spillere fra Supabase");
     console.error(error);
     return;
   }
 
-  // Fjern duplikater basert på draktnummer (behold nyeste)
-  const unikeSpillere = [];
-  const bruktDrakt = new Set();
-
-  for (const s of data) {
-    if (!bruktDrakt.has(s.drakt)) {
-      bruktDrakt.add(s.drakt);
-      unikeSpillere.push({ kamp_id: aktivKampId, drakt: s.drakt, navn: s.navn });
-    }
+  if (!aktivKampId) {
+    alert("Ingen aktiv kamp valgt");
+    return;
   }
 
-  spillere = unikeSpillere;
+  // Kopier til aktiv kamp
+  const spillereMedKamp = data.map(s => ({
+    kamp_id: aktivKampId,
+    drakt: s.drakt,
+    navn: s.navn
+  }));
+
+  await client.from("spiller").delete().eq("kamp_id", aktivKampId);
+  await client.from("spiller").insert(spillereMedKamp);
+  alert("Globale spillere hentet og lagt til aktiv kamp");
+
   lagSpillerKnapper();
 }
+
 
 
 async function lagSpillerKnapper() {
