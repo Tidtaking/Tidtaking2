@@ -420,12 +420,21 @@ async function visSpillerKnapper() {
 
 
 function velgSpiller(spiller) {
-  valgtSpiller = spiller;
+  if (valgtSpiller && valgtSpiller.drakt === spiller.drakt && valgtSpiller.navn === spiller.navn) {
+    // Trykket på samme spiller: fjern markering
+    valgtSpiller = null;
+  } else {
+    valgtSpiller = spiller;
+  }
+
   document.querySelectorAll("#spillereContainer button").forEach(btn => {
     btn.classList.remove("aktiv");
-    if (btn.textContent.startsWith(`${spiller.drakt} `)) btn.classList.add("aktiv");
+    if (valgtSpiller && btn.textContent.startsWith(`${valgtSpiller.drakt} `)) {
+      btn.classList.add("aktiv");
+    }
   });
 }
+
 
 function kampTidspunktTekst() {
   if (!kampData) return "--:--";
