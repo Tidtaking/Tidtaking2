@@ -98,14 +98,15 @@
         }, async () => {
           await hentData();
         })
-        .on("postgres_changes", {
-          event: "*",
-          schema: "public",
-          table: "hendelse",
-          filter: `kamp_id=eq.${aktivKampId}`
-        }, async () => {
-          await hentData();
-        })
+.on("postgres_changes", {
+  event: "*",
+  schema: "public",
+  table: "hendelse",
+  filter: `kamp_id=eq.${aktivKampId}`
+}, async () => {
+  await hentHendelser(); // 👈 oppdater kun hendelser
+})
+
         .on("postgres_changes", {
           event: "*",
           schema: "public",
