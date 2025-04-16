@@ -94,12 +94,6 @@
         kampSelect.appendChild(opt);
       });
     }
-// sorteringsfunksjon (eksempel for mål)
-Object.entries(stats)
-  .sort((a, b) => b[1].maal - a[1].maal) // Sorter synkende på mål
-  .forEach(([spiller, stat]) => {
-    ...
-  });
 
     async function hentData() {
       const kampId = document.getElementById("kampFilter").value;
