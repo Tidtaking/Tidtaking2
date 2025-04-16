@@ -211,15 +211,19 @@ async function velgKamp() {
         let beskrivelse = "";
 
         if (h.type === "maal") {
-          beskrivelse = "🎯 Mål";
-          h.lag === "hjemme" ? hjem++ : bort++;
-        } else if (h.type === "kort") {
-          beskrivelse = h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort";
-        } else if (h.type === "timeout") {
-          beskrivelse = "⏱ Timeout";
-        } else if (h.type === "utvisning") {
-          beskrivelse = "🚨 Utvisning";
-        }
+  beskrivelse = "🎯 Mål";
+  h.lag === "hjemme" ? hjem++ : bort++;
+} else if (h.type === "straffe") {
+  beskrivelse = "⚡ Straffemål";
+  h.lag === "hjemme" ? hjem++ : bort++;
+} else if (h.type === "kort") {
+  beskrivelse = h.korttype === "rødt" ? "🟥 Rødt kort" : "🟨 Gult kort";
+} else if (h.type === "timeout") {
+  beskrivelse = "⏱ Timeout";
+} else if (h.type === "utvisning") {
+  beskrivelse = "🚨 Utvisning";
+}
+
 
         const tr = document.createElement("tr");
         if (h.lag === "hjemme") tr.classList.add("lhk-mål");
