@@ -65,7 +65,7 @@
       rettKnappContainer.appendChild(knapp);
     });
 
-    const generator = await pipeline('text-generation', 'Xenova/gpt2');
+    const generator = await pipeline('text-generation', 'NbAiLab/nb-gpt2');
 
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
