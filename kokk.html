@@ -16,16 +16,7 @@
     <!-- Heatmap -->
     <section class="mb-6">
       <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <button class="bg-yellow-100 hover:bg-yellow-200 p-4 rounded shadow" onclick="chooseDish('Lasagne')">Lasagne</button>
-        <button class="bg-red-100 hover:bg-red-200 p-4 rounded shadow" onclick="chooseDish('Tikka Masala')">Tikka Masala</button>
-        <button class="bg-green-100 hover:bg-green-200 p-4 rounded shadow" onclick="chooseDish('Vegetarwok')">Vegetarwok</button>
-        <button class="bg-blue-100 hover:bg-blue-200 p-4 rounded shadow" onclick="chooseDish('Fiskesuppe')">Fiskesuppe</button>
-        <button class="bg-pink-100 hover:bg-pink-200 p-4 rounded shadow" onclick="chooseDish('Ramen')">Ramen</button>
-        <button class="bg-purple-100 hover:bg-purple-200 p-4 rounded shadow" onclick="chooseDish('Pasta Carbonara')">Carbonara</button>
-        <button class="bg-orange-100 hover:bg-orange-200 p-4 rounded shadow" onclick="chooseDish('Biff med bearnaise')">Biff & Bearnaise</button>
-        <button class="bg-teal-100 hover:bg-teal-200 p-4 rounded shadow" onclick="chooseDish('Kyllingsalat')">Kyllingsalat</button>
-      </div>
+      <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </section>
 
     <!-- Chatboks -->
@@ -48,6 +39,33 @@
   </main>
 
   <script>
+    const ukedagsRetter = {
+      0: ['Fiskekaker', 'Ertestuing', 'Hjemmelaget pizza', 'Chili sin carne'],
+      1: ['Lasagne', 'Caprese-salat', 'Spaghetti bolognese', 'Vegetarwok'],
+      2: ['Tikka Masala', 'Kyllingsuppe', 'Fiskesuppe', 'Linsesalat'],
+      3: ['Ramen', 'Pho', 'Kylling teriyaki', 'Sushi bowl'],
+      4: ['Pasta Carbonara', 'Risotto', 'Grønnsakscurry', 'Pulled pork'],
+      5: ['Biff med bearnaise', 'Gnocchi', 'Indisk dhal', 'Poke bowl'],
+      6: ['Kyllingsalat', 'Tortillalefser', 'Kremet pastasalat', 'Burger']
+    };
+
+    const farger = [
+      'yellow', 'red', 'green', 'blue', 'pink', 'purple', 'orange', 'teal'
+    ];
+
+    const rettKnappContainer = document.getElementById('rettKnappContainer');
+    const iDag = new Date().getDay();
+    const dagensRetter = ukedagsRetter[iDag] || [];
+
+    dagensRetter.forEach((rett, index) => {
+      const color = farger[index % farger.length];
+      const knapp = document.createElement('button');
+      knapp.textContent = rett;
+      knapp.className = `bg-${color}-100 hover:bg-${color}-200 p-4 rounded shadow`;
+      knapp.onclick = () => chooseDish(rett);
+      rettKnappContainer.appendChild(knapp);
+    });
+
     async function sendMessage() {
       const input = document.getElementById('userInput');
       const chatbox = document.getElementById('chatbox');
@@ -75,8 +93,10 @@
           },
           body: JSON.stringify({
             model: 'gpt-4',
-            messages: [{ role: 'system', content: 'Du er en erfaren fransk gourmetkokk som svarer på matlagingsspørsmål.' },
-                      { role: 'user', content: userMessage }],
+            messages: [
+              { role: 'system', content: 'Du er en erfaren fransk gourmetkokk som svarer på matlagingsspørsmål.' },
+              { role: 'user', content: userMessage }
+            ],
             temperature: 0.7
           })
         });
