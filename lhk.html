@@ -147,21 +147,23 @@ async function velgKamp() {
       await hentHendelser();
     }
 
-    function visKlokke() {
+   function visKlokke() {
   if (klokkeInterval) clearInterval(klokkeInterval);
   const visning = document.getElementById("klokke");
 
   klokkeInterval = setInterval(async () => {
+    if (!aktivKampId) return;
+
+    await hentKampData(); // ← viktig for å få oppdatert omgangslengde
+
     if (!kampData) return;
-
-    await hentKampData(); // 👈 henter oppdatert omgangslengde
-
     const start = new Date(kampData.start_tid).getTime();
     const nå = Date.now();
     let brukt = kampData.tid_brukt;
     if (!kampData.er_paused) {
       brukt += Math.floor((nå - start) / 1000);
     }
+
     const total = kampData.omgang_lengde || 1200;
     const gjenstående = Math.max(0, total - brukt);
     const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
@@ -169,7 +171,7 @@ async function velgKamp() {
     visning.textContent = `${min}:${sek}`;
   }, 1000);
 }
-}
+
     async function hentUtvisninger() {
       const { data } = await client
         .from("utvisning")
