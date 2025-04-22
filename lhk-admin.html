@@ -131,7 +131,7 @@
     <div>🕒 Omgang: <span id="omgangVisning">1</span></div>
     <div class="klokke">⏱️ <span id="klokkeVisning">--:--</span></div>
     <label>
-      Lengde (min): <input type="number" id="omgang_lengde" value="20" style="width: 60px" />
+      Lengde (min): <input type="number" id="omgangLengde" value="20" style="width: 60px" />
     </label>
     <div>
       <button onclick="startPauseKamp()">▶️ Start / Pause</button>
@@ -831,7 +831,7 @@ async function opprettKamp() {
 async function startPauseKamp() {
   if (!kampData) return;
 
-  const omgangLengdeSekunder = parseInt(document.getElementById("omgang_lengde").value, 10) * 60;
+  const omgangLengdeSekunder = parseInt(document.getElementById("omgangLengde").value, 10) * 60;
 
   const nå = new Date();
   if (kampData.er_paused) {
