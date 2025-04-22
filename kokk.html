@@ -61,11 +61,11 @@
       const knapp = document.createElement('button');
       knapp.textContent = rett;
       knapp.className = `bg-${color}-100 hover:bg-${color}-200 p-4 rounded shadow`;
-      knapp.onclick = () => chooseDish(rett);
+      knapp.onclick = () => window.chooseDish(rett);
       rettKnappContainer.appendChild(knapp);
     });
 
-    const generator = await pipeline('text-generation', 'NbAiLab/nb-gpt2');
+    const generator = await pipeline('text-generation', 'Xenova/nb-gpt2');
 
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
