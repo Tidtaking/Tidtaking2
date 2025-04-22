@@ -85,14 +85,16 @@
 
       try {
         const result = await generator(userMessage);
-        const reply = result && result[0] && result[0].output ? result[0].output : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
+        console.log('Modellresultat:', result);
+
+        const reply = result && result[0] && (result[0].output || result[0].generated_text) ? (result[0].output || result[0].generated_text) : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
         recipeText.textContent = reply;
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
       } catch (error) {
         recipeText.textContent = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
-        console.error(error);
+        console.error('Feil under generering:', error);
       }
     }
 
