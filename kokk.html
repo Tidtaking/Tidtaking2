@@ -84,7 +84,8 @@
       responseSection.classList.remove('hidden');
 
       try {
-        const result = await generator(userMessage);
+        const prompt = `answer the following culinary question in detail:\n${userMessage}`;
+        const result = await generator(prompt);
         console.log('Modellresultat:', result);
 
         const reply = result && result[0] && (result[0].output || result[0].generated_text) ? (result[0].output || result[0].generated_text) : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
