@@ -65,7 +65,21 @@
       rettKnappContainer.appendChild(knapp);
     });
 
-    const generator = await pipeline('text-generation', 'Xenova/nb-gpt2');
+    const generator = await pipeline('text-generation', 'Xenova/gpt2');
+
+    async function translateToEnglish(text) {
+      const translations = {
+        'Hvordan lager jeg lasagne?': 'How do I make lasagna?',
+        'Hvordan lager jeg kyllingsuppe?': 'How do I make chicken soup?',
+        'Hvordan lager jeg pizza?': 'How do I make pizza?',
+      };
+      return translations[text] || text;
+    }
+
+    async function translateToNorwegian(text) {
+      // enkel fjerning av "prompt" fra GPT2 som starter med input
+      return text.replace(/^.*?\n/, '').trim();
+    }
 
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
@@ -84,14 +98,13 @@
       responseSection.classList.remove('hidden');
 
       try {
-        const prompt = userMessage;
+        const prompt = await translateToEnglish(userMessage);
         const result = await generator(prompt, { max_new_tokens: 100 });
-        console.log('Modellresultat:', result);
-
         const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
+        const norskSvar = await translateToNorwegian(reply);
 
-        recipeText.textContent = reply;
-        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
+        recipeText.textContent = norskSvar;
+        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${norskSvar}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
       } catch (error) {
         recipeText.textContent = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
