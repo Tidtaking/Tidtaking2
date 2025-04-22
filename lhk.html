@@ -148,23 +148,27 @@ async function velgKamp() {
     }
 
     function visKlokke() {
-      if (klokkeInterval) clearInterval(klokkeInterval);
-      const visning = document.getElementById("klokke");
+  if (klokkeInterval) clearInterval(klokkeInterval);
+  const visning = document.getElementById("klokke");
 
-      function oppdater() {
-        if (!kampData) return;
-        const start = new Date(kampData.start_tid).getTime();
-        const nå = Date.now();
-        let brukt = kampData.tid_brukt;
-        if (!kampData.er_paused) {
-          brukt += Math.floor((nå - start) / 1000);
-        }
-        const total = kampData.omgang_lengde || 1200;
-        const gjenstående = Math.max(0, total - brukt);
-        const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
-        const sek = (gjenstående % 60).toString().padStart(2, "0");
-        visning.textContent = `${min}:${sek}`;
-      }
+  klokkeInterval = setInterval(async () => {
+    if (!kampData) return;
+
+    await hentKampData(); // 👈 henter oppdatert omgangslengde
+
+    const start = new Date(kampData.start_tid).getTime();
+    const nå = Date.now();
+    let brukt = kampData.tid_brukt;
+    if (!kampData.er_paused) {
+      brukt += Math.floor((nå - start) / 1000);
+    }
+    const total = kampData.omgang_lengde || 1200;
+    const gjenstående = Math.max(0, total - brukt);
+    const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
+    const sek = (gjenstående % 60).toString().padStart(2, "0");
+    visning.textContent = `${min}:${sek}`;
+  }, 1000);
+}
 
       oppdater();
       klokkeInterval = setInterval(oppdater, 1000);
