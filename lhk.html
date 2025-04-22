@@ -170,10 +170,6 @@ async function velgKamp() {
   }, 1000);
 }
 
-      oppdater();
-      klokkeInterval = setInterval(oppdater, 1000);
-    }
-
     async function hentUtvisninger() {
       const { data } = await client
         .from("utvisning")
