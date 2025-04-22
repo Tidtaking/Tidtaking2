@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Virtuell Gourmetkokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/dist/transformers.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans">
   <header class="bg-white shadow p-4 flex items-center justify-between">
@@ -28,7 +27,7 @@
     <!-- Inndata -->
     <div class="mt-4 flex">
       <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
-      <button onclick="sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
+      <button onclick="window.sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
     </div>
 
     <!-- Resultatvisning -->
@@ -38,7 +37,9 @@
     </section>
   </main>
 
-  <script>
+  <script type="module">
+    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
+
     const ukedagsRetter = {
       0: ['Fiskekaker', 'Ertestuing', 'Hjemmelaget pizza', 'Chili sin carne'],
       1: ['Lasagne', 'Caprese-salat', 'Spaghetti bolognese', 'Vegetarwok'],
@@ -64,8 +65,9 @@
       rettKnappContainer.appendChild(knapp);
     });
 
-    let pipeline;
-    async function sendMessage() {
+    const generator = await pipeline('text2text-generation', 'Xenova/flan-t5-small');
+
+    window.sendMessage = async function () {
       const input = document.getElementById('userInput');
       const chatbox = document.getElementById('chatbox');
       const responseSection = document.getElementById('responseSection');
@@ -82,11 +84,7 @@
       responseSection.classList.remove('hidden');
 
       try {
-        if (!pipeline) {
-          pipeline = await window.transformers.pipeline('text2text-generation', 'Xenova/flan-t5-small');
-        }
-
-        const result = await pipeline(userMessage);
+        const result = await generator(userMessage);
         const reply = result[0].generated_text;
 
         recipeText.textContent = reply;
@@ -98,9 +96,9 @@
       }
     }
 
-    function chooseDish(dishName) {
+    window.chooseDish = function (dishName) {
       document.getElementById('userInput').value = `Hvordan lager jeg ${dishName}?`;
-      sendMessage();
+      window.sendMessage();
     }
   </script>
 </body>
