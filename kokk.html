@@ -85,7 +85,7 @@
 
       try {
         const result = await generator(userMessage);
-        const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
+        const reply = result && result[0] && result[0].output ? result[0].output : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
         recipeText.textContent = reply;
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
