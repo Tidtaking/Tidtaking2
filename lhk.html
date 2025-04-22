@@ -147,30 +147,40 @@ async function velgKamp() {
       await hentHendelser();
     }
 
-   function visKlokke() {
+  function visKlokke() {
   if (klokkeInterval) clearInterval(klokkeInterval);
   const visning = document.getElementById("klokke");
 
   klokkeInterval = setInterval(async () => {
     if (!aktivKampId) return;
 
-    await hentKampData(); // ← viktig for å få oppdatert omgangslengde
+    // Hent kampdata for å fange opp eventuell ny omgangslengde
+    const { data } = await client
+      .from("kamp")
+      .select("*")
+      .eq("id", aktivKampId)
+      .single();
+    if (data) kampData = data;
 
     if (!kampData) return;
-    const start = new Date(kampData.start_tid).getTime();
+
+    const start = kampData.start_tid ? new Date(kampData.start_tid).getTime() : null;
     const nå = Date.now();
-    let brukt = kampData.tid_brukt;
-    if (!kampData.er_paused) {
+    let brukt = kampData.tid_brukt || 0;
+
+    if (!kampData.er_paused && start) {
       brukt += Math.floor((nå - start) / 1000);
     }
 
-    const total = kampData.omgang_lengde || 1200;
+    const total = kampData.omgangs_lengde || 1200; // allerede i sekunder
     const gjenstående = Math.max(0, total - brukt);
+
     const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
     const sek = (gjenstående % 60).toString().padStart(2, "0");
     visning.textContent = `${min}:${sek}`;
   }, 1000);
 }
+
 
     async function hentUtvisninger() {
       const { data } = await client
