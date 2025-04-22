@@ -83,10 +83,10 @@
 
       try {
         if (!pipeline) {
-          pipeline = await window.transformers.pipeline('text-generation', 'Xenova/phi-1_5');
+          pipeline = await window.transformers.pipeline('text2text-generation', 'Xenova/flan-t5-small');
         }
 
-        const result = await pipeline(userMessage, { max_new_tokens: 100 });
+        const result = await pipeline(userMessage);
         const reply = result[0].generated_text;
 
         recipeText.textContent = reply;
