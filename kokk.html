@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtuell Gourmetkokk</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+  <header class="bg-white shadow p-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
+    <p class="text-sm text-gray-500">Spør meg om mat, oppskrifter og teknikker!</p>
+  </header>
+
+  <main class="max-w-4xl mx-auto mt-6 p-4">
+    <!-- Chatboks -->
+    <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
+      <div class="text-gray-500">Hei! Jeg er din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
+    </div>
+
+    <!-- Inndata -->
+    <div class="mt-4 flex">
+      <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
+      <button onclick="sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
+    </div>
+
+    <!-- Resultatvisning -->
+    <section id="responseSection" class="mt-6 hidden">
+      <h2 class="text-xl font-semibold mb-2">Svar fra Kokken:</h2>
+      <div id="recipeText" class="bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
+      <div id="videoContainer" class="mt-4"></div>
+    </section>
+  </main>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const chatbox = document.getElementById('chatbox');
+      const responseSection = document.getElementById('responseSection');
+      const recipeText = document.getElementById('recipeText');
+      const videoContainer = document.getElementById('videoContainer');
+
+      const userMessage = input.value.trim();
+      if (!userMessage) return;
+
+      chatbox.innerHTML += `<div class='mt-2'><strong>Du:</strong> ${userMessage}</div>`;
+      input.value = '';
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+      recipeText.textContent = 'Kokken tenker ...';
+      responseSection.classList.remove('hidden');
+      videoContainer.innerHTML = '';
+
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer YOUR_API_KEY'
+          },
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [{ role: 'system', content: 'Du er en erfaren fransk gourmetkokk som svarer på matlagingsspørsmål.' },
+                      { role: 'user', content: userMessage }],
+            temperature: 0.7
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.choices[0].message.content;
+
+        recipeText.textContent = reply;
+        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+        // Enkel heuristikk: legg til video om spørsmålet handler om "carbonara"
+        if (userMessage.toLowerCase().includes('carbonara')) {
+          videoContainer.innerHTML = `
+            <iframe width="100%" height="315" class="rounded shadow"
+              src="https://www.youtube.com/embed/3AAdKl1UYZs"
+              title="Carbonara-video" frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen>
+            </iframe>`;
+        }
+
+      } catch (error) {
+        recipeText.textContent = 'Beklager, noe gikk galt med kokkens kommunikasjon. Prøv igjen senere.';
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>
