@@ -84,7 +84,7 @@
       responseSection.classList.remove('hidden');
 
       try {
-        const prompt = `answer the following culinary question in detail:\n${userMessage}`;
+        const prompt = `question: ${userMessage}\nanswer:`;
         const result = await generator(prompt);
         console.log('Modellresultat:', result);
 
