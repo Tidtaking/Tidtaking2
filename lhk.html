@@ -306,11 +306,14 @@ setInterval(() => {
 }, 5000);
 
 async function hentKampData() {
-  const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
-  if (data) {
-    kampData = data;
-  }
+  const { data } = await client
+    .from("kamp")
+    .select("*")
+    .eq("id", aktivKampId)
+    .single();
+  if (data) kampData = data;
 }
+
 
   </script>
 </body>
