@@ -13,6 +13,21 @@
   </header>
 
   <main class="max-w-4xl mx-auto mt-6 p-4">
+    <!-- Heatmap -->
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button class="bg-yellow-100 hover:bg-yellow-200 p-4 rounded shadow" onclick="chooseDish('Lasagne')">Lasagne</button>
+        <button class="bg-red-100 hover:bg-red-200 p-4 rounded shadow" onclick="chooseDish('Tikka Masala')">Tikka Masala</button>
+        <button class="bg-green-100 hover:bg-green-200 p-4 rounded shadow" onclick="chooseDish('Vegetarwok')">Vegetarwok</button>
+        <button class="bg-blue-100 hover:bg-blue-200 p-4 rounded shadow" onclick="chooseDish('Fiskesuppe')">Fiskesuppe</button>
+        <button class="bg-pink-100 hover:bg-pink-200 p-4 rounded shadow" onclick="chooseDish('Ramen')">Ramen</button>
+        <button class="bg-purple-100 hover:bg-purple-200 p-4 rounded shadow" onclick="chooseDish('Pasta Carbonara')">Carbonara</button>
+        <button class="bg-orange-100 hover:bg-orange-200 p-4 rounded shadow" onclick="chooseDish('Biff med bearnaise')">Biff & Bearnaise</button>
+        <button class="bg-teal-100 hover:bg-teal-200 p-4 rounded shadow" onclick="chooseDish('Kyllingsalat')">Kyllingsalat</button>
+      </div>
+    </section>
+
     <!-- Chatboks -->
     <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
       <div class="text-gray-500">Hei! Jeg er din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
@@ -73,7 +88,6 @@
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
 
-        // Enkel heuristikk: legg til video om spørsmålet handler om "carbonara"
         if (userMessage.toLowerCase().includes('carbonara')) {
           videoContainer.innerHTML = `
             <iframe width="100%" height="315" class="rounded shadow"
@@ -88,6 +102,11 @@
         recipeText.textContent = 'Beklager, noe gikk galt med kokkens kommunikasjon. Prøv igjen senere.';
         console.error(error);
       }
+    }
+
+    function chooseDish(dishName) {
+      document.getElementById('userInput').value = `Hvordan lager jeg ${dishName}?`;
+      sendMessage();
     }
   </script>
 </body>
