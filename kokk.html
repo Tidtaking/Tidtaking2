@@ -80,12 +80,12 @@
       input.value = '';
       chatbox.scrollTop = chatbox.scrollHeight;
 
-      recipeText.textContent = 'Kokken tenker ...';
+      recipeText.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-2 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Kokken tenker ...</div>';
       responseSection.classList.remove('hidden');
 
       try {
         const result = await generator(userMessage);
-        const reply = result[0].generated_text;
+        const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
         recipeText.textContent = reply;
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
