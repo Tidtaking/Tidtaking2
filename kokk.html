@@ -65,7 +65,7 @@
       rettKnappContainer.appendChild(knapp);
     });
 
-    const generator = await pipeline('text2text-generation', 'Xenova/flan-t5-small');
+    const generator = await pipeline('text-generation', 'Xenova/gpt2');
 
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
@@ -84,11 +84,11 @@
       responseSection.classList.remove('hidden');
 
       try {
-        const prompt = `question: ${userMessage}\nanswer:`;
-        const result = await generator(prompt);
+        const prompt = userMessage;
+        const result = await generator(prompt, { max_new_tokens: 100 });
         console.log('Modellresultat:', result);
 
-        const reply = result && result[0] && (result[0].output || result[0].generated_text) ? (result[0].output || result[0].generated_text) : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
+        const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
         recipeText.textContent = reply;
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${reply}</div>`;
