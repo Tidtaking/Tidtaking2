@@ -298,6 +298,20 @@ setInterval(() => {
   if (kampData) hentUtvisninger();
 }, 1000);
     lastKamper();
+      // Oppdater kampData hvert 5. sekund for å få med ny omgangslengde
+setInterval(() => {
+  if (aktivKampId) {
+    hentKampData();
+  }
+}, 5000);
+
+async function hentKampData() {
+  const { data } = await client.from("kamp").select("*").eq("id", aktivKampId).single();
+  if (data) {
+    kampData = data;
+  }
+}
+
   </script>
 </body>
 </html>
