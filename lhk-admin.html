@@ -830,11 +830,15 @@ async function opprettKamp() {
 
 async function startPauseKamp() {
   if (!kampData) return;
+
+  const omgangLengdeSekunder = parseInt(document.getElementById("omgangLengde").value, 10) * 60;
+
   const nå = new Date();
   if (kampData.er_paused) {
     await client.from("kamp").update({
       er_paused: false,
       start_tid: nå.toISOString(),
+      omgangs_lengde: omgangLengdeSekunder,
       oppdatert: nå.toISOString()
     }).eq("id", aktivKampId);
   } else {
@@ -843,11 +847,13 @@ async function startPauseKamp() {
       er_paused: true,
       tid_brukt: kampData.tid_brukt + ekstraTid,
       start_tid: null,
+      omgangs_lengde: omgangLengdeSekunder,
       oppdatert: nå.toISOString()
     }).eq("id", aktivKampId);
   }
   await hentKampData();
 }
+
 
 async function hentAlleKamper() {
   const { data, error } = await client.from("kamp").select("*").order("opprettet", { ascending: false });
