@@ -172,7 +172,7 @@ async function velgKamp() {
       brukt += Math.floor((nå - start) / 1000);
     }
 
-    const total = kampData.omgangs_lengde || 1200; // allerede i sekunder
+    const total = kampData.omgang_lengde || 1200; // allerede i sekunder
     const gjenstående = Math.max(0, total - brukt);
 
     const min = Math.floor(gjenstående / 60).toString().padStart(2, "0");
