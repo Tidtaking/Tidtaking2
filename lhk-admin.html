@@ -137,6 +137,7 @@
       <button onclick="startPauseKamp()">▶️ Start / Pause</button>
       <button onclick="nyOmgang()">🔁 Ny omgang</button>
       <button onclick="nullstillTid()">🛑 Nullstill tid</button>
+      <button onclick="nullstillOmgang()">🔄 Nullstill omgang</button>
     </div>
   </div>
 
@@ -913,6 +914,15 @@ async function nullstillTid() {
   }).eq("id", aktivKampId);
   await hentKampData();
 }
+    async function nullstillOmgang() {
+  if (!kampData) return;
+  await client.from("kamp").update({
+    omgang: 1, // eller 0, hvis du ønsker å starte helt på nytt
+    oppdatert: new Date().toISOString()
+  }).eq("id", aktivKampId);
+  await hentKampData();
+}
+
 
 
 // Start alt
