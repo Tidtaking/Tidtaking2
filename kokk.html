@@ -69,15 +69,15 @@
 
     async function translateToEnglish(text) {
       const translations = {
-        'Hvordan lager jeg lasagne?': 'How do I make lasagna?',
-        'Hvordan lager jeg kyllingsuppe?': 'How do I make chicken soup?',
-        'Hvordan lager jeg pizza?': 'How do I make pizza?',
+        'Hvordan lager jeg lasagne?': 'lasagna',
+        'Hvordan lager jeg kyllingsuppe?': 'chicken soup',
+        'Hvordan lager jeg pizza?': 'pizza',
+        'Hvordan lager jeg fiskesuppe?': 'fish soup'
       };
-      return translations[text] || text;
+      return translations[text.toLowerCase()] || text;
     }
 
     async function translateToNorwegian(text) {
-      // enkel fjerning av "prompt" fra GPT2 som starter med input
       return text.replace(/^.*?\n/, '').trim();
     }
 
@@ -98,8 +98,10 @@
       responseSection.classList.remove('hidden');
 
       try {
-        const prompt = await translateToEnglish(userMessage);
-        const result = await generator(prompt, { max_new_tokens: 100 });
+        const englishDish = await translateToEnglish(userMessage);
+        const prompt = `Recipe for ${englishDish}:
+`;
+        const result = await generator(prompt, { max_new_tokens: 120 });
         const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
         const norskSvar = await translateToNorwegian(reply);
 
