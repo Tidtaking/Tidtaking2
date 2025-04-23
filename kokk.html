@@ -1,34 +1,58 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Morten´s kokkehjørnet</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtuell Gourmetkokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    #morten {
+      width: 160px;
+      height: auto;
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+    }
+    #morten.speaking {
+      animation: bounce 1s infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans">
+  <img id="morten" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2dqaTcwZ3ZldjNkbWJjNXRuY3g5dmxlMmFzeHloZmF5YXY4M3Y0dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/MPdtmZCcNdyBO/giphy.gif" alt="Kokk Morten">
+
+  <!-- Resten av koden starter her -->
   <header class="bg-white shadow p-4 flex items-center justify-between">
     <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
-    <p class="text-sm text-gray-500">Spør meg om mat, oppskrifter og teknikker!</p>
+    <p class="text-sm text-gray-500">Spør Morten om mat, oppskrifter og teknikker!</p>
   </header>
 
   <main class="max-w-4xl mx-auto mt-6 p-4">
+    <!-- Heatmap -->
     <section class="mb-6">
       <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
       <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </section>
 
+    <!-- Chatboks -->
     <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
-      <div class="text-gray-500">Hei! Jeg er din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
+      <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
     </div>
 
+    <!-- Inndata -->
     <div class="mt-4 flex">
       <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
       <button onclick="window.sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
     </div>
 
+    <!-- Resultatvisning -->
     <section id="responseSection" class="mt-6 hidden">
-      <h2 class="text-xl font-semibold mb-2">Svar fra Kokken:</h2>
+      <h2 class="text-xl font-semibold mb-2">Svar fra Morten:</h2>
       <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
       <div id="videoSuggestion" class="mt-4 hidden">
         <h3 class="font-semibold text-lg mb-2">Video:</h3>
@@ -37,95 +61,7 @@
     </section>
   </main>
 
-  <script type="module">
-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0';
-
-    const ukedagsRetter = {
-      0: ['Fiskekaker', 'Ertestuing', 'Hjemmelaget pizza', 'Chili sin carne'],
-      1: ['Lasagne', 'Caprese-salat', 'Spaghetti bolognese', 'Vegetarwok'],
-      2: ['Tikka Masala', 'Kyllingsuppe', 'Fiskesuppe', 'Linsesalat'],
-      3: ['Ramen', 'Pho', 'Kylling teriyaki', 'Sushi bowl'],
-      4: ['Pasta Carbonara', 'Risotto', 'Grønnsakscurry', 'Pulled pork'],
-      5: ['Biff med bearnaise', 'Gnocchi', 'Indisk dhal', 'Poke bowl'],
-      6: ['Kyllingsalat', 'Tortillalefser', 'Kremet pastasalat', 'Burger']
-    };
-
-    const fallbackRecipes = {
-      'ramen': `Ingredienser:
-- 2 pakker ramen-nudler
-- 1 liter kyllingkraft
-- 2 egg
-- 1 ss soyasaus
-- Vårløk, sopp, spinat, mais eller annet tilbehør etter ønske
-
-Fremgangsmåte:
-1. Kok eggene i 7 minutter, avkjøl og skrell.
-2. Varm opp kyllingkraft med soyasaus.
-3. Tilsett nudlene og kok etter anvisning.
-4. Hell alt i en bolle og topp med egg og ønsket tilbehør.`,
-
-      'kyllingsuppe': `Ingredienser:
-- 1 løk, hakket
-- 2 gulrøtter, i skiver
-- 2 kyllingfileter, i biter
-- 1 liter hønsebuljong
-- Salt, pepper, urter
-
-Fremgangsmåte:
-1. Fres løk og gulrot i olje.
-2. Tilsett kylling og brun lett.
-3. Hell over buljong og kok i 15–20 minutter.
-4. Smak til og server varm.`
-    };
-
-    const videoMap = {
-      'kyllingsuppe': 'https://www.youtube.com/embed/dh_f1bKQg9Q',
-      'lasagne': 'https://www.youtube.com/embed/FxH2nOGB4Sg',
-      'fiskesuppe': 'https://www.youtube.com/embed/j8B9lflM8C8',
-      'pizza': 'https://www.youtube.com/embed/17Sfr-pqUNg',
-      'ramen': 'https://www.youtube.com/embed/d2l1O6mY8eE'
-    };
-
-    const farger = ['yellow', 'red', 'green', 'blue', 'pink', 'purple', 'orange', 'teal'];
-
-    const rettKnappContainer = document.getElementById('rettKnappContainer');
-    const iDag = new Date().getDay();
-    const dagensRetter = ukedagsRetter[iDag] || [];
-
-    dagensRetter.forEach((rett, index) => {
-      const color = farger[index % farger.length];
-      const knapp = document.createElement('button');
-      knapp.textContent = rett;
-      knapp.className = `bg-${color}-100 hover:bg-${color}-200 p-4 rounded shadow`;
-      knapp.onclick = () => window.chooseDish(rett);
-      rettKnappContainer.appendChild(knapp);
-    });
-
-    const generator = await pipeline('text-generation', 'Xenova/gpt2');
-
-    function formatAsRecipe(text) {
-      const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line);
-      let formatted = '';
-      lines.forEach(line => {
-        if (/^\d+\./.test(line) || /^- /.test(line)) {
-          formatted += `<li>${line}</li>`;
-        } else {
-          formatted += `<p class='mb-2'>${line}</p>`;
-        }
-      });
-      return formatted;
-    }
-
-    async function translateToEnglish(dish) {
-      const oversettelser = {
-        'kyllingsuppe': 'chicken soup',
-        'fiskesuppe': 'fish soup',
-        'lasagne': 'lasagna',
-        'pizza': 'pizza',
-        'ramen': 'ramen'
-      };
-      return oversettelser[dish.toLowerCase()] || dish;
-    }
+  <script>$1
 
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
@@ -142,41 +78,23 @@ Fremgangsmåte:
       input.value = '';
       chatbox.scrollTop = chatbox.scrollHeight;
 
-      recipeText.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-2 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Kokken tenker ...</div>';
+      recipeText.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-2 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Morten tenker ...</div>';
       responseSection.classList.remove('hidden');
+      mortenSnakker(true);
 
-      const rett = userMessage.toLowerCase().replace('hvordan lager jeg', '').replace('?', '').trim();
-
-      if (fallbackRecipes[rett]) {
-        recipeText.innerHTML = formatAsRecipe(fallbackRecipes[rett]);
-        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong><br/>${formatAsRecipe(fallbackRecipes[rett])}</div>`;
-      } else {
-        try {
-          const englishDish = await translateToEnglish(rett);
-          const prompt = `Recipe for ${englishDish} (ingredients and instructions):\n`;
-          const result = await generator(prompt, { max_new_tokens: 150 });
-          const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
-
-          recipeText.innerHTML = formatAsRecipe(reply);
-          chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong><br/>${formatAsRecipe(reply)}</div>`;
-        } catch (error) {
-          recipeText.innerHTML = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
-          console.error('Feil under generering:', error);
-        }
-      }
-
-      if (videoMap[rett]) {
-        videoFrame.src = videoMap[rett];
-        videoDiv.classList.remove('hidden');
-      } else {
-        videoDiv.classList.add('hidden');
+      try {
+        // AI-kall skal inn her (eventuelt fallback)
+        setTimeout(() => {
+          recipeText.innerHTML = '<p>Her er en oppskrift på noe godt!</p>';
+          chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>Her er en oppskrift på noe godt!</div>`;
+          mortenSnakker(false);
+        }, 2000);
+      } catch (error) {
+        recipeText.innerHTML = 'Beklager, noe gikk galt med Morten sin tenkning. Prøv igjen senere.';
+        mortenSnakker(false);
+        console.error('Feil under generering:', error);
       }
     }
 
-    window.chooseDish = function (dishName) {
-      document.getElementById('userInput').value = `Hvordan lager jeg ${dishName}?`;
-      window.sendMessage();
-    }
-  </script>
 </body>
 </html>
