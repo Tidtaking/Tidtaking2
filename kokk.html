@@ -61,20 +61,17 @@
 
   <script type="module">
     function mortenSnakker(på) {
-  const morten = document.getElementById('morten');
-  const boble = document.getElementById('snakkeboble');
-  if (!morten || !boble) return;
-  if (på) {
-    morten.classList.add('speaking');
-    boble.textContent = 'Morten tenker ...';
-    boble.classList.remove('hidden');
-  } else {
-    morten.classList.remove('speaking');
-    boble.classList.add('hidden');
-    boble.textContent = '';
-  }
-} else {
+      const morten = document.getElementById('morten');
+      const boble = document.getElementById('snakkeboble');
+      if (!morten || !boble) return;
+      if (på) {
+        morten.classList.add('speaking');
+        boble.textContent = 'Morten tenker ...';
+        boble.classList.remove('hidden');
+      } else {
         morten.classList.remove('speaking');
+        boble.classList.add('hidden');
+        boble.textContent = '';
       }
     }
 
@@ -114,9 +111,8 @@
                      .replace(/Serve/gi, 'Server')
                      .replace(/minutes/gi, 'minutter');
 
-recipeText.innerHTML = `<p>${reply.replace(/\n/g, '<br>')}</p>`;
-        document.getElementById('snakkeboble').textContent = reply.split('
-')[0];
+        recipeText.innerHTML = `<p>${reply.replace(/\n/g, '<br>')}</p>`;
+        document.getElementById('snakkeboble').textContent = reply.split('\n')[0];
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>${reply.replace(/\n/g, '<br>')}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
         mortenSnakker(false);
