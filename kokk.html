@@ -13,27 +13,23 @@
   </header>
 
   <main class="max-w-4xl mx-auto mt-6 p-4">
-    <!-- Heatmap -->
     <section class="mb-6">
       <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
       <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </section>
 
-    <!-- Chatboks -->
     <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
       <div class="text-gray-500">Hei! Jeg er din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
     </div>
 
-    <!-- Inndata -->
     <div class="mt-4 flex">
       <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
       <button onclick="window.sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
     </div>
 
-    <!-- Resultatvisning -->
     <section id="responseSection" class="mt-6 hidden">
       <h2 class="text-xl font-semibold mb-2">Svar fra Kokken:</h2>
-      <div id="recipeText" class="bg-white p-4 rounded shadow whitespace-pre-wrap"></div>
+      <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
     </section>
   </main>
 
@@ -77,8 +73,17 @@
       return translations[text.toLowerCase()] || text;
     }
 
-    async function translateToNorwegian(text) {
-      return text.replace(/^.*?\n/, '').trim();
+    function formatAsRecipe(text) {
+      const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line);
+      let formatted = '';
+      lines.forEach(line => {
+        if (/^\d+\./.test(line) || /^- /.test(line)) {
+          formatted += `<li>${line}</li>`;
+        } else {
+          formatted += `<p class='mb-2'>${line}</p>`;
+        }
+      });
+      return formatted;
     }
 
     window.sendMessage = async function () {
@@ -99,17 +104,17 @@
 
       try {
         const englishDish = await translateToEnglish(userMessage);
-        const prompt = `Recipe for ${englishDish}:
-`;
-        const result = await generator(prompt, { max_new_tokens: 120 });
+        const prompt = `Recipe for ${englishDish} (ingredients and instructions):\n`;
+        const result = await generator(prompt, { max_new_tokens: 150 });
         const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
-        const norskSvar = await translateToNorwegian(reply);
 
-        recipeText.textContent = norskSvar;
-        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong> ${norskSvar}</div>`;
+        const content = formatAsRecipe(reply);
+        recipeText.innerHTML = content;
+
+        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong><br/>${content}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
       } catch (error) {
-        recipeText.textContent = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
+        recipeText.innerHTML = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
         console.error('Feil under generering:', error);
       }
     }
