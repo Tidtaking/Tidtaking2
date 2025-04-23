@@ -23,8 +23,11 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-900 font-sans">
-  <img id="morten" src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2dqaTcwZ3ZldjNkbWJjNXRuY3g5dmxlMmFzeHloZmF5YXY4M3Y0dyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/MPdtmZCcNdyBO/giphy.gif" alt="Kokk Morten">
+<body class="bg-cover bg-center text-gray-900 font-sans" style="background-image: url('https://images.unsplash.com/photo-1556911073-52527ac437f5?auto=format&fit=crop&w=1950&q=80')">
+  <div class="absolute bottom-20 left-4 flex items-end gap-2">
+  <div id="snakkeboble" class="hidden bg-white text-gray-900 px-3 py-2 rounded-lg shadow text-sm max-w-xs">Jeg tenker ...</div>
+  <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten" />
+</div>
 
   <header class="bg-white shadow p-4 flex items-center justify-between">
     <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
@@ -58,11 +61,19 @@
 
   <script type="module">
     function mortenSnakker(på) {
-      const morten = document.getElementById('morten');
-      if (!morten) return;
-      if (på) {
-        morten.classList.add('speaking');
-      } else {
+  const morten = document.getElementById('morten');
+  const boble = document.getElementById('snakkeboble');
+  if (!morten || !boble) return;
+  if (på) {
+    morten.classList.add('speaking');
+    boble.textContent = 'Morten tenker ...';
+    boble.classList.remove('hidden');
+  } else {
+    morten.classList.remove('speaking');
+    boble.classList.add('hidden');
+    boble.textContent = '';
+  }
+} else {
         morten.classList.remove('speaking');
       }
     }
@@ -90,7 +101,7 @@
         const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
         const generator = await pipeline('text-generation', 'Xenova/gpt2');
         const rett = userMessage.replace('Hvordan lager jeg', '').replace('?', '').trim();
-        const prompt = `Give a detailed and realistic recipe for ${rett}, including a list of ingredients and clear step-by-step instructions.`;
+        const prompt = `Write a complete recipe for ${rett}. Include ingredients and step-by-step instructions. Do not mention any links or downloads. Just give the full recipe.`;
         const result = await generator(prompt, { max_new_tokens: 150 });
         let reply = result[0]?.generated_text || 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
@@ -103,7 +114,10 @@
                      .replace(/Serve/gi, 'Server')
                      .replace(/minutes/gi, 'minutter');
 
-        recipeText.innerHTML = `<p>${reply.replace(/\n/g, '<br>')}</p>`;
+        recipeText.innerHTML = `<p>${reply.replace(/
+/g, '<br>')}</p>`;
+        document.getElementById('snakkeboble').textContent = reply.split('
+')[0];
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>${reply.replace(/\n/g, '<br>')}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
         mortenSnakker(false);
