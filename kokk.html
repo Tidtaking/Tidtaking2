@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Virtuell Gourmetkokk</title>
+  <title>Morten´s kokkehjørnet</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans">
@@ -30,6 +30,10 @@
     <section id="responseSection" class="mt-6 hidden">
       <h2 class="text-xl font-semibold mb-2">Svar fra Kokken:</h2>
       <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
+      <div id="videoSuggestion" class="mt-4 hidden">
+        <h3 class="font-semibold text-lg mb-2">Video:</h3>
+        <iframe id="youtubeFrame" class="w-full aspect-video rounded shadow" src="" frameborder="0" allowfullscreen></iframe>
+      </div>
     </section>
   </main>
 
@@ -44,6 +48,42 @@
       4: ['Pasta Carbonara', 'Risotto', 'Grønnsakscurry', 'Pulled pork'],
       5: ['Biff med bearnaise', 'Gnocchi', 'Indisk dhal', 'Poke bowl'],
       6: ['Kyllingsalat', 'Tortillalefser', 'Kremet pastasalat', 'Burger']
+    };
+
+    const fallbackRecipes = {
+      'ramen': `Ingredienser:
+- 2 pakker ramen-nudler
+- 1 liter kyllingkraft
+- 2 egg
+- 1 ss soyasaus
+- Vårløk, sopp, spinat, mais eller annet tilbehør etter ønske
+
+Fremgangsmåte:
+1. Kok eggene i 7 minutter, avkjøl og skrell.
+2. Varm opp kyllingkraft med soyasaus.
+3. Tilsett nudlene og kok etter anvisning.
+4. Hell alt i en bolle og topp med egg og ønsket tilbehør.`,
+
+      'kyllingsuppe': `Ingredienser:
+- 1 løk, hakket
+- 2 gulrøtter, i skiver
+- 2 kyllingfileter, i biter
+- 1 liter hønsebuljong
+- Salt, pepper, urter
+
+Fremgangsmåte:
+1. Fres løk og gulrot i olje.
+2. Tilsett kylling og brun lett.
+3. Hell over buljong og kok i 15–20 minutter.
+4. Smak til og server varm.`
+    };
+
+    const videoMap = {
+      'kyllingsuppe': 'https://www.youtube.com/embed/dh_f1bKQg9Q',
+      'lasagne': 'https://www.youtube.com/embed/FxH2nOGB4Sg',
+      'fiskesuppe': 'https://www.youtube.com/embed/j8B9lflM8C8',
+      'pizza': 'https://www.youtube.com/embed/17Sfr-pqUNg',
+      'ramen': 'https://www.youtube.com/embed/1pZ2H7Cjsdk'
     };
 
     const farger = ['yellow', 'red', 'green', 'blue', 'pink', 'purple', 'orange', 'teal'];
@@ -63,16 +103,6 @@
 
     const generator = await pipeline('text-generation', 'Xenova/gpt2');
 
-    async function translateToEnglish(text) {
-      const translations = {
-        'Hvordan lager jeg lasagne?': 'lasagna',
-        'Hvordan lager jeg kyllingsuppe?': 'chicken soup',
-        'Hvordan lager jeg pizza?': 'pizza',
-        'Hvordan lager jeg fiskesuppe?': 'fish soup'
-      };
-      return translations[text.toLowerCase()] || text;
-    }
-
     function formatAsRecipe(text) {
       const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line);
       let formatted = '';
@@ -86,11 +116,24 @@
       return formatted;
     }
 
+    async function translateToEnglish(dish) {
+      const oversettelser = {
+        'kyllingsuppe': 'chicken soup',
+        'fiskesuppe': 'fish soup',
+        'lasagne': 'lasagna',
+        'pizza': 'pizza',
+        'ramen': 'ramen'
+      };
+      return oversettelser[dish.toLowerCase()] || dish;
+    }
+
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
       const chatbox = document.getElementById('chatbox');
       const responseSection = document.getElementById('responseSection');
       const recipeText = document.getElementById('recipeText');
+      const videoDiv = document.getElementById('videoSuggestion');
+      const videoFrame = document.getElementById('youtubeFrame');
 
       const userMessage = input.value.trim();
       if (!userMessage) return;
@@ -102,20 +145,31 @@
       recipeText.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-2 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Kokken tenker ...</div>';
       responseSection.classList.remove('hidden');
 
-      try {
-        const englishDish = await translateToEnglish(userMessage);
-        const prompt = `Recipe for ${englishDish} (ingredients and instructions):\n`;
-        const result = await generator(prompt, { max_new_tokens: 150 });
-        const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
+      const rett = userMessage.toLowerCase().replace('hvordan lager jeg', '').replace('?', '').trim();
 
-        const content = formatAsRecipe(reply);
-        recipeText.innerHTML = content;
+      if (fallbackRecipes[rett]) {
+        recipeText.innerHTML = formatAsRecipe(fallbackRecipes[rett]);
+        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong><br/>${formatAsRecipe(fallbackRecipes[rett])}</div>`;
+      } else {
+        try {
+          const englishDish = await translateToEnglish(rett);
+          const prompt = `Recipe for ${englishDish} (ingredients and instructions):\n`;
+          const result = await generator(prompt, { max_new_tokens: 150 });
+          const reply = result && result[0] && result[0].generated_text ? result[0].generated_text : 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
-        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong><br/>${content}</div>`;
-        chatbox.scrollTop = chatbox.scrollHeight;
-      } catch (error) {
-        recipeText.innerHTML = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
-        console.error('Feil under generering:', error);
+          recipeText.innerHTML = formatAsRecipe(reply);
+          chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Kokken:</strong><br/>${formatAsRecipe(reply)}</div>`;
+        } catch (error) {
+          recipeText.innerHTML = 'Beklager, noe gikk galt med kokkens tenkning. Prøv igjen senere.';
+          console.error('Feil under generering:', error);
+        }
+      }
+
+      if (videoMap[rett]) {
+        videoFrame.src = videoMap[rett];
+        videoDiv.classList.remove('hidden');
+      } else {
+        videoDiv.classList.add('hidden');
       }
     }
 
