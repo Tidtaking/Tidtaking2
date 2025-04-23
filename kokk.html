@@ -61,7 +61,7 @@
     </section>
   </main>
 
-  <script>$1
+  <script>
 
     window.sendMessage = async function () {
       const input = document.getElementById('userInput');
@@ -83,12 +83,32 @@
       mortenSnakker(true);
 
       try {
-        // AI-kall skal inn her (eventuelt fallback)
-        setTimeout(() => {
-          recipeText.innerHTML = '<p>Her er en oppskrift på noe godt!</p>';
-          chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>Her er en oppskrift på noe godt!</div>`;
-          mortenSnakker(false);
-        }, 2000);
+        import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0').then(async ({ pipeline }) => {
+  const generator = await pipeline('text-generation', 'Xenova/gpt2');
+  const prompt = `Recipe for ${userMessage.replace('Hvordan lager jeg ', '').replace('?', '').trim()} (ingredients and instructions):`;
+  const result = await generator(prompt, { max_new_tokens: 150 });
+  let reply = result[0]?.generated_text || 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
+
+          // Automatisk "oversettelse" (forenklet)
+          reply = reply.replace(/Ingredients/g, 'Ingredienser')
+                       .replace(/Instructions/g, 'Fremgangsmåte')
+                       .replace(/Add/g, 'Tilsett')
+                       .replace(/Mix/g, 'Bland')
+                       .replace(/Cook/g, 'Kok')
+                       .replace(/Boil/g, 'Kok opp')
+                       .replace(/Serve/g, 'Server')
+                       .replace(/minutes/g, 'minutter');
+  recipeText.innerHTML = `<p>${reply.replace(/
+/g, '<br>')}</p>`;
+  chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>${reply.replace(/
+/g, '<br>')}</div>`;
+  chatbox.scrollTop = chatbox.scrollHeight;
+  mortenSnakker(false);
+}).catch(error => {
+  recipeText.innerHTML = 'Beklager, noe gikk galt med Morten sin tenkning. Prøv igjen senere.';
+  mortenSnakker(false);
+  console.error('Feil under generering:', error);
+});
       } catch (error) {
         recipeText.innerHTML = 'Beklager, noe gikk galt med Morten sin tenkning. Prøv igjen senere.';
         mortenSnakker(false);
