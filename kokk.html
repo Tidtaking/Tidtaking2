@@ -23,7 +23,7 @@
     }
   </style>
 </head>
-<body class="bg-cover bg-center text-gray-900 font-sans" style="background-image: url('https://images.unsplash.com/photo-1556911073-52527ac437f5?auto=format&fit=crop&w=1950&q=80')">
+<body class="bg-cover bg-center text-gray-900 font-sans" style="background-image: url('https://images.unsplash.com/photo-1605479729116-3a5f3e979ba9?auto=format&fit=crop&w=1950&q=80')">
   <div class="absolute bottom-20 left-4 flex items-end gap-2">
   <div id="snakkeboble" class="hidden bg-white text-gray-900 px-3 py-2 rounded-lg shadow text-sm max-w-xs">Jeg tenker ...</div>
   <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten" />
@@ -98,7 +98,7 @@
         const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
         const generator = await pipeline('text-generation', 'Xenova/gpt2');
         const rett = userMessage.replace('Hvordan lager jeg', '').replace('?', '').trim();
-        const prompt = `Write a complete recipe for ${rett}. Include ingredients and step-by-step instructions. Do not mention any links or downloads. Just give the full recipe.`;
+        const prompt = `Write a detailed recipe for ${rett}, including a list of ingredients and clear instructions. Avoid phrases like 'I hope you enjoy this recipe'.`;
         const result = await generator(prompt, { max_new_tokens: 150 });
         let reply = result[0]?.generated_text || 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
