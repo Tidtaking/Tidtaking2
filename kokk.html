@@ -6,8 +6,13 @@
   <title>Virtuell Gourmetkokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    body::before {
-      content: '';
+    /* Fullscreen kitchen background */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+    #background {
       position: fixed;
       top: 0;
       left: 0;
@@ -16,83 +21,102 @@
       background-image: url('https://images.unsplash.com/photo-1605479729116-3a5f3e979ba9?auto=format&fit=crop&w=1950&q=80');
       background-size: cover;
       background-position: center;
-      z-index: -1;
-      opacity: 0.8;
+      filter: brightness(0.7);
+      z-index: -10;
     }
-    }
-
-    #morten {
-      width: 160px;
-      height: auto;
+    /* Morten avatar */
+    #morten-container {
       position: fixed;
       bottom: 20px;
       left: 20px;
-      z-index: 10;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      z-index: 50;
     }
-    #morten.speaking {
+    #snakkeboble {
+      display: none;
+      background: rgba(255,255,255,0.9);
+      color: #222;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      max-width: 200px;
+      font-size: 0.9rem;
+    }
+    #morten {
+      width: 140px;
+      height: auto;
+    }
+    .speaking {
       animation: bounce 1s infinite;
     }
     @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
+      0%,100% { transform: translateY(0); }
       50% { transform: translateY(-5px); }
+    }
+    /* Content panel centered */
+    #panel {
+      position: relative;
+      max-width: 800px;
+      margin: 40px auto;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      z-index: 10;
     }
   </style>
 </head>
-<body class="text-gray-900 font-sans bg-transparent">
-  <div class="absolute bottom-20 left-4 flex items-end gap-2">
-    <div id="snakkeboble" class="hidden bg-white text-gray-900 px-3 py-2 rounded-lg shadow text-sm max-w-xs">Jeg tenker ...</div>
-    <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten" />
+<body>
+  <div id="background"></div>
+
+  <div id="morten-container">
+    <div id="snakkeboble">Jeg tenker ...</div>
+    <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten">
   </div>
 
-  <div class="bg-white bg-opacity-60 backdrop-blur-lg max-w-4xl mx-auto p-6 rounded-xl shadow-lg mt-6">
-    <header class="shadow p-4 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
-      <p class="text-sm text-gray-500">Spør Morten om mat, oppskrifter og teknikker!</p>
+  <div id="panel">
+    <header class="flex items-center justify-between mb-4">
+      <h1 class="text-3xl font-bold">🍳 Virtuell Gourmetkokk</h1>
+      <p class="text-gray-600">Spør Morten om mat, oppskrifter og teknikker!</p>
     </header>
-
-    <main class="mt-6">
-      <section class="mb-6">
-        <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
-        <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-      </section>
-
-      <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
-        <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
+      <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+    </section>
+    <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-64 overflow-y-auto mb-4">
+      <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
+    </div>
+    <div class="flex">
+      <input id="userInput" class="flex-1 p-2 border rounded-l-lg" placeholder="Hva vil du vite om matlaging?">
+      <button id="sendBtn" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
+    </div>
+    <section id="responseSection" class="mt-6 hidden">
+      <h2 class="text-xl font-semibold mb-2">Svar fra Morten:</h2>
+      <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
+      <div id="videoSuggestion" class="mt-4 hidden">
+        <h3 class="font-semibold text-lg mb-2">Video:</h3>
+        <iframe id="youtubeFrame" class="w-full aspect-video rounded shadow" src="" frameborder="0" allowfullscreen></iframe>
       </div>
-
-      <div class="mt-4 flex">
-        <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
-        <button onclick="window.sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
-      </div>
-
-      <section id="responseSection" class="mt-6 hidden">
-        <h2 class="text-xl font-semibold mb-2">Svar fra Morten:</h2>
-        <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
-        <div id="videoSuggestion" class="mt-4 hidden">
-          <h3 class="font-semibold text-lg mb-2">Video:</h3>
-          <iframe id="youtubeFrame" class="w-full aspect-video rounded shadow" src="" frameborder="0" allowfullscreen></iframe>
-        </div>
-      </section>
-    </main>
+    </section>
   </div>
 
   <script type="module">
     function mortenSnakker(på) {
       const morten = document.getElementById('morten');
       const boble = document.getElementById('snakkeboble');
-      if (!morten || !boble) return;
       if (på) {
         morten.classList.add('speaking');
-        boble.textContent = 'Morten tenker ...';
-        boble.classList.remove('hidden');
+        boble.style.display = 'block';
       } else {
         morten.classList.remove('speaking');
-        boble.classList.add('hidden');
-        boble.textContent = '';
+        boble.style.display = 'none';
       }
     }
 
-    window.sendMessage = async function () {
+    document.getElementById('sendBtn').addEventListener('click', window.sendMessage = async () => {
       const input = document.getElementById('userInput');
       const chatbox = document.getElementById('chatbox');
       const responseSection = document.getElementById('responseSection');
@@ -100,23 +124,19 @@
       const videoDiv = document.getElementById('videoSuggestion');
       const videoFrame = document.getElementById('youtubeFrame');
 
-      const userMessage = input.value.trim();
-      if (!userMessage) return;
-
+      const userMessage = input.value.trim(); if (!userMessage) return;
       chatbox.innerHTML += `<div class='mt-2'><strong>Du:</strong> ${userMessage}</div>`;
-      input.value = '';
-      chatbox.scrollTop = chatbox.scrollHeight;
+      input.value = ''; chatbox.scrollTop = chatbox.scrollHeight;
 
-      recipeText.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-2 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Morten tenker ...</div>';
-      responseSection.classList.remove('hidden');
-      mortenSnakker(true);
+      recipeText.innerHTML = '<div class="flex items-center"><svg class="animate-spin h-5 w-5 mr-2 text-green-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> Morten tenker ...</div>';
+      responseSection.classList.remove('hidden'); mortenSnakker(true);
 
       try {
         const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
         const generator = await pipeline('text-generation', 'Xenova/gpt2');
-        const rett = userMessage.replace('Hvordan lager jeg', '').replace('?', '').trim();
+        const rett = userMessage.replace(/Hvordan lager jeg/i,'').replace('?','').trim();
         const prompt = `Write a detailed recipe for ${rett}, including a list of ingredients and clear instructions. Avoid phrases like 'I hope you enjoy this recipe'.`;
-        const result = await generator(prompt, { max_new_tokens: 150 });
+        const result = await generator(prompt, { max_new_tokens: 200 });
         let reply = result[0]?.generated_text || 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
         reply = reply.replace(/Ingredients/gi, 'Ingredienser')
@@ -128,17 +148,18 @@
                      .replace(/Serve/gi, 'Server')
                      .replace(/minutes/gi, 'minutter');
 
-        recipeText.innerHTML = `<p>${reply.replace(/\n/g, '<br>')}</p>`;
+        recipeText.innerHTML = `<p>${reply.replace(/\n/g,'<br>')}</p>`;
         document.getElementById('snakkeboble').textContent = reply.split('\n')[0];
-        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>${reply.replace(/\n/g, '<br>')}</div>`;
-        chatbox.scrollTop = chatbox.scrollHeight;
+        chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>${reply.replace(/\n/g,'<br>')}</div>`;
+        chatbox.scrollTop = chatbox.scrollHeight; mortenSnakker(false);
+
+        // optional video suggestion logic here
+      } catch (e) {
+        recipeText.innerHTML = 'Beklager, noe gikk galt med Morten sin tenkning.';
         mortenSnakker(false);
-      } catch (error) {
-        recipeText.innerHTML = 'Beklager, noe gikk galt med Morten sin tenkning. Prøv igjen senere.';
-        mortenSnakker(false);
-        console.error('Feil under generering:', error);
+        console.error(e);
       }
-    }
+    });
   </script>
 </body>
 </html>
