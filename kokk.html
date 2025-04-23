@@ -114,8 +114,7 @@
                      .replace(/Serve/gi, 'Server')
                      .replace(/minutes/gi, 'minutter');
 
-        recipeText.innerHTML = `<p>${reply.replace(/
-/g, '<br>')}</p>`;
+recipeText.innerHTML = `<p>${reply.replace(/\n/g, '<br>')}</p>`;
         document.getElementById('snakkeboble').textContent = reply.split('
 ')[0];
         chatbox.innerHTML += `<div class='mt-2 text-green-700'><strong>Morten:</strong><br/>${reply.replace(/\n/g, '<br>')}</div>`;
