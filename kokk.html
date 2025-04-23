@@ -6,161 +6,88 @@
   <title>Virtuell Gourmetkokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    /* Fullscreen kitchen background */
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: url('https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=1950&q=80') center/cover no-repeat;
-      filter: brightness(0.6);
-      z-index: -1;
-    }
-    /* Foreground kitchen island bench */
-    body::after {
-      content: '';
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100vw;
-      height: 30vh;
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+    /* Bakgrunn: kjøkken interiør */
+    #background {
+      position: fixed; top:0; left:0; width:100%; height:100%;
       background: url('https://images.unsplash.com/photo-1598514981195-76cbd8f9a2bf?auto=format&fit=crop&w=1950&q=80') center/cover no-repeat;
-      z-index: 0;
+      filter: brightness(0.75);
+      z-index: -2;
     }
-    /* Centered panel */
+    /* Kjøkkenøy i forgrunn */
+    #island {
+      position: fixed; bottom:0; left:50%; transform:translateX(-50%);
+      width: 120%; max-height:40%; object-fit:cover;
+      z-index:-1;
+    }
+    /* Panel med innhold */
     #panel {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90%;
-      max-width: 600px;
-      max-height: 90%;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(10px);
-      border-radius: 12px;
-      box-shadow: 0 5px 30px rgba(0,0,0,0.5);
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
+      position:absolute; top:10%; left:50%; transform:translateX(-50%);
+      width:90%; max-width:600px; max-height:80%;
+      background:rgba(255,255,255,0.9); backdrop-filter:blur(8px);
+      border-radius:16px; padding:24px; box-shadow:0 8px 30px rgba(0,0,0,0.4);
+      display:flex; flex-direction:column;
     }
-    /* Morten avatar */
+    /* Morten-avatar */
     #morten-container {
-      position: absolute;
-      bottom: 24px;
-      right: 24px;
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      z-index: 10;
+      position: absolute; bottom: 50%; left:50%; transform:translate(-50%,50%);
+      display:flex; align-items:flex-end; gap:8px; z-index:10;
     }
-    #morten {
-      width: 120px;
-      height: auto;
-      pointer-events: none;
+    #morten { width:160px; pointer-events:none; }
+    .speaking { animation:bounce 1s infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);} }
+    #snakkeboble { display:none; background:rgba(255,255,255,0.9); padding:8px 12px;
+      border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.2); max-width:200px; font-size:0.9rem;
+      position:absolute; bottom:calc(50% + 170px); left:50%; transform:translateX(-50%);
     }
-    .speaking {
-      animation: bounce 1s infinite;
-    }
-    @keyframes bounce {
-      0%,100% { transform: translateY(0); }
-      50% { transform: translateY(-5px); }
-    }
-    #snakkeboble {
-      display: none;
-      background: rgba(255,255,255,0.9);
-      padding: 8px 12px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      max-width: 200px;
-      font-size: 0.9rem;
-    }
-    /* Scrollable chat */
-    #chatbox {
-      flex: 1;
-      overflow-y: auto;
-    }
+    /* Chat-område */
+    #chatbox { flex:1; overflow-y:auto; background:white; padding:16px; border-radius:8px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
+  <div id="background"></div>
+  <img id="island" src="https://images.unsplash.com/photo-1571075126347-6202958f2c25?auto=format&fit=crop&w=1950&q=80" alt="Kitchen Island">
+
   <div id="morten-container">
     <div id="snakkeboble">Morten tenker ...</div>
     <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten">
   </div>
 
   <div id="panel">
-    <header class="mb-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
-      <p class="text-sm text-gray-600">Spør Morten om mat, oppskrifter og teknikker!</p>
+    <header class="flex justify-between items-center mb-4">
+      <h1 class="text-3xl font-bold">🍳 Virtuell Gourmetkokk</h1>
+      <p class="text-gray-600">Spør Morten om mat, oppskrifter og teknikker!</p>
     </header>
-
-    <section class="mb-4">
+    <div class="mb-4">
       <h2 class="font-semibold mb-2">Dagens Retter</h2>
-      <div id="rettKnappContainer" class="grid grid-cols-2 gap-2"></div>
-    </section>
-
-    <div id="chatbox" class="bg-white rounded-lg shadow p-4 mb-4">
-      <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
+      <div id="rettKnappContainer" class="grid grid-cols-2 gap-2 mb-4"></div>
+      <div id="chatbox">
+        <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
+      </div>
     </div>
-
     <div class="flex mb-4">
       <input id="userInput" class="flex-1 p-2 border rounded-l-lg" placeholder="Hva vil du vite om matlaging?">
       <button id="sendBtn" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
     </div>
-
-    <section id="responseSection" class="hidden flex flex-col overflow-y-auto">
+    <div id="responseSection" class="hidden flex flex-col overflow-y-auto">
       <h2 class="font-semibold mb-2">Svar fra Morten:</h2>
-      <div id="recipeText" class="bg-white p-4 rounded shadow mb-4 max-h-40 overflow-y-auto"></div>
+      <div id="recipeText" class="bg-white p-4 rounded shadow mb-4 flex-1 overflow-y-auto"></div>
       <div id="videoSuggestion" class="hidden">
         <h3 class="font-semibold mb-2">Video:</h3>
         <iframe id="youtubeFrame" class="w-full aspect-video rounded shadow" src="" frameborder="0" allowfullscreen></iframe>
       </div>
-    </section>
+    </div>
   </div>
 
   <script type="module">
-    const ukedagsRetter = {0:['Lasagne','Pizza'],1:['Suppe','Salat'],2:['Taco','Pasta'],3:['Ramen','Burgere'],4:['Risotto','Curry'],5:['Grill','Dhal'],6:['Fiskegryte','Sandwich']};
-    const container = document.getElementById('rettKnappContainer');
-    (ukedagsRetter[new Date().getDay()]||[]).forEach(r=>{
-      const btn=document.createElement('button');
-      btn.textContent=r;
-      btn.className='bg-gray-200 p-2 rounded';
-      btn.onclick=()=>{document.getElementById('userInput').value=`Hvordan lager jeg ${r}?`; sendMessage();};
-      container.appendChild(btn);
-    });
+    const ukedagsRetter={0:['Ramen','Burgere'],1:['Lasagne','Salat'],2:['Taco','Pasta'],3:['Suppe','Sandwich'],4:['Risotto','Curry'],5:['Grill','Pizza'],6:['Dhal','Fiskegryte']};
+    const cont=document.getElementById('rettKnappContainer');(ukedagsRetter[new Date().getDay()]||[]).forEach(r=>{const b=document.createElement('button');b.textContent=r;b.className='bg-gray-200 p-2 rounded';b.onclick=()=>{document.getElementById('userInput').value=`Hvordan lager jeg ${r}?`;sendMessage();};cont.appendChild(b);});
 
-    function mortenSnakker(p){
-      const m=document.getElementById('morten'), b=document.getElementById('snakkeboble');
-      if(p){m.classList.add('speaking'); b.style.display='block';} else {m.classList.remove('speaking'); b.style.display='none';}
-    }
+    function mortenSnakker(p){const m=document.getElementById('morten'),b=document.getElementById('snakkeboble');if(p){m.classList.add('speaking');b.style.display='block';}else{m.classList.remove('speaking');b.style.display='none';}}
 
-    async function sendMessage(){
-      const inp=document.getElementById('userInput'), txt=inp.value.trim(); if(!txt) return;
-      const chat=document.getElementById('chatbox'); chat.innerHTML+=`<div class='mt-2'><strong>Du:</strong> ${txt}</div>`;
-      inp.value=''; chat.scrollTop=chat.scrollHeight;
-
-      const respSec=document.getElementById('responseSection'), recipe=document.getElementById('recipeText');
-      respSec.classList.remove('hidden'); recipe.innerHTML='<div>… Morten tenker …</div>'; mortenSnakker(true);
-
-      try{
-        const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
-        const gen=await pipeline('text-generation','Xenova/gpt2');
-        const dish=txt.replace(/Hvordan lager jeg/i,'').replace('?','').trim();
-        const prompt=`Write a detailed recipe for ${dish}, including ingredients and instructions. Avoid generic phrases.`;
-        const out=await gen(prompt,{max_new_tokens:200}); let rep=out[0]?.generated_text||'Beklager, ingen svar.';
-        rep=rep.replace(/Ingredients/gi,'Ingredienser').replace(/Instructions/gi,'Fremgangsmåte');
-
-        recipe.innerHTML=rep.replace(/\n/g,'<br>');
-        mortenSnakker(false);
-      }catch(e){recipe.innerHTML='Beklager, noe gikk galt.'; mortenSnakker(false); console.error(e);}    }
+    async function sendMessage(){const inp=document.getElementById('userInput'),txt=inp.value.trim();if(!txt)return;const chat=document.getElementById('chatbox');chat.innerHTML+=`<div class='mt-2'><strong>Du:</strong> ${txt}</div>`;inp.value='';chat.scrollTop=chat.scrollHeight;const resp=document.getElementById('responseSection'),rec=document.getElementById('recipeText');resp.classList.remove('hidden');rec.innerHTML='<div>… Morten tenker …</div>';mortenSnakker(true);
+      try{const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');const gen=await pipeline('text-generation','Xenova/gpt2');const d=txt.replace(/Hvordan lager jeg/i,'').replace('?','').trim();const prompt=`Write a detailed recipe for ${d}, including ingredients and instructions. Avoid generic phrases.`;const out=await gen(prompt,{max_new_tokens:200});let rep=out[0]?.generated_text||'Beklager, ingen svar.';rep=rep.replace(/Ingredients/gi,'Ingredienser').replace(/Instructions/gi,'Fremgangsmåte');rec.innerHTML=rep.replace(/
+/g,'<br>');chat.scrollTop=chat.scrollHeight;mortenSnakker(false);}catch(e){rec.innerHTML='Beklager, noe gikk galt.';mortenSnakker(false);console.error(e);} }
     document.getElementById('sendBtn').onclick=sendMessage;
   </script>
 </body>
