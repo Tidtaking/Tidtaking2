@@ -90,7 +90,7 @@
         const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
         const generator = await pipeline('text-generation', 'Xenova/gpt2');
         const rett = userMessage.replace('Hvordan lager jeg', '').replace('?', '').trim();
-        const prompt = `Recipe for ${rett} (ingredients and instructions):`;
+        const prompt = `Give a detailed and realistic recipe for ${rett}, including a list of ingredients and clear step-by-step instructions.`;
         const result = await generator(prompt, { max_new_tokens: 150 });
         let reply = result[0]?.generated_text || 'Beklager, jeg klarte ikke å lage et svar akkurat nå.';
 
