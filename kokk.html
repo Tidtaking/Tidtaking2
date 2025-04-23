@@ -6,6 +6,20 @@
   <title>Virtuell Gourmetkokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('https://images.unsplash.com/photo-1605479729116-3a5f3e979ba9?auto=format&fit=crop&w=1950&q=80');
+      background-size: cover;
+      background-position: center;
+      z-index: -1;
+      opacity: 0.5;
+    }
+
     #morten {
       width: 160px;
       height: auto;
@@ -23,41 +37,43 @@
     }
   </style>
 </head>
-<body class="bg-cover bg-center text-gray-900 font-sans" style="background-image: url('https://images.unsplash.com/photo-1605479729116-3a5f3e979ba9?auto=format&fit=crop&w=1950&q=80')">
+<body class="text-gray-900 font-sans bg-transparent">
   <div class="absolute bottom-20 left-4 flex items-end gap-2">
-  <div id="snakkeboble" class="hidden bg-white text-gray-900 px-3 py-2 rounded-lg shadow text-sm max-w-xs">Jeg tenker ...</div>
-  <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten" />
-</div>
+    <div id="snakkeboble" class="hidden bg-white text-gray-900 px-3 py-2 rounded-lg shadow text-sm max-w-xs">Jeg tenker ...</div>
+    <img id="morten" src="https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif" alt="Kokk Morten" />
+  </div>
 
-  <header class="bg-white shadow p-4 flex items-center justify-between">
-    <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
-    <p class="text-sm text-gray-500">Spør Morten om mat, oppskrifter og teknikker!</p>
-  </header>
+  <div class="bg-white bg-opacity-90 max-w-4xl mx-auto p-4 rounded-xl shadow mt-6">
+    <header class="shadow p-4 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">🍳 Virtuell Gourmetkokk</h1>
+      <p class="text-sm text-gray-500">Spør Morten om mat, oppskrifter og teknikker!</p>
+    </header>
 
-  <main class="max-w-4xl mx-auto mt-6 p-4">
-    <section class="mb-6">
-      <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
-      <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    </section>
+    <main class="mt-6">
+      <section class="mb-6">
+        <h2 class="text-xl font-semibold mb-2">Dagens Retter</h2>
+        <div id="rettKnappContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </section>
 
-    <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
-      <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
-    </div>
-
-    <div class="mt-4 flex">
-      <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
-      <button onclick="window.sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
-    </div>
-
-    <section id="responseSection" class="mt-6 hidden">
-      <h2 class="text-xl font-semibold mb-2">Svar fra Morten:</h2>
-      <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
-      <div id="videoSuggestion" class="mt-4 hidden">
-        <h3 class="font-semibold text-lg mb-2">Video:</h3>
-        <iframe id="youtubeFrame" class="w-full aspect-video rounded shadow" src="" frameborder="0" allowfullscreen></iframe>
+      <div id="chatbox" class="bg-white rounded-lg shadow p-4 h-96 overflow-y-auto">
+        <div class="text-gray-500">Hei! Jeg er Morten – din virtuelle gourmetkokk. Hva vil du lage i dag?</div>
       </div>
-    </section>
-  </main>
+
+      <div class="mt-4 flex">
+        <input id="userInput" type="text" placeholder="Hva vil du vite om matlaging?" class="flex-1 p-2 border rounded-l-lg" />
+        <button onclick="window.sendMessage()" class="bg-green-600 text-white px-4 rounded-r-lg">Send</button>
+      </div>
+
+      <section id="responseSection" class="mt-6 hidden">
+        <h2 class="text-xl font-semibold mb-2">Svar fra Morten:</h2>
+        <div id="recipeText" class="bg-white p-4 rounded shadow"></div>
+        <div id="videoSuggestion" class="mt-4 hidden">
+          <h3 class="font-semibold text-lg mb-2">Video:</h3>
+          <iframe id="youtubeFrame" class="w-full aspect-video rounded shadow" src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script type="module">
     function mortenSnakker(på) {
