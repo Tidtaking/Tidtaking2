@@ -9,7 +9,7 @@
     /* ---------- Layout‑ramme ---------- */
     html,body{margin:0;height:100%;overflow:hidden;font-family:"Inter",sans-serif}
     /* Hel kjøkkenbakgrunn */
-    #bg{position:fixed;inset:0;background:url('https://images.unsplash.com/photo-1605479729116-3a5f3e979ba9?auto=format&fit=crop&w=1950&q=80')) center/cover no-repeat;filter:brightness(.55);z-index:-3}
+    #bg{position:fixed;inset:0;background:url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1950&q=80')) center/cover no-repeat;filter:brightness(.55);z-index:-3}
     /* Kjøkkenøy (forgrunn) */
     #island{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:120%;max-height:35%;object-fit:cover;z-index:-2}
     /* Hovedkort */
@@ -38,7 +38,7 @@
   <!-- Kokk Morten -->
   <div id="chefWrap">
     <div id="bubble">Morten tenker …</div>
-    <img id="chef" src="https://media.giphy.com/media/l41lFw057lAJQMwg0/giphy.gif" alt="Kokk Morten">
+    <img id="chef" src="https://images.unsplash.com/photo-1528715471579-d8db87db75aa?auto=format&fit=crop&w=300&q=80' alt='Kokk Morten'>
   </div>
 
   <!-- Hovedpanel -->
@@ -97,7 +97,11 @@
         chatEl.innerHTML+=`<div class='chef'>Morten:<br>${html}</div>`;
         chatEl.scrollTop=chatEl.scrollHeight;
       }catch(err){console.error(err);ansEl.textContent='Beklager, noe gikk galt.';}
-      finally{setTalking(false);}
+      finally{
+        setTalking(false);
+        bubble.textContent = html.split('<br>')[0]; // første linje i boblen
+        bubble.style.display = 'block';
+      }
     }
     document.getElementById('sendBtn').onclick=sendMsg;
   </script>
