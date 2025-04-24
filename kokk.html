@@ -33,7 +33,7 @@
 </head>
 <body>
   <div id="bg"></div>
-  <img id="island" src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1950&q=80" alt="Kjøkkenøy">
+  <img id="island" src="https://images.unsplash.com/photo-1600904557633-460104c79dfe?auto=format&fit=crop&w=1950&q=80&v=2" alt="Kjøkkenøy">
 
   <!-- Kokk Morten -->
   <div id="chefWrap">
@@ -87,7 +87,7 @@
     async function sendMsg(){const inp=document.getElementById('userInput');const q=inp.value.trim();if(!q)return;chatEl.innerHTML+=`<div class='user'>Du: ${q}</div>`;inp.value='';chatEl.scrollTop=chatEl.scrollHeight;ansWrap.classList.remove('hidden');ansEl.innerHTML="<div class='loader'>Morten tenker …</div>";setTalking(true);
       try{
         const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
-        const gen=await pipeline('text2text-generation','Xenova/flan-t5-base');
+        const gen=await pipeline('text2text-generation','Xenova/flan-t5-small');
         const dish=q.replace(/Hvordan lager jeg/i,'').replace('?','').trim();
         const prompt=`Skriv en kort oppskrift på ${dish} på norsk.\n\nIngredienser:\n- liste\nFremgangsmåte:\n1. steg for steg`;
         const res=await gen(prompt,{max_new_tokens:160});
