@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virtuell Gourmet-kokk</title>
+  <title>Virtuell Gourmet‑kokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     html,body{margin:0;height:100%;overflow:hidden;font-family:"Inter",sans-serif}
@@ -39,7 +39,7 @@
 
   <div id="card">
     <header class="flex justify-between items-center mb-4">
-      <h1 class="text-3xl font-bold">🍳 Virtuell Gourmet-kokk</h1>
+      <h1 class="text-3xl font-bold">🍳 Virtuell Gourmet‑kokk</h1>
       <p class="text-gray-600 text-sm">Spør Morten om oppskrifter og teknikker!</p>
     </header>
 
@@ -49,7 +49,7 @@
     </section>
 
     <div id="chat" class="mb-4">
-      <div class="text-gray-500">Hei – jeg er Morten. Hva vil du lage i dag?</div>
+      <div class="text-gray-500">Hei – jeg er Morten. Hva vil du lage i dag?</div>
     </div>
 
     <div class="flex mb-4">
@@ -82,9 +82,23 @@
         const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
         const gen=await pipeline('text2text-generation','Xenova/flan-t5-small');
         const dish=q.replace(/Hvordan lager jeg/i,'').replace('?','').trim();
-        const prompt=`Skriv en kort oppskrift på ${dish} på norsk.\n\nIngredienser:\n- liste\nFremgangsmåte:\n1. steg for steg`;
-        const res=await gen(prompt,{max_new_tokens:160});
-        const out=res[0]?.generated_text||'Beklager – ingen oppskrift funnet.';
+        const prompt = `Skriv en oppskrift på norsk.
+
+Eksempel:
+Rettnavn: Lasagne
+Ingredienser:
+- 400 g kjøttdeig
+- 1 boks hakkede tomater
+Fremgangsmåte:
+1. Brun kjøttdeig.
+2. Tilsett tomater.
+3. Stek i ovn 30 minutter.
+
+Nå din tur:
+Rettnavn: ${dish}
+Ingredienser:`;
+        const res = await gen(prompt, { max_new_tokens: 220 });
+        const out = (res[0] && res[0].generated_text) ? res[0].generated_text : 'Modellen ga tomt svar';
         html = out.split('\n').join('<br>');
         ansEl.innerHTML = html;
         chatEl.innerHTML+=`<div class='chefTxt'>Morten:<br>${html}</div>`;
