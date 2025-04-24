@@ -3,31 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Virtuell Gourmet‑kokk</title>
+  <title>Virtuell Gourmet-kokk</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    /* ---------- Layout‑ramme ---------- */
     html,body{margin:0;height:100%;overflow:hidden;font-family:"Inter",sans-serif}
-    /* Hel kjøkkenbakgrunn */
-    #bg{position:fixed;inset:0;background:url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1950&q=80')) center/cover no-repeat;filter:brightness(.55);z-index:-3}
-    /* Kjøkkenøy (forgrunn) */
+    /* Bakgrunn */
+    #bg{position:fixed;inset:0;background:url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1950&q=80') center/cover no-repeat;filter:brightness(.55);z-index:-3}
+    /* Kjøkkenøy */
     #island{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:120%;max-height:35%;object-fit:cover;z-index:-2}
-    /* Hovedkort */
+    /* Panel */
     #card{position:absolute;top:8%;left:50%;transform:translateX(-50%);width:92%;max-width:640px;max-height:82%;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-radius:18px;padding:28px;box-shadow:0 10px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;z-index:1}
-    /* Kokk‑avatar */
+    /* Kokk */
     #chefWrap{position:absolute;bottom:36%;left:50%;transform:translate(-50%,50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:2}
-    #bubble{display:none;background:rgba(255,255,255,.95);padding:8px 14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.22);max-width:240px;font-size:.9rem;text-align:center}
     #chef{width:150px;border-radius:8px;pointer-events:none}
     #chef.talk{animation:bounce 1s infinite}
     @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-    /* Chat‑boks */
+    #bubble{display:none;background:rgba(255,255,255,.95);padding:8px 14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.22);max-width:240px;font-size:.9rem;text-align:center}
+    /* Chat */
     #chat{flex:1;overflow-y:auto;background:#fff;padding:18px;border-radius:10px;box-shadow:inset 0 2px 4px rgba(0,0,0,.07);margin-bottom:18px;font-size:.95rem}
     .user{font-weight:600;margin-top:6px}
-    .chef{color:#047857;margin-top:6px}
-    /* Dagens knapper */
+    .chefTxt{color:#047857;margin-top:6px}
     .dishBtn{background:#e5e7eb;padding:6px 10px;border-radius:6px;font-size:.9rem;transition:background .2s}
     .dishBtn:hover{background:#d1d5db}
-    /* Loader */
     .loader{font-style:italic;color:#4b5563}
   </style>
 </head>
@@ -35,16 +32,14 @@
   <div id="bg"></div>
   <img id="island" src="https://images.unsplash.com/photo-1600904557633-460104c79dfe?auto=format&fit=crop&w=1950&q=80&v=2" alt="Kjøkkenøy">
 
-  <!-- Kokk Morten -->
   <div id="chefWrap">
-    <div id="bubble">Morten tenker …</div>
-    <img id="chef" src="https://images.unsplash.com/photo-1528715471579-d8db87db75aa?auto=format&fit=crop&w=300&q=80' alt='Kokk Morten'>
+    <div id="bubble">Morten tenker …</div>
+    <img id="chef" src="https://images.unsplash.com/photo-1528715471579-d8db87db75aa?auto=format&fit=crop&w=300&q=80" alt="Kokk Morten">
   </div>
 
-  <!-- Hovedpanel -->
   <div id="card">
     <header class="flex justify-between items-center mb-4">
-      <h1 class="text-3xl font-bold">🍳 Virtuell Gourmet‑kokk</h1>
+      <h1 class="text-3xl font-bold">🍳 Virtuell Gourmet-kokk</h1>
       <p class="text-gray-600 text-sm">Spør Morten om oppskrifter og teknikker!</p>
     </header>
 
@@ -54,7 +49,7 @@
     </section>
 
     <div id="chat" class="mb-4">
-      <div class="text-gray-500">Hei – jeg er Morten. Hva vil du lage i dag?</div>
+      <div class="text-gray-500">Hei – jeg er Morten. Hva vil du lage i dag?</div>
     </div>
 
     <div class="flex mb-4">
@@ -69,22 +64,20 @@
   </div>
 
   <script type="module">
-    /* ---------- UI helpers ---------- */
-    const chef   = document.getElementById('chef');
+    const chef = document.getElementById('chef');
     const bubble = document.getElementById('bubble');
     const chatEl = document.getElementById('chat');
-    const ansEl  = document.getElementById('answer');
-    const ansWrap= document.getElementById('answerWrap');
+    const ansEl = document.getElementById('answer');
+    const ansWrap = document.getElementById('answerWrap');
 
-    function setTalking(on){if(on){chef.classList.add('talk');bubble.style.display='block';}else{chef.classList.remove('talk');bubble.style.display='none';}}
+    function setTalking(on){if(on){chef.classList.add('talk');bubble.style.display='block';bubble.textContent='Morten tenker …';}else{chef.classList.remove('talk');}}
 
-    /* ---------- Render dagens retter ---------- */
     const daily={0:['Ramen','Burgere'],1:['Lasagne','Salat'],2:['Taco','Pasta'],3:['Suppe','Sandwich'],4:['Risotto','Curry'],5:['Grill','Pizza'],6:['Dhal','Fiskegryte']};
     const btnWrap=document.getElementById('dishButtons');
     (daily[new Date().getDay()]||[]).forEach(d=>{const b=document.createElement('button');b.textContent=d;b.className='dishBtn';b.onclick=()=>{document.getElementById('userInput').value=`Hvordan lager jeg ${d}?`;sendMsg();};btnWrap.appendChild(b);});
 
-    /* ---------- Send‑melding ---------- */
-    async function sendMsg(){const inp=document.getElementById('userInput');const q=inp.value.trim();if(!q)return;chatEl.innerHTML+=`<div class='user'>Du: ${q}</div>`;inp.value='';chatEl.scrollTop=chatEl.scrollHeight;ansWrap.classList.remove('hidden');ansEl.innerHTML="<div class='loader'>Morten tenker …</div>";setTalking(true);
+    async function sendMsg(){const inp=document.getElementById('userInput');const q=inp.value.trim();if(!q)return;chatEl.innerHTML+=`<div class='user'>Du: ${q}</div>`;inp.value='';chatEl.scrollTop=chatEl.scrollHeight;ansWrap.classList.remove('hidden');ansEl.innerHTML="<div class='loader'>Morten tenker …</div>";setTalking(true);
+      let html='';
       try{
         const {pipeline}=await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0');
         const gen=await pipeline('text2text-generation','Xenova/flan-t5-small');
@@ -92,15 +85,14 @@
         const prompt=`Skriv en kort oppskrift på ${dish} på norsk.\n\nIngredienser:\n- liste\nFremgangsmåte:\n1. steg for steg`;
         const res=await gen(prompt,{max_new_tokens:160});
         const out=res[0]?.generated_text||'Beklager – ingen oppskrift funnet.';
-        const html=out.split('\n').join('<br>');
-        ansEl.innerHTML=html;
-        chatEl.innerHTML+=`<div class='chef'>Morten:<br>${html}</div>`;
+        html = out.split('\n').join('<br>');
+        ansEl.innerHTML = html;
+        chatEl.innerHTML+=`<div class='chefTxt'>Morten:<br>${html}</div>`;
         chatEl.scrollTop=chatEl.scrollHeight;
-      }catch(err){console.error(err);ansEl.textContent='Beklager, noe gikk galt.';}
+      }catch(e){console.error(e);ansEl.textContent='Beklager, noe gikk galt.';}
       finally{
         setTalking(false);
-        bubble.textContent = html.split('<br>')[0]; // første linje i boblen
-        bubble.style.display = 'block';
+        if(html) {bubble.textContent=html.replace(/<br>.*/,'');bubble.style.display='block';}
       }
     }
     document.getElementById('sendBtn').onclick=sendMsg;
