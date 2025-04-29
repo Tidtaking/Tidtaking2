@@ -4,314 +4,264 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golfscore – registrering</title>
-  <!-- Tailwind CSS CDN (stand‑alone version) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Production‑trygg Tailwind: henter minifisert CSS fra jsdelivr (samme som cdn.tailwindcss.com bygger)  -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
+  <style>[x-cloak]{display:none}</style>
 </head>
-<body class="bg-green-50 min-h-screen flex flex-col items-center p-4">
-  <header class="w-full max-w-5xl mb-6">
-    <h1 class="text-3xl font-bold text-center mb-2">Golfscore</h1>
-    <p class="text-center text-sm text-gray-600">Registrer slag, håndter flere spillere og beregn "spilte på"‑score med handicap.</p>
+<body class="bg-green-50 min-h-screen flex flex-col items-center p-3 sm:p-4">
+  <header class="w-full max-w-4xl mb-4 sm:mb-6">
+    <h1 class="text-2xl sm:text-3xl font-bold text-center mb-1">Golfscore</h1>
+    <p class="text-center text-xs sm:text-sm text-gray-600">Registrer slag, flere spillere, WHS‑handicap og «spilte på». Lagres lokalt.</p>
   </header>
 
-  <main id="app" class="w-full max-w-5xl space-y-8">
+  <main id="app" class="w-full max-w-4xl space-y-6 sm:space-y-8">
 
-    <!-- Bane‑valg -->
-    <section class="bg-white p-4 rounded-2xl shadow">
-      <h2 class="text-xl font-semibold mb-2">1. Velg bane</h2>
-      <div class="flex gap-2 mb-3 flex-wrap">
-        <input id="courseSearch" type="text" placeholder="Søk etter bane…" class="flex-grow md:flex-none md:w-72 border rounded px-2 py-1" />
-        <button id="searchBtn" class="px-4 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Søk</button>
-        <button id="loadSample" class="px-4 py-1 rounded bg-gray-300 hover:bg-gray-400">Last demo‑bane</button>
+    <!-- 1. Bane -->
+    <section class="bg-white p-3 sm:p-4 rounded-2xl shadow">
+      <h2 class="text-lg sm:text-xl font-semibold mb-2">1. Velg eller legg inn bane</h2>
+      <div class="flex flex-col sm:flex-row gap-2 mb-3">
+        <input id="courseSearch" type="text" placeholder="Søk (navn/sted)…" class="flex-grow border rounded px-2 py-1" />
+        <button id="searchBtn" class="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Søk</button>
+        <button id="manualCourseBtn" class="px-3 py-1 rounded bg-gray-300 hover:bg-gray-400">Manuell</button>
       </div>
+
       <ul id="courseResults" class="space-y-1 max-h-60 overflow-y-auto"></ul>
+
+      <!-- Valgt bane -->
       <div id="courseDetails" class="mt-4 hidden">
-        <h3 class="font-semibold">Valgt bane:</h3>
+        <h3 class="font-semibold">Valgt bane</h3>
         <p id="courseName" class="mb-1"></p>
-        <p class="text-sm text-gray-600">Par: <span id="coursePar"></span> • CR: <span id="courseRating"></span> • Slope: <span id="courseSlope"></span></p>
+        <p class="text-sm text-gray-600">Par <span id="coursePar"></span> • CR <span id="courseRating"></span> • Slope <span id="courseSlope"></span></p>
+        <button id="editHolesBtn" class="mt-2 text-xs underline text-emerald-700">Rediger hull/par</button>
+      </div>
+
+      <!-- Manuell bane‑modal -->
+      <div id="courseModal" x-cloak class="fixed inset-0 bg-black/40 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-4 w-[90%] max-w-md shadow-xl space-y-2">
+          <h3 class="text-lg font-semibold mb-1">Ny bane</h3>
+          <input id="cName" class="w-full border rounded px-2 py-1" placeholder="Banenavn"/>
+          <div class="flex gap-2">
+            <input id="cPar" type="number" class="w-full border rounded px-2 py-1" placeholder="Par totale (osc)">
+            <input id="cRating" type="number" step="0.1" class="w-full border rounded px-2 py-1" placeholder="Course Rating">
+            <input id="cSlope" type="number" class="w-full border rounded px-2 py-1" placeholder="Slope">
+          </div>
+          <p class="text-xs text-gray-600">Hull‑par settes til 4‑4‑... men kan redigeres senere.</p>
+          <div class="flex gap-2 justify-end pt-2">
+            <button id="cancelCourseBtn" class="px-3 py-1 rounded bg-gray-200">Avbryt</button>
+            <button id="saveCourseBtn" class="px-3 py-1 rounded bg-emerald-600 text-white">Lagre</button>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Spillere -->
-    <section class="bg-white p-4 rounded-2xl shadow">
-      <h2 class="text-xl font-semibold mb-2">2. Legg til spillere</h2>
-      <div class="flex gap-2 flex-wrap mb-3">
-        <input id="playerName" type="text" placeholder="Navn" class="flex-grow md:flex-none md:w-48 border rounded px-2 py-1" />
-        <input id="playerHcp" type="number" step="0.1" placeholder="Hcp‑indeks" class="flex-grow md:flex-none md:w-32 border rounded px-2 py-1" />
-        <button id="addPlayerBtn" class="px-4 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Legg til</button>
+    <!-- 2. Spillere -->
+    <section class="bg-white p-3 sm:p-4 rounded-2xl shadow">
+      <h2 class="text-lg sm:text-xl font-semibold mb-2">2. Spillere</h2>
+      <div class="flex flex-col sm:flex-row gap-2 mb-3">
+        <input id="playerName" type="text" placeholder="Navn" class="flex-grow border rounded px-2 py-1" />
+        <input id="playerHcp" type="number" step="0.1" placeholder="Hcp‑indeks" class="border rounded px-2 py-1 w-full sm:w-32" />
+        <button id="addPlayerBtn" class="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Legg til</button>
       </div>
       <ul id="playerList" class="space-y-1"></ul>
     </section>
 
-    <!-- Scoretabell -->
-    <section id="scoreSection" class="bg-white p-4 rounded-2xl shadow hidden overflow-auto">
-      <h2 class="text-xl font-semibold mb-4">3. Registrer slag</h2>
+    <!-- 3. Slag -->
+    <section id="scoreSection" class="bg-white p-3 sm:p-4 rounded-2xl shadow hidden overflow-auto">
+      <h2 class="text-lg sm:text-xl font-semibold mb-2">3. Slag pr. hull</h2>
       <div class="overflow-auto">
-        <table id="scoreTable" class="min-w-full text-center text-sm">
-          <!-- Dynamisk innhold -->
-        </table>
+        <table id="scoreTable" class="min-w-full text-center text-xs sm:text-sm"></table>
       </div>
     </section>
 
-    <!-- Sammendrag -->
-    <section id="summarySection" class="bg-white p-4 rounded-2xl shadow hidden">
-      <h2 class="text-xl font-semibold mb-2">4. Resultat</h2>
-      <table id="summaryTable" class="w-full text-sm text-center"></table>
+    <!-- 4. Sammendrag -->
+    <section id="summarySection" class="bg-white p-3 sm:p-4 rounded-2xl shadow hidden">
+      <h2 class="text-lg sm:text-xl font-semibold mb-2">4. Resultat</h2>
+      <table id="summaryTable" class="w-full text-xs sm:text-sm text-center"></table>
     </section>
   </main>
 
-  <!-- --- SCRIPT --- -->
-  <script>
-    const API_BASE = "https://api.golfcourseapi.com"; // Oppdater med gyldig base‑url om nødvendig
-    const API_KEY  = ""; // Legg inn din API‑nøkkel her (X‑Api‑Key)
+<!-- Alpine.js for små modaler & reaktivitet -->
+<script src="https://unpkg.com/alpinejs@3.13.10/dist/cdn.min.js" defer></script>
+<script>
+/* =========  Konfig  ========= */
+const API_BASE = "https://api.golfcourseapi.com"; // Registrer deg gratis og legg inn nøkkel under
+const API_KEY  = "";                                 // eks: "Bearer sk_..."
 
-    const state = {
-      course: null,     // aktiv bane med hull‑data
-      players: [],      // {id,name,index,courseHcp,strokes:Array(number|null)}
-    };
+// Lokal fallback–database (kan utvides)
+const localCourses = [
+  {id:"losby-ostmork", name:"Losby GK – Østmork", par:72, rating:73.0, slope:139},
+  {id:"losby-vestmork", name:"Losby GK – Vestmork", par:72, rating:70.8, slope:130},
+  {id:"miklagard",      name:"Miklagard Golf",      par:72, rating:74.4, slope:140},
+  {id:"bogstad",        name:"Oslo GK (Bogstad)",   par:71, rating:72.2, slope:135}
+];
 
-    /* ---------------- Kurs‑søk ---------------- */
-    const courseSearchInput = document.getElementById("courseSearch");
-    const searchBtn         = document.getElementById("searchBtn");
-    const loadSampleBtn     = document.getElementById("loadSample");
-    const courseResults     = document.getElementById("courseResults");
-    const courseDetailsBox  = document.getElementById("courseDetails");
-    const courseNameLabel   = document.getElementById("courseName");
-    const courseParLabel    = document.getElementById("coursePar");
-    const courseRatingLabel = document.getElementById("courseRating");
-    const courseSlopeLabel  = document.getElementById("courseSlope");
+/* =========  State  ========= */
+const state = { course:null, players:[] };
 
-    searchBtn.addEventListener("click", () => {
-      const q = courseSearchInput.value.trim();
-      if (!q) return;
-      fetchCourses(q);
+/* =========  Elementer  ========= */
+const qs = s=>document.querySelector(s);
+const courseSearchInput = qs('#courseSearch');
+const searchBtn         = qs('#searchBtn');
+const manualCourseBtn   = qs('#manualCourseBtn');
+const courseResults     = qs('#courseResults');
+const courseDetailsBox  = qs('#courseDetails');
+const courseNameLabel   = qs('#courseName');
+const courseParLabel    = qs('#coursePar');
+const courseRatingLabel = qs('#courseRating');
+const courseSlopeLabel  = qs('#courseSlope');
+const editHolesBtn      = qs('#editHolesBtn');
+
+/* =========  Søk bane  ========= */
+searchBtn.addEventListener('click', () => doSearch(courseSearchInput.value.trim()));
+courseSearchInput.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch(courseSearchInput.value.trim());});
+
+async function doSearch(q){
+  if(!q){courseResults.innerHTML='';return;}
+  // 1) lokal match
+  const local = localCourses.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
+  if(local.length){ renderCourseResults(local,true); }
+  // 2) ekstern API hvis nøkkel satt
+  if(!API_KEY) return; // 404‑feilen brukeren så skyldtes manglende nøkkel / feil path
+  courseResults.insertAdjacentHTML('beforeend',`<li>Laster eksterne treff…</li>`);
+  try{
+    const res=await fetch(`${API_BASE}/courses/search?query=${encodeURIComponent(q)}`,{
+      headers:{'Authorization':API_KEY}
     });
+    if(!res.ok) throw new Error(`(${res.status}) ${res.statusText}`);
+    const data=await res.json();
+    renderCourseResults((data.courses||data).map(normaliseCourse));
+  }catch(err){
+    console.warn('API‑feil',err);
+    courseResults.insertAdjacentHTML('beforeend',`<li class="text-red-600">API‑feil – sjekk nøkkel / url</li>`);
+  }
+}
 
-    loadSampleBtn.addEventListener("click", loadSampleCourse);
+function renderCourseResults(list,clear=false){
+  if(clear) courseResults.innerHTML='';
+  list.forEach(c=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<button class="w-full text-left px-2 py-1 rounded hover:bg-emerald-100" data-id="${c.id}">${c.name}</button>`;
+    li.querySelector('button').addEventListener('click',()=>selectCourse(normaliseCourse(c)));
+    courseResults.appendChild(li);
+  });
+}
 
-    async function fetchCourses(q) {
-      courseResults.innerHTML = `<li>Laster…</li>`;
-      try {
-        const res = await fetch(`${API_BASE}/courses?search=${encodeURIComponent(q)}`, {
-          headers: API_KEY ? {"X-Api-Key": API_KEY} : {}
-        });
-        if (!res.ok) throw new Error("Feil fra API");
-        const data = await res.json();
-        renderCourseResults(data.courses || data); // Avhengig av API‑struktur
-      } catch (err) {
-        courseResults.innerHTML = `<li class="text-red-600">${err.message}. Viser ingen resultater.</li>`;
-        console.error(err);
-      }
-    }
+/* =========  Manuell bane‑modal  ========= */
+const modal   = qs('#courseModal');
+const cName   = qs('#cName');
+const cPar    = qs('#cPar');
+const cRating = qs('#cRating');
+const cSlope  = qs('#cSlope');
+qs('#cancelCourseBtn').onclick=()=>{modal.classList.add('hidden')};
+manualCourseBtn.onclick=()=>{modal.classList.remove('hidden')};
+qs('#saveCourseBtn').onclick=()=>{
+  if(!cName.value||!cPar.value) return;
+  const manual={id:`m_${Date.now()}`,name:cName.value,par:Number(cPar.value),rating:Number(cRating.value)||null,slope:Number(cSlope.value)||113,holes:Array.from({length:18},(_,i)=>({num:i+1,par:4}))};
+  modal.classList.add('hidden');
+  selectCourse(manual);
+  cName.value=cPar.value=cRating.value=cSlope.value='';
+};
 
-    function renderCourseResults(list) {
-      if (!Array.isArray(list) || list.length === 0) {
-        courseResults.innerHTML = `<li>Ingen baner funnet.</li>`;
-        return;
-      }
-      courseResults.innerHTML = "";
-      list.forEach(c => {
-        const li = document.createElement("li");
-        li.innerHTML = `<button class="w-full text-left px-2 py-1 rounded hover:bg-emerald-100" data-id="${c.id}">${c.name}</button>`;
-        li.querySelector("button").addEventListener("click", () => selectCourse(c));
-        courseResults.appendChild(li);
-      });
-    }
+/* =========  Kurs valg  ========= */
+function selectCourse(course){
+  state.course=normaliseCourse(course);
+  courseNameLabel.textContent=state.course.name;
+  courseParLabel.textContent=state.course.par;
+  courseRatingLabel.textContent=state.course.rating||'–';
+  courseSlopeLabel.textContent=state.course.slope||113;
+  courseDetailsBox.classList.remove('hidden');
+  // Reberegn hcp
+  state.players.forEach(p=>p.courseHcp=calcCourseHcp(p.index));
+  buildScoreTable();
+  updateSummary();
+  saveState();
+}
 
-    /* ---------------- Banevalg ---------------- */
-    function selectCourse(course) {
-      state.course = normaliseCourse(course);
-      courseNameLabel.textContent   = state.course.name;
-      courseParLabel.textContent    = state.course.par;
-      courseRatingLabel.textContent = state.course.rating || "–";
-      courseSlopeLabel.textContent  = state.course.slope || 113;
-      courseDetailsBox.classList.remove("hidden");
+function normaliseCourse(raw){
+  const holes = raw.holes?.length ? raw.holes.map(h=>({num:h.number||h.num||h.hole||0,par:h.par||4})) : Array.from({length:18},(_,i)=>({num:i+1,par:4}));
+  return {id:raw.id||0,name:raw.name||'Ukjent',rating:raw.rating||raw.course_rating||null,slope:raw.slope||raw.slope_rating||113,holes,par:raw.par||holes.reduce((t,h)=>t+Number(h.par||4),0)};
+}
 
-      // Re-beregn course handicap for alle spillere
-      state.players.forEach(p => p.courseHcp = calcCourseHcp(p.index));
-      buildScoreTable();
-      updateSummary();
-    }
+/* =========  Spillere  ========= */
+const playerNameInput = qs('#playerName');
+const playerHcpInput  = qs('#playerHcp');
+qs('#addPlayerBtn').onclick=()=>{
+  const n=playerNameInput.value.trim();
+  const i=parseFloat(playerHcpInput.value);
+  if(!n||isNaN(i))return;
+  addPlayer(n,i);
+  playerNameInput.value='';playerHcpInput.value='';
+};
+const playerList=qs('#playerList');
+function addPlayer(name,index){
+  state.players.push({id:Date.now()+Math.random(),name,index:Number(index),courseHcp:calcCourseHcp(index),strokes:[]});
+  renderPlayerList();
+  buildScoreTable();
+  updateSummary();
+  saveState();
+}
+function removePlayer(id){
+  state.players=state.players.filter(p=>p.id!==id);
+  renderPlayerList();buildScoreTable();updateSummary();saveState();
+}
+function renderPlayerList(){
+  playerList.innerHTML='';
+  state.players.forEach(p=>{
+    const li=document.createElement('li');li.className='flex justify-between bg-gray-100 rounded px-3 py-1';
+    li.innerHTML=`<span>${p.name} (hcp ${p.index})</span><button class='text-red-600' title='Fjern'>✕</button>`;
+    li.querySelector('button').onclick=()=>removePlayer(p.id);
+    playerList.appendChild(li);
+  });
+}
+function calcCourseHcp(idx){ if(!state.course) return 0; const s=state.course.slope||113; const base=idx*(s/113); const adj=(state.course.rating?state.course.rating-state.course.par:0); return Math.round(base+adj); }
 
-    function normaliseCourse(raw) {
-      // Tilpass denne om API‑strukturen er annerledes
-      const holes = (raw.holes && raw.holes.length) ? raw.holes.map(h => ({
-        num: h.number || h.num || h.hole || 0,
-        par: h.par || 4
-      })) : Array.from({length: 18}, (_,i)=>({num:i+1, par:4}));
-      const parTotal = holes.reduce((acc,h)=>acc + (Number(h.par)||4),0);
-      return {
-        id: raw.id ?? 0,
-        name: raw.name ?? "Ukjent bane",
-        rating: raw.rating || raw.course_rating || null,
-        slope: raw.slope || raw.slope_rating || 113,
-        holes,
-        par: parTotal
-      };
-    }
-
-    /* ---------------- Spillere ---------------- */
-    const playerNameInput = document.getElementById("playerName");
-    const playerHcpInput  = document.getElementById("playerHcp");
-    const addPlayerBtn    = document.getElementById("addPlayerBtn");
-    const playerList      = document.getElementById("playerList");
-
-    addPlayerBtn.addEventListener("click", () => {
-      const name = playerNameInput.value.trim();
-      const idx  = parseFloat(playerHcpInput.value);
-      if (!name || isNaN(idx)) return;
-      addPlayer(name, idx);
-      playerNameInput.value = "";
-      playerHcpInput.value  = "";
+/* =========  Scoretabell  ========= */
+const scoreSection=qs('#scoreSection');
+const scoreTable  =qs('#scoreTable');
+function buildScoreTable(){
+  if(!state.course||!state.players.length){scoreSection.classList.add('hidden');scoreTable.innerHTML='';return;}
+  scoreSection.classList.remove('hidden');
+  const holes=state.course.holes;
+  let thead='<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
+  state.players.forEach(p=>thead+=`<th class="border px-1 whitespace-nowrap">${p.name}</th>`);thead+='</tr></thead>';
+  let tbody='<tbody>';
+  holes.forEach((h,hi)=>{
+    tbody+=`<tr><td class="border px-1">${h.num}</td><td class="border px-1">${h.par}</td>`;
+    state.players.forEach((p,pi)=>{
+      const id=`s_${pi}_${hi}`;const val=p.strokes[hi]??'';
+      tbody+=`<td class="border p-0"><input id="${id}" type="number" min="1" class="w-full text-center py-0.5" value="${val}" /></td>`;
     });
+    tbody+='</tr>';
+  });
+  tbody+='</tbody>';
+  scoreTable.innerHTML=thead+tbody;
+  // lyttere
+  state.players.forEach((p,pi)=>{
+    state.course.holes.forEach((_,hi)=>{
+      qs(`#s_${pi}_${hi}`).oninput=e=>{const v=parseInt(e.target.value);p.strokes[hi]=isNaN(v)?null:v;updateSummary();saveState();};
+    });
+  });
+}
 
-    function addPlayer(name, index) {
-      const player = {
-        id: Date.now(),
-        name,
-        index: Number(index),
-        courseHcp: calcCourseHcp(index),
-        strokes: [] // per hole, parallell med state.course.holes
-      };
-      state.players.push(player);
-      renderPlayerList();
-      buildScoreTable();
-      updateSummary();
-    }
+/* =========  Sammendrag  ========= */
+const summarySection=qs('#summarySection');
+const summaryTable  =qs('#summaryTable');
+function updateSummary(){
+  if(!state.players.length||!state.course){summarySection.classList.add('hidden');summaryTable.innerHTML='';return;}
+  summarySection.classList.remove('hidden');
+  let html='<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Course Hcp</th><th class="border px-1">Netto</th><th class="border px-1">Spilte på</th></tr></thead><tbody>';
+  state.players.forEach(p=>{
+    const gross=p.strokes.reduce((a,v)=>a+(Number(v)||0),0);
+    const net=gross-p.courseHcp;const played=net-state.course.par;
+    html+=`<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross||'–'}</td><td class="border px-1">${p.courseHcp}</td><td class="border px-1">${gross?net:'–'}</td><td class="border px-1">${gross?(played>0?'+':'')+played:'–'}</td></tr>`;
+  });
+  html+='</tbody>';summaryTable.innerHTML=html;
+}
 
-    function removePlayer(id) {
-      state.players = state.players.filter(p => p.id !== id);
-      renderPlayerList();
-      buildScoreTable();
-      updateSummary();
-    }
-
-    function renderPlayerList() {
-      playerList.innerHTML = "";
-      state.players.forEach(p => {
-        const li = document.createElement("li");
-        li.className = "flex justify-between bg-gray-100 rounded px-3 py-1";
-        li.innerHTML = `<span>${p.name} (hcp ${p.index})</span><button class="text-red-600" title="Fjern">✕</button>`;
-        li.querySelector("button").addEventListener("click", ()=> removePlayer(p.id));
-        playerList.appendChild(li);
-      });
-    }
-
-    function calcCourseHcp(index) {
-      if (!state.course) return 0;
-      // WHS: Course handicap = Index * (slope/113) + (rating - par)
-      const slopeFactor = (state.course.slope || 113) / 113;
-      const base        = index * slopeFactor;
-      const adj         = (state.course.rating ? (state.course.rating - state.course.par) : 0);
-      return Math.round(base + adj);
-    }
-
-    /* ---------------- Scoretabell ---------------- */
-    const scoreSection = document.getElementById("scoreSection");
-    const scoreTable   = document.getElementById("scoreTable");
-
-    function buildScoreTable() {
-      if (!state.course || state.players.length === 0) {
-        scoreSection.classList.add("hidden");
-        scoreTable.innerHTML = "";
-        return;
-      }
-      scoreSection.classList.remove("hidden");
-      const holes = state.course.holes;
-
-      // Tabelldata
-      let thead = `<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>`;
-      state.players.forEach(p => {
-        thead += `<th class="border px-1">${p.name}</th>`;
-      });
-      thead += `</tr></thead>`;
-
-      let tbody = "<tbody>";
-      holes.forEach((h,i) => {
-        tbody += `<tr><td class="border px-1">${h.num}</td><td class="border px-1">${h.par}</td>`;
-        state.players.forEach((p,pi) => {
-          const inputId = `st_${pi}_${i}`;
-          const val = p.strokes[i] ?? "";
-          tbody += `<td class="border p-0"><input id="${inputId}" type="number" min="1" class="w-full text-center outline-none py-1" value="${val}" /></td>`;
-        });
-        tbody += `</tr>`;
-      });
-      tbody += "</tbody>";
-
-      scoreTable.innerHTML = thead + tbody;
-
-      // Legg til lyttere
-      state.players.forEach((p,pi)=>{
-        holes.forEach((_,hi)=>{
-          const input = document.getElementById(`st_${pi}_${hi}`);
-          input.addEventListener("input", () => {
-            const v = parseInt(input.value);
-            p.strokes[hi] = isNaN(v) ? null : v;
-            updateSummary();
-            saveState();
-          });
-        });
-      });
-    }
-
-    /* ---------------- Sammendrag ---------------- */
-    const summarySection = document.getElementById("summarySection");
-    const summaryTable   = document.getElementById("summaryTable");
-
-    function updateSummary() {
-      if (state.players.length === 0 || !state.course) {
-        summarySection.classList.add("hidden");
-        summaryTable.innerHTML = "";
-        return;
-      }
-      summarySection.classList.remove("hidden");
-
-      let html = `<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Course Hcp</th><th class="border px-1">Netto</th><th class="border px-1">Spilte på</th></tr></thead><tbody>`;
-
-      state.players.forEach(p => {
-        const gross = p.strokes.reduce((acc,v)=>(acc + (Number(v)||0)),0);
-        const net   = gross - p.courseHcp;
-        const playedTo = net - state.course.par; // positivt = over par
-        html += `<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross || "–"}</td><td class="border px-1">${p.courseHcp}</td><td class="border px-1">${gross ? net : "–"}</td><td class="border px-1">${gross ? (playedTo>0?"+":"") + playedTo : "–"}</td></tr>`;
-      });
-      html += `</tbody>`;
-      summaryTable.innerHTML = html;
-    }
-
-    /* ---------------- Demo-klikk ---------------- */
-    function loadSampleCourse() {
-      const sample = {
-        id: 0,
-        name: "Eksempelkollen GK",
-        rating: 72.0,
-        slope: 125,
-        holes: Array.from({length: 18}, (_,i)=>({num:i+1, par: (i%5===0?5: (i%3===0?3:4))}))
-      };
-      selectCourse(sample);
-    }
-
-    /* ---------------- Lagring ---------------- */
-    function saveState() {
-      localStorage.setItem("golfAppState", JSON.stringify(state));
-    }
-
-    function loadState() {
-      try {
-        const raw = JSON.parse(localStorage.getItem("golfAppState"));
-        if (!raw) return;
-        // Reconstruct functions / prototype data
-        state.course = raw.course;
-        state.players = raw.players || [];
-        // After restoring, update UI
-        if (state.course) selectCourse(state.course);
-        renderPlayerList();
-        buildScoreTable();
-        updateSummary();
-      } catch(e){console.error(e);}
-    }
-
-    // Init
-    loadState();
-  </script>
+/* =========  Lagring  ========= */
+function saveState(){localStorage.setItem('golfAppState',JSON.stringify(state));}
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('golfAppState'));if(!raw)return;state.course=raw.course;state.players=raw.players||[];if(state.course)selectCourse(state.course);renderPlayerList();buildScoreTable();updateSummary();}catch(e){console.error(e);}}
+loadState();
+</script>
 </body>
 </html>
-
