@@ -1,120 +1,187 @@
-  <!-- Ferdigkompilert Tailwind CSS, ingen console‑warning -->
-  <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">  <style>[x-cloak]{display:none}</style>
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golfscore – registrering</title>
+  <!-- Prod‑klar Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
+  <style>[x-cloak]{display:none}</style>
 </head>
 <body class="bg-green-50 min-h-screen flex flex-col items-center p-3 sm:p-4">
-  <header class="w-full max-w-4xl mb-4 sm:mb-6">
-    <h1 class="text-2xl sm:text-3xl font-bold text-center mb-1">Golfscore</h1>
-    <p class="text-center text-xs sm:text-sm text-gray-600">Registrer slag, flere spillere, WHS‑handicap og «spilte på». Lagres i Supabase om konfigurert, ellers lokalt.</p>
+  <!-- ===== HEADER ===== -->
+  <header class="w-full max-w-4xl mb-4 sm:mb-6 text-center">
+    <h1 class="text-2xl sm:text-3xl font-bold">Golfscore</h1>
+    <p class="text-xs sm:text-sm text-gray-600">Baner hentes fra Supabase • Runder lagres automatisk</p>
   </header>
 
+  <!-- ===== MAIN ===== -->
   <main id="app" class="w-full max-w-4xl space-y-6 sm:space-y-8">
-
     <!-- 1. Bane -->
-    <section class="bg-white p-3 sm:p-4 rounded-2xl shadow">
-      <h2 class="text-lg sm:text-xl font-semibold mb-2">1. Velg eller legg inn bane</h2>
-      <div class="flex flex-col sm:flex-row gap-2 mb-3">
-        <input id="courseSearch" type="text" placeholder="Søk (navn/sted)…" class="flex-grow border rounded px-2 py-1" />
-        <button id="searchBtn" class="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Søk</button>
-        <button id="manualCourseBtn" class="px-3 py-1 rounded bg-gray-300 hover:bg-gray-400">Manuell</button>
+    <section class="card">
+      <h2 class="card-title">1. Velg bane</h2>
+      <div class="flex flex-col sm:flex-row gap-2 mb-2">
+        <input id="courseSearch" class="flex-grow input" placeholder="Søk (navn/sted)…" />
+        <button id="searchBtn" class="btn-primary">Søk</button>
       </div>
-
       <ul id="courseResults" class="space-y-1 max-h-60 overflow-y-auto"></ul>
-
-      <!-- Valgt bane -->
-      <div id="courseDetails" class="mt-4 hidden">
-        <h3 class="font-semibold">Valgt bane</h3>
-        <p id="courseName" class="mb-1"></p>
-        <p class="text-sm text-gray-600">Par <span id="coursePar"></span> • CR <span id="courseRating"></span> • Slope <span id="courseSlope"></span></p>
-      </div>
-
-      <!-- Manuell bane‑modal -->
-      <div id="courseModal" x-cloak class="fixed inset-0 bg-black/40 flex items-center justify-center hidden">
-        <div class="bg-white rounded-2xl p-4 w-[90%] max-w-md shadow-xl space-y-2">
-          <h3 class="text-lg font-semibold mb-1">Ny bane</h3>
-          <input id="cName" class="w-full border rounded px-2 py-1" placeholder="Banenavn"/>
-          <div class="flex gap-2">
-            <input id="cPar" type="number" class="w-full border rounded px-2 py-1" placeholder="Par totale">
-            <input id="cRating" type="number" step="0.1" class="w-full border rounded px-2 py-1" placeholder="Course Rating">
-            <input id="cSlope" type="number" class="w-full border rounded px-2 py-1" placeholder="Slope">
-          </div>
-          <p class="text-xs text-gray-600">Hull‑par settes til 4‑4‑... men kan redigeres senere.</p>
-          <div class="flex gap-2 justify-end pt-2">
-            <button id="cancelCourseBtn" class="px-3 py-1 rounded bg-gray-200">Avbryt</button>
-            <button id="saveCourseBtn" class="px-3 py-1 rounded bg-emerald-600 text-white">Lagre</button>
-          </div>
-        </div>
+      <div id="courseDetails" class="mt-4 hidden text-sm text-gray-700">
+        <div id="courseName" class="font-semibold"></div>
+        Par <span id="coursePar"></span> • CR <span id="courseRating"></span> • Slope <span id="courseSlope"></span>
       </div>
     </section>
 
     <!-- 2. Spillere -->
-    <section class="bg-white p-3 sm:p-4 rounded-2xl shadow">
-      <h2 class="text-lg sm:text-xl font-semibold mb-2">2. Spillere</h2>
-      <div class="flex flex-col sm:flex-row gap-2 mb-3">
-        <input id="playerName" type="text" placeholder="Navn" class="flex-grow border rounded px-2 py-1" />
-        <input id="playerHcp" type="number" step="0.1" placeholder="Hcp‑indeks" class="border rounded px-2 py-1 w-full sm:w-32" />
-        <button id="addPlayerBtn" class="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Legg til</button>
+    <section class="card">
+      <h2 class="card-title">2. Spillere</h2>
+      <div class="flex flex-col sm:flex-row gap-2 mb-2">
+        <input id="playerName" class="flex-grow input" placeholder="Navn" />
+        <input id="playerHcp" type="number" step="0.1" class="input w-full sm:w-32" placeholder="Hcp‑indeks" />
+        <button id="addPlayerBtn" class="btn-primary">Legg&nbsp;til</button>
       </div>
       <ul id="playerList" class="space-y-1"></ul>
     </section>
 
     <!-- 3. Slag -->
-    <section id="scoreSection" class="bg-white p-3 sm:p-4 rounded-2xl shadow hidden overflow-auto">
-      <h2 class="text-lg sm:text-xl font-semibold mb-2">3. Slag pr. hull</h2>
-      <div class="overflow-auto">
-        <table id="scoreTable" class="min-w-full text-center text-xs sm:text-sm"></table>
-      </div>
+    <section id="scoreSection" class="card hidden overflow-auto">
+      <h2 class="card-title">3. Slag pr. hull</h2>
+      <table id="scoreTable" class="min-w-full text-center text-xs sm:text-sm"></table>
     </section>
 
     <!-- 4. Sammendrag -->
-    <section id="summarySection" class="bg-white p-3 sm:p-4 rounded-2xl shadow hidden">
-      <h2 class="text-lg sm:text-xl font-semibold mb-2">4. Resultat</h2>
+    <section id="summarySection" class="card hidden">
+      <h2 class="card-title">4. Resultat</h2>
       <table id="summaryTable" class="w-full text-xs sm:text-sm text-center"></table>
     </section>
   </main>
 
-<!-- Alpine.js -->
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-/*****   Konfig‑seksjon   *****/
-const API_BASE = "https://api.golfcourseapi.com";   // (valgfritt) ekstern kurs‑API
-const API_KEY  = "";                                // "Bearer sk_..."
+  <!-- ===== SCRIPTS ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+  /***** Utils + Styles *****/
+  const $ = s=>document.querySelector(s);
+  document.head.insertAdjacentHTML('beforeend',`<style>
+    .card{background:#fff;border-radius:1rem;padding:1rem;box-shadow:0 1px 4px rgb(0 0 0 / .08)}
+    .card-title{font-size:1.125rem;font-weight:600;margin-bottom:.5rem}
+    .input{border:1px solid #d1d5db;border-radius:.375rem;padding:.25rem .5rem}
+    .btn-primary{background:#059669;color:#fff;border-radius:.375rem;padding:.25rem .75rem}
+  </style>`);
 
-// Overpass (OpenStreetMap) query for alle golfbaner i Norge (brukes som offline‑fallback)
-const OVERPASS_URL = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent('[out:json][timeout:25];area["ISO3166-1"="NO"]->.a;(node["golf"="course"](area.a);way["golf"="course"](area.a);relation["golf"="course"](area.a););out tags;')}`;
+  /***** Supabase init *****/
+  const supabase = window.supabase.createClient(
+    "https://chzfewhbfkdtcizdxyzk.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+  );
 
-// Supabase – DINE verdier (Variant A: anonym‑nøkkel)
-const SUPABASE_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+  /***** State *****/
+  const state = { course:null, players:[], roundId:null };
 
-// Init‑klient
-const supabase = window.Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const supabaseClient = supabase; // alias for lesbarhet
+  /***** Søk bane *****/
+  $('#searchBtn').onclick = ()=> search($('#courseSearch').value.trim());
+  $('#courseSearch').onkeydown = e=>{ if(e.key==='Enter') search(e.target.value.trim()); };
 
-/*****   Tilstand   *****/
-const state = { course:null, players:[], roundId:null };
+  async function search(q){
+    const list=$('#courseResults'); list.innerHTML='';
+    if(!q) return;
+    const {data,error}=await supabase
+      .from('courses_with_par')
+      .select('id,name,par_total,course_rating,slope,holes:holes(par,hole)')
+      .ilike('name',`%${q}%`).limit(20);
+    if(error){list.innerHTML='<li class="text-red-600">DB-feil</li>';return;}
+    if(!data.length){list.innerHTML='<li class="text-gray-600">Ingen treff</li>';return;}
+    data.forEach(c=>{
+      const li=document.createElement('li');
+      li.innerHTML=`<button class="w-full text-left px-2 py-1 hover:bg-emerald-100 rounded">${c.name}</button>`;
+      li.firstChild.onclick=()=> selectCourse(c);
+      list.appendChild(li);
+    });
+  }
 
-/*****   Elementer   *****/
-const qs = s=>document.querySelector(s);
-const courseSearchInput = qs('#courseSearch');
-const searchBtn         = qs('#searchBtn');
-const manualCourseBtn   = qs('#manualCourseBtn');
-const courseResults     = qs('#courseResults');
-const courseDetailsBox  = qs('#courseDetails');
-const courseNameLabel   = qs('#courseName');
-const courseParLabel    = qs('#coursePar');
-const courseRatingLabel = qs('#courseRating');
-const courseSlopeLabel  = qs('#courseSlope');
+  function selectCourse(row){
+    state.course={
+      id:row.id,
+      name:row.name,
+      par:row.par_total,
+      rating:row.course_rating,
+      slope:row.slope,
+      holes:row.holes.sort((a,b)=>a.hole-b.hole)
+    };
+    $('#courseName').textContent=row.name;
+    $('#coursePar').textContent=row.par_total;
+    $('#courseRating').textContent=row.course_rating||'–';
+    $('#courseSlope').textContent=row.slope||'–';
+    $('#courseDetails').classList.remove('hidden');
+    buildScoreTable();updateSummary();saveRound();
+  }
 
-/*****   Lokale kursdata   *****/
-let norwayCourses = [];
-ensureNorwayCourses(); // async henter OSM‑liste og cacher i localStorage
+  /***** Spillere *****/
+  $('#addPlayerBtn').onclick=()=>{
+    const name=$('#playerName').value.trim();
+    const idx=parseFloat($('#playerHcp').value);
+    if(!name||isNaN(idx))return;
+    state.players.push({id:crypto.randomUUID(),name,index:idx,strokes:Array(18).fill(null)});
+    $('#playerName').value='';$('#playerHcp').value='';
+    renderPlayers();buildScoreTable();updateSummary();saveRound();
+  };
+  function renderPlayers(){
+    const ul=$('#playerList'); ul.innerHTML='';
+    state.players.forEach(p=>{
+      const li=document.createElement('li');
+      li.className='flex justify-between bg-gray-100 rounded px-3 py-1';
+      li.innerHTML=`<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
+      li.lastChild.onclick=()=>{state.players=state.players.filter(x=>x.id!==p.id);renderPlayers();buildScoreTable();updateSummary();saveRound();};
+      ul.appendChild(li);
+    });
+  }
 
-async function ensureNorwayCourses(){
-  try{
-    const cached = localStorage.getItem('norwayCourses');
-    if(cached){ norwayCourses = JSON.parse(cached); return; }
-    const res = await fetch(OVERPASS_URL);
-    const data = await res.json();
-    norwayCourses = data.elements.map(e=>({id:`osm_${
+  /***** Scoretable *****/
+  function buildScoreTable(){
+    const sec=$('#scoreSection'),tbl=$('#scoreTable');
+    if(!state.course||!state.players.length){sec.classList.add('hidden');tbl.innerHTML='';return;}
+    sec.classList.remove('hidden');
+    const holes=state.course.holes;
+    let html='<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
+    state.players.forEach(p=> html+=`<th class="border px-1">${p.name}</th>`);
+    html+='</tr></thead><tbody>';
+    holes.forEach((h,hi)=>{
+      html+=`<tr><td class="border px-1">${h.hole}</td><td class="border px-1">${h.par}</td>`;
+      state.players.forEach((p,pi)=>{
+        const id=`s_${pi}_${hi}`;
+        const val=p.strokes[hi]??'';
+        html+=`<td class="border p-0"><input id="${id}" type="number" class="w-full text-center py-0.5" value="${val}" /></td>`;
+      });
+      html+='</tr>';
+    });
+    html+='</tbody>'; tbl.innerHTML=html;
+    state.players.forEach((p,pi)=> holes.forEach((_,hi)=>{
+      $('#'+`s_${pi}_${hi}`).oninput=e=>{const v=parseInt(e.target.value);p.strokes[hi]=isNaN(v)?null:v;updateSummary();saveRound();};
+    }));
+  }
+
+  /***** Sammendrag *****/
+  function updateSummary(){
+    const sec=$('#summarySection'),tbl=$('#summaryTable');
+    if(!state.course||!state.players.length){sec.classList.add('hidden');tbl.innerHTML='';return;}
+    sec.classList.remove('hidden');
+    let html='<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
+    state.players.forEach(p=>{
+      const gross=p.strokes.reduce((a,v)=>a+(Number(v)||0),0);
+      const net=gross - p.index;
+      html+=`<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross||'–'}</td><td class="border px-1">${gross?net:'–'}</td></tr>`;
+    });
+    html+='</tbody>'; tbl.innerHTML=html;
+  }
+
+  /***** Persist *****/
+  async function saveRound(){
+    if(!state.course||!state.players.length) return;
+    if(!state.roundId) state.roundId=crypto.randomUUID();
+    await supabase.from('rounds').upsert({id:state.roundId,payload:state});
+  }
+  async function loadRound(){
+    const {data,error}=await supabase.from('rounds').select('*').order('inserted_at',{ascending:false}).limit(1).maybeSingle();
+    if(data){Object.assign(state,data.payload);renderPlayers();selectCourse(state.course);} }
+  loadRound();
+  </script>
+</body>
+</html>
