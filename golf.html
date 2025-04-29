@@ -4,14 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golfscore – registrering</title>
-  <!-- Production‑trygg Tailwind: henter minifisert CSS fra jsdelivr (samme som cdn.tailwindcss.com bygger)  -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Tailwind via CDN-script (kompileres i nettleser) – robust for alle miljøer -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script>tailwind.config = {theme:{extend:{}}}</script>
   <style>[x-cloak]{display:none}</style>
 </head>
 <body class="bg-green-50 min-h-screen flex flex-col items-center p-3 sm:p-4">
   <header class="w-full max-w-4xl mb-4 sm:mb-6">
     <h1 class="text-2xl sm:text-3xl font-bold text-center mb-1">Golfscore</h1>
-    <p class="text-center text-xs sm:text-sm text-gray-600">Registrer slag, flere spillere, WHS‑handicap og «spilte på». Lagres lokalt.</p>
+    <p class="text-center text-xs sm:text-sm text-gray-600">Registrer slag, flere spillere, WHS‑handicap og «spilte på». Lagres i Supabase om konfigurert, ellers lokalt.</p>
   </header>
 
   <main id="app" class="w-full max-w-4xl space-y-6 sm:space-y-8">
@@ -32,7 +33,6 @@
         <h3 class="font-semibold">Valgt bane</h3>
         <p id="courseName" class="mb-1"></p>
         <p class="text-sm text-gray-600">Par <span id="coursePar"></span> • CR <span id="courseRating"></span> • Slope <span id="courseSlope"></span></p>
-        <button id="editHolesBtn" class="mt-2 text-xs underline text-emerald-700">Rediger hull/par</button>
       </div>
 
       <!-- Manuell bane‑modal -->
@@ -41,7 +41,7 @@
           <h3 class="text-lg font-semibold mb-1">Ny bane</h3>
           <input id="cName" class="w-full border rounded px-2 py-1" placeholder="Banenavn"/>
           <div class="flex gap-2">
-            <input id="cPar" type="number" class="w-full border rounded px-2 py-1" placeholder="Par totale (osc)">
+            <input id="cPar" type="number" class="w-full border rounded px-2 py-1" placeholder="Par totale">
             <input id="cRating" type="number" step="0.1" class="w-full border rounded px-2 py-1" placeholder="Course Rating">
             <input id="cSlope" type="number" class="w-full border rounded px-2 py-1" placeholder="Slope">
           </div>
@@ -80,25 +80,30 @@
     </section>
   </main>
 
-<!-- Alpine.js for små modaler & reaktivitet -->
-<script src="https://unpkg.com/alpinejs@3.13.10/dist/cdn.min.js" defer></script>
+<!-- Alpine.js -->
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* =========  Konfig  ========= */
-const API_BASE = "https://api.golfcourseapi.com"; // Registrer deg gratis og legg inn nøkkel under
-const API_KEY  = "";                                 // eks: "Bearer sk_..."
+/*****   Konfig‑seksjon   *****/
+const API_BASE = "https://api.golfcourseapi.com";   // (valgfritt) ekstern kurs‑API
+const API_KEY  = "";                                // "Bearer sk_..."
 
-// Lokal fallback–database (kan utvides)
-const localCourses = [
-  {id:"losby-ostmork", name:"Losby GK – Østmork", par:72, rating:73.0, slope:139},
-  {id:"losby-vestmork", name:"Losby GK – Vestmork", par:72, rating:70.8, slope:130},
-  {id:"miklagard",      name:"Miklagard Golf",      par:72, rating:74.4, slope:140},
-  {id:"bogstad",        name:"Oslo GK (Bogstad)",   par:71, rating:72.2, slope:135}
-];
+// Overpass (OpenStreetMap) query for alle golfbaner i Norge (brukes som offline‑fallback)
+const OVERPASS_URL = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent('[out:json][timeout:25];area["ISO3166-1"="NO"]->.a;(node["golf"="course"](area.a);way["golf"="course"](area.a);relation["golf"="course"](area.a););out tags;')}`;
 
-/* =========  State  ========= */
-const state = { course:null, players:[] };
+// Supabase – DINE verdier (Variant A: anonym‑nøkkel)
+const SUPABASE_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
 
-/* =========  Elementer  ========= */
+// Init‑klient
+const supabase = window.Supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = supabase; // alias for lesbarhet
+
+/*****   Tilstand   *****/
+const state = { course:null, players:[], roundId:null };
+
+/*****   Elementer   *****/
 const qs = s=>document.querySelector(s);
 const courseSearchInput = qs('#courseSearch');
 const searchBtn         = qs('#searchBtn');
@@ -109,159 +114,15 @@ const courseNameLabel   = qs('#courseName');
 const courseParLabel    = qs('#coursePar');
 const courseRatingLabel = qs('#courseRating');
 const courseSlopeLabel  = qs('#courseSlope');
-const editHolesBtn      = qs('#editHolesBtn');
 
-/* =========  Søk bane  ========= */
-searchBtn.addEventListener('click', () => doSearch(courseSearchInput.value.trim()));
-courseSearchInput.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch(courseSearchInput.value.trim());});
+/*****   Lokale kursdata   *****/
+let norwayCourses = [];
+ensureNorwayCourses(); // async henter OSM‑liste og cacher i localStorage
 
-async function doSearch(q){
-  if(!q){courseResults.innerHTML='';return;}
-  // 1) lokal match
-  const local = localCourses.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
-  if(local.length){ renderCourseResults(local,true); }
-  // 2) ekstern API hvis nøkkel satt
-  if(!API_KEY) return; // 404‑feilen brukeren så skyldtes manglende nøkkel / feil path
-  courseResults.insertAdjacentHTML('beforeend',`<li>Laster eksterne treff…</li>`);
+async function ensureNorwayCourses(){
   try{
-    const res=await fetch(`${API_BASE}/courses/search?query=${encodeURIComponent(q)}`,{
-      headers:{'Authorization':API_KEY}
-    });
-    if(!res.ok) throw new Error(`(${res.status}) ${res.statusText}`);
-    const data=await res.json();
-    renderCourseResults((data.courses||data).map(normaliseCourse));
-  }catch(err){
-    console.warn('API‑feil',err);
-    courseResults.insertAdjacentHTML('beforeend',`<li class="text-red-600">API‑feil – sjekk nøkkel / url</li>`);
-  }
-}
-
-function renderCourseResults(list,clear=false){
-  if(clear) courseResults.innerHTML='';
-  list.forEach(c=>{
-    const li=document.createElement('li');
-    li.innerHTML=`<button class="w-full text-left px-2 py-1 rounded hover:bg-emerald-100" data-id="${c.id}">${c.name}</button>`;
-    li.querySelector('button').addEventListener('click',()=>selectCourse(normaliseCourse(c)));
-    courseResults.appendChild(li);
-  });
-}
-
-/* =========  Manuell bane‑modal  ========= */
-const modal   = qs('#courseModal');
-const cName   = qs('#cName');
-const cPar    = qs('#cPar');
-const cRating = qs('#cRating');
-const cSlope  = qs('#cSlope');
-qs('#cancelCourseBtn').onclick=()=>{modal.classList.add('hidden')};
-manualCourseBtn.onclick=()=>{modal.classList.remove('hidden')};
-qs('#saveCourseBtn').onclick=()=>{
-  if(!cName.value||!cPar.value) return;
-  const manual={id:`m_${Date.now()}`,name:cName.value,par:Number(cPar.value),rating:Number(cRating.value)||null,slope:Number(cSlope.value)||113,holes:Array.from({length:18},(_,i)=>({num:i+1,par:4}))};
-  modal.classList.add('hidden');
-  selectCourse(manual);
-  cName.value=cPar.value=cRating.value=cSlope.value='';
-};
-
-/* =========  Kurs valg  ========= */
-function selectCourse(course){
-  state.course=normaliseCourse(course);
-  courseNameLabel.textContent=state.course.name;
-  courseParLabel.textContent=state.course.par;
-  courseRatingLabel.textContent=state.course.rating||'–';
-  courseSlopeLabel.textContent=state.course.slope||113;
-  courseDetailsBox.classList.remove('hidden');
-  // Reberegn hcp
-  state.players.forEach(p=>p.courseHcp=calcCourseHcp(p.index));
-  buildScoreTable();
-  updateSummary();
-  saveState();
-}
-
-function normaliseCourse(raw){
-  const holes = raw.holes?.length ? raw.holes.map(h=>({num:h.number||h.num||h.hole||0,par:h.par||4})) : Array.from({length:18},(_,i)=>({num:i+1,par:4}));
-  return {id:raw.id||0,name:raw.name||'Ukjent',rating:raw.rating||raw.course_rating||null,slope:raw.slope||raw.slope_rating||113,holes,par:raw.par||holes.reduce((t,h)=>t+Number(h.par||4),0)};
-}
-
-/* =========  Spillere  ========= */
-const playerNameInput = qs('#playerName');
-const playerHcpInput  = qs('#playerHcp');
-qs('#addPlayerBtn').onclick=()=>{
-  const n=playerNameInput.value.trim();
-  const i=parseFloat(playerHcpInput.value);
-  if(!n||isNaN(i))return;
-  addPlayer(n,i);
-  playerNameInput.value='';playerHcpInput.value='';
-};
-const playerList=qs('#playerList');
-function addPlayer(name,index){
-  state.players.push({id:Date.now()+Math.random(),name,index:Number(index),courseHcp:calcCourseHcp(index),strokes:[]});
-  renderPlayerList();
-  buildScoreTable();
-  updateSummary();
-  saveState();
-}
-function removePlayer(id){
-  state.players=state.players.filter(p=>p.id!==id);
-  renderPlayerList();buildScoreTable();updateSummary();saveState();
-}
-function renderPlayerList(){
-  playerList.innerHTML='';
-  state.players.forEach(p=>{
-    const li=document.createElement('li');li.className='flex justify-between bg-gray-100 rounded px-3 py-1';
-    li.innerHTML=`<span>${p.name} (hcp ${p.index})</span><button class='text-red-600' title='Fjern'>✕</button>`;
-    li.querySelector('button').onclick=()=>removePlayer(p.id);
-    playerList.appendChild(li);
-  });
-}
-function calcCourseHcp(idx){ if(!state.course) return 0; const s=state.course.slope||113; const base=idx*(s/113); const adj=(state.course.rating?state.course.rating-state.course.par:0); return Math.round(base+adj); }
-
-/* =========  Scoretabell  ========= */
-const scoreSection=qs('#scoreSection');
-const scoreTable  =qs('#scoreTable');
-function buildScoreTable(){
-  if(!state.course||!state.players.length){scoreSection.classList.add('hidden');scoreTable.innerHTML='';return;}
-  scoreSection.classList.remove('hidden');
-  const holes=state.course.holes;
-  let thead='<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
-  state.players.forEach(p=>thead+=`<th class="border px-1 whitespace-nowrap">${p.name}</th>`);thead+='</tr></thead>';
-  let tbody='<tbody>';
-  holes.forEach((h,hi)=>{
-    tbody+=`<tr><td class="border px-1">${h.num}</td><td class="border px-1">${h.par}</td>`;
-    state.players.forEach((p,pi)=>{
-      const id=`s_${pi}_${hi}`;const val=p.strokes[hi]??'';
-      tbody+=`<td class="border p-0"><input id="${id}" type="number" min="1" class="w-full text-center py-0.5" value="${val}" /></td>`;
-    });
-    tbody+='</tr>';
-  });
-  tbody+='</tbody>';
-  scoreTable.innerHTML=thead+tbody;
-  // lyttere
-  state.players.forEach((p,pi)=>{
-    state.course.holes.forEach((_,hi)=>{
-      qs(`#s_${pi}_${hi}`).oninput=e=>{const v=parseInt(e.target.value);p.strokes[hi]=isNaN(v)?null:v;updateSummary();saveState();};
-    });
-  });
-}
-
-/* =========  Sammendrag  ========= */
-const summarySection=qs('#summarySection');
-const summaryTable  =qs('#summaryTable');
-function updateSummary(){
-  if(!state.players.length||!state.course){summarySection.classList.add('hidden');summaryTable.innerHTML='';return;}
-  summarySection.classList.remove('hidden');
-  let html='<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Course Hcp</th><th class="border px-1">Netto</th><th class="border px-1">Spilte på</th></tr></thead><tbody>';
-  state.players.forEach(p=>{
-    const gross=p.strokes.reduce((a,v)=>a+(Number(v)||0),0);
-    const net=gross-p.courseHcp;const played=net-state.course.par;
-    html+=`<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross||'–'}</td><td class="border px-1">${p.courseHcp}</td><td class="border px-1">${gross?net:'–'}</td><td class="border px-1">${gross?(played>0?'+':'')+played:'–'}</td></tr>`;
-  });
-  html+='</tbody>';summaryTable.innerHTML=html;
-}
-
-/* =========  Lagring  ========= */
-function saveState(){localStorage.setItem('golfAppState',JSON.stringify(state));}
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('golfAppState'));if(!raw)return;state.course=raw.course;state.players=raw.players||[];if(state.course)selectCourse(state.course);renderPlayerList();buildScoreTable();updateSummary();}catch(e){console.error(e);}}
-loadState();
-</script>
-</body>
-</html>
+    const cached = localStorage.getItem('norwayCourses');
+    if(cached){ norwayCourses = JSON.parse(cached); return; }
+    const res = await fetch(OVERPASS_URL);
+    const data = await res.json();
+    norwayCourses = data.elements.map(e=>({id:`osm_${
