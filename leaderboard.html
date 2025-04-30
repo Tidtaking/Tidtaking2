@@ -43,8 +43,8 @@
     <section id="holesSection" class="bg-white rounded-lg shadow p-4 hidden">
       <h2 id="holesTitle" class="text-xl font-semibold mb-2">Hulldetaljer</h2>
       <table id="holesTable" class="w-full text-center text-sm">
-        <thead class="bg-gray-200">
-          <tr><th class="px-2 py-1">Hull</th><th class="px-2 py-1">Par</th><th class="px-2 py-1">Gj.snitt slag</th></tr>
+        <thead>
+          <tr id="holesHeader"><!-- Dynamisk --></tr>
         </thead>
         <tbody id="holesBody"></tbody>
       </table>
@@ -54,22 +54,24 @@
     <!-- Spiller statistikk -->
     <section id="playerSection" class="bg-white rounded-lg shadow p-4 hidden">
       <h2 id="playerTitle" class="text-xl font-semibold mb-2">Spillerstatistikk</h2>
-      <div id="playerStats" class="space-y-4">
-        <!-- Dynamisk innhold -->
-      </div>
+      <div id="playerStats" class="space-y-4"></div>
       <button id="closePlayer" class="mt-4 btn-secondary">Lukk</button>
     </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
-    // Initialize Supabase
+    // Supabase-klient
     const supabase = window.supabase.createClient(
       "https://chzfewhbfkdtcizdxyzk.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
     );
 
-    // Load data and compute stats
+    // Globale datastrukturer
+    let courseMap = {};
+    let playerMap = {};
+
+    // Hent data og beregn statistikk
     async function loadData() {
       const { data, error } = await supabase
         .from('rounds')
@@ -77,104 +79,154 @@
         .order('inserted_at', { ascending: false })
         .limit(100);
       if (error) return;
-      const scores = {};
-      const courseMap = {};
-      const playerMap = {};
+
+      const leaderboardScores = {};
+      courseMap = {};
+      playerMap = {};
 
       data.forEach(r => {
-        const course = r.payload.course;
-        const key = course.name;
-        if (!courseMap[key]) {
-          courseMap[key] = { count: 0, totalNet: 0, holeTotals: Array(18).fill(0), holeCounts: Array(18).fill(0), holes: course.holes };
+        const { course, players } = r.payload;
+        const courseName = course.name;
+        if (!courseMap[courseName]) {
+          courseMap[courseName] = {
+            holes: course.holes,
+            playerStats: {},
+            count: 0,
+            totalNet: 0
+          };
         }
-        r.payload.players.forEach(p => {
-          const gross = p.strokes.reduce((s,v)=>s+(Number(v)||0),0);
+        players.forEach(p => {
+          const gross = p.strokes.reduce((sum, v) => sum + (Number(v) || 0), 0);
           const net = gross - p.index;
           // Leaderboard
-          if (!scores[p.name] || net < scores[p.name]) scores[p.name] = net;
+          if (!leaderboardScores[p.name] || net < leaderboardScores[p.name]) {
+            leaderboardScores[p.name] = net;
+          }
           // Course stats
-          const cs = courseMap[key];
+          const cs = courseMap[courseName];
           cs.count++;
           cs.totalNet += net;
-          p.strokes.forEach((s,i)=>{ if(s!=null){ cs.holeTotals[i]+=s; cs.holeCounts[i]++; }});
+          if (!cs.playerStats[p.name]) {
+            cs.playerStats[p.name] = { holeTotals: Array(18).fill(0), holeCounts: Array(18).fill(0) };
+          }
+          p.strokes.forEach((s, i) => {
+            if (s != null) {
+              cs.playerStats[p.name].holeTotals[i] += s;
+              cs.playerStats[p.name].holeCounts[i]++;
+            }
+          });
           // Player stats
-          if (!playerMap[p.name]) playerMap[p.name] = { rounds: 0, totalNet: 0, courseCounts: {}, holeTotals: Array(18).fill(0), holeCounts: Array(18).fill(0) };
+          if (!playerMap[p.name]) {
+            playerMap[p.name] = { rounds: 0, totalNet: 0, courseCounts: {}, holeTotals: Array(18).fill(0), holeCounts: Array(18).fill(0) };
+          }
           const pm = playerMap[p.name];
           pm.rounds++;
           pm.totalNet += net;
-          pm.courseCounts[key] = (pm.courseCounts[key]||0) + 1;
-          p.strokes.forEach((s,i)=>{ if(s!=null){ pm.holeTotals[i]+=s; pm.holeCounts[i]++; }});
+          pm.courseCounts[courseName] = (pm.courseCounts[courseName] || 0) + 1;
+          p.strokes.forEach((s, i) => {
+            if (s != null) {
+              pm.holeTotals[i] += s;
+              pm.holeCounts[i]++;
+            }
+          });
         });
       });
-      renderLeaderboard(scores);
-      renderCourseStats(courseMap);
-      window.playerMap = playerMap; // for access in click handler
+
+      renderLeaderboard(leaderboardScores);
+      renderCourseStats();
     }
 
+    // Vis leaderboard
     function renderLeaderboard(scores) {
-      const sorted = Object.entries(scores).sort((a,b)=>a[1]-b[1]).slice(0,10);
-      const rows = sorted.map(([name,net],i)=>
-        `<tr class="border-t hover:bg-gray-50 cursor-pointer" data-player="${name}">`+
-          `<td class="px-4 py-2">${i+1}</td><td class="px-4 py-2 text-left">${name}</td><td class="px-4 py-2">${net}</td>`+
-        `</tr>`
+      const sorted = Object.entries(scores).sort((a, b) => a[1] - b[1]).slice(0, 10);
+      const rows = sorted.map(([name, net], idx) => `
+        <tr class="border-t hover:bg-gray-50 cursor-pointer" data-player="${name}">
+          <td class="px-4 py-2">${idx + 1}</td>
+          <td class="px-4 py-2 text-left">${name}</td>
+          <td class="px-4 py-2">${net}</td>
+        </tr>`
       ).join('');
-      const tb = document.getElementById('leaderboardBody'); tb.innerHTML = rows;
-      tb.querySelectorAll('[data-player]').forEach(tr=>tr.onclick=()=>showPlayer(tr.dataset.player));
+      const tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = rows;
+      tbody.querySelectorAll('[data-player]').forEach(tr => {
+        tr.onclick = () => showPlayer(tr.dataset.player);
+      });
     }
 
-    function renderCourseStats(courseMap) {
+    // Vis stats per bane
+    function renderCourseStats() {
       const container = document.getElementById('coursesStats');
       container.innerHTML = '';
-      Object.entries(courseMap).forEach(([name,cs]) => {
+      Object.entries(courseMap).forEach(([name, cs]) => {
         const avgNet = (cs.totalNet / cs.count).toFixed(1);
         const div = document.createElement('div');
         div.className = 'flex justify-between items-center';
-        div.innerHTML = `<span>${name} — ${cs.count} runder, gj.snitt netto ${avgNet}</span>` +
-                        `<button class="btn-primary btn-sm" data-course="${name}">Vis hull</button>`;
+        div.innerHTML = `
+          <span>${name} — ${cs.count} runder, gj.snitt netto ${avgNet}</span>
+          <button class="btn-primary btn-sm" data-course="${name}">Vis hull</button>
+        `;
         container.appendChild(div);
       });
-      document.querySelectorAll('[data-course]').forEach(btn=>btn.onclick=()=>showHoles(btn.dataset.course, courseMap[btn.dataset.course]));
+      document.querySelectorAll('[data-course]').forEach(btn => {
+        btn.onclick = () => showHoles(btn.dataset.course);
+      });
     }
 
-    function showHoles(name, cs) {
-      document.getElementById('holesTitle').textContent = `Hulldetaljer — ${name}`;
-      const tbody = document.getElementById('holesBody'); tbody.innerHTML = '';
-      cs.holes.forEach((h,i)=>{
-        const avg = cs.holeCounts[i]>0 ? (cs.holeTotals[i]/cs.holeCounts[i]).toFixed(1) : '-';
-        tbody.innerHTML += `<tr><td class="border px-2 py-1">${h.hole}</td><td class="border px-2 py-1">${h.par}</td><td class="border px-2 py-1">${avg}</td></tr>`;
+    // Vis hulldetaljer for en bane (alle spillere)
+    function showHoles(courseName) {
+      const cs = courseMap[courseName];
+      document.getElementById('holesTitle').textContent = `Hulldetaljer — ${courseName}`;
+      // Header
+      const headerRow = document.getElementById('holesHeader');
+      const players = Object.keys(cs.playerStats);
+      headerRow.innerHTML = `<th class="px-2 py-1">Hull</th><th class="px-2 py-1">Par</th>` +
+        players.map(p => `<th class="px-2 py-1">${p}</th>`).join('');
+      // Body
+      const tbody = document.getElementById('holesBody');
+      tbody.innerHTML = '';
+      cs.holes.forEach((h, i) => {
+        let row = `<tr><td class="border px-2 py-1">${h.hole}</td><td class="border px-2 py-1">${h.par}</td>`;
+        players.forEach(p => {
+          const ps = cs.playerStats[p];
+          const avg = ps.holeCounts[i] ? (ps.holeTotals[i] / ps.holeCounts[i]).toFixed(1) : '-';
+          row += `<td class="border px-2 py-1">${avg}</td>`;
+        });
+        row += '</tr>';
+        tbody.innerHTML += row;
       });
       document.getElementById('holesSection').classList.remove('hidden');
     }
 
+    // Vis spillerstatistikk
     function showPlayer(name) {
-      const pm = window.playerMap[name];
+      const pm = playerMap[name];
       document.getElementById('playerTitle').textContent = `Spiller — ${name}`;
       const container = document.getElementById('playerStats');
       container.innerHTML = '';
       // Oversikt
-      const avgNet = (pm.totalNet/pm.rounds).toFixed(1);
-      const overview = `<p>Runder: ${pm.rounds}, gj.snitt netto: ${avgNet}</p>`;
-      container.innerHTML += overview;
+      const avgNet = (pm.totalNet / pm.rounds).toFixed(1);
+      container.innerHTML += `<p>Runder: ${pm.rounds}, gj.snitt netto: ${avgNet}</p>`;
       // Stats per bane
-      const courseList = Object.entries(pm.courseCounts).map(([c,n])=>`${c}: ${n} runder`).join(', ');
+      const courseList = Object.entries(pm.courseCounts)
+        .map(([c, n]) => `${c}: ${n} runder`).join(', ');
       container.innerHTML += `<p>Banefordeling: ${courseList}</p>`;
-      // Hulldetaljer
-      let holeTable = '<table class="w-full text-center text-sm"><thead><tr><th>Hull</th><th>Gj.snitt slag</th></tr></thead><tbody>';
-      pm.holeTotals.forEach((tot,i)=>{
+      // Hullstatistikk
+      let table = `<table class="w-full text-center text-sm"><thead><tr><th>Hull</th><th>Gj.snitt slag</th></tr></thead><tbody>`;
+      pm.holeTotals.forEach((tot, i) => {
         const cnt = pm.holeCounts[i];
-        const avg = cnt>0 ? (tot/cnt).toFixed(1) : '-';
-        holeTable += `<tr><td class="border px-2 py-1">${i+1}</td><td class="border px-2 py-1">${avg}</td></tr>`;
+        const avg = cnt ? (tot / cnt).toFixed(1) : '-';
+        table += `<tr><td class="border px-2 py-1">${i+1}</td><td class="border px-2 py-1">${avg}</td></tr>`;
       });
-      holeTable += '</tbody></table>';
-      container.innerHTML += holeTable;
+      table += '</tbody></table>';
+      container.innerHTML += table;
       document.getElementById('playerSection').classList.remove('hidden');
     }
 
-    // Close handlers
-    document.getElementById('closeHoles').onclick = ()=> document.getElementById('holesSection').classList.add('hidden');
-    document.getElementById('closePlayer').onclick = ()=> document.getElementById('playerSection').classList.add('hidden');
+    // Lukk knapper
+    document.getElementById('closeHoles').onclick = () => document.getElementById('holesSection').classList.add('hidden');
+    document.getElementById('closePlayer').onclick = () => document.getElementById('playerSection').classList.add('hidden');
 
-    // Initial load & refresh
+    // Initial load & intervall
     loadData();
     setInterval(loadData, 30000);
   </script>
