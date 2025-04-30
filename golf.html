@@ -16,7 +16,7 @@
   </header>
 
   <!-- ===== MAIN ===== -->
-  <main id="app" class="w-full max-w-4xl space-y-6 sm:space-y-8">
+  <main id="app" class="w-full max-w-4xl space-y-4 sm:space-y-6">
     <!-- 1. Bane -->
     <section class="card">
       <h2 class="card-title">1. Velg bane</h2>
@@ -24,8 +24,8 @@
         <input id="courseSearch" class="flex-grow input" placeholder="Søk (navn/sted)…" />
         <button id="searchBtn" class="btn-primary">Søk</button>
       </div>
-      <ul id="courseResults" class="space-y-1 max-h-60 overflow-y-auto"></ul>
-      <div id="courseDetails" class="mt-4 hidden text-sm text-gray-700">
+      <ul id="courseResults" class="space-y-1 max-h-56 overflow-y-auto"></ul>
+      <div id="courseDetails" class="mt-3 hidden text-sm text-gray-700">
         <div id="courseName" class="font-semibold"></div>
         Par <span id="coursePar"></span> • CR <span id="courseRating"></span> • Slope <span id="courseSlope"></span>
       </div>
@@ -36,7 +36,7 @@
       <h2 class="card-title">2. Spillere</h2>
       <div class="flex flex-col sm:flex-row gap-2 mb-2">
         <input id="playerName" class="flex-grow input" placeholder="Navn" />
-        <input id="playerHcp" type="number" step="0.1" class="input w-full sm:w-32" placeholder="Hcp‑indeks" />
+        <input id="playerHcp" type="number" step="0.1" class="input w-full sm:w-28" placeholder="Hcp‑indeks" />
         <button id="addPlayerBtn" class="btn-primary">Legg&nbsp;til</button>
       </div>
       <ul id="playerList" class="space-y-1"></ul>
@@ -45,13 +45,13 @@
     <!-- 3. Slag -->
     <section id="scoreSection" class="card hidden overflow-auto">
       <h2 class="card-title">3. Slag pr. hull</h2>
-      <table id="scoreTable" class="min-w-full text-center text-xs sm:text-sm"></table>
+      <table id="scoreTable" class="min-w-full text-center text-xs sm:text-xs"></table>
     </section>
 
     <!-- 4. Sammendrag -->
     <section id="summarySection" class="card hidden">
       <h2 class="card-title">4. Resultat</h2>
-      <table id="summaryTable" class="w-full text-xs sm:text-sm text-center"></table>
+      <table id="summaryTable" class="w-full text-xs sm:text-xs text-center"></table>
     </section>
 
     <!-- Kontroller -->
@@ -68,11 +68,14 @@
     const $ = s => document.querySelector(s);
     document.head.insertAdjacentHTML('beforeend', `
       <style>
-        .card { background: #fff; border-radius: 1rem; padding: 1rem; box-shadow: 0 1px 4px rgb(0 0 0 / .08); }
-        .card-title { font-size: 1.125rem; font-weight: 600; margin-bottom: .5rem; }
-        .input { border: 1px solid #d1d5db; border-radius: .375rem; padding: .25rem .5rem; }
-        .btn-primary { background: #059669; color: #fff; border-radius: .375rem; padding: .25rem .75rem; }
-        .btn-secondary { background: #e5e7eb; color: #000; border-radius: .375rem; padding: .25rem .75rem; }
+        .card { background: #fff; border-radius: 1rem; padding: 0.75rem; box-shadow: 0 1px 4px rgb(0 0 0 / .08); }
+        .card-title { font-size: 1rem; font-weight: 600; margin-bottom: .25rem; }
+        .input { border: 1px solid #d1d5db; border-radius: .375rem; padding: .25rem .5rem; font-size: .875rem; }
+        .btn-primary, .btn-secondary { border-radius: .375rem; padding: .25rem .5rem; font-size: .875rem; }
+        .btn-primary { background: #059669; color: #fff; }
+        .btn-secondary { background: #e5e7eb; color: #000; }
+        th, td { padding: 0.125rem 0.25rem; }
+        input[type=number] { padding: 0.125rem 0; }
       </style>
     `);
 
@@ -90,8 +93,7 @@
     $('#courseSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value.trim()); };
 
     async function search(q) {
-      const list = $('#courseResults');
-      list.innerHTML = '';
+      const list = $('#courseResults'); list.innerHTML = '';
       if (!q) return;
       const { data, error } = await supabase
         .from('courses_with_par')
@@ -101,21 +103,14 @@
       if (!data.length) { list.innerHTML = '<li class="text-gray-600">Ingen treff</li>'; return; }
       data.forEach(c => {
         const li = document.createElement('li');
-        li.innerHTML = `<button class="w-full text-left px-2 py-1 hover:bg-emerald-100 rounded">${c.name}</button>`;
+        li.innerHTML = `<button class="w-full text-left px-2 py-1 hover:bg-emerald-100 rounded text-sm">${c.name}</button>`;
         li.firstChild.onclick = () => selectCourse(c);
         list.appendChild(li);
       });
     }
 
     function selectCourse(row) {
-      state.course = {
-        id: row.id,
-        name: row.name,
-        par: row.par_total,
-        rating: row.course_rating,
-        slope: row.slope,
-        holes: row.holes.sort((a, b) => a.hole - b.hole)
-      };
+      state.course = { id: row.id, name: row.name, par: row.par_total, rating: row.course_rating, slope: row.slope, holes: row.holes.sort((a,b)=>a.hole-b.hole) };
       $('#courseName').textContent = row.name;
       $('#coursePar').textContent = row.par_total;
       $('#courseRating').textContent = row.course_rating || '–';
@@ -129,9 +124,8 @@
       const name = $('#playerName').value.trim();
       const idx = parseFloat($('#playerHcp').value);
       if (!name || isNaN(idx)) return;
-      state.players.push({ id: crypto.randomUUID(), name: name, index: idx, strokes: Array(18).fill(null) });
-      $('#playerName').value = '';
-      $('#playerHcp').value = '';
+      state.players.push({ id: crypto.randomUUID(), name, index: idx, strokes: Array(18).fill(null) });
+      $('#playerName').value = ''; $('#playerHcp').value = '';
       renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
     };
 
@@ -139,7 +133,7 @@
       const ul = $('#playerList'); ul.innerHTML = '';
       state.players.forEach(p => {
         const li = document.createElement('li');
-        li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
+        li.className = 'flex justify-between bg-gray-100 rounded px-2 py-1 text-sm';
         li.innerHTML = `<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
         li.lastChild.onclick = () => { state.players = state.players.filter(x => x.id !== p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound(); };
         ul.appendChild(li);
@@ -152,15 +146,15 @@
       if (!state.course || !state.players.length) { sec.classList.add('hidden'); tbl.innerHTML = ''; return; }
       sec.classList.remove('hidden');
       const holes = state.course.holes;
-      let html = '<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
-      state.players.forEach(p => html += `<th class="border px-1">${p.name}</th>`);
+      let html = '<thead><tr><th class="border">Hull</th><th class="border">Par</th>';
+      state.players.forEach(p => html += `<th class="border text-xs">${p.name}</th>`);
       html += '</tr></thead><tbody>';
       holes.forEach((h, hi) => {
-        html += `<tr><td class="border px-1">${h.hole}</td><td class="border px-1">${h.par}</td>`;
+        html += `<tr><td class="border">${h.hole}</td><td class="border">${h.par}</td>`;
         state.players.forEach((p, pi) => {
           const id = `s_${pi}_${hi}`;
           const val = p.strokes[hi] ?? '';
-          html += `<td class="border p-0"><input id="${id}" type="number" class="w-full text-center py-0.5" value="${val}" /></td>`;
+          html += `<td class="border"><input id="${id}" type="number" class="w-full text-center" value="${val}" /></td>`;
         });
         html += '</tr>';
       });
@@ -177,11 +171,11 @@
       const sec = $('#summarySection'), tbl = $('#summaryTable');
       if (!state.course || !state.players.length) { sec.classList.add('hidden'); tbl.innerHTML = ''; return; }
       sec.classList.remove('hidden');
-      let html = '<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
+      let html = '<thead><tr><th class="border">Spiller</th><th class="border">Brutto</th><th class="border">Netto</th></tr></thead><tbody>';
       state.players.forEach(p => {
         const gross = p.strokes.reduce((a, v) => a + (Number(v)||0), 0);
         const net = gross - p.index;
-        html += `<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross||'–'}</td><td class="border px-1">${gross?net:'–'}</td></tr>`;
+        html += `<tr><td class="border text-left text-sm">${p.name}</td><td class="border">${gross||'–'}</td><td class="border">${gross?net:'–'}</td></tr>`;
       });
       html += '</tbody>'; tbl.innerHTML = html;
     }
@@ -189,7 +183,7 @@
     /***** Persist *****/
     async function saveRound() { if (!state.course || !state.players.length) return; if (!state.roundId) state.roundId = crypto.randomUUID(); await supabase.from('rounds').upsert({ id: state.roundId, payload: state }); }
     async function loadRound() {
-      const { data, error } = await supabase.from('rounds').select('*').order('inserted_at', { ascending: false }).limit(1).maybeSingle();
+      const { data } = await supabase.from('rounds').select('*').order('inserted_at', { ascending: false }).limit(1).maybeSingle();
       if (data) { Object.assign(state, data.payload); renderPlayers(); selectCourse(state.course); }
     }
     loadRound();
@@ -197,30 +191,19 @@
     // Avslutt og nullstill
     document.getElementById('finishRoundBtn').onclick = async function() {
       if (!state.course || !state.players.length) return;
-      await saveRound();
-      alert('Runde avsluttet og lagret!');
+      await saveRound(); alert('Runde avsluttet og lagret!');
       state.course = null; state.players = []; state.roundId = null;
+      ['courseSearch','courseResults','playerList','scoreTable','summaryTable'].forEach(id => document.getElementById(id).innerHTML = '');
       document.getElementById('courseSearch').value = '';
-      document.getElementById('courseResults').innerHTML = '';
-      document.getElementById('courseDetails').classList.add('hidden');
-      document.getElementById('playerList').innerHTML = '';
-      document.getElementById('scoreSection').classList.add('hidden');
-      document.getElementById('scoreTable').innerHTML = '';
-      document.getElementById('summarySection').classList.add('hidden');
-      document.getElementById('summaryTable').innerHTML = '';
+      ['courseDetails','scoreSection','summarySection'].forEach(id => document.getElementById(id).classList.add('hidden'));
     };
 
     document.getElementById('resetBtn').onclick = function() {
       if (confirm('Er du sikker på at du vil nullstille runden? Dette vil slette alt.')) {
         state.course = null; state.players = []; state.roundId = null;
+        ['courseSearch','courseResults','playerList','scoreTable','summaryTable'].forEach(id => document.getElementById(id).innerHTML = '');
         document.getElementById('courseSearch').value = '';
-        document.getElementById('courseResults').innerHTML = '';
-        document.getElementById('courseDetails').classList.add('hidden');
-        document.getElementById('playerList').innerHTML = '';
-        document.getElementById('scoreSection').classList.add('hidden');
-        document.getElementById('scoreTable').innerHTML = '';
-        document.getElementById('summarySection').classList.add('hidden');
-        document.getElementById('summaryTable').innerHTML = '';
+        ['courseDetails','scoreSection','summarySection'].forEach(id => document.getElementById(id).classList.add('hidden'));
       }
     };
   </script>
