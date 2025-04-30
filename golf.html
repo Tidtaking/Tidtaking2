@@ -5,12 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golfscore – registrering</title>
   <!-- Tailwind CSS -->
-  <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
+  <link
+    href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
+  <!-- Egendefinerte farger fra logo -->
+  <style>
+    :root {
+      --primary-color: #0f3d2e; /* Mørkegrønn fra logo */
+      --bg-color:      #f5f0e8; /* Kremfarget bakgrunn */
+    }
+    body {
+      background-color: var(--bg-color);
+      font-family: sans-serif;
+    }
+    /* Kortene */
+    .bg-white {
+      background-color: #fff !important;
+    }
+    .rounded-lg {
+      border: 2px solid var(--primary-color) !important;
+      border-radius: 1rem !important;
+    }
+    .shadow {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }
+    /* Tittel-farge */
+    h1, h2 {
+      color: var(--primary-color) !important;
+    }
+    /* Primærknapper */
+    .btn-primary,
+    button.bg-green-600 {
+      background-color: var(--primary-color) !important;
+      color: #fff      !important;
+    }
+    .btn-primary:hover,
+    button.bg-green-600:hover {
+      background-color: #0c3326 !important;
+    }
+    /* Fjern gammel Tailwind-“bg-green-50” */
+    .bg-green-50 {
+      background-color: var(--bg-color) !important;
+    }
+  </style>
 </head>
-<body class="bg-green-50 min-h-screen flex flex-col items-center p-4">
+
+<body class="min-h-screen flex flex-col items-center p-4">
   <header class="w-full max-w-4xl mb-6 text-center">
-    <h1 class="text-3xl font-bold">Golfscore - Selskapsgolferne</h1>
-    <p class="text-sm text-gray-700">Baner hentes fra Supabase • Runder lagres automatisk</p>
+    <!-- Logo øverst -->
+    <img src="golf.jpg" alt="Selskapsgolferne Logo" class="mx-auto mb-4 w-48" />
+    <h1 class="text-3xl font-bold">Golfscore – Selskapsgolferne</h1>
+    <p class="text-sm text-gray-700">
+      Baner hentes fra Supabase • Runder lagres automatisk
+    </p>
   </header>
 
   <main id="app" class="w-full max-w-4xl space-y-6">
@@ -18,8 +66,14 @@
     <section class="bg-white rounded-lg shadow p-4">
       <h2 class="text-xl font-semibold mb-2">1. Velg bane</h2>
       <div class="flex gap-2 mb-4">
-        <input id="courseSearch" class="flex-grow border border-gray-300 rounded px-2 py-1" placeholder="Søk (navn/sted)…" />
-        <button id="searchBtn" class="bg-green-600 text-white rounded px-3 py-1">Søk</button>
+        <input
+          id="courseSearch"
+          class="flex-grow border border-gray-300 rounded px-2 py-1"
+          placeholder="Søk (navn/sted)…"
+        />
+        <button id="searchBtn" class="bg-green-600 text-white rounded px-3 py-1">
+          Søk
+        </button>
       </div>
       <ul id="courseResults" class="space-y-1 max-h-48 overflow-y-auto"></ul>
       <div id="courseDetails" class="mt-4 hidden text-sm text-gray-800">
@@ -32,47 +86,78 @@
     <section class="bg-white rounded-lg shadow p-4">
       <h2 class="text-xl font-semibold mb-2">2. Legg til spillere</h2>
       <div class="flex gap-2 mb-4">
-        <input id="playerName" class="flex-grow border border-gray-300 rounded px-2 py-1" placeholder="Navn" />
-        <input id="playerHcp" type="number" step="0.1" class="border border-gray-300 rounded px-2 py-1 w-28" placeholder="Hcp" />
-        <button id="addPlayerBtn" class="bg-green-600 text-white rounded px-3 py-1">Legg til</button>
+        <input
+          id="playerName"
+          class="flex-grow border border-gray-300 rounded px-2 py-1"
+          placeholder="Navn"
+        />
+        <input
+          id="playerHcp"
+          type="number"
+          step="0.1"
+          class="border border-gray-300 rounded px-2 py-1 w-28"
+          placeholder="Hcp"
+        />
+        <button id="addPlayerBtn" class="bg-green-600 text-white rounded px-3 py-1">
+          Legg til
+        </button>
       </div>
       <ul id="playerList" class="space-y-1"></ul>
     </section>
 
     <!-- 3. Slag pr. hull -->
-    <section id="scoreSection" class="bg-white rounded-lg shadow p-4 hidden overflow-auto">
+    <section
+      id="scoreSection"
+      class="bg-white rounded-lg shadow p-4 hidden overflow-auto"
+    >
       <h2 class="text-xl font-semibold mb-2">3. Slag pr. hull</h2>
       <table id="scoreTable" class="w-full text-center text-sm"></table>
     </section>
 
     <!-- 4. Sammendrag -->
-    <section id="summarySection" class="bg-white rounded-lg shadow p-4 hidden">
+    <section
+      id="summarySection"
+      class="bg-white rounded-lg shadow p-4 hidden"
+    >
       <h2 class="text-xl font-semibold mb-2">4. Sammendrag</h2>
       <table id="summaryTable" class="w-full text-sm text-center"></table>
     </section>
 
     <!-- 5. Kontrollknapper -->
     <section class="bg-white rounded-lg shadow p-4 flex justify-end gap-2">
-      <button id="finishRoundBtn" class="bg-green-600 text-white rounded px-3 py-1">Avslutt runde</button>
-      <button id="resetBtn" class="bg-gray-300 text-black rounded px-3 py-1">Nullstill</button>
+      <button id="finishRoundBtn" class="bg-green-600 text-white rounded px-3 py-1">
+        Avslutt runde
+      </button>
+      <button id="resetBtn" class="bg-gray-300 text-black rounded px-3 py-1">
+        Nullstill
+      </button>
     </section>
 
     <!-- 6. Leaderboard Live -->
-    <section id="leaderboardSection" class="bg-white rounded-lg shadow p-4">
+    <section class="bg-white rounded-lg shadow p-4">
       <h2 class="text-xl font-semibold mb-2">Leaderboard</h2>
       <table id="leaderboardTable" class="w-full text-sm text-center">
         <thead>
-          <tr><th class="border px-2 py-1">Plass</th><th class="border px-2 py-1">Navn</th><th class="border px-2 py-1">Netto</th></tr>
+          <tr>
+            <th class="border px-2 py-1">Plass</th>
+            <th class="border px-2 py-1">Navn</th>
+            <th class="border px-2 py-1">Netto</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
       <div class="mt-2 text-right">
-        <a href="https://tidtaking.github.io/Tidtaking2/leaderboard" class="text-blue-600 underline text-sm" target="_blank">Live leaderboard</a>
+        <a
+          href="https://tidtaking.github.io/Tidtaking2/leaderboard"
+          class="text-blue-600 underline text-sm"
+          target="_blank"
+          >Live leaderboard</a
+        >
       </div>
     </section>
 
     <!-- 7. Lagrede runder -->
-    <section id="savedRoundsSection" class="bg-white rounded-lg shadow p-4">
+    <section class="bg-white rounded-lg shadow p-4">
       <h2 class="text-xl font-semibold mb-2">Lagrede runder</h2>
       <ul id="savedRoundsList" class="space-y-1"></ul>
     </section>
@@ -80,10 +165,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
+    // --- Her er all JavaScript fra din originale golf.html ---
     const $ = s => document.querySelector(s);
     const supabase = window.supabase.createClient(
       'https://chzfewhbfkdtcizdxyzk.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…PHUru9KmuqA'
     );
     const state = { course: null, players: [], roundId: null };
 
@@ -118,6 +204,7 @@
         ul.appendChild(li);
       });
     }
+
     $('#searchBtn').onclick = () => search($('#courseSearch').value.trim());
     $('#courseSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value.trim()); };
 
@@ -154,7 +241,10 @@
         const li = document.createElement('li');
         li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
         li.innerHTML = `<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
-        li.lastChild.onclick = () => { state.players = state.players.filter(x => x.id !== p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound(); };
+        li.lastChild.onclick = () => {
+          state.players = state.players.filter(x => x.id !== p.id);
+          renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
+        };
         ul.appendChild(li);
       });
     }
@@ -162,8 +252,7 @@
     function buildScoreTable() {
       const sec = $('#scoreSection'), tbl = $('#scoreTable');
       if (!state.course || !state.players.length) {
-        sec.classList.add('hidden'); tbl.innerHTML = '';
-        return;
+        sec.classList.add('hidden'); tbl.innerHTML = ''; return;
       }
       sec.classList.remove('hidden');
       let html = '<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
@@ -198,8 +287,7 @@
     function updateSummary() {
       const sec = $('#summarySection'), tbl = $('#summaryTable');
       if (!state.course || !state.players.length) {
-        sec.classList.add('hidden'); tbl.innerHTML = '';
-        return;
+        sec.classList.add('hidden'); tbl.innerHTML = ''; return;
       }
       sec.classList.remove('hidden');
       let html = '<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
@@ -212,12 +300,23 @@
       tbl.innerHTML = html;
     }
 
-    async function saveRound() { if (!state.course || !state.players.length) return; if (!state.roundId) state.roundId = crypto.randomUUID(); await supabase.from('rounds').upsert({ id: state.roundId, payload: state }); }
-    async function loadRound() { const { data } = await supabase.from('rounds').select('*').order('inserted_at', { ascending: false }).limit(1).maybeSingle(); if (data) { Object.assign(state, data.payload); renderPlayers(); selectCourse(state.course); } }
+    async function saveRound() {
+      if (!state.course || !state.players.length) return;
+      if (!state.roundId) state.roundId = crypto.randomUUID();
+      await supabase.from('rounds').upsert({ id: state.roundId, payload: state });
+    }
+
+    async function loadRound() {
+      const { data } = await supabase.from('rounds').select('*').order('inserted_at',{ ascending: false }).limit(1).maybeSingle();
+      if (data) {
+        Object.assign(state, data.payload);
+        renderPlayers();
+        selectCourse(state.course);
+      }
+    }
 
     async function loadSavedRounds() {
-      const { data, error } = await supabase.from('rounds').select('id,inserted_at')
-        .order('inserted_at', { ascending: false }).limit(20);
+      const { data, error } = await supabase.from('rounds').select('id,inserted_at').order('inserted_at',{ ascending: false }).limit(20);
       const ul = $('#savedRoundsList'); ul.innerHTML = '';
       if (error) { ul.innerHTML = '<li class="text-red-600">Feil ved lasting</li>'; return; }
       data.forEach(r => {
@@ -226,15 +325,17 @@
         li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
         li.innerHTML = `<span>${dt}</span><button class="text-red-600">Slett</button>`;
         li.querySelector('button').onclick = async () => {
-          if (confirm('Slett denne runden?')) { await supabase.from('rounds').delete().eq('id', r.id); loadSavedRounds(); loadLeaderboard(); }
+          if (confirm('Slett denne runden?')) {
+            await supabase.from('rounds').delete().eq('id', r.id);
+            loadSavedRounds(); loadLeaderboard();
+          }
         };
         ul.appendChild(li);
       });
     }
 
     async function loadLeaderboard() {
-      const { data, error } = await supabase.from('rounds').select('payload')
-        .order('inserted_at', { ascending: false }).limit(100);
+      const { data, error } = await supabase.from('rounds').select('payload').order('inserted_at',{ ascending: false }).limit(100);
       if (error) return;
       const scores = {};
       data.forEach(r => r.payload.players.forEach(p => {
@@ -249,7 +350,7 @@
       $('#leaderboardTable tbody').innerHTML = rows;
     }
 
-    // Initialize
+    // Init
     loadRound();
     loadSavedRounds();
     loadLeaderboard();
