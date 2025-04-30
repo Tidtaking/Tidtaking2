@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Leaderboard</title>
+  <!-- Prod-klar Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
+  <style>[x-cloak]{display:none}</style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+  <header class="w-full max-w-3xl mb-6 text-center">
+    <h1 class="text-3xl font-bold">Live Leaderboard</h1>
+    <p class="text-sm text-gray-600">Oppdatert i sanntid fra Supabase</p>
+  </header>
+
+  <main class="w-full max-w-3xl space-y-4">
+    <table id="leaderboardTable" class="w-full bg-white rounded-lg shadow overflow-hidden text-center text-sm">
+      <thead class="bg-green-600 text-white">
+        <tr>
+          <th class="px-4 py-2">Plass</th>
+          <th class="px-4 py-2">Navn</th>
+          <th class="px-4 py-2">Netto</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardBody">
+        <tr><td colspan="3" class="py-4">Laster...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    // Supabase-klient
+    const supabase = window.supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+    );
+
+    // Hent og vis leaderboard
+    async function loadLeaderboard() {
+      const { data, error } = await supabase
+        .from('rounds')
+        .select('payload')
+        .order('inserted_at', { ascending: false })
+        .limit(50);
+      if (error) {
+        document.getElementById('leaderboardBody').innerHTML = `<tr><td colspan=3 class="text-red-600 py-4">Feil ved henting</td></tr>`;
+        return;
+      }
+      // Beregn beste netto per spiller
+      const scores = {};
+      data.forEach(r => {
+        const players = r.payload.players;
+        players.forEach(p => {
+          const gross = p.strokes.reduce((sum, v) => sum + (Number(v) || 0), 0);
+          const net = gross - p.index;
+          if (!scores[p.name] || net < scores[p.name]) scores[p.name] = net;
+        });
+      });
+      // Sorter og vis topp 10
+      const sorted = Object.entries(scores).sort((a, b) => a[1] - b[1]).slice(0, 10);
+      const rows = sorted.map(([name, net], idx) => `
+        <tr class="border-t">
+          <td class="px-4 py-2
