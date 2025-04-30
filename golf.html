@@ -64,159 +64,138 @@
   <!-- ===== SCRIPTS ===== -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
-    /***** Utils + Styles *****/
-    const $ = s => document.querySelector(s);
-    document.head.insertAdjacentHTML('beforeend', `
-      <style>
-        .card { background: #fff; border-radius: 1rem; padding: 1rem; box-shadow: 0 1px 4px rgb(0 0 0 / .08); }
-        .card-title { font-size: 1.125rem; font-weight: 600; margin-bottom: .5rem; }
-        .input { border: 1px solid #d1d5db; border-radius: .375rem; padding: .25rem .5rem; }
-        .btn-primary { background: #059669; color: #fff; border-radius: .375rem; padding: .25rem .75rem; }
-        .btn-secondary { background: #e5e7eb; color: #000; border-radius: .375rem; padding: .25rem .75rem; }
-      </style>
-    `);
+  /***** Utils + Styles *****/
+  const $ = s=>document.querySelector(s);
+  document.head.insertAdjacentHTML('beforeend',`<style>
+    .card{background:#fff;border-radius:1rem;padding:1rem;box-shadow:0 1px 4px rgb(0 0 0 / .08)}
+    .card-title{font-size:1.125rem;font-weight:600;margin-bottom:.5rem}
+    .input{border:1px solid #d1d5db;border-radius:.375rem;padding:.25rem .5rem}
+    .btn-primary{background:#059669;color:#fff;border-radius:.375rem;padding:.25rem .75rem}
+    .btn-secondary{background:#e5e7eb;color:#000;border-radius:.375rem;padding:.25rem .75rem}
+  </style>`);
 
-    /***** Supabase init *****/
-    const supabase = window.supabase.createClient(
-      "https://chzfewhbfkdtcizdxyzk.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
-    );
+  /***** Supabase init *****/
+  const supabase = window.supabase.createClient(
+    "https://chzfewhbfkdtcizdxyzk.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+  );
 
-    /***** State *****/
-    const state = { course: null, players: [], roundId: null };
+  /***** State *****/
+  const state = { course:null, players:[], roundId:null };
 
-    /***** Søk bane *****/
-    $('#searchBtn').onclick = () => search($('#courseSearch').value.trim());
-    $('#courseSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value.trim()); };
+  /***** Søk bane *****/
+  $('#searchBtn').onclick = ()=> search($('#courseSearch').value.trim());
+  $('#courseSearch').onkeydown = e=>{ if(e.key==='Enter') search(e.target.value.trim()); };
 
-    async function search(q) {
-      const list = $('#courseResults');
-      list.innerHTML = '';
-      if (!q) return;
-      const { data, error } = await supabase
-        .from('courses_with_par')
-        .select('id,name,par_total,course_rating,slope,holes:holes(par,hole)')
-        .ilike('name', `%${q}%`).limit(20);
-      if (error) { list.innerHTML = '<li class="text-red-600">DB-feil</li>'; return; }
-      if (!data.length) { list.innerHTML = '<li class="text-gray-600">Ingen treff</li>'; return; }
-      data.forEach(c => {
-        const li = document.createElement('li');
-        li.innerHTML = `<button class="w-full text-left px-2 py-1 hover:bg-emerald-100 rounded">${c.name}</button>`;
-        li.firstChild.onclick = () => selectCourse(c);
-        list.appendChild(li);
+  async function search(q){
+    const list=$('#courseResults'); list.innerHTML='';
+    if(!q) return;
+    const {data,error} = await supabase
+      .from('courses_with_par')
+      .select('id,name,par_total,course_rating,slope,holes:holes(par,hole)')
+      .ilike('name',`%${q}%`).limit(20);
+    if(error){ list.innerHTML='<li class="text-red-600">DB-feil</li>'; return; }
+    if(!data.length){ list.innerHTML='<li class="text-gray-600">Ingen treff</li>'; return; }
+    data.forEach(c=>{
+      const li=document.createElement('li');
+      li.innerHTML=`<button class="w-full text-left px-2 py-1 hover:bg-emerald-100 rounded">${c.name}</button>`;
+      li.firstChild.onclick=()=> selectCourse(c);
+      list.appendChild(li);
+    });
+  }
+
+  function selectCourse(row){
+    state.course={ id:row.id, name:row.name, par:row.par_total, rating:row.course_rating, slope:row.slope, holes:row.holes.sort((a,b)=>a.hole-b.hole) };
+    $('#courseName').textContent=row.name;
+    $('#coursePar').textContent=row.par_total;
+    $('#courseRating').textContent=row.course_rating||'–';
+    $('#courseSlope').textContent=row.slope||'–';
+    $('#courseDetails').classList.remove('hidden');
+    buildScoreTable(); updateSummary(); saveRound();
+  }
+
+  /***** Spillere *****/
+  $('#addPlayerBtn').onclick=()=>{
+    const name=$('#playerName').value.trim();
+    const idx=parseFloat($('#playerHcp').value);
+    if(!name||isNaN(idx)) return;
+    state.players.push({ id:crypto.randomUUID(), name, index:idx, strokes:Array(18).fill(null) });
+    $('#playerName').value=''; $('#playerHcp').value='';
+    renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
+  };
+
+  function renderPlayers(){
+    const ul=$('#playerList'); ul.innerHTML='';
+    state.players.forEach(p=>{
+      const li=document.createElement('li');
+      li.className='flex justify-between bg-gray-100 rounded px-3 py-1';
+      li.innerHTML=`<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
+      li.lastChild.onclick=()=>{ state.players = state.players.filter(x=>x.id!==p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound(); };
+      ul.appendChild(li);
+    });
+  }
+
+  /***** Scoretable *****/
+  function buildScoreTable(){
+    const sec=$('#scoreSection'), tbl=$('#scoreTable');
+    if(!state.course||!state.players.length){ sec.classList.add('hidden'); tbl.innerHTML=''; return; }
+    sec.classList.remove('hidden');
+    const holes=state.course.holes;
+    let html='<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
+    state.players.forEach(p=> html+=`<th class="border px-1">${p.name}</th>`);
+    html+='</tr></thead><tbody>';
+    holes.forEach((h,hi)=>{
+      html+=`<tr><td class="border px-1">${h.hole}</td><td class="border px-1">${h.par}</td>`;
+      state.players.forEach((p,pi)=>{
+        const id=`s_${pi}_${hi}`;
+        const val=p.strokes[hi]??'';
+        html+=`<td class="border p-0"><input id="${id}" type="number" class="w-full text-center py-0.5" value="${val}" /></td>`;
       });
-    }
+      html+='</tr>';
+    });
+    html+='</tbody>'; tbl.innerHTML=html;
+    state.players.forEach((p,pi)=> holes.forEach((_,hi)=>{
+      $('#'+`s_${pi}_${hi}`).oninput=e=>{ const v=parseInt(e.target.value); p.strokes[hi] = isNaN(v)?null:v; updateSummary(); saveRound(); };
+    }));
+  }
 
-    function selectCourse(row) {
-      state.course = {
-        id: row.id,
-        name: row.name,
-        par: row.par_total,
-        rating: row.course_rating,
-        slope: row.slope,
-        holes: row.holes.sort((a, b) => a.hole - b.hole)
-      };
-      $('#courseName').textContent = row.name;
-      $('#coursePar').textContent = row.par_total;
-      $('#courseRating').textContent = row.course_rating || '–';
-      $('#courseSlope').textContent = row.slope || '–';
-      $('#courseDetails').classList.remove('hidden');
-      buildScoreTable(); updateSummary(); saveRound();
-    }
+  /***** Sammendrag *****/
+  function updateSummary(){
+    const sec=$('#summarySection'), tbl=$('#summaryTable');
+    if(!state.course||!state.players.length){ sec.classList.add('hidden'); tbl.innerHTML=''; return; }
+    sec.classList.remove('hidden');
+    let html='<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
+    state.players.forEach(p=>{
+      const gross=p.strokes.reduce((a,v)=>a+(Number(v)||0),0);
+      const net=gross - p.index;
+      html+=`<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross||'–'}</td><td class="border px-1">${gross?net:'–'}</td></tr>`;
+    });
+    html+='</tbody>'; tbl.innerHTML=html;
+  }
 
-    /***** Spillere *****/
-    $('#addPlayerBtn').onclick = () => {
-      const name = $('#playerName').value.trim();
-      const idx = parseFloat($('#playerHcp').value);
-      if (!name || isNaN(idx)) return;
-      state.players.push({ id: crypto.randomUUID(), name: name, index: idx, strokes: Array(18).fill(null) });
-      $('#playerName').value = '';
-      $('#playerHcp').value = '';
-      renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
-    };
+  /***** Persist *****/
+  async function saveRound(){ if(!state.course||!state.players.length) return; if(!state.roundId) state.roundId = crypto.randomUUID(); await supabase.from('rounds').upsert({ id: state.roundId, payload: state }); }
+  async function loadRound(){ const {data,error} = await supabase.from('rounds').select('*').order('inserted_at',{ascending:false}).limit(1).maybeSingle(); if(data){ Object.assign(state,data.payload); renderPlayers(); selectCourse(state.course); }}
+  loadRound();
 
-    function renderPlayers() {
-      const ul = $('#playerList'); ul.innerHTML = '';
-      state.players.forEach(p => {
-        const li = document.createElement('li');
-        li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
-        li.innerHTML = `<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
-        li.lastChild.onclick = () => { state.players = state.players.filter(x => x.id !== p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound(); };
-        ul.appendChild(li);
-      });
-    }
-
-    /***** Scoretable *****/
-    function buildScoreTable() {
-      const sec = $('#scoreSection'), tbl = $('#scoreTable');
-      if (!state.course || !state.players.length) { sec.classList.add('hidden'); tbl.innerHTML = ''; return; }
-      sec.classList.remove('hidden');
-      const holes = state.course.holes;
-      let html = '<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
-      state.players.forEach(p => html += `<th class="border px-1">${p.name}</th>`);
-      html += '</tr></thead><tbody>';
-      holes.forEach((h, hi) => {
-        html += `<tr><td class="border px-1">${h.hole}</td><td class="border px-1">${h.par}</td>`;
-        state.players.forEach((p, pi) => {
-          const id = `s_${pi}_${hi}`;
-          const val = p.strokes[hi] ?? '';
-          html += `<td class="border p-0"><input id="${id}" type="number" class="w-full text-center py-0.5" value="${val}" /></td>`;
-        });
-        html += '</tr>';
-      });
-      html += '</tbody>'; tbl.innerHTML = html;
-      state.players.forEach((p, pi) => holes.forEach((_, hi) => {
-        $('#'+`s_${pi}_${hi}`).oninput = e => { const v = parseInt(e.target.value); p.strokes[hi] = isNaN(v) ? null : v; updateSummary(); saveRound(); };
-      }));
-    }
-
-    /***** Sammendrag *****/
-    function updateSummary() {
-      const sec = $('#summarySection'), tbl = $('#summaryTable');
-      if (!state.course || !state.players.length) { sec.classList.add('hidden'); tbl.innerHTML = ''; return; }
-      sec.classList.remove('hidden');
-      let html = '<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
-      state.players.forEach(p => {
-        const gross = p.strokes.reduce((a, v) => a + (Number(v) || 0), 0);
-        const net = gross - p.index;
-        html += `<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross || '–'}</td><td class="border px-1">${gross ? net : '–'}</td></tr>`;
-      });
-      html += '</tbody>'; tbl.innerHTML = html;
-    }
-
-    /***** Persist *****/
-    async function saveRound() {
-      if (!state.course || !state.players.length) return;
-      if (!state.roundId) state.roundId = crypto.randomUUID();
-      await supabase.from('rounds').upsert({ id: state.roundId, payload: state });
-    }
-
-    async function loadRound() {
-      const { data, error } = await supabase.from('rounds').select('*').order('inserted_at', { ascending: false }).limit(1).maybeSingle();
-      if (data) { Object.assign(state, data.payload); renderPlayers(); selectCourse(state.course); }
-    }
-
-    loadRound();
-
-    // Avslutt og nullstill
-    $('#finishRoundBtn').onclick = async () => {
-      if (!state.course || !state.players.length) return;
-      await saveRound();
-      alert('Runde avsluttet og lagret!');
-      state.course = null; state.players = []; state.roundId = null;
-      $('#courseSearch').value = ''; $('#courseResults').innerHTML = ''; $('#courseDetails').classList.add('hidden');
-      $('#playerList').innerHTML = ''; $('#scoreSection').classList.add('hidden'); $('#scoreTable').innerHTML = '';
-      $('#summarySection').classList.add('hidden'); $('#summaryTable').innerHTML = '';
-    };
-
-    $('#resetBtn').onclick = () => {
-      if (confirm('Er du sikker på at du vil nullstille runden? Dette vil slette alt.')) {
-        state.course = null; state.players = []; state.roundId = null;
-        $('#courseSearch').value = ''; $('#courseResults').innerHTML = ''; $('#courseDetails').classList.add('hidden');
-        $('#playerList').innerHTML = ''; $('#scoreSection').classList.add('hidden'); $('#scoreTable').innerHTML = '';
-        $('#summarySection').classList.add('hidden'); $('#summaryTable').innerHTML = '';
-      }
-    };
+  // Avslutt og Nullstill
+  $('#finishRoundBtn').onclick = async()=>{
+n      if(!state.course || !state.players.length) return;
+n      await saveRound();
+n      alert('Runde avsluttet og lagret!');
+n      state.course = null; state.players = []; state.roundId = null;
+n      $('#courseSearch').value = ''; $('#courseResults').innerHTML = ''; $('#courseDetails').classList.add('hidden');
+n      $('#playerList').innerHTML = ''; $('#scoreSection').classList.add('hidden'); $('#scoreTable').innerHTML = '';
+n      $('#summarySection').classList.add('hidden'); $('#summaryTable').innerHTML = '';
+n  };
+n  $('#resetBtn').onclick = ()=>{
+n      if(confirm('Er du sikker på at du vil nullstille runden? Dette vil slette alt.')){
+n          state.course = null; state.players = []; state.roundId = null;
+n          $('#courseSearch').value = ''; $('#courseResults').innerHTML = ''; $('#courseDetails').classList.add('hidden');
+n          $('#playerList').innerHTML = ''; $('#scoreSection').classList.add('hidden'); $('#scoreTable').innerHTML = '';
+n          $('#summarySection').classList.add('hidden'); $('#summaryTable').innerHTML = '';
+n      }
+n  };
   </script>
 </body>
 </html>
