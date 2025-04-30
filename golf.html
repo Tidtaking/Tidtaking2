@@ -6,21 +6,20 @@
   <title>Golfscore – registrering</title>
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
-  <style>[x-cloak]{display:none}</style>
 </head>
 <body class="bg-green-50 min-h-screen flex flex-col items-center p-4">
   <header class="w-full max-w-4xl mb-6 text-center">
-    <h1 class="text-3xl font-bold">Golfscore</h1>
+    <h1 class="text-3xl font-bold">Golfscore - Selskapsgolferne</h1>
     <p class="text-sm text-gray-700">Baner hentes fra Supabase • Runder lagres automatisk</p>
   </header>
 
   <main id="app" class="w-full max-w-4xl space-y-6">
     <!-- 1. Velg bane -->
-    <section class="card">
-      <h2 class="card-title">1. Velg bane</h2>
+    <section class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xl font-semibold mb-2">1. Velg bane</h2>
       <div class="flex gap-2 mb-4">
-        <input id="courseSearch" class="flex-grow input" placeholder="Søk (navn/sted)…" />
-        <button id="searchBtn" class="btn-primary">Søk</button>
+        <input id="courseSearch" class="flex-grow border border-gray-300 rounded px-2 py-1" placeholder="Søk (navn/sted)…" />
+        <button id="searchBtn" class="bg-green-600 text-white rounded px-3 py-1">Søk</button>
       </div>
       <ul id="courseResults" class="space-y-1 max-h-48 overflow-y-auto"></ul>
       <div id="courseDetails" class="mt-4 hidden text-sm text-gray-800">
@@ -30,37 +29,37 @@
     </section>
 
     <!-- 2. Legg til spillere -->
-    <section class="card">
-      <h2 class="card-title">2. Legg til spillere</h2>
+    <section class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xl font-semibold mb-2">2. Legg til spillere</h2>
       <div class="flex gap-2 mb-4">
-        <input id="playerName" class="flex-grow input" placeholder="Navn" />
-        <input id="playerHcp" type="number" step="0.1" class="input w-28" placeholder="Hcp" />
-        <button id="addPlayerBtn" class="btn-primary">Legg til</button>
+        <input id="playerName" class="flex-grow border border-gray-300 rounded px-2 py-1" placeholder="Navn" />
+        <input id="playerHcp" type="number" step="0.1" class="border border-gray-300 rounded px-2 py-1 w-28" placeholder="Hcp" />
+        <button id="addPlayerBtn" class="bg-green-600 text-white rounded px-3 py-1">Legg til</button>
       </div>
       <ul id="playerList" class="space-y-1"></ul>
     </section>
 
     <!-- 3. Slag pr. hull -->
-    <section id="scoreSection" class="card hidden overflow-auto">
-      <h2 class="card-title">3. Slag pr. hull</h2>
+    <section id="scoreSection" class="bg-white rounded-lg shadow p-4 hidden overflow-auto">
+      <h2 class="text-xl font-semibold mb-2">3. Slag pr. hull</h2>
       <table id="scoreTable" class="w-full text-center text-sm"></table>
     </section>
 
     <!-- 4. Sammendrag -->
-    <section id="summarySection" class="card hidden">
-      <h2 class="card-title">4. Sammendrag</h2>
+    <section id="summarySection" class="bg-white rounded-lg shadow p-4 hidden">
+      <h2 class="text-xl font-semibold mb-2">4. Sammendrag</h2>
       <table id="summaryTable" class="w-full text-sm text-center"></table>
     </section>
 
     <!-- 5. Kontrollknapper -->
-    <section class="card flex justify-end gap-2">
-      <button id="finishRoundBtn" class="btn-primary">Avslutt runde</button>
-      <button id="resetBtn" class="btn-secondary">Nullstill</button>
+    <section class="bg-white rounded-lg shadow p-4 flex justify-end gap-2">
+      <button id="finishRoundBtn" class="bg-green-600 text-white rounded px-3 py-1">Avslutt runde</button>
+      <button id="resetBtn" class="bg-gray-300 text-black rounded px-3 py-1">Nullstill</button>
     </section>
 
     <!-- 6. Leaderboard Live -->
-    <section id="leaderboardSection" class="card">
-      <h2 class="card-title">Leaderboard</h2>
+    <section id="leaderboardSection" class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xl font-semibold mb-2">Leaderboard</h2>
       <table id="leaderboardTable" class="w-full text-sm text-center">
         <thead>
           <tr><th class="border px-2 py-1">Plass</th><th class="border px-2 py-1">Navn</th><th class="border px-2 py-1">Netto</th></tr>
@@ -68,18 +67,17 @@
         <tbody></tbody>
       </table>
       <div class="mt-2 text-right">
-        <a href="/leaderboard.html" class="text-blue-600 underline text-sm" target="_blank">Live leaderboard</a>
+        <a href="https://tidtaking.github.io/Tidtaking2/leaderboard" class="text-blue-600 underline text-sm" target="_blank">Live leaderboard</a>
       </div>
     </section>
 
     <!-- 7. Lagrede runder -->
-    <section id="savedRoundsSection" class="card">
-      <h2 class="card-title">Lagrede runder</h2>
+    <section id="savedRoundsSection" class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xl font-semibold mb-2">Lagrede runder</h2>
       <ul id="savedRoundsList" class="space-y-1"></ul>
     </section>
   </main>
 
-  <!-- Supabase & Script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     const $ = s => document.querySelector(s);
@@ -89,24 +87,28 @@
     );
     const state = { course: null, players: [], roundId: null };
 
-    // Fargekoding av slag
     function colorCell(input, strokes, par) {
-      input.classList.remove('bg-green-200','bg-orange-200','bg-red-200');
+      const cell = input.closest('td');
+      cell.style.backgroundColor = '';
+      input.style.backgroundColor = '';
       if (strokes != null && !isNaN(strokes)) {
-        if (strokes <= par) input.classList.add('bg-green-200');
-        else if (strokes <= par + 2) input.classList.add('bg-orange-200');
-        else input.classList.add('bg-red-200');
+        let color;
+        if (strokes <= par) color = '#d1fae5';
+        else if (strokes <= par + 2) color = '#fed7aa';
+        else color = '#fecaca';
+        cell.style.backgroundColor = color;
+        input.style.backgroundColor = color;
       }
     }
 
-    // Søk baner
     async function search(q) {
       const ul = $('#courseResults'); ul.innerHTML = '';
       if (!q) return;
       const { data, error } = await supabase
         .from('courses_with_par')
         .select('id,name,par_total,course_rating,slope,holes:holes(par,hole)')
-        .ilike('name', `%${q}%`).limit(20);
+        .ilike('name', `%${q}%`)
+        .limit(20);
       if (error) { ul.innerHTML = '<li class="text-red-600">DB-feil</li>'; return; }
       if (!data.length) { ul.innerHTML = '<li class="text-gray-600">Ingen treff</li>'; return; }
       data.forEach(c => {
@@ -117,48 +119,53 @@
       });
     }
     $('#searchBtn').onclick = () => search($('#courseSearch').value.trim());
-    $('#courseSearch').onkeydown = e => { if (e.key==='Enter') search(e.target.value.trim()); };
+    $('#courseSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value.trim()); };
 
-    // Velg bane
     function selectCourse(row) {
-      state.course = { id:row.id, name:row.name, par:row.par_total, rating:row.course_rating, slope:row.slope, holes:row.holes.sort((a,b)=>a.hole-b.hole)};
+      state.course = {
+        id: row.id,
+        name: row.name,
+        par: row.par_total,
+        rating: row.course_rating,
+        slope: row.slope,
+        holes: row.holes.sort((a, b) => a.hole - b.hole)
+      };
       $('#courseName').textContent = row.name;
       $('#coursePar').textContent = row.par_total;
-      $('#courseRating').textContent = row.course_rating||'–';
-      $('#courseSlope').textContent = row.slope||'–';
+      $('#courseRating').textContent = row.course_rating || '–';
+      $('#courseSlope').textContent = row.slope || '–';
       $('#courseDetails').classList.remove('hidden');
       renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
     }
 
-    // Spillere
     $('#addPlayerBtn').onclick = () => {
       const name = $('#playerName').value.trim();
       const idx = parseFloat($('#playerHcp').value);
-      if (!name||isNaN(idx)) return;
-      state.players.push({ id:crypto.randomUUID(), name, index:idx, strokes:Array(18).fill(null) });
-      $('#playerName').value=''; $('#playerHcp').value='';
+      if (!name || isNaN(idx)) return;
+      state.players.push({ id: crypto.randomUUID(), name, index: idx, strokes: Array(18).fill(null) });
+      $('#playerName').value = '';
+      $('#playerHcp').value = '';
       renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
     };
-    function renderPlayers(){
-      const ul=$('#playerList'); ul.innerHTML='';
-      state.players.forEach(p=>{
-        const li=document.createElement('li'); li.className='flex justify-between bg-gray-100 rounded px-3 py-1';
-        li.innerHTML=`<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
-        li.lastChild.onclick=()=>{state.players=state.players.filter(x=>x.id!==p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound();};
+
+    function renderPlayers() {
+      const ul = $('#playerList'); ul.innerHTML = '';
+      state.players.forEach(p => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
+        li.innerHTML = `<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
+        li.lastChild.onclick = () => { state.players = state.players.filter(x => x.id !== p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound(); };
         ul.appendChild(li);
       });
     }
 
-    // Score tabell
     function buildScoreTable() {
       const sec = $('#scoreSection'), tbl = $('#scoreTable');
       if (!state.course || !state.players.length) {
-        sec.classList.add('hidden');
-        tbl.innerHTML = '';
+        sec.classList.add('hidden'); tbl.innerHTML = '';
         return;
       }
       sec.classList.remove('hidden');
-      // Construct table
       let html = '<thead><tr><th class="border px-1">Hull</th><th class="border px-1">Par</th>';
       state.players.forEach(p => html += `<th class="border px-1">${p.name}</th>`);
       html += '</tr></thead><tbody>';
@@ -173,14 +180,10 @@
       });
       html += '</tbody>';
       tbl.innerHTML = html;
-      // Attach handlers and initial coloring
       state.players.forEach((p, pi) => {
         state.course.holes.forEach((h, i) => {
           const inp = document.getElementById(`s_${pi}_${i}`);
-          // Initial color
-          const existing = p.strokes[i];
-          colorCell(inp, existing, h.par);
-          // On input
+          colorCell(inp, p.strokes[i], h.par);
           inp.oninput = e => {
             const v = parseInt(e.target.value);
             p.strokes[i] = isNaN(v) ? null : v;
@@ -192,32 +195,65 @@
       });
     }
 
-    // Sammendrag
-    function updateSummary(){
-      const sec=$('#summarySection'), tbl=$('#summaryTable');
-      if(!state.course||!state.players.length){sec.classList.add('hidden'); tbl.innerHTML=''; return;} sec.classList.remove('hidden');
-      let html='<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
-      state.players.forEach(p=>{
-        const gross=p.strokes.reduce((a,v)=>a+(Number(v)||0),0), net=gross-p.index;
-        html+=`<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross||'–'}</td><td class="border px-1">${gross?net:'–'}</td></tr>`;
-      }); html+='</tbody>'; tbl.innerHTML=html;
+    function updateSummary() {
+      const sec = $('#summarySection'), tbl = $('#summaryTable');
+      if (!state.course || !state.players.length) {
+        sec.classList.add('hidden'); tbl.innerHTML = '';
+        return;
+      }
+      sec.classList.remove('hidden');
+      let html = '<thead><tr><th class="border px-1">Spiller</th><th class="border px-1">Brutto</th><th class="border px-1">Netto</th></tr></thead><tbody>';
+      state.players.forEach(p => {
+        const gross = p.strokes.reduce((a, v) => a + (Number(v) || 0), 0);
+        const net = gross - p.index;
+        html += `<tr><td class="border px-1 text-left">${p.name}</td><td class="border px-1">${gross || '–'}</td><td class="border px-1">${gross ? net : '–'}</td></tr>`;
+      });
+      html += '</tbody>';
+      tbl.innerHTML = html;
     }
 
-    // Persist
-    async function saveRound(){ if(!state.course||!state.players.length) return; if(!state.roundId) state.roundId=crypto.randomUUID(); await supabase.from('rounds').upsert({id:state.roundId, payload: state}); }
+    async function saveRound() { if (!state.course || !state.players.length) return; if (!state.roundId) state.roundId = crypto.randomUUID(); await supabase.from('rounds').upsert({ id: state.roundId, payload: state }); }
+    async function loadRound() { const { data } = await supabase.from('rounds').select('*').order('inserted_at', { ascending: false }).limit(1).maybeSingle(); if (data) { Object.assign(state, data.payload); renderPlayers(); selectCourse(state.course); } }
 
-    // Load siste runde
-    async function loadRound(){ const { data } = await supabase.from('rounds').select('*').order('inserted_at',{ascending:false}).limit(1).maybeSingle(); if(data){ Object.assign(state, data.payload); renderPlayers(); selectCourse(state.course);} }
+    async function loadSavedRounds() {
+      const { data, error } = await supabase.from('rounds').select('id,inserted_at')
+        .order('inserted_at', { ascending: false }).limit(20);
+      const ul = $('#savedRoundsList'); ul.innerHTML = '';
+      if (error) { ul.innerHTML = '<li class="text-red-600">Feil ved lasting</li>'; return; }
+      data.forEach(r => {
+        const li = document.createElement('li');
+        const dt = new Date(r.inserted_at).toLocaleString('nb-NO');
+        li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
+        li.innerHTML = `<span>${dt}</span><button class="text-red-600">Slett</button>`;
+        li.querySelector('button').onclick = async () => {
+          if (confirm('Slett denne runden?')) { await supabase.from('rounds').delete().eq('id', r.id); loadSavedRounds(); loadLeaderboard(); }
+        };
+        ul.appendChild(li);
+      });
+    }
 
-    // Lagrede runder
-    async function loadSavedRounds(){ const { data, error } = await supabase.from('rounds').select('id,inserted_at').order('inserted_at',{ascending:false}).limit(20);
-      const ul=$('#savedRoundsSection ul'); ul.innerHTML=''; if(error){ul.innerHTML='<li class="text-red-600">Feil</li>'; return;} data.forEach(r=>{ const li=document.createElement('li'), dt=new Date(r.inserted_at).toLocaleString('nb-NO'); li.className='flex justify-between bg-gray-100 rounded px-3 py-1'; li.innerHTML=`<span>${dt}</span><button class="text-red-600">Slett</button>`; li.querySelector('button').onclick=async()=>{if(confirm('Slett denne runden?')){await supabase.from('rounds').delete().eq('id',r.id); loadSavedRounds(); loadLeaderboard();}}; ul.appendChild(li); }); }
+    async function loadLeaderboard() {
+      const { data, error } = await supabase.from('rounds').select('payload')
+        .order('inserted_at', { ascending: false }).limit(100);
+      if (error) return;
+      const scores = {};
+      data.forEach(r => r.payload.players.forEach(p => {
+        const gross = p.strokes.reduce((s, v) => s + (Number(v) || 0), 0);
+        const net = gross - p.index;
+        if (!scores[p.name] || net < scores[p.name]) scores[p.name] = net;
+      }));
+      const sorted = Object.entries(scores).sort((a, b) => a[1] - b[1]).slice(0, 10);
+      const rows = sorted.map(([name, net], i) =>
+        `<tr><td class="border px-2 py-1">${i + 1}</td><td class="border px-2 py-1">${name}</td><td class="border px-2 py-1">${net}</td></tr>`
+      ).join('');
+      $('#leaderboardTable tbody').innerHTML = rows;
+    }
 
-    // Live leaderboard
-    async function loadLeaderboard(){ const { data, error } = await supabase.from('rounds').select('payload').order('inserted_at',{ascending:false}).limit(100); if(error) return; const scores={}; data.forEach(r=>r.payload.players.forEach(p=>{ const gross=p.strokes.reduce((s,v)=>s+(Number(v)||0),0), net=gross-p.index; if(!scores[p.name]||net<scores[p.name])scores[p.name]=net;})); const sorted=Object.entries(scores).sort((a,b)=>a[1]-b[1]).slice(0,10); const rows=sorted.map(([name,net],i)=>`<tr><td class="border px-2 py-1">${i+1}</td><td class="border px-2 py-1">${name}</td><td class="border px-2 py-1">${net}</td></tr>`).join(''); $('#leaderboardTable tbody').innerHTML=rows; }
-
-    // Init
-    loadRound(); loadSavedRounds(); loadLeaderboard(); setInterval(loadLeaderboard,30000);
+    // Initialize
+    loadRound();
+    loadSavedRounds();
+    loadLeaderboard();
+    setInterval(loadLeaderboard, 30000);
   </script>
 </body>
 </html>
