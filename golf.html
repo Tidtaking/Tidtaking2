@@ -197,8 +197,6 @@ async function loadRound() {
         ul.appendChild(li);
       });
     }
-    $('#searchBtn').onclick = () => search($('#courseSearch').value.trim());
-    $('#courseSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value.trim()); };
 
     function selectCourse(row) {
       state.course = {
