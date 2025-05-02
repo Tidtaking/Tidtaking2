@@ -362,7 +362,7 @@ const ul = $('#savedRoundsList')[0];
       state.players = [];
       state.roundId = null;
       state.updated_at = null;
-      $('#courseDetails').classList.add('hidden');
+$('#courseDetails').removeClass('hidden');
       $('#courseSearch').value = '';
       $('#courseResults').innerHTML = '';
       renderPlayers();
