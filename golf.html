@@ -146,17 +146,16 @@ function subscribeToCurrentRound(roundId) {
 }
 
 function applyRemoteUpdate(remoteState) {
+  // Unngå loop hvis vi nettopp lagret selv
   if (!remoteState || remoteState.updated_at === state.updated_at) return;
 
-  Object.assign(state, remoteState);
+  Object.assign(state, remoteState);  // erstatt lokal state
 
-- renderPlayers();
-- selectCourse(state.course);  // ← fjerner
-- updateSummary();
-+ renderPlayers();
-+ buildScoreTable();           // bygger tabellen direkte
-+ updateSummary();             // oppdaterer sammendraget
+  renderPlayers();
+  buildScoreTable();                  // bygg tabellen direkte
+  updateSummary();                    // oppdater sammendraget
 }
+
 
 async function saveRound() {
   if (!state.course || !state.players.length) return;
@@ -185,16 +184,16 @@ async function loadRound() {
     .maybeSingle();
 
   if (data) {
-    Object.assign(state, data.payload);
+    Object.assign(state, data.payload);   // legg tilstanden inn
 
--   subscribeToCurrentRound(state.roundId);   // state.roundId = undefined
-+   state.roundId = data.id;                  // lagre ID-en lokalt
-+   subscribeToCurrentRound(data.id);         // nå får du en ekte kanal
+    state.roundId = data.id;              // ← lagre ID‑en lokalt
+    subscribeToCurrentRound(data.id);     // start Realtime‑kanal
 
     renderPlayers();
-    selectCourse(state.course);
+    selectCourse(state.course);           // bygger UI‑et
   }
 }
+
 
 
     async function search(q) {
