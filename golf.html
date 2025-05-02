@@ -190,29 +190,8 @@ setInterval(() => {
 
 async function saveRound() {
   if (!state.course || !state.players.length) return;
-  const isNew = !state.roundId;
-  if (isNew) state.roundId = crypto.randomUUID();
-
-  // Upsert med returning så vi får med oppdatert 'updated_at'-kolonne
-  const { data, error } = await supabase
-    .from('rounds')
-    .upsert(
-      {
-        id: state.roundId,
-        payload: state,
-        updated_at: new Date().toISOString()
-      },
-      { returning: 'representation' }
-    );
-  if (error) { console.error(error); return; }
-
-  // Lagre siste tidsstempel lokalt
-  state.updated_at = data[0].updated_at;
-
-  // Abonner (kun én gang) når runden er ny
-  if (isNew) {
-    subscribeToCurrentRound(state.roundId);
-  }
+  if (!state.roundId) state.roundId = crypto.randomUUID();
+  await supabase.from('rounds').upsert({ id: state.roundId, payload: state });
 }
 
 
@@ -226,17 +205,16 @@ async function loadRound() {
     .order('inserted_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-
   if (data) {
-    Object.assign(state, data.payload);   // legg tilstanden inn
-
-    state.roundId = data.id;              // ← lagre ID‑en lokalt
-    subscribeToCurrentRound(data.id);     // start Realtime‑kanal
-
+    Object.assign(state, data.payload);
+    state.roundId = data.id;
+    state.updated_at = data.updated_at;    // <-- ta med tidsstempelet!
+    subscribeToCurrentRound(data.id);
     renderPlayers();
-    selectCourse(state.course);           // bygger UI‑et
+    selectCourse(state.course);
   }
 }
+
 
 
 
