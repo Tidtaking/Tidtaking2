@@ -145,16 +145,43 @@ function subscribeToCurrentRound(roundId) {
     .subscribe();
 }
 
+x/* ---------- Reaktiv oppdatering (polling) ---------- */
+
+/* 1.  Erstatt eller legg til funksjonen applyRemoteUpdate  */
 function applyRemoteUpdate(remoteState) {
-  // Unngå loop hvis vi nettopp lagret selv
+  // hopp over hvis det ikke er noe nytt
   if (!remoteState || remoteState.updated_at === state.updated_at) return;
 
-  Object.assign(state, remoteState);  // erstatt lokal state
+  Object.assign(state, remoteState);   // erstatt lokal state
 
+  // tegn UI på nytt, men IKKE kall saveRound()
   renderPlayers();
-  buildScoreTable();                  // bygg tabellen direkte
-  updateSummary();                    // oppdater sammendraget
+  buildScoreTable();
+  updateSummary();
 }
+
+/* 2.  Poll den pågående runden hvert sekund               */
+setInterval(async () => {
+  if (!state.roundId) return;   // ingen aktiv runde
+
+  const { data, error } = await supabase
+    .from('rounds')
+    .select('payload, updated_at')
+    .eq('id', state.roundId)
+    .maybeSingle();
+
+  if (error || !data) return;
+  if (data.updated_at !== state.updated_at) {
+    applyRemoteUpdate(data.payload);   // UI oppdateres om noe er nytt
+  }
+}, 1000);   // 1 000 ms = 1 sekund
+
+/* 3.  Poll leaderboard og lagrede runder hvert 5. sekund  */
+setInterval(() => {
+  loadSavedRounds();
+  loadLeaderboard();
+}, 5000);
+
 
 
 async function saveRound() {
