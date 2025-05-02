@@ -8,17 +8,17 @@
   <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
 
 <header class="w-full max-w-4xl mb-6 flex flex-col items-center gap-2 text-center">
-  <!-- Logo -->
+  <!-- Logo: mindre på mobil, litt større fra «md» (≥768 px) -->
   <img src="golf.jpg"
        alt="Golf‑logo"
-       class="h-20 w-auto rounded-xl shadow-md object-contain" />
+       class="h-12 md:h-20 w-auto rounded-xl shadow-md object-contain" />
 
-  <!-- Tittel og undertittel -->
   <h1 class="text-3xl font-bold">Golfscore – Selskapsgolferne</h1>
   <p class="text-sm text-gray-700">
     Baner hentes fra Supabase • Runder lagres automatisk
   </p>
 </header>
+
 
   <main id="app" class="w-full max-w-4xl space-y-6">
     <!-- 1. Velg bane -->
