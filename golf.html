@@ -90,13 +90,27 @@
 <!-- erstatt gammel linje -->
  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
  <script>
- // Supabase-klient
- const supabase = window.supabase.createClient(
-   "https://chzfewhbfkdtcizdxyzk.supabase.co",
-   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
- );
-    const state = { course: null, players: [], roundId: null };
+   <!-- 1) Supabase UMD bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/index.min.js"></script>
+  <script>
+    // Hjelpefunksjon for enkel selekter
+    const $ = s => document.querySelector(s);
 
+    // Initialiser Supabase
+    const supabase = supabase.createClient(
+      'https://chzfewhbfkdtcizdxyzk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+    );
+
+    // Global state
+    const state = {
+      course: null,
+      players: [],
+      roundId: null,
+      updated_at: null
+    };
+
+    // Fargelegger celler etter score/par
     function colorCell(input, strokes, par) {
       const cell = input.closest('td');
       cell.style.backgroundColor = '';
@@ -110,86 +124,114 @@
         input.style.backgroundColor = color;
       }
     }
-/* ---------- Realtime: global ---------- */
-// Ett abonnement som reagerer når en hvilken som helst runde blir
-// lagt til / endret / slettet → oppdater «Lagrede runder» + leaderboard
-const globalChannel = supabase
-  .channel('rounds_global')
-  .on(
-    'postgres_changes',
-    { event: '*', schema: 'public', table: 'rounds' },
-    () => {
-      loadSavedRounds();   // vis ny liste uten refresh
-      loadLeaderboard();   // live‐leaderboard
-    },
-  )
-  .subscribe();
-/* ---------- Realtime: current round ---------- */
-let currentRoundChannel = null;
 
-function subscribeToCurrentRound(roundId) {
-  if (currentRoundChannel) supabase.removeChannel(currentRoundChannel);
+    // --------------- Sanntids‐kanaler ---------------
 
-  currentRoundChannel = supabase
-    .channel(`round_${roundId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'rounds',
-        filter: `id=eq.${roundId}`
-      },
-      ({ new: { payload: remoteState, updated_at } }) => {
-        applyRemoteUpdate(remoteState, updated_at);
+    // 1) Global kanal for alle runder → oppdater lister og leaderboard
+    supabase
+      .channel('rounds_global')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds' }, () => {
+        loadSavedRounds();
+        loadLeaderboard();
+      })
+      .subscribe();
+
+    // 2) Kanal for den aktive runden
+    let currentRoundChannel = null;
+    function subscribeToCurrentRound(roundId) {
+      if (currentRoundChannel) supabase.removeChannel(currentRoundChannel);
+
+      currentRoundChannel = supabase
+        .channel(`round_${roundId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'rounds', filter: `id=eq.${roundId}` },
+          ({ new: { payload: remoteState, updated_at } }) => {
+            applyRemoteUpdate(remoteState, updated_at);
+          }
+        )
+        .subscribe();
+    }
+
+    // Påfør oppdatering fra sanntids‐kanalen
+    function applyRemoteUpdate(remoteState, updatedAt) {
+      if (!remoteState) return;
+      if (state.updated_at === updatedAt) return;  // allerede brukt
+      state.updated_at = updatedAt;
+      Object.assign(state, remoteState);
+      renderPlayers();
+      buildScoreTable();
+      updateSummary();
+    }
+
+    // --------------- CRUD‐operasjoner ---------------
+
+    // Lagre / oppdatere runden, sett opp abonnement ved ny runde
+    async function saveRound() {
+      if (!state.course || !state.players.length) return;
+      const isNew = !state.roundId;
+      if (isNew) state.roundId = crypto.randomUUID();
+
+      const { data, error } = await supabase
+        .from('rounds')
+        .upsert(
+          {
+            id: state.roundId,
+            payload: state,
+            updated_at: new Date().toISOString()
+          },
+          { returning: 'representation' }
+        );
+      if (error) {
+        console.error(error);
+        return;
       }
-    )
-    .subscribe();
-}
 
+      // Oppdater lokal tidsstempel
+      state.updated_at = data[0].updated_at;
 
+      // Abonner kun ved første lagring
+      if (isNew) {
+        subscribeToCurrentRound(state.roundId);
+      }
+    }
 
+    // Last siste runde på oppstart
+    async function loadRound() {
+      const { data } = await supabase
+        .from('rounds')
+        .select('*')
+        .order('inserted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        Object.assign(state, data.payload);
+        state.roundId = data.id;
+        state.updated_at = data.updated_at;
+        subscribeToCurrentRound(data.id);
+        renderPlayers();
+        selectCourse(state.course);
+      }
+    }
 
-
-async function saveRound() {
-  if (!state.course || !state.players.length) return;
-  if (!state.roundId) state.roundId = crypto.randomUUID();
-  await supabase.from('rounds').upsert({ id: state.roundId, payload: state });
-}
-
-
-
-
-async function loadRound() {
-  const { data } = await supabase
-    .from('rounds')
-    .select('*')
-    .order('inserted_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (data) {
-    Object.assign(state, data.payload);
-    state.roundId    = data.id;
-    state.updated_at = data.updated_at;      // ← legg til dette
-    subscribeToCurrentRound(data.id);
-    renderPlayers();
-    selectCourse(state.course);
-  }
-}
-
-
-
-
+    // Søk kurs fra Supabase
     async function search(q) {
-      const ul = $('#courseResults'); ul.innerHTML = '';
+      const ul = $('#courseResults');
+      ul.innerHTML = '';
       if (!q) return;
       const { data, error } = await supabase
         .from('courses_with_par')
         .select('id,name,par_total,course_rating,slope,holes:holes(par,hole)')
         .ilike('name', `%${q}%`)
         .limit(20);
-      if (error) { ul.innerHTML = '<li class="text-red-600">DB-feil</li>'; return; }
-      if (!data.length) { ul.innerHTML = '<li class="text-gray-600">Ingen treff</li>'; return; }
+      if (error) {
+        ul.innerHTML = '<li class="text-red-600">DB-feil</li>';
+        return;
+      }
+      if (!data.length) {
+        ul.innerHTML = '<li class="text-gray-600">Ingen treff</li>';
+        return;
+      }
       data.forEach(c => {
         const li = document.createElement('li');
         li.innerHTML = `<button class="w-full text-left px-2 py-1 hover:bg-emerald-100 rounded">${c.name}</button>`;
@@ -198,6 +240,7 @@ async function loadRound() {
       });
     }
 
+    // Velg bane og bygg UI
     function selectCourse(row) {
       state.course = {
         id: row.id,
@@ -212,34 +255,37 @@ async function loadRound() {
       $('#courseRating').textContent = row.course_rating || '–';
       $('#courseSlope').textContent = row.slope || '–';
       $('#courseDetails').classList.remove('hidden');
-      renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
+      renderPlayers();
+      buildScoreTable();
+      updateSummary();
+      saveRound();
     }
 
-    $('#addPlayerBtn').onclick = () => {
-      const name = $('#playerName').value.trim();
-      const idx = parseFloat($('#playerHcp').value);
-      if (!name || isNaN(idx)) return;
-      state.players.push({ id: crypto.randomUUID(), name, index: idx, strokes: Array(18).fill(null) });
-      $('#playerName').value = '';
-      $('#playerHcp').value = '';
-      renderPlayers(); buildScoreTable(); updateSummary(); saveRound();
-    };
-
+    // Legg til spillere i listen
     function renderPlayers() {
-      const ul = $('#playerList'); ul.innerHTML = '';
+      const ul = $('#playerList');
+      ul.innerHTML = '';
       state.players.forEach(p => {
         const li = document.createElement('li');
         li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
         li.innerHTML = `<span>${p.name} (hcp ${p.index})</span><button class="text-red-600">✕</button>`;
-        li.lastChild.onclick = () => { state.players = state.players.filter(x => x.id !== p.id); renderPlayers(); buildScoreTable(); updateSummary(); saveRound(); };
+        li.lastChild.onclick = () => {
+          state.players = state.players.filter(x => x.id !== p.id);
+          renderPlayers();
+          buildScoreTable();
+          updateSummary();
+          saveRound();
+        };
         ul.appendChild(li);
       });
     }
 
+    // Bygg tabell for slag pr. hull
     function buildScoreTable() {
       const sec = $('#scoreSection'), tbl = $('#scoreTable');
       if (!state.course || !state.players.length) {
-        sec.classList.add('hidden'); tbl.innerHTML = '';
+        sec.classList.add('hidden');
+        tbl.innerHTML = '';
         return;
       }
       sec.classList.remove('hidden');
@@ -257,6 +303,8 @@ async function loadRound() {
       });
       html += '</tbody>';
       tbl.innerHTML = html;
+
+      // Koble input-hendelser
       state.players.forEach((p, pi) => {
         state.course.holes.forEach((h, i) => {
           const inp = document.getElementById(`s_${pi}_${i}`);
@@ -272,10 +320,12 @@ async function loadRound() {
       });
     }
 
+    // Oppdater sammendragstabell
     function updateSummary() {
       const sec = $('#summarySection'), tbl = $('#summaryTable');
       if (!state.course || !state.players.length) {
-        sec.classList.add('hidden'); tbl.innerHTML = '';
+        sec.classList.add('hidden');
+        tbl.innerHTML = '';
         return;
       }
       sec.classList.remove('hidden');
@@ -289,112 +339,117 @@ async function loadRound() {
       tbl.innerHTML = html;
     }
 
-    async function saveRound() { if (!state.course || !state.players.length) return; if (!state.roundId) state.roundId = crypto.randomUUID(); await supabase.from('rounds').upsert({ id: state.roundId, payload: state }); }
-    async function loadRound() { const { data } = await supabase.from('rounds').select('*').order('inserted_at', { ascending: false }).limit(1).maybeSingle(); if (data) { Object.assign(state, data.payload); renderPlayers(); selectCourse(state.course); } }
-
+    // Last lista over lagrede runder
     async function loadSavedRounds() {
-      const { data, error } = await supabase.from('rounds').select('id,inserted_at')
-        .order('inserted_at', { ascending: false }).limit(20);
-      const ul = $('#savedRoundsList'); ul.innerHTML = '';
-      if (error) { ul.innerHTML = '<li class="text-red-600">Feil ved lasting</li>'; return; }
+      const { data, error } = await supabase
+        .from('rounds')
+        .select('id,inserted_at')
+        .order('inserted_at', { ascending: false })
+        .limit(20);
+      const ul = $('#savedRoundsList');
+      ul.innerHTML = '';
+      if (error) {
+        ul.innerHTML = '<li class="text-red-600">Feil ved lasting</li>';
+        return;
+      }
       data.forEach(r => {
         const li = document.createElement('li');
         const dt = new Date(r.inserted_at).toLocaleString('nb-NO');
         li.className = 'flex justify-between bg-gray-100 rounded px-3 py-1';
         li.innerHTML = `<span>${dt}</span><button class="text-red-600">Slett</button>`;
         li.querySelector('button').onclick = async () => {
-          if (confirm('Slett denne runden?')) { await supabase.from('rounds').delete().eq('id', r.id); loadSavedRounds(); loadLeaderboard(); }
+          if (confirm('Slett denne runden?')) {
+            await supabase.from('rounds').delete().eq('id', r.id);
+            loadSavedRounds();
+            loadLeaderboard();
+          }
         };
         ul.appendChild(li);
       });
     }
 
+    // Last leaderboard (beste nettoscore)
     async function loadLeaderboard() {
-      const { data, error } = await supabase.from('rounds').select('payload')
-        .order('inserted_at', { ascending: false }).limit(100);
+      const { data, error } = await supabase
+        .from('rounds')
+        .select('payload,inserted_at')
+        .order('inserted_at', { ascending: false })
+        .limit(100);
       if (error) return;
       const scores = {};
-      data.forEach(r => r.payload.players.forEach(p => {
-        const gross = p.strokes.reduce((s, v) => s + (Number(v) || 0), 0);
-        const net = gross - p.index;
-        if (!scores[p.name] || net < scores[p.name]) scores[p.name] = net;
-      }));
+      data.forEach(r =>
+        r.payload.players.forEach(p => {
+          const gross = p.strokes.reduce((s, v) => s + (Number(v) || 0), 0);
+          const net = gross - p.index;
+          if (!scores[p.name] || net < scores[p.name]) scores[p.name] = net;
+        })
+      );
       const sorted = Object.entries(scores).sort((a, b) => a[1] - b[1]).slice(0, 10);
-      const rows = sorted.map(([name, net], i) =>
-        `<tr><td class="border px-2 py-1">${i + 1}</td><td class="border px-2 py-1">${name}</td><td class="border px-2 py-1">${net}</td></tr>`
-      ).join('');
+      const rows = sorted
+        .map(([name, net], i) => `<tr><td class="border px-2 py-1">${i + 1}</td><td class="border px-2 py-1">${name}</td><td class="border px-2 py-1">${net}</td></tr>`)
+        .join('');
       $('#leaderboardTable tbody').innerHTML = rows;
     }
 
-
-  /* ---------- 5. Kontrollknapper ---------- */
-
-  // Nullstill alt og la være å lagre en ny runde
-  function resetAll() {
-    // Tilbakestill tilstand
-    state.course   = null;
-    state.players  = [];
-    state.roundId  = null;
-
-    // Rydd grensesnittet
-    $('#courseDetails').classList.add('hidden');
-    $('#courseSearch').value      = '';
-    $('#courseResults').innerHTML = '';
-    renderPlayers();              // tømmer spiller‑listen
-    buildScoreTable();            // skjuler score‑delen
-    updateSummary();              // skjuler sammendraget
-  }
-
-  // Avslutt pågående runde, lagre den og start “blank” skjerm
-  async function finishRound() {
-    if (!state.course || !state.players.length) {
-      alert('Du har ingen pågående runde å avslutte.');
-      return;
+    // Nullstill hele appen
+    function resetAll() {
+      state.course = null;
+      state.players = [];
+      state.roundId = null;
+      state.updated_at = null;
+      $('#courseDetails').classList.add('hidden');
+      $('#courseSearch').value = '';
+      $('#courseResults').innerHTML = '';
+      renderPlayers();
+      buildScoreTable();
+      updateSummary();
     }
-    await saveRound();            // sørg for at siste endringer er i DB
-/* ---------- LIVE‑KANAL: rounds ---------- */
-const roundsChannel = supabase
-  .channel('public:rounds')      // navn valgfritt, men «schema:table» er lesbart
-  .on(
-    'postgres_changes',
-    { event: '*', schema: 'public', table: 'rounds' },
-    payload => {
-      const row = payload.new || payload.old;    // INSERT/UPDATE = new, DELETE = old
 
-      /* 2a  Oppdater pågående runde hvis ID‑en treffer -------------------- */
-      if (row.id === state.roundId && payload.eventType === 'UPDATE') {
-        applyRemoteUpdate(row.payload);          // tegner om UI
-        return;                                  // resten kan hoppes over
+    // Avslutt aktiv runde
+    async function finishRound() {
+      if (!state.course || !state.players.length) {
+        alert('Du har ingen pågående runde å avslutte.');
+        return;
       }
-
-      /* 2b  Ellers er det en annen runde → oppdater lister ---------------- */
-      loadSavedRounds();                         // viser ny/slettet runde
-      loadLeaderboard();                         // raskere leaderboard
+      await saveRound();
+      state.course = null;
+      state.players = [];
+      state.roundId = null;
+      state.updated_at = null;
+      $('#courseDetails').classList.add('hidden');
+      $('#courseSearch').value = '';
+      $('#courseResults').innerHTML = '';
+      renderPlayers();
+      buildScoreTable();
+      updateSummary();
+      loadSavedRounds();
+      loadLeaderboard();
+      alert('Runden er lagret og avsluttet!');
     }
-  )
-  .subscribe(status => console.log('Realtime status:', status));
 
-    // Nullstill tilstand og UI slik at ny runde kan startes
-    state.course  = null;
-    state.players = [];
-    state.roundId = null;
+    // Sett opp event-listeners og last initielt data
+    document.addEventListener('DOMContentLoaded', () => {
+      $('#searchBtn').onclick = () => search($('#courseSearch').value.trim());
+      $('#courseSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value.trim()); };
+      $('#addPlayerBtn').onclick = () => {
+        const name = $('#playerName').value.trim();
+        const idx = parseFloat($('#playerHcp').value);
+        if (!name || isNaN(idx)) return;
+        state.players.push({ id: crypto.randomUUID(), name, index: idx, strokes: Array(18).fill(null) });
+        $('#playerName').value = '';
+        $('#playerHcp').value = '';
+        renderPlayers();
+        buildScoreTable();
+        updateSummary();
+        saveRound();
+      };
+      $('#resetBtn').onclick = resetAll;
+      $('#finishRoundBtn').onclick = finishRound;
 
-    $('#courseDetails').classList.add('hidden');
-    $('#courseSearch').value      = '';
-    $('#courseResults').innerHTML = '';
-    renderPlayers();
-    buildScoreTable();
-    updateSummary();
-
-    // Oppdater lister som vises i høyre kolonne
-    loadSavedRounds();
-    loadLeaderboard();
-
-    alert('Runden er lagret og avsluttet!');
-  }
-
-
-
+      loadRound();
+      loadSavedRounds();
+      loadLeaderboard();
+    });
   </script>
 </body>
 </html>
