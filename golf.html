@@ -146,16 +146,18 @@ function subscribeToCurrentRound(roundId) {
 }
 
 function applyRemoteUpdate(remoteState) {
-  // Unngå unødvendige loops – sjekk at oppdateringen
-  // ikke allerede er identisk med lokal state
   if (!remoteState || remoteState.updated_at === state.updated_at) return;
 
-  // Erstatt lokal tilstand og tegn om UI‑et
   Object.assign(state, remoteState);
-  renderPlayers();         // spillerliste
-  selectCourse(state.course); // henter kurs‐data + bygger score‐tabell
-  updateSummary();         // sammendrag
+
+- renderPlayers();
+- selectCourse(state.course);  // ← fjerner
+- updateSummary();
++ renderPlayers();
++ buildScoreTable();           // bygger tabellen direkte
++ updateSummary();             // oppdaterer sammendraget
 }
+
 async function saveRound() {
   if (!state.course || !state.players.length) return;
 
@@ -184,11 +186,16 @@ async function loadRound() {
 
   if (data) {
     Object.assign(state, data.payload);
+
+-   subscribeToCurrentRound(state.roundId);   // state.roundId = undefined
++   state.roundId = data.id;                  // lagre ID-en lokalt
++   subscribeToCurrentRound(data.id);         // nå får du en ekte kanal
+
     renderPlayers();
     selectCourse(state.course);
-    subscribeToCurrentRound(state.roundId);   // ← her
   }
 }
+
 
     async function search(q) {
       const ul = $('#courseResults'); ul.innerHTML = '';
