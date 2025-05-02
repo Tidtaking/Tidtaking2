@@ -109,6 +109,86 @@
         input.style.backgroundColor = color;
       }
     }
+/* ---------- Realtime: global ---------- */
+// Ett abonnement som reagerer når en hvilken som helst runde blir
+// lagt til / endret / slettet → oppdater «Lagrede runder» + leaderboard
+const globalChannel = supabase
+  .channel('rounds_global')
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'rounds' },
+    () => {
+      loadSavedRounds();   // vis ny liste uten refresh
+      loadLeaderboard();   // live‐leaderboard
+    },
+  )
+  .subscribe();
+/* ---------- Realtime: current round ---------- */
+let currentRoundChannel = null;
+
+function subscribeToCurrentRound(roundId) {
+  // Koble fra tidligere runde hvis den finnes
+  if (currentRoundChannel) supabase.removeChannel(currentRoundChannel);
+
+  currentRoundChannel = supabase
+    .channel(`round_${roundId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'rounds',
+        filter: `id=eq.${roundId}`,   // bare DENNE runden
+      },
+      payload => applyRemoteUpdate(payload.new.payload),
+    )
+    .subscribe();
+}
+
+function applyRemoteUpdate(remoteState) {
+  // Unngå unødvendige loops – sjekk at oppdateringen
+  // ikke allerede er identisk med lokal state
+  if (!remoteState || remoteState.updated_at === state.updated_at) return;
+
+  // Erstatt lokal tilstand og tegn om UI‑et
+  Object.assign(state, remoteState);
+  renderPlayers();         // spillerliste
+  selectCourse(state.course); // henter kurs‐data + bygger score‐tabell
+  updateSummary();         // sammendrag
+}
+async function saveRound() {
+  if (!state.course || !state.players.length) return;
+
+  if (!state.roundId) state.roundId = crypto.randomUUID();
+
+  // Merk tidspunkt – nyttig for loop‑beskyttelse over
+  state.updated_at = new Date().toISOString();
+
+  await supabase.from('rounds').upsert({
+    id: state.roundId,
+    payload: state,
+    updated_at: state.updated_at,
+  });
+
+  // Sørg for at vi lytter når runden nettopp ble opprettet
+  subscribeToCurrentRound(state.roundId);
+}
+
+async function loadRound() {
+  const { data } = await supabase
+    .from('rounds')
+    .select('*')
+    .order('inserted_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (data) {
+    Object.assign(state, data.payload);
+    renderPlayers();
+    selectCourse(state.course);
+    subscribeToCurrentRound(state.roundId);   // ← her
+  }
+}
 
     async function search(q) {
       const ul = $('#courseResults'); ul.innerHTML = '';
@@ -312,13 +392,7 @@
   loadRound();
   loadSavedRounds();
   loadLeaderboard();
-  setInterval(loadLeaderboard, 30000);
 
-    // Initialize
-    loadRound();
-    loadSavedRounds();
-    loadLeaderboard();
-    setInterval(loadLeaderboard, 30000);
   </script>
 </body>
 </html>
