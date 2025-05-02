@@ -148,19 +148,6 @@ function subscribeToCurrentRound(roundId) {
 }
 
 
-/* 1.  Erstatt eller legg til funksjonen applyRemoteUpdate  */
-function applyRemoteUpdate(remoteState, updatedAt) {
-  if (!remoteState) return;
-  // Hopp over om vi allerede har brukt denne oppdateringen
-  if (state.updated_at && state.updated_at === updatedAt) return;
-
-  state.updated_at = updatedAt;
-  Object.assign(state, remoteState);
-
-  renderPlayers();
-  buildScoreTable();
-  updateSummary();
-}
 
 
 
@@ -169,7 +156,6 @@ async function saveRound() {
   if (!state.roundId) state.roundId = crypto.randomUUID();
   await supabase.from('rounds').upsert({ id: state.roundId, payload: state });
 }
-
 
 
 
@@ -183,13 +169,14 @@ async function loadRound() {
     .maybeSingle();
   if (data) {
     Object.assign(state, data.payload);
-    state.roundId = data.id;
-    state.updated_at = data.updated_at;    // <-- ta med tidsstempelet!
+    state.roundId    = data.id;
+    state.updated_at = data.updated_at;      // ← legg til dette
     subscribeToCurrentRound(data.id);
     renderPlayers();
     selectCourse(state.course);
   }
 }
+
 
 
 
