@@ -128,7 +128,6 @@ const globalChannel = supabase
 let currentRoundChannel = null;
 
 function subscribeToCurrentRound(roundId) {
-  // Koble fra tidligere runde hvis den finnes
   if (currentRoundChannel) supabase.removeChannel(currentRoundChannel);
 
   currentRoundChannel = supabase
@@ -139,25 +138,30 @@ function subscribeToCurrentRound(roundId) {
         event: 'UPDATE',
         schema: 'public',
         table: 'rounds',
-        filter: `id=eq.${roundId}`,   // bare DENNE runden
+        filter: `id=eq.${roundId}`
       },
-      payload => applyRemoteUpdate(payload.new.payload),
+      ({ new: { payload: remoteState, updated_at } }) => {
+        applyRemoteUpdate(remoteState, updated_at);
+      }
     )
     .subscribe();
 }
 
 
 /* 1.  Erstatt eller legg til funksjonen applyRemoteUpdate  */
-function applyRemoteUpdate(remoteState) {
-  // hopp hvis identisk tidsstempel
-  if (!remoteState || remoteState.updated_at === state.updated_at) return;
+function applyRemoteUpdate(remoteState, updatedAt) {
+  if (!remoteState) return;
+  // Hopp over om vi allerede har brukt denne oppdateringen
+  if (state.updated_at && state.updated_at === updatedAt) return;
 
+  state.updated_at = updatedAt;
   Object.assign(state, remoteState);
 
   renderPlayers();
   buildScoreTable();
   updateSummary();
 }
+
 
 
 /* 2.  Poll den pågående runden hvert sekund               */
@@ -186,16 +190,31 @@ setInterval(() => {
 
 async function saveRound() {
   if (!state.course || !state.players.length) return;
+  const isNew = !state.roundId;
+  if (isNew) state.roundId = crypto.randomUUID();
 
-  if (!state.roundId) state.roundId = crypto.randomUUID();
-  state.updated_at = new Date().toISOString();
+  // Upsert med returning så vi får med oppdatert 'updated_at'-kolonne
+  const { data, error } = await supabase
+    .from('rounds')
+    .upsert(
+      {
+        id: state.roundId,
+        payload: state,
+        updated_at: new Date().toISOString()
+      },
+      { returning: 'representation' }
+    );
+  if (error) { console.error(error); return; }
 
-  await supabase.from('rounds').upsert({
-    id:         state.roundId,
-    payload:    state,
-    updated_at: state.updated_at
-  });
+  // Lagre siste tidsstempel lokalt
+  state.updated_at = data[0].updated_at;
+
+  // Abonner (kun én gang) når runden er ny
+  if (isNew) {
+    subscribeToCurrentRound(state.roundId);
+  }
 }
+
 
 
 
