@@ -149,16 +149,16 @@ function subscribeToCurrentRound(roundId) {
 
 /* 1.  Erstatt eller legg til funksjonen applyRemoteUpdate  */
 function applyRemoteUpdate(remoteState) {
-  // hopp over hvis det ikke er noe nytt
+  // hopp hvis identisk tidsstempel
   if (!remoteState || remoteState.updated_at === state.updated_at) return;
 
-  Object.assign(state, remoteState);   // erstatt lokal state
+  Object.assign(state, remoteState);
 
-  // tegn UI på nytt, men IKKE kall saveRound()
   renderPlayers();
   buildScoreTable();
   updateSummary();
 }
+
 
 /* 2.  Poll den pågående runden hvert sekund               */
 setInterval(async () => {
@@ -188,14 +188,15 @@ async function saveRound() {
   if (!state.course || !state.players.length) return;
 
   if (!state.roundId) state.roundId = crypto.randomUUID();
-  state.updated_at = new Date().toISOString();   // ← tidsstempel
+  state.updated_at = new Date().toISOString();
 
   await supabase.from('rounds').upsert({
-    id: state.roundId,
-    payload: state,
-    updated_at: state.updated_at,               // ← lagres i DB
+    id:         state.roundId,
+    payload:    state,
+    updated_at: state.updated_at
   });
 }
+
 
 
 
@@ -408,6 +409,27 @@ setInterval(async () => {
       return;
     }
     await saveRound();            // sørg for at siste endringer er i DB
+/* ---------- LIVE‑KANAL: rounds ---------- */
+const roundsChannel = supabase
+  .channel('public:rounds')      // navn valgfritt, men «schema:table» er lesbart
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'rounds' },
+    payload => {
+      const row = payload.new || payload.old;    // INSERT/UPDATE = new, DELETE = old
+
+      /* 2a  Oppdater pågående runde hvis ID‑en treffer -------------------- */
+      if (row.id === state.roundId && payload.eventType === 'UPDATE') {
+        applyRemoteUpdate(row.payload);          // tegner om UI
+        return;                                  // resten kan hoppes over
+      }
+
+      /* 2b  Ellers er det en annen runde → oppdater lister ---------------- */
+      loadSavedRounds();                         // viser ny/slettet runde
+      loadLeaderboard();                         // raskere leaderboard
+    }
+  )
+  .subscribe(status => console.log('Realtime status:', status));
 
     // Nullstill tilstand og UI slik at ny runde kan startes
     state.course  = null;
