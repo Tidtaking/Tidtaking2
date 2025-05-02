@@ -87,19 +87,13 @@
     </section>
   </main>
 
-<!-- erstatt gammel linje -->
-   <!-- 1) Supabase UMD bundle -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/index.min.js"></script>
-  <!-- 2) Din egen kode: én samlet blokk -->
-  <script>
-    // Enkelt alias for querySelector
-    const $ = s => document.querySelector(s);
-
-    // Initialiser Supabase-klienten
-    const supabase = supabase.createClient(
-      'https://chzfewhbfkdtcizdxyzk.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
-    );
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+ <script>
+ // Supabase-klient
+ const supabase = window.supabase.createClient(
+   "https://chzfewhbfkdtcizdxyzk.supabase.co",
+   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+ );
 
     // Applikasjons‐state
     const state = {
