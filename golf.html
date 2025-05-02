@@ -6,20 +6,19 @@
   <title>Golfscore – registrering</title>
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
-
-<header class="w-full max-w-4xl mb-6 flex flex-col items-center gap-2 text-center">
-  <!-- Logo — maks 64 px høyde på mobil, 96 px fra md‑breakpoint -->
-  <img src="golf.jpg"
-       alt="Golf‑logo"
-       class="h-16 md:h-24 w-auto max-h-24 md:max-h-32
-              rounded-xl shadow-md object-contain" />
-
-  <h1 class="text-3xl font-bold">Golfscore – Selskapsgolferne</h1>
-  <p class="text-sm text-gray-700">
-    Baner hentes fra Supabase • Runder lagres automatisk
-  </p>
-</header>
-
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+  <header class="w-full max-w-4xl mb-6 flex flex-col items-center gap-2 text-center">
+    <img src="golf.jpg"
+         alt="Golf-logo"
+         class="h-16 md:h-24 w-auto rounded-xl shadow-md object-contain" />
+    <h1 class="text-3xl font-bold">Golfscore – Selskapsgolferne</h1>
+    <p class="text-sm text-gray-700">Baner hentes fra Supabase • Runder lagres automatisk</p>
+  </header>
 
 
   <main id="app" class="w-full max-w-4xl space-y-6">
@@ -232,7 +231,7 @@
       $('#coursePar').textContent = row.par_total;
       $('#courseRating').textContent = row.course_rating || '–';
       $('#courseSlope').textContent = row.slope || '–';
-      $('#courseDetails').classList.remove('hidden');
+$('#courseDetails').removeClass('hidden');
       renderPlayers();
       buildScoreTable();
       updateSummary();
