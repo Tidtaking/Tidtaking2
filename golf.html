@@ -164,30 +164,6 @@ function applyRemoteUpdate(remoteState, updatedAt) {
 
 
 
-/* 2.  Poll den pågående runden hvert sekund               */
-setInterval(async () => {
-  if (!state.roundId) return;   // ingen aktiv runde
-
-  const { data, error } = await supabase
-    .from('rounds')
-    .select('payload, updated_at')
-    .eq('id', state.roundId)
-    .maybeSingle();
-
-  if (error || !data) return;
-  if (data.updated_at !== state.updated_at) {
-    applyRemoteUpdate(data.payload);   // UI oppdateres om noe er nytt
-  }
-}, 1000);   // 1 000 ms = 1 sekund
-
-/* 3.  Poll leaderboard og lagrede runder hvert 5. sekund  */
-setInterval(() => {
-  loadSavedRounds();
-  loadLeaderboard();
-}, 5000);
-
-
-
 async function saveRound() {
   if (!state.course || !state.players.length) return;
   if (!state.roundId) state.roundId = crypto.randomUUID();
