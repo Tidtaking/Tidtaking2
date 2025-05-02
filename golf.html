@@ -240,7 +240,7 @@
     }
 
     function renderPlayers() {
-      const ul = $('#playerList');
+const ul = $('#playerList')[0];
       ul.innerHTML = '';
       state.players.forEach(p => {
         const li = document.createElement('li');
@@ -319,7 +319,7 @@
         .select('id,inserted_at')
         .order('inserted_at', { ascending: false })
         .limit(20);
-      const ul = $('#savedRoundsList');
+const ul = $('#savedRoundsList')[0];
       ul.innerHTML = '';
       if (error) return ul.innerHTML = '<li class="text-red-600">Feil ved lasting</li>';
       data.forEach(r => {
