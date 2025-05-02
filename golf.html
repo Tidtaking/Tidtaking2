@@ -198,9 +198,6 @@ async function saveRound() {
 }
 
 
-  // Sørg for at vi lytter når runden nettopp ble opprettet
-  subscribeToCurrentRound(state.roundId);
-}
 
 async function loadRound() {
   const { data } = await supabase
