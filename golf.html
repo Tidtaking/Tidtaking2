@@ -161,15 +161,15 @@ async function saveRound() {
   if (!state.course || !state.players.length) return;
 
   if (!state.roundId) state.roundId = crypto.randomUUID();
-
-  // Merk tidspunkt – nyttig for loop‑beskyttelse over
-  state.updated_at = new Date().toISOString();
+  state.updated_at = new Date().toISOString();   // ← tidsstempel
 
   await supabase.from('rounds').upsert({
     id: state.roundId,
     payload: state,
-    updated_at: state.updated_at,
+    updated_at: state.updated_at,               // ← lagres i DB
   });
+}
+
 
   // Sørg for at vi lytter når runden nettopp ble opprettet
   subscribeToCurrentRound(state.roundId);
@@ -343,7 +343,21 @@ async function loadRound() {
       ).join('');
       $('#leaderboardTable tbody').innerHTML = rows;
     }
-  <!-- ... alt det andre JavaScript‑et ditt over her ... -->
+/* ---------- Poll nåværende runde hvert sekund ---------- */
+setInterval(async () => {
+  if (!state.roundId) return;   // ingen runde pågår
+
+  const { data, error } = await supabase
+    .from('rounds')
+    .select('payload, updated_at')
+    .eq('id', state.roundId)
+    .maybeSingle();
+
+  if (error || !data) return;   // tidsavbrudd el. tomt resultat
+  if (data.updated_at !== state.updated_at) {
+    applyRemoteUpdate(data.payload);   // ny state → oppdater UI
+  }
+}, 1000);  // 1000 ms = 1 sekund
 
   /* ---------- 5. Kontrollknapper ---------- */
 
