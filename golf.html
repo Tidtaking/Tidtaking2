@@ -6,12 +6,19 @@
   <title>Golfscore – registrering</title>
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
-</head>
-<body class="bg-green-50 min-h-screen flex flex-col items-center p-4">
-  <header class="w-full max-w-4xl mb-6 text-center">
-    <h1 class="text-3xl font-bold">Golfscore - Selskapsgolferne</h1>
-    <p class="text-sm text-gray-700">Baner hentes fra Supabase • Runder lagres automatisk</p>
-  </header>
+
+<header class="w-full max-w-4xl mb-6 flex flex-col items-center gap-2 text-center">
+  <!-- Logo -->
+  <img src="golf.jpg"
+       alt="Golf‑logo"
+       class="h-20 w-auto rounded-xl shadow-md object-contain" />
+
+  <!-- Tittel og undertittel -->
+  <h1 class="text-3xl font-bold">Golfscore – Selskapsgolferne</h1>
+  <p class="text-sm text-gray-700">
+    Baner hentes fra Supabase • Runder lagres automatisk
+  </p>
+</header>
 
   <main id="app" class="w-full max-w-4xl space-y-6">
     <!-- 1. Velg bane -->
