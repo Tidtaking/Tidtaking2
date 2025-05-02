@@ -248,6 +248,62 @@
       ).join('');
       $('#leaderboardTable tbody').innerHTML = rows;
     }
+  <!-- ... alt det andre JavaScript‑et ditt over her ... -->
+
+  /* ---------- 5. Kontrollknapper ---------- */
+
+  // Nullstill alt og la være å lagre en ny runde
+  function resetAll() {
+    // Tilbakestill tilstand
+    state.course   = null;
+    state.players  = [];
+    state.roundId  = null;
+
+    // Rydd grensesnittet
+    $('#courseDetails').classList.add('hidden');
+    $('#courseSearch').value      = '';
+    $('#courseResults').innerHTML = '';
+    renderPlayers();              // tømmer spiller‑listen
+    buildScoreTable();            // skjuler score‑delen
+    updateSummary();              // skjuler sammendraget
+  }
+
+  // Avslutt pågående runde, lagre den og start “blank” skjerm
+  async function finishRound() {
+    if (!state.course || !state.players.length) {
+      alert('Du har ingen pågående runde å avslutte.');
+      return;
+    }
+    await saveRound();            // sørg for at siste endringer er i DB
+
+    // Nullstill tilstand og UI slik at ny runde kan startes
+    state.course  = null;
+    state.players = [];
+    state.roundId = null;
+
+    $('#courseDetails').classList.add('hidden');
+    $('#courseSearch').value      = '';
+    $('#courseResults').innerHTML = '';
+    renderPlayers();
+    buildScoreTable();
+    updateSummary();
+
+    // Oppdater lister som vises i høyre kolonne
+    loadSavedRounds();
+    loadLeaderboard();
+
+    alert('Runden er lagret og avsluttet!');
+  }
+
+  /* Koble knappene til funksjonene */
+  $('#resetBtn').onclick        = resetAll;
+  $('#finishRoundBtn').onclick  = finishRound;
+
+  /* ---------- Initialize ---------- */
+  loadRound();
+  loadSavedRounds();
+  loadLeaderboard();
+  setInterval(loadLeaderboard, 30000);
 
     // Initialize
     loadRound();
