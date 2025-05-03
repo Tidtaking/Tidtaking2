@@ -7,8 +7,6 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-o9N1j7kCzNTnT+gZLGhmC3lA3sP5lH0zjU5xWQytYtQ="
-    crossorigin=""
   />
   <style>
     body {
@@ -32,6 +30,18 @@
       padding: 10px 20px;
       font-size: 18px;
     }
+    #logg {
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      text-align: left;
+    }
+    #logg h2 {
+      font-size: 20px;
+    }
+    .logg-item {
+      border-bottom: 1px solid #ddd;
+      padding: 8px 0;
+    }
   </style>
 </head>
 <body>
@@ -42,6 +52,11 @@
 
   <div id="map"></div>
   <button id="registrerBtn">Registrer plassering</button>
+
+  <div id="logg">
+    <h2>Tidligere registreringer</h2>
+    <div id="loggInnhold">Laster logg...</div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -74,7 +89,7 @@
         alert('Mangler ball-ID eller posisjon');
         return;
       }
-      const { data, error } = await supabase.from('ball').upsert({
+      const { error } = await supabase.from('ball').insert({
         id: ballId,
         sist_sett_lat: currentCoords[0],
         sist_sett_lng: currentCoords[1],
@@ -85,9 +100,37 @@
         alert('Feil ved lagring: ' + error.message);
       } else {
         alert('Posisjon registrert!');
+        hentLogg();
       }
     });
+
+    async function hentLogg() {
+      if (!ballId) return;
+      const { data, error } = await supabase
+        .from('ball')
+        .select('*')
+        .eq('id', ballId)
+        .order('tidspunkt', { ascending: false });
+
+      if (error) {
+        $('#loggInnhold').innerText = 'Kunne ikke hente logg.';
+        return;
+      }
+
+      if (data.length === 0) {
+        $('#loggInnhold').innerText = 'Ingen registreringer ennå.';
+        return;
+      }
+
+      $('#loggInnhold').innerHTML = data.map(row => `
+        <div class="logg-item">
+          <strong>${new Date(row.tidspunkt).toLocaleString()}</strong><br/>
+          Posisjon: ${row.sist_sett_lat.toFixed(5)}, ${row.sist_sett_lng.toFixed(5)}
+        </div>
+      `).join('');
+    }
+
+    hentLogg();
   </script>
 </body>
 </html>
-
