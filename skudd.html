@@ -30,7 +30,11 @@
 
     <script>
     window.onload = function () {
-                    return playerColors[playerId];
+        function getColorForPlayer(playerId) {
+            if (!playerColors[playerId]) {
+                playerColors[playerId] = '#' + Math.floor(Math.random() * 16777215).toString(16);
+            }
+            return playerColors[playerId];
         }
 
         function drawShot(x, y, color) {
