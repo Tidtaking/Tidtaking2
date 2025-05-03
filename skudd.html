@@ -131,7 +131,7 @@
                     saveBtn.textContent = 'Lagre';
                     saveBtn.onclick = async () => {
                         const { error } = await supabaseClient.from('spiller').update({
-                            draktnummer: nrInput.value,
+                            draktnummer: parseInt(nrInput.value) || null,
                             navn: nameInput.value
                         }).eq('id', player.id);
                         if (error) alert('Feil ved lagring: ' + error.message);
