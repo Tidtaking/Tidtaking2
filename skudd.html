@@ -21,6 +21,12 @@
 
     <h3>Endre spillere</h3>
     <div id="editPlayers"></div>
+    <h3>Legg til ny spiller</h3>
+    <div>
+        <input id="newDraktnr" class="edit-input" placeholder="Draktnr">
+        <input id="newNavn" class="edit-input" placeholder="Navn">
+        <button onclick="addNewPlayer()">Legg til</button>
+    </div>
 
     <script>
     window.onload = async function () {
@@ -97,6 +103,22 @@
                     editDiv.appendChild(wrapper);
                 });
             });
+        }
+
+        window.addNewPlayer = async function () {
+            const draktnr = document.getElementById('newDraktnr').value;
+            const navn = document.getElementById('newNavn').value;
+            if (!draktnr || !navn) {
+                alert('Begge felt må fylles ut');
+                return;
+            }
+            const { error } = await supabaseClient.from('spiller').insert([{ draktnummer: draktnr, navn }]);
+            if (error) alert('Feil ved lagring: ' + error.message);
+            else {
+                document.getElementById('newDraktnr').value = '';
+                document.getElementById('newNavn').value = '';
+                loadPlayers();
+            }
         }
 
         async function loadShots() {
