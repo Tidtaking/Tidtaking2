@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Golfballoversikt – Amedia</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      margin: 0;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin: 1rem 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #e0e0e0;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    a {
+      color: #0077cc;
+      text-decoration: none;
+    }
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+        width: 100%;
+      }
+      thead tr {
+        display: none;
+      }
+      tr {
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        border: none;
+        border-bottom: 1px solid #eee;
+      }
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Oversikt over golfballer</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Ball-ID</th>
+        <th>Sted</th>
+        <th>Tidspunkt</th>
+        <th>Lenke</th>
+      </tr>
+    </thead>
+    <tbody id="ballListe">
+      <tr><td colspan="4">Laster...</td></tr>
+    </tbody>
+  </table>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://chzfewhbfkdtcizdxyzk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+    );
+
+    async function hentOversikt() {
+      const { data, error } = await supabase
+        .from('ball')
+        .select('*')
+        .order('tidspunkt', { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        document.getElementById('ballListe').innerHTML = '<tr><td colspan="4">Ingen data funnet</td></tr>';
+        return;
+      }
+
+      const sistePerBall = {};
+      data.forEach(entry => {
+        if (!sistePerBall[entry.id] || new Date(entry.tidspunkt) > new Date(sistePerBall[entry.id].tidspunkt)) {
+          sistePerBall[entry.id] = entry;
+        }
+      });
+
+      document.getElementById('ballListe').innerHTML = Object.values(sistePerBall).map(row => `
+        <tr>
+          <td data-label="Ball-ID">${row.id}</td>
+          <td data-label="Sted">${row.beskrivelse || ''}</td>
+          <td data-label="Tidspunkt">${new Date(row.tidspunkt).toLocaleString()}</td>
+          <td data-label="Lenke"><a href="golfball.html?id=${row.id}">Se</a></td>
+        </tr>
+      `).join('');
+    }
+
+    hentOversikt();
+  </script>
+</body>
+</html>
