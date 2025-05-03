@@ -142,6 +142,26 @@
                     wrapper.appendChild(nrInput);
                     wrapper.appendChild(nameInput);
                     wrapper.appendChild(saveBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Slett';
+                    deleteBtn.style.marginLeft = '8px';
+                    deleteBtn.onclick = async () => {
+                        if (!confirm(`Slett spiller #${player.draktnummer}?`)) return;
+                        const { data: skudd, error: fetchError } = await supabaseClient.from('skuddplassering').select('id').eq('spiller_id', player.id);
+                        if (fetchError) {
+                            alert('Feil ved sjekk av skudd: ' + fetchError.message);
+                            return;
+                        }
+                        if (skudd.length > 0) {
+                            alert(`Kan ikke slette spiller #${player.draktnummer} - har ${skudd.length} registrerte skudd.`);
+                            return;
+                        }
+                        const { error } = await supabaseClient.from('spiller').delete().eq('id', player.id);
+                        if (error) alert('Feil ved sletting: ' + error.message);
+                        else loadPlayers();
+                    };
+                    wrapper.appendChild(deleteBtn);
                     editDiv.appendChild(wrapper);
 
                     const option = document.createElement('option');
