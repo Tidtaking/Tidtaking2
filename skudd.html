@@ -131,10 +131,16 @@
                     const saveBtn = document.createElement('button');
                     saveBtn.textContent = 'Lagre';
                     saveBtn.onclick = async () => {
-                        const { error } = await supabaseClient.from('spiller').update({
-                            draktnummer: parseInt(nrInput.value) || null,
-                            navn: nameInput.value
-                        }).eq('id', player.id);
+                        const nyDraktnummer = parseInt(nrInput.value);
+                        const nyNavn = nameInput.value.trim();
+                        if (!nyNavn) {
+                            alert('Navn kan ikke være tomt');
+                            return;
+                        }
+                        const updateData = { navn: nyNavn };
+                        if (!isNaN(nyDraktnummer)) updateData.draktnummer = nyDraktnummer;
+
+                        const { error } = await supabaseClient.from('spiller').update(updateData).eq('id', player.id);
                         if (error) alert('Feil ved lagring: ' + error.message);
                         else loadPlayers();
                     };
