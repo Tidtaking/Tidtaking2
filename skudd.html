@@ -9,6 +9,7 @@
         #goalCanvas { border: 2px solid #444; background: linear-gradient(to top, #ddd, #fff); margin-top: 10px; }
         .player-button, .clear-button { padding: 8px; margin: 4px; cursor: pointer; }
         .selected { background-color: #4caf50; color: white; }
+        .edit-input { margin: 2px; width: 100px; }
     </style>
 </head>
 <body>
@@ -17,6 +18,9 @@
     <div id="players"></div>
     <button class="clear-button" onclick="deleteAllShots()">Slett alle skudd</button>
     <canvas id="goalCanvas" width="300" height="200"></canvas>
+
+    <h3>Endre spillere</h3>
+    <div id="editPlayers"></div>
 
     <script>
     window.onload = async function () {
@@ -54,12 +58,43 @@
             supabaseClient.from('spiller').select('*').then(({ data, error }) => {
                 if (error) { alert(error.message); return; }
                 const playerDiv = document.getElementById('players');
+                const editDiv = document.getElementById('editPlayers');
+                playerDiv.innerHTML = '';
+                editDiv.innerHTML = '';
+
                 data.forEach(player => {
                     const btn = document.createElement('button');
                     btn.textContent = `${player.draktnummer || '?'} - ${player.navn || 'Ukjent'}`;
                     btn.className = 'player-button';
                     btn.onclick = () => selectPlayer(player, btn);
                     playerDiv.appendChild(btn);
+
+                    const nrInput = document.createElement('input');
+                    nrInput.value = player.draktnummer || '';
+                    nrInput.className = 'edit-input';
+                    nrInput.placeholder = 'Draktnr';
+
+                    const nameInput = document.createElement('input');
+                    nameInput.value = player.navn || '';
+                    nameInput.className = 'edit-input';
+                    nameInput.placeholder = 'Navn';
+
+                    const saveBtn = document.createElement('button');
+                    saveBtn.textContent = 'Lagre';
+                    saveBtn.onclick = async () => {
+                        const { error } = await supabaseClient.from('spiller').update({
+                            draktnummer: nrInput.value,
+                            navn: nameInput.value
+                        }).eq('id', player.id);
+                        if (error) alert('Feil ved lagring: ' + error.message);
+                        else loadPlayers();
+                    };
+
+                    const wrapper = document.createElement('div');
+                    wrapper.appendChild(nrInput);
+                    wrapper.appendChild(nameInput);
+                    wrapper.appendChild(saveBtn);
+                    editDiv.appendChild(wrapper);
                 });
             });
         }
