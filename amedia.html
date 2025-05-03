@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Golfballsporing – Amedia</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body {
       margin: 0;
@@ -25,18 +22,15 @@
       height: 60vh;
       width: 100%;
     }
-    button {
+    button, input[type="text"] {
       margin: 20px;
-      padding: 10px 20px;
+      padding: 10px;
       font-size: 18px;
     }
     #logg {
       max-width: 600px;
       margin: 0 auto 2rem;
       text-align: left;
-    }
-    #logg h2 {
-      font-size: 20px;
     }
     .logg-item {
       border-bottom: 1px solid #ddd;
@@ -51,6 +45,7 @@
   </header>
 
   <div id="map"></div>
+  <input type="text" id="stedInput" placeholder="Stedsnavn (valgfritt)" />
   <button id="registrerBtn">Registrer plassering</button>
 
   <div id="logg">
@@ -73,13 +68,15 @@
 
     const map = L.map('map').setView([60.472, 8.4689], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap bidragsytere'
+      attribution: '© OpenStreetMap-bidragsytere'
     }).addTo(map);
 
     navigator.geolocation.getCurrentPosition(pos => {
       currentCoords = [pos.coords.latitude, pos.coords.longitude];
+      const sted = $('#stedInput').value.trim();
+      const popupText = sted ? `Du er her<br/>Sted: ${sted}` : 'Du er her';
       userMarker = L.marker(currentCoords).addTo(map)
-        .bindPopup('Du er her')
+        .bindPopup(popupText)
         .openPopup();
       map.setView(currentCoords, 16);
     });
@@ -89,17 +86,22 @@
         alert('Mangler ball-ID eller posisjon');
         return;
       }
+      const sted = $('#stedInput').value.trim();
+
       const { error } = await supabase.from('ball').insert({
         id: ballId,
         sist_sett_lat: currentCoords[0],
         sist_sett_lng: currentCoords[1],
         tidspunkt: new Date().toISOString(),
-        registrert_av: navigator.userAgent
+        registrert_av: navigator.userAgent,
+        beskrivelse: sted
       });
       if (error) {
         alert('Feil ved lagring: ' + error.message);
       } else {
         alert('Posisjon registrert!');
+        userMarker.bindPopup(sted ? `Du er her<br/>Sted: ${sted}` : 'Du er her').openPopup();
+        $('#stedInput').value = '';
         hentLogg();
       }
     });
@@ -112,20 +114,24 @@
         .eq('id', ballId)
         .order('tidspunkt', { ascending: false });
 
-      if (error) {
+      if (error || !data) {
         $('#loggInnhold').innerText = 'Kunne ikke hente logg.';
         return;
       }
 
-      if (data.length === 0) {
-        $('#loggInnhold').innerText = 'Ingen registreringer ennå.';
-        return;
-      }
+      data.forEach(row => {
+        const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
+        const popup = `${new Date(row.tidspunkt).toLocaleString()}<br/>` +
+                      (row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : '') +
+                      `Lat: ${row.sist_sett_lat.toFixed(5)}, Lng: ${row.sist_sett_lng.toFixed(5)}`;
+        mark.bindPopup(popup);
+      });
 
       $('#loggInnhold').innerHTML = data.map(row => `
         <div class="logg-item">
           <strong>${new Date(row.tidspunkt).toLocaleString()}</strong><br/>
-          Posisjon: ${row.sist_sett_lat.toFixed(5)}, ${row.sist_sett_lng.toFixed(5)}
+          Posisjon: ${row.sist_sett_lat.toFixed(5)}, ${row.sist_sett_lng.toFixed(5)}<br/>
+          ${row.beskrivelse ? `Sted: ${row.beskrivelse}` : ''}
         </div>
       `).join('');
     }
