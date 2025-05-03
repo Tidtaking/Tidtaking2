@@ -30,6 +30,8 @@
 
     <script>
     window.onload = function () {
+        const canvas = document.getElementById('goalCanvas');
+        const ctx = canvas.getContext('2d');
         function getColorForPlayer(playerId) {
             if (!playerColors[playerId]) {
                 playerColors[playerId] = '#' + Math.floor(Math.random() * 16777215).toString(16);
