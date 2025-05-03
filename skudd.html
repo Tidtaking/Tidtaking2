@@ -113,13 +113,13 @@
 
                 data.forEach(player => {
                     const btn = document.createElement('button');
-                    btn.textContent = `${player.draktnummer !== null && player.draktnummer !== undefined ? '#' + player.draktnummer : '#?'} - ${player.navn || 'Ukjent'}`;
+                    btn.textContent = `${player.drakt !== null && player.drakt !== undefined ? '#' + player.drakt : '#?'} - ${player.navn || 'Ukjent'}`;
                     btn.className = 'player-button';
                     btn.onclick = () => selectPlayer(player, btn);
                     playerDiv.appendChild(btn);
 
                     const nrInput = document.createElement('input');
-                    nrInput.value = player.draktnummer || '';
+                    nrInput.value = player.drakt || '';
                     nrInput.className = 'edit-input';
                     nrInput.placeholder = 'Draktnr';
 
@@ -138,7 +138,7 @@
                             return;
                         }
                         const updateData = { navn: nyNavn };
-                        if (!isNaN(nyDraktnummer)) updateData.draktnummer = nyDraktnummer;
+                        if (!isNaN(nyDraktnummer)) updateData.drakt = nyDraktnummer;
 
                         const { error } = await supabaseClient.from('spiller').update(updateData).eq('id', player.id);
                         if (error) alert('Feil ved lagring: ' + error.message);
@@ -179,7 +179,7 @@
 
                     const option = document.createElement('option');
                     option.value = player.id;
-                    option.textContent = `#${player.draktnummer} - ${player.navn}`;
+                    option.textContent = `#${player.drakt} - ${player.navn}`;
                     filterSelect.appendChild(option);
                 });
             });
@@ -192,7 +192,7 @@
                 alert('Begge felt må fylles ut');
                 return;
             }
-            const { error } = await supabaseClient.from('spiller').insert([{ draktnummer: draktnr, navn }]);
+            const { error } = await supabaseClient.from('spiller').insert([{ drakt: parseInt(draktnr), navn }]);
             if (error) alert('Feil ved lagring: ' + error.message);
             else {
                 document.getElementById('newDraktnr').value = '';
