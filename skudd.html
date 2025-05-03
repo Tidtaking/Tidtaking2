@@ -6,8 +6,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 10px; }
-        #goalCanvas { border: 1px solid #ccc; }
-        .player-button { padding: 8px; margin: 4px; cursor: pointer; }
+        #goalCanvas { border: 2px solid #444; background: linear-gradient(to top, #ddd, #fff); margin-top: 10px; }
+        .player-button, .clear-button { padding: 8px; margin: 4px; cursor: pointer; }
         .selected { background-color: #4caf50; color: white; }
     </style>
 </head>
@@ -15,10 +15,11 @@
     <h2>Registrer Skuddplassering</h2>
 
     <div id="players"></div>
+    <button class="clear-button" onclick="deleteAllShots()">Slett alle skudd</button>
     <canvas id="goalCanvas" width="300" height="200"></canvas>
 
     <script>
-    window.onload = function () {
+    window.onload = async function () {
         const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -26,6 +27,28 @@
         let selectedPlayer = null;
         const canvas = document.getElementById('goalCanvas');
         const ctx = canvas.getContext('2d');
+        const playerColors = {};
+
+        function getColorForPlayer(playerId) {
+            if (!playerColors[playerId]) {
+                playerColors[playerId] = '#' + Math.floor(Math.random()*16777215).toString(16);
+            }
+            return playerColors[playerId];
+        }
+
+        function drawShot(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawGoal() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        }
 
         function loadPlayers() {
             supabaseClient.from('spiller').select('*').then(({ data, error }) => {
@@ -33,11 +56,21 @@
                 const playerDiv = document.getElementById('players');
                 data.forEach(player => {
                     const btn = document.createElement('button');
-                    btn.textContent = `${player.draktnummer} - ${player.navn}`;
+                    btn.textContent = `${player.draktnummer || '?'} - ${player.navn || 'Ukjent'}`;
                     btn.className = 'player-button';
                     btn.onclick = () => selectPlayer(player, btn);
                     playerDiv.appendChild(btn);
                 });
+            });
+        }
+
+        async function loadShots() {
+            const { data, error } = await supabaseClient.from('skuddplassering').select('*');
+            if (error) { console.error(error); return; }
+            drawGoal();
+            data.forEach(shot => {
+                const color = getColorForPlayer(shot.spiller_id);
+                drawShot(shot.x_pos, shot.y_pos, color);
             });
         }
 
@@ -56,11 +89,9 @@
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
+            const color = getColorForPlayer(selectedPlayer.id);
 
-            ctx.fillStyle = 'red';
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, 2 * Math.PI);
-            ctx.fill();
+            drawShot(x, y, color);
 
             supabaseClient.from('skuddplassering').insert([{
                 spiller_id: selectedPlayer.id,
@@ -72,14 +103,18 @@
             });
         });
 
-        function drawGoal() {
-            ctx.strokeRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 2;
+        window.deleteAllShots = async function () {
+            if (!confirm("Er du sikker på at du vil slette alle skudd?")) return;
+            const { error } = await supabaseClient.from('skuddplassering').delete().neq('id', 0);
+            if (error) {
+                alert("Feil ved sletting: " + error.message);
+            } else {
+                drawGoal();
+            }
         }
 
         loadPlayers();
-        drawGoal();
+        await loadShots();
     };
     </script>
 </body>
