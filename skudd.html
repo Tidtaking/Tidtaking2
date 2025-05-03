@@ -35,6 +35,8 @@
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
         const canvas = document.getElementById('goalCanvas');
         const ctx = canvas.getContext('2d');
+        let playerColors = {};
+        let selectedPlayer = null;
         function getColorForPlayer(playerId) {
             if (!playerColors[playerId]) {
                 playerColors[playerId] = '#' + Math.floor(Math.random() * 16777215).toString(16);
