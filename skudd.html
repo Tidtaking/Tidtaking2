@@ -21,14 +21,14 @@
     window.onload = function () {
         const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
         let selectedPlayer = null;
         const canvas = document.getElementById('goalCanvas');
         const ctx = canvas.getContext('2d');
 
         function loadPlayers() {
-            supabase.from('spiller').select('*').then(({ data, error }) => {
+            supabaseClient.from('spiller').select('*').then(({ data, error }) => {
                 if (error) { alert(error.message); return; }
                 const playerDiv = document.getElementById('players');
                 data.forEach(player => {
@@ -62,7 +62,7 @@
             ctx.arc(x, y, 5, 0, 2 * Math.PI);
             ctx.fill();
 
-            supabase.from('skuddplassering').insert([{
+            supabaseClient.from('skuddplassering').insert([{
                 spiller_id: selectedPlayer.id,
                 x_pos: x,
                 y_pos: y,
