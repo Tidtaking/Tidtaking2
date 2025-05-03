@@ -17,6 +17,11 @@
 
     <div id="players"></div>
     <button class="clear-button" onclick="deleteAllShots()">Slett alle skudd</button>
+    <h3>Vis historiske skudd</h3>
+    <select id="filterSpiller">
+        <option value="">Alle spillere</option>
+    </select>
+    <button onclick="loadShots()">Oppdater visning</button>
     <canvas id="goalCanvas" width="300" height="200"></canvas>
 
     <h3>Endre spillere</h3>
@@ -100,8 +105,10 @@
                 if (error) { alert(error.message); return; }
                 const playerDiv = document.getElementById('players');
                 const editDiv = document.getElementById('editPlayers');
+                const filterSelect = document.getElementById('filterSpiller');
                 playerDiv.innerHTML = '';
                 editDiv.innerHTML = '';
+                filterSelect.innerHTML = '<option value="">Alle spillere</option>';
 
                 data.forEach(player => {
                     const btn = document.createElement('button');
@@ -136,6 +143,11 @@
                     wrapper.appendChild(nameInput);
                     wrapper.appendChild(saveBtn);
                     editDiv.appendChild(wrapper);
+
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = `#${player.draktnummer} - ${player.navn}`;
+                    filterSelect.appendChild(option);
                 });
             });
         }
@@ -157,7 +169,12 @@
         }
 
         async function loadShots() {
-            const { data, error } = await supabaseClient.from('skuddplassering').select('*');
+            const selectedId = document.getElementById('filterSpiller').value;
+            let query = supabaseClient.from('skuddplassering').select('*');
+            if (selectedId) {
+                query = query.eq('spiller_id', selectedId);
+            }
+            const { data, error } = await query;
             if (error) { console.error(error); return; }
             drawGoal();
             data.forEach(shot => {
