@@ -105,7 +105,7 @@
 
                 data.forEach(player => {
                     const btn = document.createElement('button');
-                    btn.textContent = `#${player.draktnummer || '?'} - ${player.navn || 'Ukjent'}`;
+btn.textContent = `${player.draktnummer !== null && player.draktnummer !== undefined ? '#' + player.draktnummer : '#?'} - ${player.navn || 'Ukjent'}`;
                     btn.className = 'player-button';
                     btn.onclick = () => selectPlayer(player, btn);
                     playerDiv.appendChild(btn);
