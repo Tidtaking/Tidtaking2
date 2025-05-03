@@ -87,10 +87,8 @@
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
 }
-}
-        }
 
-        function loadPlayers() {
+    function loadPlayers() {
             supabaseClient.from('spiller').select('*').then(({ data, error }) => {
                 if (error) { alert(error.message); return; }
                 const playerDiv = document.getElementById('players');
