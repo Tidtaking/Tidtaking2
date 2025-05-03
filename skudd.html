@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Skuddplassering Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; }
+        #goalCanvas { border: 1px solid #ccc; }
+        .player-button { padding: 8px; margin: 4px; cursor: pointer; }
+        .selected { background-color: #4caf50; color: white; }
+    </style>
+</head>
+<body>
+    <h2>Registrer Skuddplassering</h2>
+
+    <div id="players"></div>
+    <canvas id="goalCanvas" width="300" height="200"></canvas>
+
+    <script>
+        const supabaseUrl = 'https://YOUR_SUPABASE_URL';
+        const supabaseKey = 'YOUR_SUPABASE_KEY';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let selectedPlayer = null;
+        const canvas = document.getElementById('goalCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function loadPlayers() {
+            supabase.from('spiller').select('*').then(({ data, error }) => {
+                if (error) { alert(error.message); return; }
+                const playerDiv = document.getElementById('players');
+                data.forEach(player => {
+                    const btn = document.createElement('button');
+                    btn.textContent = `${player.draktnummer} - ${player.navn}`;
+                    btn.className = 'player-button';
+                    btn.onclick = () => selectPlayer(player, btn);
+                    playerDiv.appendChild(btn);
+                });
+            });
+        }
+
+        function selectPlayer(player, btn) {
+            document.querySelectorAll('.player-button').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedPlayer = player;
+        }
+
+        canvas.addEventListener('click', function(event) {
+            if (!selectedPlayer) {
+                alert('Velg en spiller først!');
+                return;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            supabase.from('skuddplassering').insert([{
+                spiller_id: selectedPlayer.id,
+                x_pos: x,
+                y_pos: y,
+                timestamp: new Date()
+            }]).then(({ error }) => {
+                if (error) alert('Feil ved lagring: ' + error.message);
+            });
+        });
+
+        function drawGoal() {
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+        }
+
+        loadPlayers();
+        drawGoal();
+    </script>
+</body>
+</html>
