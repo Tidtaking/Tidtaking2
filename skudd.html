@@ -25,6 +25,7 @@
     <canvas id="goalCanvas" width="300" height="200"></canvas>
 
     <h3>Endre spillere</h3>
+    <button onclick="deleteSelectedPlayers()">Slett valgte spillere</button>
     <div id="editPlayers"></div>
     <h3>Legg til ny spiller</h3>
     <div>
@@ -161,6 +162,12 @@
                         if (error) alert('Feil ved sletting: ' + error.message);
                         else loadPlayers();
                     };
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.dataset.playerId = player.id;
+                    checkbox.style.marginRight = '8px';
+                    wrapper.prepend(checkbox);
+
                     wrapper.appendChild(deleteBtn);
                     editDiv.appendChild(wrapper);
 
@@ -245,6 +252,30 @@
         loadPlayers();
         loadShots();
         window.loadShots = loadShots;
+
+        window.deleteSelectedPlayers = async function () {
+            const checkboxes = document.querySelectorAll('#editPlayers input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) {
+                alert('Ingen spillere valgt.');
+                return;
+            }
+            if (!confirm(`Slett ${checkboxes.length} valgte spillere?`)) return;
+            for (const cb of checkboxes) {
+                const id = parseInt(cb.dataset.playerId);
+                const { data: skudd, error: fetchError } = await supabaseClient.from('skuddplassering').select('id').eq('spiller_id', id);
+                if (fetchError) {
+                    alert('Feil ved sjekk av skudd for spiller ID ' + id);
+                    continue;
+                }
+                if (skudd.length > 0) {
+                    alert(`Spiller ID ${id} har ${skudd.length} skudd og ble ikke slettet.`);
+                    continue;
+                }
+                const { error } = await supabaseClient.from('spiller').delete().eq('id', id);
+                if (error) alert('Feil ved sletting av spiller ID ' + id);
+            }
+            loadPlayers();
+        };
     };
     </script>
 </body>
