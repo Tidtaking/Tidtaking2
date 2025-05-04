@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -51,18 +50,14 @@
     th {
       background-color: #f0f0f0;
     }
-    .logg-item {
-      border-bottom: 1px solid #ddd;
-      padding: 8px 0;
-    }
     tr[onclick] {
-    transition: background 0.2s;
-    cursor: pointer;
-  }
-  tr[onclick]:hover {
-    background-color: #e8f4ff;
-  }
-</style>
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    tr[onclick]:hover {
+      background-color: #e8f4ff;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -79,6 +74,7 @@
 
   <div id="logg">
     <h2 style="text-align:center;">Tidligere registreringer</h2>
+    <p id="teller" style="text-align:center; font-weight:bold;">Antall registrerte baller: ...</p>
     <table>
       <thead>
         <tr>
@@ -94,128 +90,124 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-  const supabase = window.supabase.createClient(
-    'https://chzfewhbfkdtcizdxyzk.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
-  );
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://chzfewhbfkdtcizdxyzk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+    );
 
-  let currentCoords = null;
-  const map = L.map('map').setView([60.472, 8.4689], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap-bidragsytere'
-  }).addTo(map);
+    let currentCoords = null;
+    const map = L.map('map').setView([60.472, 8.4689], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap-bidragsytere'
+    }).addTo(map);
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    currentCoords = [pos.coords.latitude, pos.coords.longitude];
-    const marker = L.marker(currentCoords).addTo(map)
-      .bindPopup('Din posisjon').openPopup();
-    map.setView(currentCoords, 15);
-  });
+    navigator.geolocation.getCurrentPosition(pos => {
+      currentCoords = [pos.coords.latitude, pos.coords.longitude];
+      const marker = L.marker(currentCoords).addTo(map)
+        .bindPopup('Din posisjon').openPopup();
+      map.setView(currentCoords, 15);
+    });
 
-  document.getElementById('registrerBtn').addEventListener('click', async () => {
-    const sted = document.getElementById('stedInput').value.trim();
+    document.getElementById('registrerBtn').addEventListener('click', async () => {
+      const sted = document.getElementById('stedInput').value.trim();
 
-    // Autofullfør: hent forslag fra Nominatim
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sted)}&limit=5`)
-      .then(res => res.json())
-      .then(data => {
-        const forslagListe = document.getElementById('stedForslag');
-        forslagListe.innerHTML = '';
-        data.forEach(item => {
-          const option = document.createElement('option');
-          option.value = item.display_name;
-          forslagListe.appendChild(option);
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sted)}&limit=5`)
+        .then(res => res.json())
+        .then(data => {
+          const forslagListe = document.getElementById('stedForslag');
+          forslagListe.innerHTML = '';
+          data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.display_name;
+            forslagListe.appendChild(option);
+          });
         });
+
+      let lat = null;
+      let lng = null;
+
+      if (sted) {
+        const respons = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sted)}`);
+        const resultat = await respons.json();
+        if (resultat.length > 0) {
+          lat = parseFloat(resultat[0].lat);
+          lng = parseFloat(resultat[0].lon);
+        } else {
+          alert('Fant ikke stedet. Registrerer uten posisjon.');
+        }
+      } else if (currentCoords) {
+        lat = currentCoords[0];
+        lng = currentCoords[1];
+      }
+
+      const { error } = await supabase.from('ball').insert({
+        id: crypto.randomUUID(),
+        sist_sett_lat: lat,
+        sist_sett_lng: lng,
+        tidspunkt: new Date().toISOString(),
+        beskrivelse: sted,
+        registrert_av: navigator.userAgent
       });
 
-    let lat = null;
-    let lng = null;
-
-    if (sted) {
-      const respons = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sted)}`);
-      const resultat = await respons.json();
-      if (resultat.length > 0) {
-        lat = parseFloat(resultat[0].lat);
-        lng = parseFloat(resultat[0].lon);
+      if (error) {
+        alert('Feil ved lagring: ' + error.message);
       } else {
-        alert('Fant ikke stedet. Registrerer uten posisjon.');
-      }
-    } else if (currentCoords) {
-      lat = currentCoords[0];
-      lng = currentCoords[1];
-    }
-
-    const { error } = await supabase.from('ball').insert({
-      id: crypto.randomUUID(),
-      sist_sett_lat: lat,
-      sist_sett_lng: lng,
-      tidspunkt: new Date().toISOString(),
-      beskrivelse: sted,
-      registrert_av: navigator.userAgent
-    });
-
-    if (error) {
-      alert('Feil ved lagring: ' + error.message);
-    } else {
-      alert('Registrering lagret!');
-      document.getElementById('stedInput').value = '';
-      hentOversikt();
-    }
-  });
-
-  async function hentOversikt() {
-    const { data, error } = await supabase
-      .from('ball')
-      .select('*')
-      .order('tidspunkt', { ascending: false });
-
-    if (error || !data || data.length === 0) {
-      document.getElementById('ballListe').innerHTML = '<tr><td colspan="2">Ingen data funnet</td></tr>';
-      return;
-    }
-
-    document.getElementById('ballListe').innerHTML = data.map(row => {
-      const lat = row.sist_sett_lat;
-      const lng = row.sist_sett_lng;
-      const popup = `${row.beskrivelse || ''}<br/>${new Date(row.tidspunkt).toLocaleString()}`;
-      return `
-        <tr style="cursor:pointer" onclick="zoomToLocation(${lat}, ${lng}, \`${popup}\`)">
-          <td>${row.beskrivelse || ''}</td>
-          <td>${new Date(row.tidspunkt).toLocaleString()}</td>
-        </tr>`;
-    }).join('');
-
-    const group = L.featureGroup();
-    data.forEach(row => {
-      if (row.sist_sett_lat !== null && row.sist_sett_lng !== null) {
-        const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
-        const popup = `${row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : ''}` +
-                      `${new Date(row.tidspunkt).toLocaleString()}`;
-        mark.bindPopup(popup);
-        group.addLayer(mark);
-      } else if (row.beskrivelse) {
-        const popup = `${row.beskrivelse}<br/>${new Date(row.tidspunkt).toLocaleString()}`;
-        const mark = L.marker(map.getCenter()).addTo(map);
-        mark.bindPopup(popup);
+        alert('Registrering lagret!');
+        document.getElementById('stedInput').value = '';
+        hentOversikt();
       }
     });
 
-    if (group.getLayers().length > 0) {
-      map.fitBounds(group.getBounds(), { padding: [20, 20] });
-    }
-  }
+    async function hentOversikt() {
+      const { data, error } = await supabase
+        .from('ball')
+        .select('*')
+        .order('tidspunkt', { ascending: false });
 
-  hentOversikt();
-function zoomToLocation(lat, lng, popupText) {
-  if (lat !== null && lng !== null) {
-    map.setView([lat, lng], 17);
-    const mark = L.marker([lat, lng]).addTo(map);
-    mark.bindPopup(popupText).openPopup();
-  }
-}
-</script>
+      if (error || !data || data.length === 0) {
+        document.getElementById('ballListe').innerHTML = '<tr><td colspan="2">Ingen data funnet</td></tr>';
+        return;
+      }
+
+      document.getElementById('teller').innerText = `Antall registrerte baller: ${data.length}`;
+
+      document.getElementById('ballListe').innerHTML = data.map(row => {
+        const lat = row.sist_sett_lat;
+        const lng = row.sist_sett_lng;
+        const popup = `${row.beskrivelse || ''}<br/>${new Date(row.tidspunkt).toLocaleString()}`;
+        return `
+          <tr onclick="zoomToLocation(${lat}, ${lng}, \`${popup}\`)">
+            <td>${row.beskrivelse || ''}</td>
+            <td>${new Date(row.tidspunkt).toLocaleString()}</td>
+          </tr>`;
+      }).join('');
+
+      const group = L.featureGroup();
+      data.forEach(row => {
+        if (row.sist_sett_lat !== null && row.sist_sett_lng !== null) {
+          const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
+          const popup = `${row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : ''}` +
+                        `${new Date(row.tidspunkt).toLocaleString()}`;
+          mark.bindPopup(popup);
+          group.addLayer(mark);
+        }
+      });
+
+      if (group.getLayers().length > 0) {
+        map.fitBounds(group.getBounds(), { padding: [20, 20] });
+      }
+    }
+
+    function zoomToLocation(lat, lng, popupText) {
+      if (lat !== null && lng !== null) {
+        map.setView([lat, lng], 17);
+        const mark = L.marker([lat, lng]).addTo(map);
+        mark.bindPopup(popupText).openPopup();
+      }
+    }
+
+    hentOversikt();
+  </script>
 </body>
 </html>
