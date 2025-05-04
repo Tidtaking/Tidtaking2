@@ -105,19 +105,51 @@
     });
 
     document.getElementById('registrerBtn').addEventListener('click', async () => {
-      const sted = document.getElementById('stedInput').value.trim();
-      if (!currentCoords) {
-        alert('Posisjon ikke tilgjengelig ennå.');
-        return;
-      }
-      const { error } = await supabase.from('ball').insert({
-        id: crypto.randomUUID(),
-        sist_sett_lat: currentCoords[0],
-        sist_sett_lng: currentCoords[1],
-        tidspunkt: new Date().toISOString(),
-        beskrivelse: sted,
-        registrert_av: navigator.userAgent
-      });
+  const sted = document.getElementById('stedInput').value.trim();
+
+  let lat = null;
+  let lng = null;
+
+  if (sted) {
+    const respons = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sted)}`);
+    const resultat = await respons.json();
+    if (resultat.length > 0) {
+      lat = parseFloat(resultat[0].lat);
+      lng = parseFloat(resultat[0].lon);
+    } else {
+      alert('Fant ikke stedet. Registrerer uten posisjon.');
+    }
+  } else if (currentCoords) {
+    lat = currentCoords[0];
+    lng = currentCoords[1];
+  }
+
+  const { error } = await supabase.from('ball').insert({
+    id: crypto.randomUUID(),
+    sist_sett_lat: lat,
+    sist_sett_lng: lng,
+    tidspunkt: new Date().toISOString(),
+    beskrivelse: sted,
+    registrert_av: navigator.userAgent
+  });
+
+  if (error) {
+    alert('Feil ved lagring: ' + error.message);
+  } else {
+    alert('Registrering lagret!');
+    document.getElementById('stedInput').value = '';
+    hentOversikt();
+  }
+});
+
+  if (error) {
+    alert('Feil ved lagring: ' + error.message);
+  } else {
+    alert('Registrering lagret!');
+    document.getElementById('stedInput').value = '';
+    hentOversikt();
+  }
+});
       if (error) {
         alert('Feil ved lagring: ' + error.message);
       } else {
@@ -147,11 +179,17 @@
 
       const group = L.featureGroup();
       data.forEach(row => {
-        const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
-        const popup = `${row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : ''}` +
-                      `${new Date(row.tidspunkt).toLocaleString()}`;
-        mark.bindPopup(popup);
-        group.addLayer(mark);
+        if (row.sist_sett_lat !== null && row.sist_sett_lng !== null) {
+          const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
+          const popup = `${row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : ''}` +
+                        `${new Date(row.tidspunkt).toLocaleString()}`;
+          mark.bindPopup(popup);
+          group.addLayer(mark);
+        } else if (row.beskrivelse) {
+          const popup = `${row.beskrivelse}<br/>${new Date(row.tidspunkt).toLocaleString()}`;
+          const mark = L.marker(map.getCenter()).addTo(map); // fallback posisjon
+          mark.bindPopup(popup);
+        }
       });
 
       if (group.getLayers().length > 0) {
