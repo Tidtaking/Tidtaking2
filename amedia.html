@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -64,10 +65,9 @@
 </style>
 </head>
 <body>
-  $1
-<div style="text-align:center; margin: 0.5rem 0;">
-  <button onclick="visAlleBaller()">Vis alle baller</button>
-</div>
+  <header>
+    <h1>Golfballsporing – Amedia</h1>
+  </header>
 
   <div id="map"></div>
 
@@ -77,11 +77,7 @@
     <button id="registrerBtn">Registrer posisjon</button>
   </div>
 
-  <div style="text-align:center; margin-top:1rem;">
-  <button onclick="visAlleBaller()">Vis alle baller</button>
-</div>
-
-$1
+  <div id="logg">
     <h2 style="text-align:center;">Tidligere registreringer</h2>
     <table>
       <thead>
@@ -220,9 +216,6 @@ function zoomToLocation(lat, lng, popupText) {
     mark.bindPopup(popupText).openPopup();
   }
 }
-function visAlleBaller() {
-  hentOversikt();
-}
-$1
+</script>
 </body>
 </html>
