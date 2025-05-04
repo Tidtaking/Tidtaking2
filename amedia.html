@@ -54,7 +54,14 @@
       border-bottom: 1px solid #ddd;
       padding: 8px 0;
     }
-  </style>
+    tr[onclick] {
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  tr[onclick]:hover {
+    background-color: #e8f4ff;
+  }
+</style>
 </head>
 <body>
   <header>
