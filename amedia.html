@@ -64,9 +64,10 @@
 </style>
 </head>
 <body>
-  <header>
-    <h1>Golfballsporing – Amedia</h1>
-  </header>
+  $1
+<div style="text-align:center; margin: 0.5rem 0;">
+  <button onclick="visAlleBaller()">Vis alle baller</button>
+</div>
 
   <div id="map"></div>
 
@@ -76,7 +77,11 @@
     <button id="registrerBtn">Registrer posisjon</button>
   </div>
 
-  <div id="logg">
+  <div style="text-align:center; margin-top:1rem;">
+  <button onclick="visAlleBaller()">Vis alle baller</button>
+</div>
+
+$1
     <h2 style="text-align:center;">Tidligere registreringer</h2>
     <table>
       <thead>
@@ -215,6 +220,9 @@ function zoomToLocation(lat, lng, popupText) {
     mark.bindPopup(popupText).openPopup();
   }
 }
-</script>
+function visAlleBaller() {
+  hentOversikt();
+}
+$1
 </body>
 </html>
