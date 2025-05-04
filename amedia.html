@@ -7,30 +7,48 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body {
-      margin: 0;
       font-family: sans-serif;
-      text-align: center;
+      margin: 0;
+      background: #f9f9f9;
     }
     header {
-      background: #fff;
-      padding: 10px;
+      padding: 1rem;
+      background: white;
+      text-align: center;
     }
-    img.logo {
-      max-height: 50px;
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
     }
     #map {
-      height: 60vh;
+      height: 50vh;
       width: 100%;
     }
-    button, input[type="text"] {
-      margin: 20px;
-      padding: 10px;
-      font-size: 18px;
+    #registrering {
+      padding: 1rem;
+      background: #fff;
+      text-align: center;
     }
-    #logg {
-      max-width: 600px;
-      margin: 0 auto 2rem;
-      text-align: left;
+    input, button {
+      margin: 0.5rem;
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 90%;
+      max-width: 400px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #e0e0e0;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+    th {
+      background-color: #f0f0f0;
     }
     .logg-item {
       border-bottom: 1px solid #ddd;
@@ -40,32 +58,42 @@
 </head>
 <body>
   <header>
-    <img src="Amedia_logo_sort.jpg" alt="Amedia logo" class="logo" />
-    <h1>Golfballsporing</h1>
+    <h1>Golfballsporing – Amedia</h1>
   </header>
 
   <div id="map"></div>
-  <input type="text" id="stedInput" placeholder="Stedsnavn (valgfritt)" />
-  <button id="registrerBtn">Registrer plassering</button>
+
+  <div id="registrering">
+    <input type="text" id="ballIdInput" placeholder="Ball-ID" />
+    <input type="text" id="stedInput" placeholder="Stedsnavn (valgfritt)" />
+    <button id="registrerBtn">Registrer posisjon</button>
+  </div>
 
   <div id="logg">
-    <h2>Tidligere registreringer</h2>
-    <div id="loggInnhold">Laster logg...</div>
+    <h2 style="text-align:center;">Tidligere registreringer</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Ball-ID</th>
+          <th>Sted</th>
+          <th>Tidspunkt</th>
+        </tr>
+      </thead>
+      <tbody id="ballListe">
+        <tr><td colspan="3">Laster...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const $ = s => document.querySelector(s);
     const supabase = window.supabase.createClient(
       'https://chzfewhbfkdtcizdxyzk.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
     );
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const ballId = urlParams.get('id');
-    let userMarker, currentCoords;
-
+    let currentCoords = null;
     const map = L.map('map').setView([60.472, 8.4689], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap-bidragsytere'
@@ -73,70 +101,80 @@
 
     navigator.geolocation.getCurrentPosition(pos => {
       currentCoords = [pos.coords.latitude, pos.coords.longitude];
-      const sted = $('#stedInput').value.trim();
-      const popupText = sted ? `Du er her<br/>Sted: ${sted}` : 'Du er her';
-      userMarker = L.marker(currentCoords).addTo(map)
-        .bindPopup(popupText)
-        .openPopup();
-      map.setView(currentCoords, 16);
+      const marker = L.marker(currentCoords).addTo(map)
+        .bindPopup('Din posisjon').openPopup();
+      map.setView(currentCoords, 15);
     });
 
-    $('#registrerBtn').addEventListener('click', async () => {
+    document.getElementById('registrerBtn').addEventListener('click', async () => {
+      const ballId = document.getElementById('ballIdInput').value.trim();
+      const sted = document.getElementById('stedInput').value.trim();
       if (!ballId || !currentCoords) {
-        alert('Mangler ball-ID eller posisjon');
+        alert('Ball-ID og posisjon må være satt.');
         return;
       }
-      const sted = $('#stedInput').value.trim();
-
       const { error } = await supabase.from('ball').insert({
         id: ballId,
         sist_sett_lat: currentCoords[0],
         sist_sett_lng: currentCoords[1],
         tidspunkt: new Date().toISOString(),
-        registrert_av: navigator.userAgent,
-        beskrivelse: sted
+        beskrivelse: sted,
+        registrert_av: navigator.userAgent
       });
       if (error) {
         alert('Feil ved lagring: ' + error.message);
       } else {
-        alert('Posisjon registrert!');
-        userMarker.bindPopup(sted ? `Du er her<br/>Sted: ${sted}` : 'Du er her').openPopup();
-        $('#stedInput').value = '';
-        hentLogg();
+        alert('Registrering lagret!');
+        document.getElementById('ballIdInput').value = '';
+        document.getElementById('stedInput').value = '';
+        hentOversikt();
       }
     });
 
-    async function hentLogg() {
-      if (!ballId) return;
+    async function hentOversikt() {
       const { data, error } = await supabase
         .from('ball')
         .select('*')
-        .eq('id', ballId)
         .order('tidspunkt', { ascending: false });
 
-      if (error || !data) {
-        $('#loggInnhold').innerText = 'Kunne ikke hente logg.';
+      if (error || !data || data.length === 0) {
+        document.getElementById('ballListe').innerHTML = '<tr><td colspan="3">Ingen data funnet</td></tr>';
         return;
       }
 
-      data.forEach(row => {
-        const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
-        const popup = `${new Date(row.tidspunkt).toLocaleString()}<br/>` +
-                      (row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : '') +
-                      `Lat: ${row.sist_sett_lat.toFixed(5)}, Lng: ${row.sist_sett_lng.toFixed(5)}`;
-        mark.bindPopup(popup);
+      const sistePerBall = {};
+      data.forEach(entry => {
+        if (!sistePerBall[entry.id] || new Date(entry.tidspunkt) > new Date(sistePerBall[entry.id].tidspunkt)) {
+          sistePerBall[entry.id] = entry;
+        }
       });
 
-      $('#loggInnhold').innerHTML = data.map(row => `
-        <div class="logg-item">
-          <strong>${new Date(row.tidspunkt).toLocaleString()}</strong><br/>
-          Posisjon: ${row.sist_sett_lat.toFixed(5)}, ${row.sist_sett_lng.toFixed(5)}<br/>
-          ${row.beskrivelse ? `Sted: ${row.beskrivelse}` : ''}
-        </div>
+      const rows = Object.values(sistePerBall);
+
+      document.getElementById('ballListe').innerHTML = rows.map(row => `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.beskrivelse || ''}</td>
+          <td>${new Date(row.tidspunkt).toLocaleString()}</td>
+        </tr>
       `).join('');
+
+      const group = L.featureGroup();
+      rows.forEach(row => {
+        const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
+        const popup = `Ball: ${row.id}<br/>` +
+                      (row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : '') +
+                      `${new Date(row.tidspunkt).toLocaleString()}`;
+        mark.bindPopup(popup);
+        group.addLayer(mark);
+      });
+
+      if (group.getLayers().length > 0) {
+        map.fitBounds(group.getBounds(), { padding: [20, 20] });
+      }
     }
 
-    hentLogg();
+    hentOversikt();
   </script>
 </body>
 </html>
