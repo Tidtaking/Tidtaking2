@@ -169,12 +169,16 @@
       return;
     }
 
-    document.getElementById('ballListe').innerHTML = data.map(row => `
-      <tr>
-        <td>${row.beskrivelse || ''}</td>
-        <td>${new Date(row.tidspunkt).toLocaleString()}</td>
-      </tr>
-    `).join('');
+    document.getElementById('ballListe').innerHTML = data.map(row => {
+      const lat = row.sist_sett_lat;
+      const lng = row.sist_sett_lng;
+      const popup = `${row.beskrivelse || ''}<br/>${new Date(row.tidspunkt).toLocaleString()}`;
+      return `
+        <tr style="cursor:pointer" onclick="zoomToLocation(${lat}, ${lng}, \`${popup}\`)">
+          <td>${row.beskrivelse || ''}</td>
+          <td>${new Date(row.tidspunkt).toLocaleString()}</td>
+        </tr>`;
+    }).join('');
 
     const group = L.featureGroup();
     data.forEach(row => {
@@ -197,6 +201,13 @@
   }
 
   hentOversikt();
+function zoomToLocation(lat, lng, popupText) {
+  if (lat !== null && lng !== null) {
+    map.setView([lat, lng], 17);
+    const mark = L.marker([lat, lng]).addTo(map);
+    mark.bindPopup(popupText).openPopup();
+  }
+}
 </script>
 </body>
 </html>
