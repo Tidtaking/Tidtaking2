@@ -64,7 +64,6 @@
   <div id="map"></div>
 
   <div id="registrering">
-    <input type="text" id="ballIdInput" placeholder="Ball-ID" />
     <input type="text" id="stedInput" placeholder="Stedsnavn (valgfritt)" />
     <button id="registrerBtn">Registrer posisjon</button>
   </div>
@@ -74,13 +73,12 @@
     <table>
       <thead>
         <tr>
-          <th>Ball-ID</th>
           <th>Sted</th>
           <th>Tidspunkt</th>
         </tr>
       </thead>
       <tbody id="ballListe">
-        <tr><td colspan="3">Laster...</td></tr>
+        <tr><td colspan="2">Laster...</td></tr>
       </tbody>
     </table>
   </div>
@@ -107,14 +105,13 @@
     });
 
     document.getElementById('registrerBtn').addEventListener('click', async () => {
-      const ballId = document.getElementById('ballIdInput').value.trim();
       const sted = document.getElementById('stedInput').value.trim();
-      if (!ballId || !currentCoords) {
-        alert('Ball-ID og posisjon må være satt.');
+      if (!currentCoords) {
+        alert('Posisjon ikke tilgjengelig ennå.');
         return;
       }
       const { error } = await supabase.from('ball').insert({
-        id: ballId,
+        id: crypto.randomUUID(),
         sist_sett_lat: currentCoords[0],
         sist_sett_lng: currentCoords[1],
         tidspunkt: new Date().toISOString(),
@@ -125,7 +122,6 @@
         alert('Feil ved lagring: ' + error.message);
       } else {
         alert('Registrering lagret!');
-        document.getElementById('ballIdInput').value = '';
         document.getElementById('stedInput').value = '';
         hentOversikt();
       }
@@ -138,32 +134,21 @@
         .order('tidspunkt', { ascending: false });
 
       if (error || !data || data.length === 0) {
-        document.getElementById('ballListe').innerHTML = '<tr><td colspan="3">Ingen data funnet</td></tr>';
+        document.getElementById('ballListe').innerHTML = '<tr><td colspan="2">Ingen data funnet</td></tr>';
         return;
       }
 
-      const sistePerBall = {};
-      data.forEach(entry => {
-        if (!sistePerBall[entry.id] || new Date(entry.tidspunkt) > new Date(sistePerBall[entry.id].tidspunkt)) {
-          sistePerBall[entry.id] = entry;
-        }
-      });
-
-      const rows = Object.values(sistePerBall);
-
-      document.getElementById('ballListe').innerHTML = rows.map(row => `
+      document.getElementById('ballListe').innerHTML = data.map(row => `
         <tr>
-          <td>${row.id}</td>
           <td>${row.beskrivelse || ''}</td>
           <td>${new Date(row.tidspunkt).toLocaleString()}</td>
         </tr>
       `).join('');
 
       const group = L.featureGroup();
-      rows.forEach(row => {
+      data.forEach(row => {
         const mark = L.marker([row.sist_sett_lat, row.sist_sett_lng]).addTo(map);
-        const popup = `Ball: ${row.id}<br/>` +
-                      (row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : '') +
+        const popup = `${row.beskrivelse ? `Sted: ${row.beskrivelse}<br/>` : ''}` +
                       `${new Date(row.tidspunkt).toLocaleString()}`;
         mark.bindPopup(popup);
         group.addLayer(mark);
