@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -90,9 +91,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  let sisteRegistreringstid = 0;
-
-$1 = window.supabase.createClient(
+  <script>
+    const supabase = window.supabase.createClient(
       'https://chzfewhbfkdtcizdxyzk.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
     );
@@ -111,12 +111,6 @@ $1 = window.supabase.createClient(
     });
 
     document.getElementById('registrerBtn').addEventListener('click', async () => {
-      const nå = Date.now();
-      if (nå - sisteRegistreringstid < 10000) {
-        alert("Vent minst 10 sekunder mellom registreringer.");
-        return;
-      }
-      sisteRegistreringstid = nå;
       const sted = document.getElementById('stedInput').value.trim();
 
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sted)}&limit=5`)
