@@ -350,6 +350,8 @@
 <p id="hcpResult"></p>
 
 <script>
+  // Forutsetter at `supabase` allerede er initialisert tidligere i siden
+
   async function hentBaner() {
     const { data, error } = await supabase
       .from('courses')
@@ -376,16 +378,16 @@
       .eq('id', baneId)
       .single();
 
-    if (error || !data) {
-      document.getElementById('courseRating').value = '';
-      document.getElementById('slopeRating').value = '';
-      document.getElementById('courseRating').removeAttribute('readonly');
-      document.getElementById('slopeRating').removeAttribute('readonly');
-      return;
-    }
-
     const courseField = document.getElementById('courseRating');
     const slopeField = document.getElementById('slopeRating');
+
+    if (error || !data) {
+      courseField.value = '';
+      slopeField.value = '';
+      courseField.removeAttribute('readonly');
+      slopeField.removeAttribute('readonly');
+      return;
+    }
 
     if (data.course_rating != null) {
       courseField.value = data.course_rating;
@@ -429,20 +431,17 @@
       return;
     }
 
-    let differential = ((score - courseRating) * 113) / slopeRating;
+    // ✅ Juster course rating for 9 hull
+    const justertCourseRating = hull === 9 ? courseRating / 2 : courseRating;
 
-    if (hull === 9) {
-      differential *= 0.5;
-    }
-
+    const differential = ((score - justertCourseRating) * 113) / slopeRating;
     const rounded = differential.toFixed(1);
+
     document.getElementById("hcpResult").textContent = `Du spilte på handicap: ${rounded}`;
   });
 
-  hentBaner(); // Last inn banevalg ved oppstart
+  hentBaner(); // Hent alle baner ved lasting
 </script>
-
-
 
 </body>
 </html>
