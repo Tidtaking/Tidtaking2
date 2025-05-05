@@ -320,5 +320,95 @@
     loadLeaderboard();
     setInterval(loadLeaderboard, 30000);
   </script>
+  <hr>
+<h3>Beregn Handicap du spilte på</h3>
+
+<form id="hcpForm">
+  <label for="bane">Velg bane:</label>
+  <select id="bane" required>
+    <option value="">-- Velg bane --</option>
+  </select><br>
+
+  <label for="score">Antall slag:</label>
+  <input type="number" id="score" required><br>
+
+  <label for="courseRating">Course Rating:</label>
+  <input type="number" step="0.1" id="courseRating" readonly><br>
+
+  <label for="slopeRating">Slope Rating:</label>
+  <input type="number" id="slopeRating" readonly><br>
+
+  <button type="submit">Beregn HCP</button>
+</form>
+
+<p id="hcpResult"></p>
+
+<script>
+  // Bruker eksisterende `supabase`-klient som allerede er initialisert i siden
+
+  async function hentBaner() {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id, name');
+
+    if (error) {
+      console.error('Feil ved henting av baner:', error);
+      return;
+    }
+
+    const select = document.getElementById('bane');
+    data.forEach(bane => {
+      const option = document.createElement('option');
+      option.value = bane.id;
+      option.textContent = bane.name;
+      select.appendChild(option);
+    });
+  }
+
+  async function hentBaneData(baneId) {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('course_rating, slope')
+      .eq('id', baneId)
+      .single();
+
+    if (error) {
+      console.error('Feil ved henting av baneinfo:', error);
+      return;
+    }
+
+    document.getElementById('courseRating').value = data.course_rating;
+    document.getElementById('slopeRating').value = data.slope ?? 113;
+  }
+
+  document.getElementById('bane').addEventListener('change', (e) => {
+    const baneId = e.target.value;
+    if (baneId) {
+      hentBaneData(baneId);
+    } else {
+      document.getElementById('courseRating').value = '';
+      document.getElementById('slopeRating').value = '';
+    }
+  });
+
+  document.getElementById("hcpForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const score = parseFloat(document.getElementById("score").value);
+    const courseRating = parseFloat(document.getElementById("courseRating").value);
+    const slopeRating = parseFloat(document.getElementById("slopeRating").value);
+
+    if (isNaN(score) || isNaN(courseRating) || isNaN(slopeRating)) {
+      document.getElementById("hcpResult").textContent = "Mangler info for beregning.";
+      return;
+    }
+
+    const differential = ((score - courseRating) * 113) / slopeRating;
+    const rounded = differential.toFixed(1);
+    document.getElementById("hcpResult").textContent = `Du spilte på handicap: ${rounded}`;
+  });
+
+  hentBaner(); // Hent alle baner når siden lastes
+</script>
+
 </body>
 </html>
