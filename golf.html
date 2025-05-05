@@ -365,21 +365,26 @@
     });
   }
 
-  async function hentBaneData(baneId) {
-    const { data, error } = await supabase
-      .from('courses')
-      .select('course_rating, slope')
-      .eq('id', baneId)
-      .single();
+async function hentBaneData(baneId) {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('course_rating, slope')
+    .eq('id', baneId)
+    .single();
 
-    if (error) {
-      console.error('Feil ved henting av baneinfo:', error);
-      return;
-    }
-
-    document.getElementById('courseRating').value = data.course_rating;
-    document.getElementById('slopeRating').value = data.slope ?? 113;
+  if (error || !data) {
+    console.error('Feil ved henting av baneinfo:', error);
+    document.getElementById('courseRating').value = '';
+    document.getElementById('slopeRating').value = '';
+    return;
   }
+
+  console.log('Hentet data fra Supabase:', data);
+
+  document.getElementById('courseRating').value = data.course_rating ?? '';
+  document.getElementById('slopeRating').value = data.slope ?? 113;
+}
+
 
   document.getElementById('bane').addEventListener('change', (e) => {
     const baneId = e.target.value;
