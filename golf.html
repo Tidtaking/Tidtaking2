@@ -320,7 +320,7 @@
     loadLeaderboard();
     setInterval(loadLeaderboard, 30000);
   </script>
-  <hr>
+<hr>
 <h3>Beregn Handicap du spilte på</h3>
 
 <form id="hcpForm">
@@ -333,10 +333,10 @@
   <input type="number" id="score" required><br>
 
   <label for="courseRating">Course Rating:</label>
-  <input type="number" step="0.1" id="courseRating" readonly><br>
+  <input type="number" step="0.1" id="courseRating"><br>
 
   <label for="slopeRating">Slope Rating:</label>
-  <input type="number" id="slopeRating" readonly><br>
+  <input type="number" id="slopeRating"><br>
 
   <button type="submit">Beregn HCP</button>
 </form>
@@ -344,7 +344,8 @@
 <p id="hcpResult"></p>
 
 <script>
-  // Bruker eksisterende `supabase`-klient som allerede er initialisert i siden
+  // Forutsetter at du allerede har:
+  // const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
   async function hentBaner() {
     const { data, error } = await supabase
@@ -365,26 +366,47 @@
     });
   }
 
-async function hentBaneData(baneId) {
-  const { data, error } = await supabase
-    .from('courses')
-    .select('course_rating, slope')
-    .eq('id', baneId)
-    .single();
+  async function hentBaneData(baneId) {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('course_rating, slope')
+      .eq('id', baneId)
+      .single();
 
-  if (error || !data) {
-    console.error('Feil ved henting av baneinfo:', error);
-    document.getElementById('courseRating').value = '';
-    document.getElementById('slopeRating').value = '';
-    return;
+    if (error || !data) {
+      console.warn('Fant ikke data for valgt bane.');
+      // Tillat manuell inntasting
+      document.getElementById('courseRating').value = '';
+      document.getElementById('slopeRating').value = '';
+      document.getElementById('courseRating').removeAttribute('readonly');
+      document.getElementById('slopeRating').removeAttribute('readonly');
+      return;
+    }
+
+    console.log('Hentet data fra Supabase:', data);
+
+    const courseRating = data.course_rating;
+    const slopeRating = data.slope;
+
+    const courseField = document.getElementById('courseRating');
+    const slopeField = document.getElementById('slopeRating');
+
+    if (courseRating != null) {
+      courseField.value = courseRating;
+      courseField.setAttribute('readonly', true);
+    } else {
+      courseField.value = '';
+      courseField.removeAttribute('readonly');
+    }
+
+    if (slopeRating != null) {
+      slopeField.value = slopeRating;
+      slopeField.setAttribute('readonly', true);
+    } else {
+      slopeField.value = '113';
+      slopeField.removeAttribute('readonly');
+    }
   }
-
-  console.log('Hentet data fra Supabase:', data);
-
-  document.getElementById('courseRating').value = data.course_rating ?? '';
-  document.getElementById('slopeRating').value = data.slope ?? 113;
-}
-
 
   document.getElementById('bane').addEventListener('change', (e) => {
     const baneId = e.target.value;
@@ -393,6 +415,8 @@ async function hentBaneData(baneId) {
     } else {
       document.getElementById('courseRating').value = '';
       document.getElementById('slopeRating').value = '';
+      document.getElementById('courseRating').removeAttribute('readonly');
+      document.getElementById('slopeRating').removeAttribute('readonly');
     }
   });
 
@@ -403,7 +427,7 @@ async function hentBaneData(baneId) {
     const slopeRating = parseFloat(document.getElementById("slopeRating").value);
 
     if (isNaN(score) || isNaN(courseRating) || isNaN(slopeRating)) {
-      document.getElementById("hcpResult").textContent = "Mangler info for beregning.";
+      document.getElementById("hcpResult").textContent = "Mangler data for beregning.";
       return;
     }
 
@@ -412,8 +436,9 @@ async function hentBaneData(baneId) {
     document.getElementById("hcpResult").textContent = `Du spilte på handicap: ${rounded}`;
   });
 
-  hentBaner(); // Hent alle baner når siden lastes
+  hentBaner(); // Hent baner ved innlasting
 </script>
+
 
 </body>
 </html>
