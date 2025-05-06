@@ -21,11 +21,14 @@
       margin: 0 auto;
     }
 
+    h1, h2, h3 {
+      color: #1b5e20;
+    }
+
     h1 {
       font-size: 24px;
       font-weight: 600;
       margin-top: 20px;
-      color: #1b5e20;
     }
 
     .site-header {
@@ -66,6 +69,7 @@
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
     }
 
     table.scorecard th,
@@ -74,6 +78,10 @@
       border: 1px solid #ddd;
       text-align: center;
       font-size: 16px;
+    }
+
+    .player-section {
+      margin-top: 40px;
     }
 
     @media (max-width: 768px) {
@@ -122,6 +130,17 @@
         <tbody id="leaderboardBody"></tbody>
       </table>
     </div>
+
+    <section id="rundeStatistikk">
+      <h2>Statistikk per runde</h2>
+      <div id="rundeContainer"></div>
+    </section>
+
+    <section id="playerSection" class="player-section hidden">
+      <h2 id="playerTitle"></h2>
+      <div id="playerStats"></div>
+      <button onclick="document.getElementById('playerSection').classList.add('hidden')">Lukk</button>
+    </section>
   </main>
 
   <script>
@@ -129,6 +148,8 @@
       'https://chzfewhbfkdtcizdxyzk.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
     );
+
+    let playerMap = {};
 
     async function loadData() {
       const { data, error } = await supabase
@@ -143,15 +164,41 @@
       }
 
       const leaderboardScores = {};
-      data.forEach(r => {
-        const { players } = r.payload;
+      const rundeHtml = [];
+      playerMap = {};
+
+      data.forEach((r, idx) => {
+        const { players, course } = r.payload;
+        rundeHtml.push(`<h3>Runde ${idx + 1}: ${course?.name || 'Ukjent bane'}</h3>`);
+        rundeHtml.push('<table class="scorecard"><thead><tr><th>Navn</th>' + course.holes.map(h => `<th>${h.hole}</th>`).join('') + '<th>Netto</th></tr></thead><tbody>');
+
         players.forEach(p => {
           const gross = p.strokes.reduce((sum, v) => sum + (Number(v) || 0), 0);
           const net = gross - p.index;
           if (!leaderboardScores[p.name] || net < leaderboardScores[p.name]) {
             leaderboardScores[p.name] = net;
           }
+
+          if (!playerMap[p.name]) playerMap[p.name] = { rounds: 0, totalNet: 0, holeTotals: Array(18).fill(0), holeCounts: Array(18).fill(0) };
+          const pm = playerMap[p.name];
+          pm.rounds++;
+          pm.totalNet += net;
+          p.strokes.forEach((s, i) => {
+            if (s != null) {
+              pm.holeTotals[i] += s;
+              pm.holeCounts[i]++;
+            }
+          });
+
+          rundeHtml.push(`<tr data-player="${p.name}" class="clickable"><td>${p.name}</td>` + p.strokes.map(s => `<td>${s ?? ''}</td>`).join('') + `<td>${net}</td></tr>`);
         });
+
+        rundeHtml.push('</tbody></table>');
+      });
+
+      document.getElementById('rundeContainer').innerHTML = rundeHtml.join('');
+      document.querySelectorAll('[data-player]').forEach(tr => {
+        tr.addEventListener('click', () => showPlayer(tr.dataset.player));
       });
       renderLeaderboard(leaderboardScores);
     }
@@ -166,6 +213,22 @@
           <td>${net}</td>
         </tr>
       `).join('');
+    }
+
+    function showPlayer(name) {
+      const stats = playerMap[name];
+      if (!stats) return;
+      document.getElementById('playerTitle').textContent = `Statistikk for ${name}`;
+      const html = [`<p>Runder: ${stats.rounds}, snitt netto: ${(stats.totalNet / stats.rounds).toFixed(1)}</p>`];
+      html.push('<table class="scorecard"><thead><tr><th>Hull</th><th>Snitt slag</th></tr></thead><tbody>');
+      stats.holeTotals.forEach((tot, i) => {
+        const cnt = stats.holeCounts[i];
+        const avg = cnt ? (tot / cnt).toFixed(1) : '-';
+        html.push(`<tr><td>${i + 1}</td><td>${avg}</td></tr>`);
+      });
+      html.push('</tbody></table>');
+      document.getElementById('playerStats').innerHTML = html.join('');
+      document.getElementById('playerSection').classList.remove('hidden');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
