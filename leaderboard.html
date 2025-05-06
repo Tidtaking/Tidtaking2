@@ -84,6 +84,20 @@
       background-color: #FFF8E1;
     }
 
+    .ongoing-label {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 0.8rem;
+      background-color: #FFEE58;
+      color: #333;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .highlight {
+      background-color: #C8E6C9;
+    }
+
     .player-section {
       margin-top: 40px;
     }
@@ -175,7 +189,7 @@
         const { players, course } = r.payload;
         const isOngoing = players.some(p => p.strokes.some(s => s === null || s === undefined));
 
-        rundeHtml.push(`<h3>Runde ${idx + 1}: ${course?.name || 'Ukjent bane'}</h3>`);
+        rundeHtml.push(`<h3>Runde ${idx + 1}: ${course?.name || 'Ukjent bane'}${isOngoing ? ' <span class="ongoing-label">pågår</span>' : ''}</h3>`);
         rundeHtml.push(`<table class="scorecard${isOngoing ? ' ongoing' : ''}"><thead><tr><th>Navn</th>` + course.holes.map(h => `<th>${h.hole}</th>`).join('') + '<th>Netto</th></tr></thead><tbody>');
 
         players.forEach(p => {
@@ -204,7 +218,11 @@
 
       document.getElementById('rundeContainer').innerHTML = rundeHtml.join('');
       document.querySelectorAll('[data-player]').forEach(tr => {
-        tr.addEventListener('click', () => showPlayer(tr.dataset.player));
+        tr.addEventListener('click', () => {
+          document.querySelectorAll('[data-player]').forEach(row => row.classList.remove('highlight'));
+          tr.classList.add('highlight');
+          showPlayer(tr.dataset.player);
+        });
       });
       renderLeaderboard(leaderboardScores);
     }
