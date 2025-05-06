@@ -6,6 +6,7 @@
   <title>Leaderboard – Golfscore</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body {
       background-color: #F1F8E9;
@@ -118,131 +119,54 @@
             <th>Netto</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- Dynamisk innhold her -->
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
   </main>
-</body>
-</html>
 
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
- <script>
- // Supabase-klient
- const supabase = window.supabase.createClient(
-   "https://chzfewhbfkdtcizdxyzk.supabase.co",
-   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
- );
- // Globale datastrukturer
- let courseMap = {};
- let playerMap = {};
- // Hent data og beregn statistikk
- async function loadData() {
-   const { data, error } = await supabase
-     .from('rounds')
-     .select('payload')
-     .order('inserted_at', { ascending: false })
-     .limit(100);
-   if (error) return;
-   const leaderboardScores = {};
-   courseMap = {};
-   playerMap = {};
-   data.forEach(r => {
-     const { course, players } = r.payload;
-     const courseName = course.name;
-     if (!courseMap[courseName]) {
-       courseMap[courseName] = { holes: course.holes, playerStats: {}, count: 0, totalNet: 0 };
-     }
-     players.forEach(p => {
-       const gross = p.strokes.reduce((sum, v) => sum + (Number(v) || 0), 0);
-       const net = gross - p.index;
-       if (!leaderboardScores[p.name] || net < leaderboardScores[p.name]) leaderboardScores[p.name] = net;
-       const cs = courseMap[courseName];
-       cs.count++; cs.totalNet += net;
-       if (!cs.playerStats[p.name]) cs.playerStats[p.name] = { holeTotals: Array(18).fill(0), holeCounts: Array(18).fill(0) };
-       p.strokes.forEach((s,i) => { if (s != null) { cs.playerStats[p.name].holeTotals[i] += s; cs.playerStats[p.name].holeCounts[i]++; } });
-       if (!playerMap[p.name]) playerMap[p.name] = { rounds:0, totalNet:0, courseCounts:{}, holeTotals:Array(18).fill(0), holeCounts:Array(18).fill(0) };
-       const pm = playerMap[p.name]; pm.rounds++; pm.totalNet += net; pm.courseCounts[courseName] = (pm.courseCounts[courseName]||0)+1;
-       p.strokes.forEach((s,i)=>{ if(s!=null){ pm.holeTotals[i]+=s; pm.holeCounts[i]++; }});
-     });
-   });
-   renderLeaderboard(leaderboardScores);
-   renderCourseStats();
- }
- // Vis leaderboard
- function renderLeaderboard(scores) {
-   const sorted = Object.entries(scores).sort((a,b)=>a[1]-b[1]).slice(0,10);
-   const tbody = document.getElementById('leaderboardBody');
-   tbody.innerHTML = sorted.map(([name,net],i) => `
-     <tr class="border-t hover:bg-gray-50 cursor-pointer" data-player="${name}">
-       <td class="px-4 py-2">${i+1}</td>
-       <td class="px-4 py-2 text-left">${name}</td>
-       <td class="px-4 py-2">${net}</td>
-     </tr>
-   `).join('');
-   tbody.querySelectorAll('[data-player]').forEach(tr=>tr.onclick=()=>showPlayer(tr.dataset.player));
- }
- // Vis stats per bane
- function renderCourseStats() {
-   const container = document.getElementById('coursesStats'); container.innerHTML = '';
-   Object.entries(courseMap).forEach(([name,cs])=>{
-     const avgNet = (cs.totalNet/cs.count).toFixed(1);
-     const div = document.createElement('div'); div.className='flex justify-between items-center';
-     div.innerHTML = `<span>${name} — ${cs.count} runder, gj.snitt netto ${avgNet}</span><button class="btn-primary btn-sm" data-course="${name}">Vis hull</button>`;
-     container.appendChild(div);
-   });
-   document.querySelectorAll('[data-course]').forEach(btn=>btn.onclick=()=>showHoles(btn.dataset.course));
- }
- // Vis hulldetaljer
- function showHoles(courseName) {
-    const cs = courseMap[courseName];
-    document.getElementById('holesTitle').textContent = `Hulldetaljer — ${courseName}`;
-    // Build header
-    const header = document.getElementById('holesHeader');
-    const players = Object.keys(cs.playerStats);
-    header.innerHTML = `<th class="px-2 py-1">Hull</th><th class="px-2 py-1">Par</th>` +
-      players.map(p => `<th class="px-2 py-1">${p}</th>`).join('');
-    // Build body
-    const tbody = document.getElementById('holesBody');
-    tbody.innerHTML = '';
-    cs.holes.forEach((h, i) => {
-      const row = document.createElement('tr');
-      // Hole number and par
-      row.innerHTML = `<td class="border px-2 py-1">${h.hole}</td><td class="border px-2 py-1">${h.par}</td>`;
-      // Player averages with color coding
-      players.forEach(p => {
-        const cell = document.createElement('td');
-        const avg = cs.playerStats[p].holeCounts[i] ? (cs.playerStats[p].holeTotals[i] / cs.playerStats[p].holeCounts[i]).toFixed(1) : '-';
-        cell.textContent = avg;
-        cell.className = 'border px-2 py-1';
-        if (avg !== '-') {
-          const num = parseFloat(avg);
-          let color;
-          if (num <= h.par) color = '#d1fae5';       // green
-          else if (num <= h.par + 2) color = '#fed7aa'; // orange
-          else color = '#fecaca';                      // red
-          cell.style.backgroundColor = color;
-        }
-        row.appendChild(cell);
+  <script>
+    const supabaseUrl = 'https://<DIN-URL>.supabase.co';
+    const supabaseKey = '<DIN_PUBLIC_ANON_KEY>';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function hentLeaderboard() {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('navn, netto')
+        .order('netto', { ascending: true });
+
+      if (error) {
+        console.error('Feil ved henting:', error);
+        return;
+      }
+
+      oppdaterTabell(data);
+    }
+
+    function oppdaterTabell(spillere) {
+      const tbody = document.querySelector('#leaderboardTable tbody');
+      tbody.innerHTML = '';
+      spillere.forEach((spiller, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${spiller.navn}</td>
+          <td>${spiller.netto}</td>
+        `;
+        tbody.appendChild(tr);
       });
-      tbody.appendChild(row);
-    });
-    document.getElementById('holesSection').classList.remove('hidden');
-  }
- // Vis spiller
- function showPlayer(name) {
-   const pm = playerMap[name]; document.getElementById('playerTitle').textContent = `Spiller — ${name}`;
-   const container = document.getElementById('playerStats'); container.innerHTML = `<p>Runder: ${pm.rounds}, gj.snitt netto: ${(pm.totalNet/pm.rounds).toFixed(1)}</p><p>Banefordeling: ${Object.entries(pm.courseCounts).map(([c,n])=>`${c}: ${n}`).join(', ')}</p>`;
-   let tbl = '<table class="w-full text-center text-sm"><thead><tr><th>Hull</th><th>Gj.snitt slag</th></tr></thead><tbody>';
-   pm.holeTotals.forEach((tot,i)=>{ const cnt=pm.holeCounts[i]; tbl+=`<tr><td>${i+1}</td><td>${cnt?(tot/cnt).toFixed(1):'-'}</td></tr>`; }); tbl+='</tbody></table>';
-   container.innerHTML+=tbl; document.getElementById('playerSection').classList.remove('hidden');
- }
- // Lukk
- document.getElementById('closeHoles').onclick = ()=>document.getElementById('holesSection').classList.add('hidden');
- document.getElementById('closePlayer').onclick = ()=>document.getElementById('playerSection').classList.add('hidden');
- // Initial load
- loadData(); setInterval(loadData,30000);
- </script>
+    }
+
+    supabase
+      .channel('live-leaderboard')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leaderboard' },
+        () => hentLeaderboard()
+      )
+      .subscribe();
+
+    hentLeaderboard();
+  </script>
 </body>
 </html>
