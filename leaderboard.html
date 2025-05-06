@@ -80,6 +80,10 @@
       font-size: 16px;
     }
 
+    .ongoing {
+      background-color: #FFF8E1;
+    }
+
     .player-section {
       margin-top: 40px;
     }
@@ -169,8 +173,10 @@
 
       data.forEach((r, idx) => {
         const { players, course } = r.payload;
+        const isOngoing = players.some(p => p.strokes.some(s => s === null || s === undefined));
+
         rundeHtml.push(`<h3>Runde ${idx + 1}: ${course?.name || 'Ukjent bane'}</h3>`);
-        rundeHtml.push('<table class="scorecard"><thead><tr><th>Navn</th>' + course.holes.map(h => `<th>${h.hole}</th>`).join('') + '<th>Netto</th></tr></thead><tbody>');
+        rundeHtml.push(`<table class="scorecard${isOngoing ? ' ongoing' : ''}"><thead><tr><th>Navn</th>` + course.holes.map(h => `<th>${h.hole}</th>`).join('') + '<th>Netto</th></tr></thead><tbody>');
 
         players.forEach(p => {
           const gross = p.strokes.reduce((sum, v) => sum + (Number(v) || 0), 0);
