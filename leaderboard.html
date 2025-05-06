@@ -125,10 +125,10 @@
   </main>
 
   <script>
-    const supabaseUrl = 'https://wntihfycokjrxqdsbkij.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndudGlobnljb2tqcnhxZHNib2tqaiIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzE0MjY5NzY1LCJleHAiOjE4NjAwNDk3NjV9.E0Zme4FFU_O3JfU_ytXWozixPKjc1XpsKhUQOqAT5x4';
-
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const supabase = window.supabase.createClient(
+      'https://chzfewhbfkdtcizdxyzk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+    );
 
     async function hentLeaderboard() {
       const { data, error } = await supabase
