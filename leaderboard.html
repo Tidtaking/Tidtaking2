@@ -125,8 +125,9 @@
   </main>
 
   <script>
-    const supabaseUrl = 'https://<DIN-URL>.supabase.co';
-    const supabaseKey = '<DIN_PUBLIC_ANON_KEY>';
+    // Hentet fra golf.html
+    const supabaseUrl = 'https://wntihfycokjrxqdsbkij.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndudGlobnljb2tqcnhxZHNib2tqaiIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzE0MjY5NzY1LCJleHAiOjE4NjAwNDk3NjV9.E0Zme4FFU_O3JfU_ytXWozixPKjc1XpsKhUQOqAT5x4';
     const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
     async function hentLeaderboard() {
