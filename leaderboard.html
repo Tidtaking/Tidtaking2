@@ -1,59 +1,132 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0" />
- <title>Live Leaderboard</title>
- <!-- Prod‑klar Tailwind CSS -->
- <link href="https://cdn.jsdelivr.net/gh/tailwindlabs/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet" />
- <style>[x-cloak]{display:none}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard – Golfscore</title>
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #F1F8E9;
+      font-family: 'Inter', sans-serif;
+      color: #2E7D32;
+      margin: 0;
+      padding: 0;
+    }
+
+    main {
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-top: 20px;
+      color: #1b5e20;
+    }
+
+    .site-header {
+      background-color: #F1F8E9;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #C8E6C9;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo {
+      height: 40px;
+      margin-right: 10px;
+    }
+
+    .site-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 24px;
+      color: #2E7D32;
+      margin: 0;
+    }
+
+    .scorecard-wrapper {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+
+    table.scorecard {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background-color: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    table.scorecard th,
+    table.scorecard td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .site-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .logo {
+        height: 30px;
+        margin-bottom: 8px;
+      }
+
+      .site-title {
+        font-size: 20px;
+      }
+
+      table.scorecard th,
+      table.scorecard td {
+        padding: 8px;
+        font-size: 14px;
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
- <header class="w-full max-w-3xl mb-6 text-center">
-   <h1 class="text-3xl font-bold">Live Leaderboard</h1>
-   <p class="text-sm text-gray-600">Oppdatert i sanntid fra Supabase</p>
- </header>
- <main class="w-full max-w-3xl space-y-6">
-   <!-- Leaderboard -->
-   <section class="bg-white rounded-lg shadow p-4">
-     <h2 class="text-xl font-semibold mb-2">Topp 10 Samlet</h2>
-     <table id="leaderboardTable" class="w-full text-center text-sm">
-       <thead class="bg-green-600 text-white">
-         <tr>
-           <th class="px-4 py-2">Plass</th>
-           <th class="px-4 py-2">Navn</th>
-           <th class="px-4 py-2">Netto</th>
-         </tr>
-       </thead>
-       <tbody id="leaderboardBody" class="divide-y divide-green-100">
-         <tr><td colspan="3" class="py-4">Laster...</td></tr>
-       </tbody>
-     </table>
-     <p class="text-xs text-gray-500 mt-2">Klikk på et navn for spillerstatistikk</p>
-   </section>
-   <!-- Stats per bane -->
-   <section class="bg-white rounded-lg shadow p-4">
-     <h2 class="text-xl font-semibold mb-2">Stats per bane</h2>
-     <div id="coursesStats" class="space-y-2">
-       <p>Laster...</p>
-     </div>
-   </section>
-   <!-- Holer visning -->
-   <section id="holesSection" class="bg-white rounded-lg shadow p-4 hidden">
-     <h2 id="holesTitle" class="text-xl font-semibold mb-2">Hulldetaljer</h2>
-     <table id="holesTable" class="w-full text-center text-sm">
-       <thead><tr id="holesHeader"></tr></thead>
-       <tbody id="holesBody"></tbody>
-     </table>
-     <button id="closeHoles" class="mt-4 btn-secondary">Lukk</button>
-   </section>
-   <!-- Spiller statistikk -->
-   <section id="playerSection" class="bg-white rounded-lg shadow p-4 hidden">
-     <h2 id="playerTitle" class="text-xl font-semibold mb-2">Spillerstatistikk</h2>
-     <div id="playerStats" class="space-y-4"></div>
-     <button id="closePlayer" class="mt-4 btn-secondary">Lukk</button>
-   </section>
- </main>
+<body>
+  <header class="site-header">
+    <div class="logo-container">
+      <img src="golf.jpg" alt="Golf-logo" class="logo">
+      <h1 class="site-title">Golfscore – Live Leaderboard</h1>
+    </div>
+  </header>
+
+  <main>
+    <h1>Live Leaderboard</h1>
+    <div class="scorecard-wrapper">
+      <table id="leaderboardTable" class="scorecard">
+        <thead>
+          <tr>
+            <th>Plass</th>
+            <th>Navn</th>
+            <th>Netto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dynamisk innhold her -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
+
  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
  <script>
  // Supabase-klient
