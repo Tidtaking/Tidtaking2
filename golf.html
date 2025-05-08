@@ -535,28 +535,27 @@
     }
   });
 
-  document.getElementById("hcpForm").addEventListener("submit", function(e) {
-    e.preventDefault();
+document.getElementById("hcpForm").addEventListener("submit", function(e) {
+  e.preventDefault();
 
-    const score = parseFloat(document.getElementById("score").value);
-    const courseRating = parseFloat(document.getElementById("courseRating").value);
-    const slopeRating = parseFloat(document.getElementById("slopeRating").value);
-    const hull = parseInt(document.getElementById("hull").value);
+  const score = parseFloat(document.getElementById("score").value);
+  const courseRating = parseFloat(document.getElementById("courseRating").value);
+  const slopeRating = parseFloat(document.getElementById("slopeRating").value);
+  const hull = parseInt(document.getElementById("hull").value);
 
-    if (isNaN(score) || isNaN(courseRating) || isNaN(slopeRating)) {
-      document.getElementById("hcpResult").textContent = "Mangler data for beregning.";
-      return;
-    }
+  if (isNaN(score) || isNaN(courseRating) || isNaN(slopeRating)) {
+    document.getElementById("hcpResult").textContent = "Mangler data for beregning.";
+    return;
+  }
 
-    // ✅ Juster course rating for 9 hull
-    const justertCourseRating = hull === 9 ? courseRating / 2 : courseRating;
+  let differential = ((score - courseRating) * 113) / slopeRating;
+  if (hull === 9) differential *= 2;
 
-   let differential = ((score - courseRating) * 113) / slopeRating;
-if (hull === 9) differential *= 2;
+  let rounded = differential.toFixed(1);  // 🔧 Definerer rounded her
 
+  document.getElementById("hcpResult").textContent = `Du spilte på handicap: ${rounded}`;
+});
 
-    document.getElementById("hcpResult").textContent = `Du spilte på handicap: ${rounded}`;
-  });
 
   hentBaner(); // Hent alle baner ved lasting
 </script>
