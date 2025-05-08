@@ -535,7 +535,7 @@
     }
   });
 
-  document.getElementById("hcpForm").addEventListener("submit", function(e) {
+document.getElementById("hcpForm").addEventListener("submit", function(e) {
     e.preventDefault();
 
     const score = parseFloat(document.getElementById("score").value);
@@ -548,14 +548,16 @@
       return;
     }
 
-    // Dersom 9 hull og ratingen ser ut som en 18-hulls rating, del den i to
+    // 🔍 Hvis rating er for 18 hull men du har spilt 9, del den i to
     let effectiveCR = courseRating;
     if (hull === 9 && courseRating > 40) {
       effectiveCR = courseRating / 2;
     }
 
-    // Beregn handicap differensial
+    // 🎯 Handicap differential
     let differential = ((score - effectiveCR) * 113) / slopeRating;
+
+    // 📏 Dobles ved 9 hull
     if (hull === 9) differential *= 2;
 
     const rounded = differential.toFixed(1);
