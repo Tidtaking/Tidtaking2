@@ -551,8 +551,9 @@
     // ✅ Juster course rating for 9 hull
     const justertCourseRating = hull === 9 ? courseRating / 2 : courseRating;
 
-    const differential = ((score - justertCourseRating) * 113) / slopeRating;
-    const rounded = differential.toFixed(1);
+   let differential = ((score - courseRating) * 113) / slopeRating;
+if (hull === 9) differential *= 2;
+
 
     document.getElementById("hcpResult").textContent = `Du spilte på handicap: ${rounded}`;
   });
