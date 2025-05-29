@@ -37,13 +37,10 @@
 </div>
 
 <script>
-  const supabase = supabase.createClient(
+  const supabase = window.supabase.createClient(
     'https://chzfewhbfkdtcizdxyzk.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
   );
-
-  // Kalles etter at supabase er definert
-  checkLogin();
 
   async function sendMagicLink() {
     const email = document.getElementById('email').value;
@@ -135,7 +132,11 @@
     await supabase.auth.signOut();
     location.reload();
   }
+
+  // 🚨 Dette må være nederst – etter supabase er opprettet!
+  checkLogin();
 </script>
+
 
 </body>
 </html>
