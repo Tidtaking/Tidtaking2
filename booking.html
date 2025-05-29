@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <title>Golfbooking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    input, button { display: block; margin: 10px 0; width: 100%; padding: 10px; }
+    #kalender { margin-top: 30px; }
+  </style>
+</head>
+<body>
+
+<h2>Golfbooking</h2>
+
+<div id="auth">
+  <input type="email" id="email" placeholder="Din e-post">
+  <button onclick="sendMagicLink()">Logg inn / Registrer</button>
+</div>
+
+<div id="booking" style="display:none;">
+  <p>Logget inn som: <span id="user-email"></span></p>
+
+  <h3>Book ny tid</h3>
+  <input type="date" id="dato">
+  <input type="time" id="tidspunkt">
+  <input type="number" id="antall" placeholder="Antall spillere" min="1" max="4">
+  <button onclick="bookTid()">Book tid</button>
+
+  <div id="kalender"></div>
+
+  <button onclick="logout()">Logg ut</button>
+</div>
+
+<script>
+  const supabase = supabase.createClient(
+    'https://chzfewhbfkdtcizdxyzk.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA'
+  );
+
+  checkLogin();
+
+  async function sendMagicLink() {
+    const email = document.getElementById('email').value;
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    alert(error ? error.message : 'Sjekk e-posten din for innloggingslink.');
+  }
+
+  async function checkLogin() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      showBookingUI(session.user);
+    }
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        showBookingUI(session.user);
+      }
+    });
+  }
+
+  function showBookingUI(user) {
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('booking').style.display = 'block';
+    document.getElementById('user-email').innerText = user.email;
+    fetchBookinger(user.id);
+  }
+
+  async function bookTid() {
+    const dato = document.getElementById('dato').value;
+    const tidspunkt = document.getElementById('tidspunkt').value;
+    const antall = parseInt(document.getElementById('antall').value);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!dato || !tidspunkt || !antall || !user) {
+      alert("Fyll inn alle felt.");
+      return;
+    }
+
+    const { error } = await supabase.from('booking').insert([{
+      user_id: user.id,
+      dato,
+      tidspunkt,
+      antall_spillere: antall
+    }]);
+
+    if (error) {
+      alert("Feil ved lagring: " + error.message);
+    } else {
+      alert("Booking registrert!");
+      fetchBookinger(user.id);
+    }
+  }
+
+  async function fetchBookinger(user_id) {
+    const { data, error } = await supabase
+      .from('booking')
+      .select('*')
+      .eq('user_id', user_id);
+
+    const kalenderEl = document.getElementById('kalender');
+    kalenderEl.innerHTML = '';
+
+    if (error) {
+      kalenderEl.innerText = "Kunne ikke hente bookinger.";
+      return;
+    }
+
+    const events = data.map(b => ({
+      title: `Golf (${b.antall_spillere})`,
+      start: `${b.dato}T${b.tidspunkt}`,
+      allDay: false
+    }));
+
+    const calendar = new FullCalendar.Calendar(kalenderEl, {
+      initialView: 'dayGridMonth',
+      locale: 'no',
+      height: 600,
+      selectable: true,
+      select: function(info) {
+        document.getElementById('dato').value = info.startStr.split('T')[0];
+      },
+      events
+    });
+
+    calendar.render();
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    location.reload();
+  }
+</script>
+
+</body>
+</html>
