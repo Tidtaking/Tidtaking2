@@ -18,142 +18,218 @@
       width: 100%;
       height: 100vh;
     }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 8px;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+      font-size: 14px;
+    }
+    #controls label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    #controls input[type="checkbox"] {
+      margin-right: 6px;
+    }
   </style>
 </head>
 <body>
+  <div id="controls">
+    <label>
+      <input type="checkbox" id="toggleAnbud" checked />
+      Vis «anbud_postnummer»
+    </label>
+  </div>
   <div id="map"></div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <!-- Proj4js for reprojisering fra EPSG:3035 til WGS84 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
-
   <!-- Papa Parse for å lese CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
-    // ------------------------------------------------------------
-    // 1) Initialiser Leaflet‐kartet
-    // ------------------------------------------------------------
+    // ==============================================================
+    // 1) Initialiser kart
+    // ==============================================================
     const map = L.map('map').setView([60.0, 10.0], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18,
     }).addTo(map);
 
-    // ------------------------------------------------------------
+    // ==============================================================
     // 2) Definer projeksjoner: EPSG:3035 → WGS84
-    // ------------------------------------------------------------
+    // ==============================================================
     proj4.defs("EPSG:3035", "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs");
     function coords3035tilLatLng(coords) {
-      // coords = [x, y] i EPSG:3035
       const [x, y] = coords;
       const [lon, lat] = proj4("EPSG:3035", "WGS84", [x, y]);
       return L.latLng(lat, lon);
     }
 
-    // ------------------------------------------------------------
-    // 3) Les CSV med Papa Parse (kolonne = "postnummer" små bokstaver)
-    // ------------------------------------------------------------
-    Papa.parse('aktuelle_postnummer.csv', {
-      download: true,
-      header: true,
-      dynamicTyping: false,
-      skipEmptyLines: true,
-      complete: function (csvResult) {
-        console.log('csvResult.data:', csvResult.data);
-
-        // Sjekk om det finnes data
-        if (!Array.isArray(csvResult.data) || csvResult.data.length === 0) {
-          console.error('Fant ingen rader i CSV ("/aktuelle_postnummer.csv" returnerte tomt eller 404).');
-          return;
-        }
-
-        // Sjekk at første rad har feltet "postnummer"
-        const firstRow = csvResult.data[0];
-        if (!Object.prototype.hasOwnProperty.call(firstRow, 'postnummer')) {
-          console.error('CSV mangler kolonnen "postnummer". Feltnavnene i CSV er:', Object.keys(firstRow));
-          return;
-        }
-
-        // Bygg liste over postnummer‐strenger
-        const ønskedePN = csvResult.data
-          .map(row => (row.postnummer ? String(row.postnummer).trim() : null))
-          .filter(p => p);
-
-        console.log('Ønskede postnummer:', ønskedePN);
-
-        if (ønskedePN.length === 0) {
-          console.error('Ingen gyldige postnummer funnet i CSV‐dataene.');
-          return;
-        }
-
-        // ------------------------------------------------------------
-        // 4) Hent "filtrert_postnummer.geojson" (EPSG:3035)
-        // ------------------------------------------------------------
-        fetch('filtrert_postnummer.geojson')
-          .then(res => {
-            if (!res.ok) throw new Error('Feil ved lasting av GeoJSON: ' + res.status);
-            return res.json();
-          })
-          .then(rawData => {
-            // Forvent at rawData er en FeatureCollection:
-            if (!rawData || rawData.type !== 'FeatureCollection' || !rawData.features) {
-              console.error('Uventet GeoJSON‐struktur. Forventet FeatureCollection med "features".');
+    // ==============================================================
+    // 3) Hjelpefunksjon: les en CSV med Papa Parse, returnerer Promise
+    // ==============================================================
+    function lesCSV(sti, feltNavn) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(sti, {
+          download: true,
+          header: true,
+          dynamicTyping: false,
+          skipEmptyLines: true,
+          complete: function (result) {
+            // Sjekk at det finnes data:
+            if (!Array.isArray(result.data) || result.data.length === 0) {
+              reject(new Error(`Fant ingen rader i CSV: ${sti}`));
               return;
             }
-
-            // Filtrer én gang til for sikkerhet – properties.postnummer i GeoJSON er små bokstaver
-            const filtrerteFeatures = rawData.features.filter(feat => {
-              const pn = String((feat.properties && feat.properties.postnummer) || '').trim();
-              return ønskedePN.includes(pn);
-            });
-
-            console.log(`Fant ${filtrerteFeatures.length} polygoner som matcher CSV‐listen.`);
-
-            if (filtrerteFeatures.length === 0) {
-              console.warn('Ingen matchende polygoner i GeoJSON for de angitte postnumrene.');
+            // Sjekk at første rad inneholder ønsket nøkkel
+            const førsteRad = result.data[0];
+            if (!(feltNavn in førsteRad)) {
+              reject(new Error(`CSV mangler kolonnen "${feltNavn}". Feltnavn i ${sti}: ${Object.keys(førsteRad).join(', ')}`));
+              return;
             }
+            // Returner array av verdier
+            const liste = result.data
+              .map(r => (r[feltNavn] ? String(r[feltNavn]).trim() : null))
+              .filter(p => p);
+            resolve(liste);
+          },
+          error: function (err) {
+            reject(err);
+          }
+        });
+      });
+    }
 
-            // Bygg en liten GeoJSON‐struktur
-            const litenGeoJSON = {
-              type: 'FeatureCollection',
-              features: filtrerteFeatures,
-            };
+    // ==============================================================
+    // 4) Last inn begge CSV‐filer parallelt (aktuelle_postnummer og anbud_postnummer)
+    // ==============================================================
+    Promise.all([
+      lesCSV('aktuelle_postnummer.csv', 'postnummer'),
+      lesCSV('anbud_postnummer.csv', 'postnummer')
+    ])
+    .then(([listeAktuelle, listeAnbud]) => {
+      console.log('Liste aktuelle postnummer:', listeAktuelle);
+      console.log('Liste anbud postnummer:', listeAnbud);
 
-            // ------------------------------------------------------------
-            // 5) Tegn polygonene i kartet, med reprojisering
-            // ------------------------------------------------------------
-            const geojsonLayer = L.geoJSON(litenGeoJSON, {
-              coordsToLatLng: coords3035tilLatLng,
-              style: feature => ({
-                color: '#333333',
-                weight: 1,
-                fillOpacity: 0.5,
-                fillColor: '#3388ff',
-              }),
-              onEachFeature: (feature, layer) => {
-                const props = feature.properties || {};
-                layer.bindPopup(
-                  `<strong>Postnummer:</strong> ${props.postnummer || '–'}<br>` +
-                  (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
-                );
-              }
-            }).addTo(map);
-
-            // Zoom for å vise alle polygons
-            if (litenGeoJSON.features.length > 0) {
-              map.fitBounds(geojsonLayer.getBounds().pad(0.2));
-            }
-          })
-          .catch(err => {
-            console.error('Feil ved henting av GeoJSON:', err);
-          });
-      },
-      error: err => {
-        console.error('Kunne ikke lese CSV‐filen:', err);
+      // ============================================================
+      // 5) Hent filtrert GeoJSON (EPSG:3035)
+      // ============================================================
+      return fetch('filtrert_postnummer.geojson')
+        .then(res => {
+          if (!res.ok) throw new Error('Feil ved lasting av GeoJSON: ' + res.status);
+          return res.json();
+        })
+        .then(geoData => ({ geoData, listeAktuelle, listeAnbud }));
+    })
+    .then(({ geoData, listeAktuelle, listeAnbud }) => {
+      if (!geoData || geoData.type !== 'FeatureCollection' || !geoData.features) {
+        throw new Error('Uventet GeoJSON‐struktur. Forvent "FeatureCollection".');
       }
+
+      // ============================================================
+      // 6) Filtrer ut to sett med features: én for «aktuelle», én for «anbud»
+      // ============================================================
+      const featuresAktuelle = [];
+      const featuresAnbud = [];
+      geoData.features.forEach(feat => {
+        const pn = String((feat.properties && feat.properties.postnummer) || '').trim();
+        if (listeAktuelle.includes(pn)) {
+          featuresAktuelle.push(feat);
+        }
+        if (listeAnbud.includes(pn)) {
+          featuresAnbud.push(feat);
+        }
+      });
+
+      console.log(`Fant ${featuresAktuelle.length} "aktuelle" polygoner.`);
+      console.log(`Fant ${featuresAnbud.length} "anbud" polygoner.`);
+
+      // ============================================================
+      // 7) Lag to egne GeoJSON‐objekter
+      // ============================================================
+      const geoAktuelle = {
+        type: 'FeatureCollection',
+        features: featuresAktuelle
+      };
+      const geoAnbud = {
+        type: 'FeatureCollection',
+        features: featuresAnbud
+      };
+
+      // ============================================================
+      // 8) Opprett to Leaflet‐lag med forskjellig styling
+      // ============================================================
+      const layerAktuelle = L.geoJSON(geoAktuelle, {
+        coordsToLatLng: coords3035tilLatLng,
+        style: () => ({
+          color: '#333333',
+          weight: 1,
+          fillOpacity: 0.5,
+          fillColor: '#3388ff'  // Blå farge for «aktuelle»
+        }),
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties || {};
+          layer.bindPopup(
+            `<strong>Postnummer:</strong> ${props.postnummer || '–'}<br>` +
+            (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
+          );
+        }
+      });
+
+      const layerAnbud = L.geoJSON(geoAnbud, {
+        coordsToLatLng: coords3035tilLatLng,
+        style: () => ({
+          color: '#333333',
+          weight: 1,
+          fillOpacity: 0.5,
+          fillColor: '#FF3333'  // Rød farge for «anbud»
+        }),
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties || {};
+          layer.bindPopup(
+            `<strong>Postnummer (anbud):</strong> ${props.postnummer || '–'}<br>` +
+            (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
+          );
+        }
+      });
+
+      // Legg til «aktuelle»‐laget på kartet som standard
+      layerAktuelle.addTo(map);
+      // Legg til «anbud»‐laget avhengig av checkbox
+      if (document.getElementById('toggleAnbud').checked) {
+        layerAnbud.addTo(map);
+      }
+
+      // Zoom slik at vi ser begge sett med polygoner
+      const alleLag = L.featureGroup([layerAktuelle, layerAnbud]);
+      if (alleLag.getLayers().length > 0) {
+        map.fitBounds(alleLag.getBounds().pad(0.2));
+      }
+
+      // ============================================================
+      // 9) Koble checkbox til toggling av «anbud»‐laget
+      // ============================================================
+      document.getElementById('toggleAnbud').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          layerAnbud.addTo(map);
+        } else {
+          map.removeLayer(layerAnbud);
+        }
+      });
+    })
+    .catch(err => {
+      console.error('Feil ved innlasting eller behandling av data:', err);
     });
   </script>
 </body>
