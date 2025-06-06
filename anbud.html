@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anbud – Postnummerkart</title>
 
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS (uten integrity) -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-XQoYMqMTK8LvdlDXvxdM2LB5DZX++0Vr4X0mzxtgFMo="
-    crossorigin=""
   />
+
   <style>
     html,
     body {
@@ -28,20 +27,11 @@
 <body>
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-gZOGXcIBjDoOKrlgCNL0Mi733Vl+2GYJ0gVS0E8pCgM="
-    crossorigin=""
-  ></script>
+  <!-- Leaflet JS (uten integrity) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Papa Parse for å lese CSV -->
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
-    integrity="sha512-g2ma2t7t1PdLv7hy8UmgMZpeeR8vbgyoPmNfToOVtuzUoIi1kvJraMIB+OlOSv54rz0hgyhdN3tMclz8880R4Q=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  ></script>
+  <!-- Papa Parse for å lese CSV (uten integrity) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
     // 1) Initialiser Leaflet-kartet
@@ -74,7 +64,7 @@
             return res.json();
           })
           .then((rawData) => {
-            // Her forutsetter vi at rawData er en FeatureCollection direkte under rot:
+            // Forvent at rawData er en FeatureCollection direkte under rot:
             // {
             //   "type": "FeatureCollection",
             //   "features": [ … ]
@@ -84,7 +74,7 @@
               return;
             }
 
-            // Filtrer funksjonelt en gang til (valgfritt, men trygghets‐sjekk)
+            // Filtrer en gang til som trygghetssjekk:
             const filtrerteFeatures = rawData.features.filter((feat) => {
               const pn = String((feat.properties && feat.properties.postnummer) || '').trim();
               return ønskedePN.includes(pn);
