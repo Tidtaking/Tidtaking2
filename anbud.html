@@ -5,15 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anbud – Postnummerkart</title>
 
-  <!-- Leaflet CSS (uten integrity) -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
-    html,
-    body {
+    html, body {
       height: 100%;
       margin: 0;
       padding: 0;
@@ -27,29 +23,28 @@
 <body>
   <div id="map"></div>
 
-  <!-- Leaflet JS (uten integrity) -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Papa Parse for å lese CSV (uten integrity) -->
+  <!-- Papa Parse for å lese CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
     // 1) Initialiser Leaflet-kartet
     const map = L.map('map').setView([60.0, 10.0], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution: '© OpenStreetMap contributors',
       maxZoom: 18,
     }).addTo(map);
 
-    // 2) Les CSV med ønskede postnummer (samme repo, relativ sti)
+    // 2) Les CSV med ønskede postnummer (kolonne heter "Postnummer")
     Papa.parse('aktuelle_postnummer.csv', {
       download: true,
       header: true,
       dynamicTyping: false,
       complete: function (csvResult) {
+        // Bruk row.Postnummer (stor P) i stedet for row.postnummer
         const ønskedePN = csvResult.data
-          .map((row) => (row.postnummer ? String(row.postnummer).trim() : null))
+          .map((row) => (row.Postnummer ? String(row.Postnummer).trim() : null))
           .filter((p) => p);
 
         if (ønskedePN.length === 0) {
@@ -57,31 +52,30 @@
           return;
         }
 
-        // 3) Hent den filtrerte GeoJSON-fila som ligger i samme mappe
+        // 3) Hent den filtrerte GeoJSON-fila
         fetch('filtrert_postnummer.geojson')
           .then((res) => {
             if (!res.ok) throw new Error('Feil ved lasting av GeoJSON: ' + res.status);
             return res.json();
           })
           .then((rawData) => {
-            // Forvent at rawData er en FeatureCollection direkte under rot:
-            // {
-            //   "type": "FeatureCollection",
-            //   "features": [ … ]
-            // }
+            // Forvent at rawData er en FeatureCollection
             if (!rawData || rawData.type !== 'FeatureCollection' || !rawData.features) {
               console.error('Uventet GeoJSON-struktur. Forventet FeatureCollection med "features".');
               return;
             }
 
-            // Filtrer en gang til som trygghetssjekk:
+            // Filtrer én gang til som garanti
             const filtrerteFeatures = rawData.features.filter((feat) => {
+              // 'properties.postnummer' i GeoJSON er fortsatt liten p
               const pn = String((feat.properties && feat.properties.postnummer) || '').trim();
               return ønskedePN.includes(pn);
             });
 
+            console.log(`Fant ${filtrerteFeatures.length} polygoner som matcher CSV-listen.`);
+
             if (filtrerteFeatures.length === 0) {
-              console.warn('Ingen matchende features i GeoJSON for de postnumrene som stod i CSV.');
+              console.warn('Ingen matchende polygoner i GeoJSON for de angitte postnumrene.');
             }
 
             const litenGeoJSON = {
@@ -89,23 +83,21 @@
               features: filtrerteFeatures,
             };
 
-            // Legg til GeoJSON-laget på kartet
+            // 4) Tegn polygonene i kartet
             const geojsonLayer = L.geoJSON(litenGeoJSON, {
-              style: function (feature) {
-                return {
-                  color: '#333333',
-                  weight: 1,
-                  fillOpacity: 0.5,
-                  fillColor: '#3388ff',
-                };
-              },
-              onEachFeature: function (feature, layer) {
+              style: (feature) => ({
+                color: '#333333',
+                weight: 1,
+                fillOpacity: 0.5,
+                fillColor: '#3388ff',
+              }),
+              onEachFeature: (feature, layer) => {
                 const props = feature.properties || {};
                 layer.bindPopup(
                   `<strong>Postnummer:</strong> ${props.postnummer || '–'}<br>` +
-                    (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
+                  (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
                 );
-              },
+              }
             }).addTo(map);
 
             if (litenGeoJSON.features.length > 0) {
@@ -113,10 +105,10 @@
             }
           })
           .catch((err) => {
-            console.error(err);
+            console.error('Feil ved henting av GeoJSON:', err);
           });
       },
-      error: function (err) {
+      error: (err) => {
         console.error('Kunne ikke lese CSV-filen:', err);
       },
     });
