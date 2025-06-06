@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anbud – Postnummerkart</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-XQoYMqMTK8LvdlDXvxdM2LB5DZX++0Vr4X0mzxtgFMo="
+    crossorigin=""
+  />
+
+  <!-- Enkel CSS for kartet -->
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-gZOGXcIBjDoOKrlgCNL0Mi733Vl+2GYJ0gVS0E8pCgM="
+    crossorigin=""
+  ></script>
+
+  <!-- Papa Parse for å lese CSV -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
+    integrity="sha512-g2ma2t7t1PdLv7hy8UmgMZpeeR8vbgyoPmNfToOVtuzUoIi1kvJraMIB+OlOSv54rz0hgyhdN3tMclz8880R4Q=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  ></script>
+
+  <!-- Egen JavaScript -->
+  <script>
+    // 1) Initialiser Leaflet-kartet
+    const map = L.map('map').setView([60.0, 10.0], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18,
+    }).addTo(map);
+
+    // 2) Hent CSV med ønskede postnummer
+    //    Anta at filen heter "aktuelle_postnummer.csv" og ligger i samme mappe som denne HTML-filen.
+    //    CSV-en må ha en kolonne header "postnummer".
+    Papa.parse('aktuelle_postnummer.csv', {
+      download: true,
+      header: true,
+      dynamicTyping: false,
+      complete: function (csvResult) {
+        // Les alle postnummer som strenger
+        const ønskedePN = csvResult.data
+          .map((row) => {
+            // Dersom det finnes ekstra kolonner, ignorer dem; vi bruker bare "postnummer"
+            return row.postnummer ? String(row.postnummer).trim() : null;
+          })
+          .filter((p) => p); // fjern tomme eller null
+
+        if (ønskedePN.length === 0) {
+          console.error('Ingen gyldige postnummer funnet i CSV-filen.');
+          return;
+        }
+
+        // Når vi har listen over ønskede postnummer, hent GeoJSON
+        fetch('postnummer.geojson')
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error('Feil ved lasting av GeoJSON: ' + response.status);
+            }
+            return response.json();
+          })
+          .then((geojsonData) => {
+            // 3) Filtrer ut bare de postnummer‐feature som er i ønskedePN-listen
+            const filtrerteEgenskaper = geojsonData.features.filter((feat) => {
+              const pn = String(feat.properties.postnummer).trim();
+              return ønskedePN.includes(pn);
+            });
+
+            // 4) Opprett en ny GeoJSON‐struktur med kun filtrerte features
+            const nyGeoJSON = {
+              type: 'FeatureCollection',
+              features: filtrerteEgenskaper,
+            };
+
+            if (nyGeoJSON.features.length === 0) {
+              console.warn('Ingen matchende postnummer funnet i GeoJSON for de som stod i CSV.');
+            }
+
+            // 5) Legg til det filtrerte GeoJSON-laget på kartet
+            const layer = L.geoJSON(nyGeoJSON, {
+              style: function (feature) {
+                return {
+                  color: '#333333',
+                  weight: 1,
+                  fillOpacity: 0.5,
+                  fillColor: '#3388ff', // valgfri fast farge for alle
+                };
+              },
+              onEachFeature: function (feature, latlngLayer) {
+                const props = feature.properties;
+                latlngLayer.bindPopup(
+                  `<strong>Postnummer:</strong> ${props.postnummer}<br>` +
+                    (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
+                );
+              },
+            }).addTo(map);
+
+            // 6) Zoom kartet slik at alle valgte postnummer vises
+            if (nyGeoJSON.features.length > 0) {
+              map.fitBounds(layer.getBounds().pad(0.2));
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+          });
+      },
+      error: function (err) {
+        console.error('Kunne ikke lese CSV-filen:', err);
+      },
+    });
+  </script>
+</body>
+</html>
