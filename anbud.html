@@ -12,8 +12,6 @@
     integrity="sha256-XQoYMqMTK8LvdlDXvxdM2LB5DZX++0Vr4X0mzxtgFMo="
     crossorigin=""
   />
-
-  <!-- Enkel CSS for kartet -->
   <style>
     html,
     body {
@@ -45,7 +43,6 @@
     referrerpolicy="no-referrer"
   ></script>
 
-  <!-- Egen JavaScript -->
   <script>
     // 1) Initialiser Leaflet-kartet
     const map = L.map('map').setView([60.0, 10.0], 5);
@@ -55,74 +52,74 @@
       maxZoom: 18,
     }).addTo(map);
 
-    // 2) Hent CSV med ønskede postnummer
-    //    Anta at filen heter "aktuelle_postnummer.csv" og ligger i samme mappe som denne HTML-filen.
-    //    CSV-en må ha en kolonne header "postnummer".
+    // 2) Les CSV med ønskede postnummer (samme repo, relativ sti)
     Papa.parse('aktuelle_postnummer.csv', {
       download: true,
       header: true,
       dynamicTyping: false,
       complete: function (csvResult) {
-        // Les alle postnummer som strenger
         const ønskedePN = csvResult.data
-          .map((row) => {
-            // Dersom det finnes ekstra kolonner, ignorer dem; vi bruker bare "postnummer"
-            return row.postnummer ? String(row.postnummer).trim() : null;
-          })
-          .filter((p) => p); // fjern tomme eller null
+          .map((row) => (row.postnummer ? String(row.postnummer).trim() : null))
+          .filter((p) => p);
 
         if (ønskedePN.length === 0) {
           console.error('Ingen gyldige postnummer funnet i CSV-filen.');
           return;
         }
 
-        // Når vi har listen over ønskede postnummer, hent GeoJSON
-        fetch('postnummer.geojson')
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error('Feil ved lasting av GeoJSON: ' + response.status);
-            }
-            return response.json();
+        // 3) Hent den filtrerte GeoJSON-fila som ligger i samme mappe
+        fetch('filtrert_postnummer.geojson')
+          .then((res) => {
+            if (!res.ok) throw new Error('Feil ved lasting av GeoJSON: ' + res.status);
+            return res.json();
           })
-          .then((geojsonData) => {
-            // 3) Filtrer ut bare de postnummer‐feature som er i ønskedePN-listen
-            const filtrerteEgenskaper = geojsonData.features.filter((feat) => {
-              const pn = String(feat.properties.postnummer).trim();
+          .then((rawData) => {
+            // Her forutsetter vi at rawData er en FeatureCollection direkte under rot:
+            // {
+            //   "type": "FeatureCollection",
+            //   "features": [ … ]
+            // }
+            if (!rawData || rawData.type !== 'FeatureCollection' || !rawData.features) {
+              console.error('Uventet GeoJSON-struktur. Forventet FeatureCollection med "features".');
+              return;
+            }
+
+            // Filtrer funksjonelt en gang til (valgfritt, men trygghets‐sjekk)
+            const filtrerteFeatures = rawData.features.filter((feat) => {
+              const pn = String((feat.properties && feat.properties.postnummer) || '').trim();
               return ønskedePN.includes(pn);
             });
 
-            // 4) Opprett en ny GeoJSON‐struktur med kun filtrerte features
-            const nyGeoJSON = {
-              type: 'FeatureCollection',
-              features: filtrerteEgenskaper,
-            };
-
-            if (nyGeoJSON.features.length === 0) {
-              console.warn('Ingen matchende postnummer funnet i GeoJSON for de som stod i CSV.');
+            if (filtrerteFeatures.length === 0) {
+              console.warn('Ingen matchende features i GeoJSON for de postnumrene som stod i CSV.');
             }
 
-            // 5) Legg til det filtrerte GeoJSON-laget på kartet
-            const layer = L.geoJSON(nyGeoJSON, {
+            const litenGeoJSON = {
+              type: 'FeatureCollection',
+              features: filtrerteFeatures,
+            };
+
+            // Legg til GeoJSON-laget på kartet
+            const geojsonLayer = L.geoJSON(litenGeoJSON, {
               style: function (feature) {
                 return {
                   color: '#333333',
                   weight: 1,
                   fillOpacity: 0.5,
-                  fillColor: '#3388ff', // valgfri fast farge for alle
+                  fillColor: '#3388ff',
                 };
               },
-              onEachFeature: function (feature, latlngLayer) {
-                const props = feature.properties;
-                latlngLayer.bindPopup(
-                  `<strong>Postnummer:</strong> ${props.postnummer}<br>` +
+              onEachFeature: function (feature, layer) {
+                const props = feature.properties || {};
+                layer.bindPopup(
+                  `<strong>Postnummer:</strong> ${props.postnummer || '–'}<br>` +
                     (props.navn ? `<strong>Navn:</strong> ${props.navn}` : '')
                 );
               },
             }).addTo(map);
 
-            // 6) Zoom kartet slik at alle valgte postnummer vises
-            if (nyGeoJSON.features.length > 0) {
-              map.fitBounds(layer.getBounds().pad(0.2));
+            if (litenGeoJSON.features.length > 0) {
+              map.fitBounds(geojsonLayer.getBounds().pad(0.2));
             }
           })
           .catch((err) => {
