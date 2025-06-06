@@ -43,6 +43,10 @@
 <body>
   <div id="controls">
     <label>
+      <input type="checkbox" id="toggleAktuelle" checked />
+      Vis «aktuelle» (blått lag)
+    </label>
+    <label>
       <input type="checkbox" id="toggleAnbud" checked />
       Vis «anbud» (rødt lag)
     </label>
@@ -77,7 +81,7 @@
     }
 
     // ==============================================================
-    // 3) Les CSV for «aktuelle» postnummer (kolonne = "postnummer")
+    // 3) Hjelpefunksjon: les CSV med Papa Parse, returnerer liste av strenger
     // ==============================================================
     function lesCSV(sti, feltNavn) {
       return new Promise((resolve, reject) => {
@@ -198,31 +202,48 @@
         });
 
         // ============================================================
-        // 8) Legg til «aktuelle»‐laget som standard
+        // 8) Legg til lag basert på checkbox‐tilstand
         // ============================================================
-        layerAktuelle.addTo(map);
-
-        // Legg til «anbud»‐laget om checkbox er avkrysset
-        if (document.getElementById('toggleAnbud').checked) {
-          layerAnbud.addTo(map);
-        }
-
-        // Finn felles bounds for begge lag
-        const gruppe = L.featureGroup([layerAktuelle, layerAnbud]);
-        if (gruppe.getLayers().length > 0) {
-          map.fitBounds(gruppe.getBounds().pad(0.2));
-        }
-
-        // ============================================================
-        // 9) Checkbox: toggling av «anbud»‐laget
-        // ============================================================
-        document.getElementById('toggleAnbud').addEventListener('change', (e) => {
-          if (e.target.checked) {
-            layerAnbud.addTo(map);
+        function oppdaterLagVisning() {
+          // Aktuelle
+          if (document.getElementById('toggleAktuelle').checked) {
+            if (!map.hasLayer(layerAktuelle)) layerAktuelle.addTo(map);
           } else {
-            map.removeLayer(layerAnbud);
+            if (map.hasLayer(layerAktuelle)) map.removeLayer(layerAktuelle);
           }
-        });
+          // Anbud
+          if (document.getElementById('toggleAnbud').checked) {
+            if (!map.hasLayer(layerAnbud)) layerAnbud.addTo(map);
+          } else {
+            if (map.hasLayer(layerAnbud)) map.removeLayer(layerAnbud);
+          }
+        }
+
+        // Kjør én gang for å legge til lag ved start
+        oppdaterLagVisning();
+
+        // ============================================================
+        // 9) Checkbox: toggling av lag
+        // ============================================================
+        document.getElementById('toggleAktuelle').addEventListener('change', oppdaterLagVisning);
+        document.getElementById('toggleAnbud').addEventListener('change', oppdaterLagVisning);
+
+        // ============================================================
+        // 10) Zoom slik at vi ser alle synlige lag
+        // ============================================================
+        function oppdaterZoom() {
+          const grupper = [];
+          if (map.hasLayer(layerAktuelle)) grupper.push(layerAktuelle);
+          if (map.hasLayer(layerAnbud)) grupper.push(layerAnbud);
+          if (grupper.length > 0) {
+            const fg = L.featureGroup(grupper);
+            map.fitBounds(fg.getBounds().pad(0.2));
+          }
+        }
+        // Kjør ved start og når brukeren endrer checkbox
+        oppdaterZoom();
+        document.getElementById('toggleAktuelle').addEventListener('change', oppdaterZoom);
+        document.getElementById('toggleAnbud').addEventListener('change', oppdaterZoom);
       })
       .catch(err => {
         console.error('Feil ved innlasting eller behandling av data:', err);
