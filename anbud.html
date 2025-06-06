@@ -33,70 +33,76 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
-    // ============================================================
-    // Definer EPSG:3035 (ETRS89/LAEA Europe) → WGS84
-    // EPSG:3035: +proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs
-    // ============================================================
-    proj4.defs("EPSG:3035", "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs");
-    // “WGS84” er forhåndsdefinert i Proj4js.
-
-    // Funksjon som tar [x, y] i EPSG:3035 og returnerer L.latLng(lat, lon)
-    function coords3035tilLatLng(coords) {
-      // coords = [x, y]
-      const [x, y] = coords;
-      const [lon, lat] = proj4("EPSG:3035", "WGS84", [x, y]);
-      return L.latLng(lat, lon);
-    }
-
-    // ============================================================
-    // Initialiser Leaflet-kartet
-    // ============================================================
+    // ------------------------------------------------------------
+    // 1) Initialiser Leaflet-kartet
+    // ------------------------------------------------------------
     const map = L.map('map').setView([60.0, 10.0], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18,
     }).addTo(map);
 
-    // ============================================================
-    // Les CSV med ønskede postnummer (kolonne = "Postnummer")
-    // ============================================================
+    // ------------------------------------------------------------
+    // EPSG:3035 → WGS84-definisjon
+    // ------------------------------------------------------------
+    proj4.defs("EPSG:3035", "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs");
+    function coords3035tilLatLng(coords) {
+      const [x, y] = coords;
+      const [lon, lat] = proj4("EPSG:3035", "WGS84", [x, y]);
+      return L.latLng(lat, lon);
+    }
+
+    // ------------------------------------------------------------
+    // 2) Hent CSV med Papa Parse
+    // ------------------------------------------------------------
     Papa.parse('aktuelle_postnummer.csv', {
       download: true,
       header: true,
       dynamicTyping: false,
+      skipEmptyLines: true,
       complete: function (csvResult) {
-        // Bruk “row.Postnummer” siden headeren heter akkurat det
+        console.log('csvResult.data:', csvResult.data);
+
+        // Sjekk om data finnes i det hele tatt
+        if (!Array.isArray(csvResult.data) || csvResult.data.length === 0) {
+          console.error('Fant ingen rader i CSV ("/aktuelle_postnummer.csv" returnerte tomt eller 404).');
+          return;
+        }
+
+        // Sjekk om feltet "Postnummer" eksisterer i første rad
+        const firstRow = csvResult.data[0];
+        if (!Object.prototype.hasOwnProperty.call(firstRow, 'Postnummer')) {
+          console.error('CSV mangler kolonnen "Postnummer". Feltnavnene i CSV er:', Object.keys(firstRow));
+          return;
+        }
+
+        // Bygg liste over postnummer-strenger
         const ønskedePN = csvResult.data
           .map(row => (row.Postnummer ? String(row.Postnummer).trim() : null))
           .filter(p => p);
 
+        console.log('Ønskede postnummer:', ønskedePN);
+
         if (ønskedePN.length === 0) {
-          console.error('Ingen gyldige postnummer funnet i CSV-filen.');
+          console.error('Ingen gyldige postnummer funnet i CSV-dataene.');
           return;
         }
 
-        // ==========================================================
-        // Hent den filtrerte GeoJSON-fila (EPSG:3035)
-        // ==========================================================
+        // ------------------------------------------------------------
+        // 3) Hent filtrert GeoJSON (EPSG:3035)
+        // ------------------------------------------------------------
         fetch('filtrert_postnummer.geojson')
           .then(res => {
             if (!res.ok) throw new Error('Feil ved lasting av GeoJSON: ' + res.status);
             return res.json();
           })
           .then(rawData => {
-            // Forvent at rawData har struktur:
-            // {
-            //   "type": "FeatureCollection",
-            //   "features": [ … ]
-            // }
             if (!rawData || rawData.type !== 'FeatureCollection' || !rawData.features) {
-              console.error('Uventet GeoJSON-struktur. Forventet FeatureCollection.');
+              console.error('Uventet GeoJSON-struktur. Forventet FeatureCollection med "features".');
               return;
             }
 
-            // ========================================================
-            // Filtrer én gang til for sikkerhet (bruker properties.postnummer små bokstaver)
-            // ========================================================
+            // Filtrer én gang til for sikkerhet
             const filtrerteFeatures = rawData.features.filter(feat => {
               const pn = String((feat.properties && feat.properties.postnummer) || '').trim();
               return ønskedePN.includes(pn);
@@ -104,19 +110,14 @@
 
             console.log(`Fant ${filtrerteFeatures.length} polygoner som matcher CSV-listen.`);
 
-            if (filtrerteFeatures.length === 0) {
-              console.warn('Ingen matchende polygoner i GeoJSON for de angitte postnumrene.');
-            }
-
-            // Bygg ny, liten GeoJSON‐struktur
             const litenGeoJSON = {
               type: 'FeatureCollection',
               features: filtrerteFeatures,
             };
 
-            // ========================================================
-            // Tegn polygonene i kartet, med reprojisering __med__ coordsToLatLng
-            // ========================================================
+            // ------------------------------------------------------------
+            // 4) Tegn polygonene i kartet med reprojisering
+            // ------------------------------------------------------------
             const geojsonLayer = L.geoJSON(litenGeoJSON, {
               coordsToLatLng: coords3035tilLatLng,
               style: feature => ({
@@ -134,7 +135,6 @@
               }
             }).addTo(map);
 
-            // Zoom slik at alle polygoner vises
             if (litenGeoJSON.features.length > 0) {
               map.fitBounds(geojsonLayer.getBounds().pad(0.2));
             }
