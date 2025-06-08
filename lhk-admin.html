@@ -106,7 +106,7 @@
   <!-- Eksisterende: -->
   <!--<button onclick="hentGlobaleSpillere()">📥 Hent spillere fra Supabase</button>-->
   <!-- Ny knapp: -->
-  <button onclick="hentGlobaleSpillereTilKamp()">📥 Hent globale spillere til kamp</button>
+<button onclick="importerGlobaleSpillereTilKamp()">📥 Hent globale spillere til kamp</button>
   <button onclick="visImportSpillere()">📥 Hent spillere fra annen kamp</button>
   <!-- ... -->
 </div>
@@ -339,6 +339,48 @@ async function lagreGlobalSpillere() {
 
   alert("Globale spillere oppdatert!");
   visGlobalSpillere();
+}
+// 1) Hent rådata direkte fra Supabase:
+async function fetchGlobalPlayers() {
+  const { data, error } = await client
+    .from("global_spiller")
+    .select("drakt, navn")
+    .order("drakt", { ascending: true });
+
+  if (error) {
+    console.error("Kunne ikke hente globale spillere:", error);
+    alert("Noe gikk galt ved henting av globale spillere.");
+    return [];
+  }
+  return data;
+}
+
+// 2) Wrapper som knytter dem til aktiv kamp og viser knappene:
+async function importerGlobaleSpillereTilKamp() {
+  if (!aktivKampId) {
+    alert("Du må velge en aktiv kamp først.");
+    return;
+  }
+
+  // Hent globale spillere fra databasen
+  const globale = await fetchGlobalPlayers();
+
+  if (!globale.length) {
+    alert("Fant ingen globale spillere i databasen.");
+    return;
+  }
+
+  // Oversett til din spillere-array og sett kamp_id
+  spillere = globale.map(s => ({
+    kamp_id: aktivKampId,
+    drakt: s.drakt,
+    navn: s.navn
+  }));
+
+  // Oppdater UI
+  lagSpillerKnapper();
+
+  alert("Globale spillere importert til aktiv kamp!");
 }
 
 
