@@ -780,17 +780,21 @@ async function opprettKamp() {
   const bortelag = document.getElementById("bortelag").value;
   const dato = document.getElementById("kampDato").value || new Date().toISOString().slice(0, 10);
 
-  const { data: nyKamp, error } = await client.from("kamp").insert({
-    hjemmelag,
-    bortelag,
-    dato,
-    hjemmescore: 0,
-    bortescore: 0,
-    omgang: 1,
-    er_paused: true,
-    start_tid: null,
-    tid_brukt: 0
-  }).select().single();
+  const { data: nyKamp, error } = await client
+    .from("kamp")
+    .insert({
+      hjemmelag,
+      bortelag,
+      dato,
+      hjemmescore: 0,
+      bortescore: 0,
+      omgang: 1,
+      er_paused: true,
+      start_tid: null,
+      tid_brukt: 0
+    })
+    .select()
+    .single();
 
   if (error) {
     alert("Feil ved opprettelse av kamp");
@@ -798,35 +802,49 @@ async function opprettKamp() {
     return;
   }
 
-  // Hent forrige kamp (den nest siste, altså kamp før nyKamp)
-  const { data: kamper } = await client.from("kamp")
-    .select("id")
-    .neq("id", nyKamp.id)
-    .order("opprettet", { ascending: false })
-    .limit(1);
-
-  const forrigeKampId = kamper?.[0]?.id;
-
-  if (forrigeKampId) {
-    const { data: gamleSpillere } = await client
-      .from("spiller")
-      .select("*")
-      .eq("kamp_id", forrigeKampId)
-      .order("drakt");
-
-    if (gamleSpillere?.length) {
-      const spillereMedNyKamp = gamleSpillere.map(s => ({
-        kamp_id: nyKamp.id,
-        drakt: s.drakt,
-        navn: s.navn
-      }));
-      await client.from("spiller").insert(spillereMedNyKamp);
+  // --- NY LOGIKK START ---
+  const forrigeSpillereJson = localStorage.getItem("forrigeSpillere");
+  if (forrigeSpillereJson) {
+    // Bruk spillerne du hentet med "Hent spillere fra valgt kamp"
+    const gamleSpillere = JSON.parse(forrigeSpillereJson);
+    const spillereMedNyKamp = gamleSpillere.map(s => ({
+      kamp_id: nyKamp.id,
+      drakt: s.drakt,
+      navn: s.navn
+    }));
+    await client.from("spiller").insert(spillereMedNyKamp);
+    localStorage.removeItem("forrigeSpillere");
+  } else {
+    // Faller tilbake til å kopiere fra nest siste opprettede kamp
+    const { data: kamper } = await client
+      .from("kamp")
+      .select("id")
+      .neq("id", nyKamp.id)
+      .order("opprettet", { ascending: false })
+      .limit(1);
+    const forrigeKampId = kamper?.[0]?.id;
+    if (forrigeKampId) {
+      const { data: gamleSpillere } = await client
+        .from("spiller")
+        .select("*")
+        .eq("kamp_id", forrigeKampId)
+        .order("drakt");
+      if (gamleSpillere?.length) {
+        const spillereMedNyKamp = gamleSpillere.map(s => ({
+          kamp_id: nyKamp.id,
+          drakt: s.drakt,
+          navn: s.navn
+        }));
+        await client.from("spiller").insert(spillereMedNyKamp);
+      }
     }
   }
+  // --- NY LOGIKK SLUTT ---
 
-  alert("Kamp opprettet – spillere kopiert fra forrige kamp.");
+  alert("Kamp opprettet – spillere kopiert.");
   lastKamper();
 }
+
 
 
 async function startPauseKamp() {
