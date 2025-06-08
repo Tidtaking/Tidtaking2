@@ -461,41 +461,40 @@ async function lagSpillerKnapper() {
     spillere.push(...data);
   }
 
-  spillere.forEach((spiller, index) => {
-    const wrapper = document.createElement("div");
-    wrapper.style.marginBottom = "5px";
+  // fjern slice(0,16) – vis alle spillere uansett antall
+spillere.forEach(spiller => {
+  const wrapper = document.createElement("div");
+  wrapper.style.marginBottom = "5px";
 
-    const inputDrakt = document.createElement("input");
-    inputDrakt.type = "number";
-    inputDrakt.value = spiller.drakt;
-    inputDrakt.style.width = "40px";
-    inputDrakt.style.marginRight = "5px";
-    inputDrakt.oninput = () => {
-      spiller.drakt = parseInt(inputDrakt.value);
-      btn.textContent = `${spiller.drakt} ${spiller.navn}`;
-    };
-
-    const inputNavn = document.createElement("input");
-    inputNavn.type = "text";
-    inputNavn.value = spiller.navn;
-    inputNavn.style.width = "100px";
-    inputNavn.oninput = () => {
-      spiller.navn = inputNavn.value;
-      btn.textContent = `${spiller.drakt} ${spiller.navn}`;
-    };
-
-    const btn = document.createElement("button");
+  const inputDrakt = document.createElement("input");
+  inputDrakt.type = "number";
+  inputDrakt.value = spiller.drakt;
+  inputDrakt.style.width = "40px";
+  inputDrakt.style.marginRight = "5px";
+  inputDrakt.oninput = () => {
+    spiller.drakt = parseInt(inputDrakt.value, 10);
     btn.textContent = `${spiller.drakt} ${spiller.navn}`;
-    btn.onclick = () => velgSpiller(spiller);
-    btn.classList.add("spiller-knapp");
-    btn.style.marginLeft = "5px";
+  };
 
-    wrapper.appendChild(inputDrakt);
-    wrapper.appendChild(inputNavn);
-    wrapper.appendChild(btn);
+  const inputNavn = document.createElement("input");
+  inputNavn.type = "text";
+  inputNavn.value = spiller.navn;
+  inputNavn.style.width = "100px";
+  inputNavn.oninput = () => {
+    spiller.navn = inputNavn.value;
+    btn.textContent = `${spiller.drakt} ${spiller.navn}`;
+  };
 
-    container.appendChild(wrapper);
-  });
+  const btn = document.createElement("button");
+  btn.textContent = `${spiller.drakt} ${spiller.navn}`;
+  btn.onclick = () => velgSpiller(spiller);
+  btn.classList.add("spiller-knapp");
+  btn.style.marginLeft = "5px";
+
+  wrapper.append(inputDrakt, inputNavn, btn);
+  container.appendChild(wrapper);
+});
+
 
   const leggTilBtn = document.createElement("button");
   leggTilBtn.textContent = "➕ Legg til spiller";
@@ -597,13 +596,15 @@ async function visSpillerKnapper() {
     spillere.push(...data);
   }
 
-  spillere.slice(0, 16).forEach(spiller => {
-    const btn = document.createElement("button");
-    btn.textContent = `${spiller.drakt} ${spiller.navn}`;
-    btn.onclick = () => velgSpiller(spiller);
-    btn.classList.add("spiller-knapp");
-    container.appendChild(btn);
-  });
+  // Vis alle spillere som ligger i arrayen
+spillere.forEach(spiller => {
+  const btn = document.createElement("button");
+  btn.textContent = `${spiller.drakt} ${spiller.navn}`;
+  btn.onclick = () => velgSpiller(spiller);
+  btn.classList.add("spiller-knapp");
+  container.appendChild(btn);
+});
+
 
   const redigerBtn = document.createElement("button");
   redigerBtn.textContent = "✏️ Rediger spillere";
