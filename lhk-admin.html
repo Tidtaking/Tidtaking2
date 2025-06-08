@@ -377,12 +377,12 @@ async function lagreGlobalSpillere() {
   visGlobalSpillere();
 }
 // 1) Hent rådata direkte fra Supabase:
+// Henter rådata fra egen global_spiller-tabell
 async function fetchGlobalPlayers() {
   const { data, error } = await client
     .from("global_spiller")
     .select("drakt, navn")
     .order("drakt", { ascending: true });
-
   if (error) {
     console.error("Kunne ikke hente globale spillere:", error);
     alert("Noe gikk galt ved henting av globale spillere.");
@@ -391,29 +391,44 @@ async function fetchGlobalPlayers() {
   return data;
 }
 
-// 2) Wrapper som knytter dem til aktiv kamp og viser knappene:
+// Erstatter lokal-array + UI-rendring med virkelig DB-operasjon
 async function importerGlobaleSpillereTilKamp() {
   if (!aktivKampId) {
     alert("Du må velge en aktiv kamp først.");
     return;
   }
 
-  // Hent globale spillere fra databasen
+  // 1) Hent alle globale spillere
   const globale = await fetchGlobalPlayers();
-
   if (!globale.length) {
     alert("Fant ingen globale spillere i databasen.");
     return;
   }
 
-  // Oversett til din spillere-array og sett kamp_id
-  spillere = globale.map(s => ({
+  // 2) Slett eksisterende spillere for denne kampen
+  await client
+    .from("spiller")
+    .delete()
+    .eq("kamp_id", aktivKampId);
+
+  // 3) Bulk-insert de globale som nye spillere i kampen
+  const spillereMedKamp = globale.map(s => ({
     kamp_id: aktivKampId,
     drakt: s.drakt,
     navn: s.navn
   }));
+  const { error: insertError } = await client
+    .from("spiller")
+    .insert(spillereMedKamp);
 
-  // Oppdater UI
+  if (insertError) {
+    console.error("Kunne ikke sette inn globale spillere:", insertError);
+    alert("Feil ved import av globale spillere til kamp.");
+    return;
+  }
+
+  // 4) Oppdater lokal variabel og vis UI på nytt
+  spillere = spillereMedKamp;
   lagSpillerKnapper();
 
   alert("Globale spillere importert til aktiv kamp!");
