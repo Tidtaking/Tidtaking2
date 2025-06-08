@@ -212,38 +212,96 @@ async function importerSpillereFraKamp() {
 
   lagSpillerKnapper();
 }
-async function hentGlobaleSpillere() {
+// Hent dagens globale spiller-liste fra Supabase
+async function hentGlobalSpillere() {
   const { data, error } = await client
-    .from("spiller")
+    .from("global_spiller")
     .select("*")
-    .is("kamp_id", null)
     .order("drakt");
-
   if (error) {
-    alert("Feil ved henting av spillere fra Supabase");
-    console.error(error);
-    return;
+    console.error("Kunne ikke hente globale spillere:", error);
+    return [];
   }
-
-  if (!aktivKampId) {
-    alert("Ingen aktiv kamp valgt");
-    return;
-  }
-
-  // Kopier til aktiv kamp
-  const spillereMedKamp = data.map(s => ({
-    kamp_id: aktivKampId,
-    drakt: s.drakt,
-    navn: s.navn
-  }));
-
-  await client.from("spiller").delete().eq("kamp_id", aktivKampId);
-  await client.from("spiller").insert(spillereMedKamp);
-  alert("Globale spillere hentet og lagt til aktiv kamp");
-
-  lagSpillerKnapper();
+  return data;
 }
 
+// Viser/redigerer globale spillere i UI
+async function visGlobalSpillere() {
+  const container = document.getElementById("globalSpillereContainer");
+  container.innerHTML = "";
+
+  const spillere = await hentGlobalSpillere();
+
+  spillere.forEach((s, idx) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.marginBottom = "5px";
+
+    const inpNum = document.createElement("input");
+    inpNum.type = "number";
+    inpNum.value = s.drakt;
+    inpNum.style.width = "50px";
+    inpNum.oninput = () => s.drakt = parseInt(inpNum.value,10);
+
+    const inpNavn = document.createElement("input");
+    inpNavn.type = "text";
+    inpNavn.value = s.navn;
+    inpNavn.style.width = "150px";
+    inpNavn.oninput = () => s.navn = inpNavn.value;
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.onclick = () => {
+      wrapper.remove();
+      // markér til sletting
+      s._delete = true;
+    };
+
+    wrapper.append(inpNum, inpNavn, delBtn);
+    container.appendChild(wrapper);
+  });
+
+  // knapp for å legge til ny global spiller
+  const addBtn = document.createElement("button");
+  addBtn.textContent = "➕ Legg til global spiller";
+  addBtn.onclick = () => {
+    const ny = { drakt: 0, navn: "", _new: true };
+    spillere.push(ny);
+    visGlobalSpillere(); // refresh
+  };
+  container.appendChild(document.createElement("br"));
+  container.appendChild(addBtn);
+}
+
+// Lagre endringer (insert, update, delete) i Supabase
+async function lagreGlobalSpillere() {
+  // Les alle elementer vi viser
+  const container = document.getElementById("globalSpillereContainer");
+  // Gjenbruk samme hentGlobalSpillere kalla på for data‐objektene
+  const spillere = await hentGlobalSpillere();
+  const toInsert = spillere.filter(s => s._new);
+  const toDelete  = spillere.filter(s => s._delete).map(s => s.id);
+  const toUpdate  = spillere.filter(s => !s._new && !s._delete);
+
+  // Slett
+  if (toDelete.length) {
+    await client.from("global_spiller").delete().in("id", toDelete);
+  }
+  // Oppdater
+  for (let s of toUpdate) {
+    await client.from("global_spiller")
+      .update({ drakt: s.drakt, navn: s.navn })
+      .eq("id", s.id);
+  }
+  // Insert
+  if (toInsert.length) {
+    await client.from("global_spiller").insert(
+      toInsert.map(s => ({ drakt: s.drakt, navn: s.navn }))
+    );
+  }
+
+  alert("Globale spillere oppdatert!");
+  visGlobalSpillere();
+}
 
 
 async function lagSpillerKnapper() {
