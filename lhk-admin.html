@@ -219,6 +219,42 @@ async function importerSpillereFraKamp() {
 
   lagSpillerKnapper();
 }
+async function importerGlobaleSpillereTilKamp() {
+  if (!aktivKampId) {
+    alert("Du må velge en aktiv kamp først.");
+    return;
+  }
+
+  // 1) Hent globale spillere fra egen tabell
+  const globale = await fetchGlobalPlayers();
+  if (!globale.length) {
+    alert("Fant ingen globale spillere i databasen.");
+    return;
+  }
+
+  // 2) Slett eksisterende spillere for aktiv kamp i DB
+  await client
+    .from("spiller")
+    .delete()
+    .eq("kamp_id", aktivKampId);
+
+  // 3) Bygg nytt array med kamp_id og bulk‐insert i DB
+  const spillereMedKamp = globale.map(s => ({
+    kamp_id: aktivKampId,
+    drakt: s.drakt,
+    navn: s.navn
+  }));
+  await client
+    .from("spiller")
+    .insert(spillereMedKamp);
+
+  // 4) Oppdater lokal variabel og UI
+  spillere = spillereMedKamp;
+  lagSpillerKnapper();
+
+  alert("Globale spillere importert til aktiv kamp!");
+}
+
 // Hent dagens globale spiller-liste fra Supabase
 async function hentGlobalSpillere() {
   const { data, error } = await client
