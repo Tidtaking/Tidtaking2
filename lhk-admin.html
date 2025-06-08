@@ -234,6 +234,33 @@ async function hentGlobalSpillere() {
   // Dersom alt er OK, returner listen
   return data;
 }
+// Henter de globale spillerne fra Supabase og kobler dem til aktiv kamp
+async function hentGlobaleSpillereTilKamp() {
+  if (!aktivKampId) {
+    alert("Ingen aktiv kamp valgt");
+    return;
+  }
+
+  // Hent rådata fra global_spiller-tabellen
+  const globale = await hentGlobalSpillere();
+
+  if (!globale.length) {
+    alert("Ingen globale spillere funnet");
+    return;
+  }
+
+  // Map til spillere-array for denne kampen
+  spillere = globale.map(s => ({
+    kamp_id: aktivKampId,
+    drakt: s.drakt,
+    navn: s.navn
+  }));
+
+  // Oppdater UI
+  lagSpillerKnapper();
+
+  alert("Globale spillere importert til aktiv kamp!");
+}
 
 
 // Viser/redigerer globale spillere i UI
