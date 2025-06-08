@@ -102,7 +102,14 @@
   <button onclick="lagreGlobalSpillere()">💾 Lagre globale spillere</button>
 </div>
 <div style="margin-top: 1rem;">
-  <button onclick="hentGlobalSpillere()">📥 Hent spillere fra Supabase</button>
+ <div style="margin-top: 1rem;">
+  <!-- Eksisterende: -->
+  <!--<button onclick="hentGlobaleSpillere()">📥 Hent spillere fra Supabase</button>-->
+  <!-- Ny knapp: -->
+  <button onclick="hentGlobaleSpillereTilKamp()">📥 Hent globale spillere til kamp</button>
+  <button onclick="visImportSpillere()">📥 Hent spillere fra annen kamp</button>
+  <!-- ... -->
+</div>
   <button onclick="visImportSpillere()">📥 Hent spillere fra annen kamp</button>
   <div id="importSpillereContainer" style="display: none; margin-top: 0.5rem;">
     <select id="kampImportVelger"></select>
