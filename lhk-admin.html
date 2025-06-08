@@ -218,12 +218,16 @@ async function hentGlobalSpillere() {
     .from("global_spiller")
     .select("*")
     .order("drakt");
+
   if (error) {
     console.error("Kunne ikke hente globale spillere:", error);
     return [];
   }
+
+  // Dersom alt er OK, returner listen
   return data;
 }
+
 
 // Viser/redigerer globale spillere i UI
 async function visGlobalSpillere() {
