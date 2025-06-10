@@ -203,7 +203,7 @@
           .flatMap(l => l.getLayers());
         if (synligeLayers.length) {
           const fg = L.featureGroup(synligeLayers);
-          map.fitBounds(fg.getBounds().pad(0.2));
+          map.fitBounds(fg.getBounds().pad(0.05));
         }
       }
 
