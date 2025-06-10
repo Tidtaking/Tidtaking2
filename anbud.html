@@ -42,81 +42,94 @@
 </head>
 <body>
   <div id="controls">
-    <label><input type="checkbox" id="toggleAktuelle" checked />Vis «Abo utenfor anbud» (blått)</label>
-    <label><input type="checkbox" id="toggleAnbud" checked />Vis «anbudet» (rødt)</label>
-    <label><input type="checkbox" id="toggleAbo"     checked />Vis «abo_treff_anbud» (grønt)</label>
+    <label>
+      <input type="checkbox" id="toggleAktuelle" checked />
+      Vis «Abo utenfor anbud» (blått lag)
+    </label>
+    <label>
+      <input type="checkbox" id="toggleAnbud" checked />
+      Vis «anbudet» (rødt lag)
+    </label>
+    <label>
+      <input type="checkbox" id="toggleAbo" checked />
+      Vis «abo_treff_anbud» (grønt lag)
+    </label>
   </div>
   <div id="map"></div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Proj4js for EPSG:3035 → WGS84 -->
+  <!-- Proj4js for reprojisering fra EPSG:3035 til WGS84 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
-  <!-- Papa Parse -->
+  <!-- Papa Parse for å lese CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
-    // 1) Init map
+    // 1) Initialiser kart
     const map = L.map('map').setView([60.0, 10.0], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18
     }).addTo(map);
 
-    // 2) Define projection
+    // 2) EPSG:3035 → WGS84
     proj4.defs("EPSG:3035", "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs");
-    function coords3035tilLatLng(c) {
-      const [x, y] = c;
+    function coords3035tilLatLng(coords) {
+      const [x, y] = coords;
       const [lon, lat] = proj4("EPSG:3035", "WGS84", [x, y]);
       return L.latLng(lat, lon);
     }
 
-    // 3) CSV loader
-    function lesCSV(sti, felt) {
+    // 3) CSV-leser
+    function lesCSV(sti, feltNavn) {
       return new Promise((resolve, reject) => {
         Papa.parse(sti, {
           download: true,
           header: true,
           skipEmptyLines: true,
-          complete: r => {
-            if (!r.data.length) return reject(`Ingen rader i ${sti}`);
-            if (!(felt in r.data[0])) return reject(`CSV ${sti} mangler feltet ${felt}`);
-            const list = r.data
-              .map(row => row[felt] ? row[felt].trim() : null)
+          complete: result => {
+            if (!result.data.length) return reject(`Ingen rader i ${sti}`);
+            if (!(feltNavn in result.data[0])) {
+              return reject(`CSV ${sti} mangler kolonnen "${feltNavn}"`);
+            }
+            const liste = result.data
+              .map(r => r[feltNavn] ? r[feltNavn].trim() : null)
               .filter(v => v);
-            resolve(list);
+            resolve(liste);
           },
-          error: e => reject(e)
+          error: err => reject(err)
         });
       });
     }
 
-    // 4) Load lists and GeoJSONs
+    // 4) Last inn alle tre CSV-er og to GeoJSON-filer
     Promise.all([
-      lesCSV('aktuelle_postnummer.csv','postnummer'),
-      lesCSV('abo_treff_anbud.csv','postnummer'),
+      lesCSV('aktuelle_postnummer.csv', 'postnummer'),
+      lesCSV('abo_treff_anbud.csv', 'postnummer'),
+      lesCSV('anbud_postnummer.csv', 'postnummer'),
       fetch('filtrert_postnummer.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
     ])
-    .then(([listeAktuelle, listeAbo, geoAktData, geoAnbudData]) => {
-      // filter aktuelle
-      const featuresAktuelle = geoAktData.features.filter(f => 
+    .then(([listeAktuelle, listeAbo, listeAnbud, geoAktData, geoAnbudData]) => {
+      // Filtrer «aktuelle»
+      const fAktuelle = geoAktData.features.filter(f =>
         listeAktuelle.includes((f.properties.postnummer||'').trim())
       );
-      // filter abo subset
-      const featuresAbo = geoAktData.features.filter(f =>
+      const fAbo = geoAktData.features.filter(f =>
         listeAbo.includes((f.properties.postnummer||'').trim())
       );
-      // anbud features
-      const featuresAnbud = geoAnbudData.features;
+      // anbud ferdig filtrert i geoAnbudData
+      const fAnbud = geoAnbudData.features.filter(f =>
+        listeAnbud.includes((f.properties.postnummer||'').trim())
+      );
 
-      // build collections
-      const collAkt = { type:'FeatureCollection', features: featuresAktuelle };
-      const collAbo = { type:'FeatureCollection', features: featuresAbo };
-      const collAnb = { type:'FeatureCollection', features: featuresAnbud };
+      // Bygg FeatureCollections
+      const collAkt = { type:'FeatureCollection', features: fAktuelle };
+      const collAbo = { type:'FeatureCollection', features: fAbo };
+      const collAnb = { type:'FeatureCollection', features: fAnbud };
 
-      // layers
-      const layerAkt = L.geoJSON(collAkt, {
+      // 5) Opprett lag
+      const layerAktuelle = L.geoJSON(collAkt, {
         coordsToLatLng: coords3035tilLatLng,
         style: ()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#3388ff' })
       });
@@ -124,52 +137,44 @@
         coordsToLatLng: coords3035tilLatLng,
         style: ()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#33cc33' })
       });
-      const layerAnb = L.geoJSON(collAnb, {
+      const layerAnbud = L.geoJSON(collAnb, {
         coordsToLatLng: coords3035tilLatLng,
         style: ()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#ff3333' })
       });
 
-      // popups
-      [layerAkt, layerAbo, layerAnb].forEach(layer => {
-        layer.eachLayer(f => {
-          const props = f.feature.properties;
-          f.bindPopup(`<strong>${props.postnummer}</strong>`);
-        });
-      });
+      // Popups
+      [layerAktuelle, layerAbo, layerAnbud].forEach(layer =>
+        layer.eachLayer(l => l.bindPopup(`<strong>${l.feature.properties.postnummer}</strong>`))
+      );
 
-      // toggle & zoom
+      // 6) Toggle-visning & zoom
       function oppdater() {
-        // aktuelle
-        document.getElementById('toggleAktuelle').checked
-          ? map.addLayer(layerAkt)
-          : map.removeLayer(layerAkt);
-        // anbud
-        document.getElementById('toggleAnbud').checked
-          ? map.addLayer(layerAnb)
-          : map.removeLayer(layerAnb);
-        // abo
-        document.getElementById('toggleAbo').checked
-          ? map.addLayer(layerAbo)
-          : map.removeLayer(layerAbo);
-        // zoom to visible
-        const visible = [];
-        if (map.hasLayer(layerAkt)) visible.push(layerAkt);
-        if (map.hasLayer(layerAnb)) visible.push(layerAnb);
-        if (map.hasLayer(layerAbo)) visible.push(layerAbo);
-        if (visible.length) {
-          const fg = L.featureGroup(visible);
+        document.getElementById('toggleAktuelle').checked ?
+          map.addLayer(layerAktuelle) : map.removeLayer(layerAktuelle);
+        document.getElementById('toggleAbo').checked ?
+          map.addLayer(layerAbo) : map.removeLayer(layerAbo);
+        document.getElementById('toggleAnbud').checked ?
+          map.addLayer(layerAnbud) : map.removeLayer(layerAnbud);
+
+        // zoom til alle synlige
+        const synlige = [];
+        if (map.hasLayer(layerAktuelle)) synlige.push(layerAktuelle);
+        if (map.hasLayer(layerAbo)) synlige.push(layerAbo);
+        if (map.hasLayer(layerAnbud)) synlige.push(layerAnbud);
+        if (synlige.length) {
+          const fg = L.featureGroup(synlige);
           map.fitBounds(fg.getBounds().pad(0.2));
         }
       }
 
-      // event listeners
-      ['toggleAktuelle','toggleAnbud','toggleAbo']
-        .forEach(id => document.getElementById(id).onchange = oppdater);
+      ['toggleAktuelle','toggleAbo','toggleAnbud'].forEach(id =>
+        document.getElementById(id).addEventListener('change', oppdater)
+      );
 
-      // initial draw
+      // init
       oppdater();
     })
-    .catch(err => console.error('Feil:', err));
+    .catch(err => console.error('Feil ved innlasting/behandling:', err));
   </script>
 </body>
 </html>
