@@ -91,23 +91,22 @@
         Papa.parse(sti, {
           download: true,
           header: true,
-          dynamicTyping: false,
           skipEmptyLines: true,
           complete: result => {
             const data = result.data.filter(r => Object.keys(r).length);
-            if (!data.length) return reject(new Error(`Ingen rader i ${sti}`));
-            if (!(feltNavn in data[0])) return reject(new Error(`CSV ${sti} mangler kolonnen "${feltNavn}".`));
-            const liste = data
-              .map(r => r[feltNavn] ? String(r[feltNavn]).trim() : null)
-              .filter(v => v);
-            resolve(liste);
+            if (!data.length) reject(new Error(`Ingen rader i ${sti}`));
+            else if (!(feltNavn in data[0])) reject(new Error(`CSV ${sti} mangler kolonnen "${feltNavn}".`));
+            else {
+              const liste = data.map(r => r[feltNavn] ? String(r[feltNavn]).trim() : null).filter(v => v);
+              resolve(liste);
+            }
           },
           error: err => reject(err)
         });
       });
     }
 
-    // 4) Last inn tre CSV-er og én GeoJSON
+    // 4) Last inn tre CSV-er og én GeoJSON med robust parsing
     Promise.all([
       lesCSV('aktuelle_postnummer.csv', 'postnummer'),
       lesCSV('abo_treff_anbud.csv', 'postnummer'),
@@ -115,40 +114,42 @@
       fetch('alle_postnummer.geojson')
         .then(response => {
           if (!response.ok) throw new Error('Feil ved lasting av alle_postnummer.geojson: ' + response.statusText);
-          return response.json();
+          return response.text();
+        })
+        .then(text => {
+          if (!text || !text.trim()) {
+            console.warn('GeoJSON er tom eller ikke funnet, bruker tom FeatureCollection');
+            return { type: 'FeatureCollection', features: [] };
+          }
+          try {
+            return JSON.parse(text);
+          } catch (err) {
+            console.error('Kunne ikke parse GeoJSON:', err);
+            return { type: 'FeatureCollection', features: [] };
+          }
         })
     ])
     .then(([listeAktuelle, listeAbo, listeAnbud, geoAllData]) => {
       // 5) Filtrer features
       const features = Array.isArray(geoAllData.features) ? geoAllData.features : [];
-      console.log('Funn i GeoJSON:', features.length, 'features');
+      console.log('Loaded features:', features.length);
 
       const fAktuelle = features.filter(f => listeAktuelle.includes((f.properties.postnummer || '').trim()));
       const fAbo      = features.filter(f => listeAbo.includes((f.properties.postnummer || '').trim()));
       const fAnbud    = features.filter(f => listeAnbud.includes((f.properties.postnummer || '').trim()));
 
-      // 6) Bygg FeatureCollections
-      const collAktuelle = { type: 'FeatureCollection', features: fAktuelle };
-      const collAbo      = { type: 'FeatureCollection', features: fAbo };
-      const collAnbud    = { type: 'FeatureCollection', features: fAnbud };
+      // 6) Lag FeatureCollections og layer
+      const layerAktuelle = L.geoJSON({ type: 'FeatureCollection', features: fAktuelle }, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#3388ff', weight: 1, fillOpacity: 0.5 }) });
+      const layerAbo      = L.geoJSON({ type: 'FeatureCollection', features: fAbo },      { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#33cc33', weight: 1, fillOpacity: 0.5 }) });
+      const layerAnbud    = L.geoJSON({ type: 'FeatureCollection', features: fAnbud },    { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#ff3333', weight: 1, fillOpacity: 0.5 }) });
 
-      // 7) Opprett Leaflet-lag
-      const layerAktuelle = L.geoJSON(collAktuelle, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#3388ff', weight: 1, fillOpacity: 0.5 }) });
-      const layerAbo      = L.geoJSON(collAbo,      { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#33cc33', weight: 1, fillOpacity: 0.5 }) });
-      const layerAnbud    = L.geoJSON(collAnbud,    { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#ff3333', weight: 1, fillOpacity: 0.5 }) });
-
-      // 8) Toggle og zoom
+      // 7) Toggle og zoom
       function oppdater() {
         document.getElementById('toggleAktuelle').checked ? map.addLayer(layerAktuelle) : map.removeLayer(layerAktuelle);
         document.getElementById('toggleAbo').checked      ? map.addLayer(layerAbo)      : map.removeLayer(layerAbo);
         document.getElementById('toggleAnbud').checked    ? map.addLayer(layerAnbud)    : map.removeLayer(layerAnbud);
-
-        const synlige = [layerAktuelle, layerAbo, layerAnbud]
-          .filter(l => map.hasLayer(l))
-          .flatMap(l => l.getLayers());
-        if (synlige.length) {
-          map.fitBounds(L.featureGroup(synlige).getBounds().pad(0.05));
-        }
+        const synlige = [layerAktuelle, layerAbo, layerAnbud].filter(l => map.hasLayer(l)).flatMap(l => l.getLayers());
+        if (synlige.length) map.fitBounds(L.featureGroup(synlige).getBounds().pad(0.05));
       }
       ['toggleAktuelle','toggleAbo','toggleAnbud'].forEach(id => document.getElementById(id).addEventListener('change', oppdater));
       oppdater();
