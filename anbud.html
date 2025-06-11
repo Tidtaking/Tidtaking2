@@ -6,17 +6,17 @@
   <title>Anbud – Postnummerkart</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    html, body { height:100%; margin:0; padding:0; }
-    #map { width:100%; height:100vh; }
+    html, body { height:100%; margin:0; padding:0 }
+    #map { width:100%; height:100vh }
     #controls {
       position:absolute; top:10px; right:10px; z-index:1000;
       background:white; padding:8px; border-radius:4px;
       box-shadow:0 2px 6px rgba(0,0,0,0.3);
       font-family:sans-serif; font-size:14px;
     }
-    #controls label { display:flex; align-items:center; margin-bottom:4px; }
-    #controls input { margin-right:6px; }
-    #controls span.count { margin-left:auto; font-weight:bold; }
+    #controls label { display:flex; align-items:center; margin-bottom:4px }
+    #controls input { margin-right:6px }
+    #controls span.count { margin-left:auto; font-weight:bold }
   </style>
 </head>
 <body>
@@ -43,21 +43,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
-    // 1) Init map
+    // 1) Init kart
     const map = L.map('map').setView([60,10],5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'© OpenStreetMap contributors',maxZoom:18
+      attribution:'© OpenStreetMap contributors', maxZoom:18
     }).addTo(map);
 
-    // 2) Projection EPSG:3035→WGS84
+    // 2) EPSG:3035 → WGS84
     proj4.defs("EPSG:3035","+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs");
     function coords3035tilLatLng(c){
-      const [x,y]=c;
-      const [lon,lat]=proj4("EPSG:3035","WGS84",[x,y]);
+      const [x,y] = c;
+      const [lon,lat] = proj4("EPSG:3035","WGS84",[x,y]);
       return L.latLng(lat,lon);
     }
 
-    // 3) CSV loader: returns rows with postnummer
+    // 3) Les CSV-rader med 'postnummer'
     function lesCSVRows(sti){
       return new Promise((res,rej)=>{
         Papa.parse(sti,{download:true,header:true,skipEmptyLines:true,
@@ -70,7 +70,7 @@
       });
     }
 
-    // 4) Load lists and GeoJSONs
+    // 4) Last inn tre CSV-er og to GeoJSON-filer
     Promise.all([
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
@@ -79,40 +79,41 @@
       fetch('filtrert_anbud.geojson').then(r=>r.json())
     ])
     .then(([rowsAkt, rowsAbo, rowsAnb, geoBase, geoAnb])=>{
-      // Normalize postnummer to 4 digits
-      const norm = arr => Array.from(new Set(arr.map(r=>r.postnummer.trim().padStart(4,'0'))));
-
+      // Normaliser til fire-sifret postnummer
+      const norm = rows => Array.from(new Set(
+        rows.map(r=>r.postnummer.trim().padStart(4,'0'))
+      ));
       const normAkt = norm(rowsAkt);
       const normAbo = norm(rowsAbo);
       const normAnb = norm(rowsAnb);
 
-      // 5) Filter features
-      // Blue: match against both geoBase and geoAnb
+      // 5) Filtrer features
+      // Blått lag fra begge JSON-filer
       const baseMatch = geoBase.features.filter(f=> normAkt.includes(f.properties.postnummer.trim()));
-      const anbMatch  = geoAnb.features.filter(f=> normAkt.includes(f.properties.postnummer.trim()));
-      const uniqueAktMap = {};
-      baseMatch.forEach(f=> uniqueAktMap[f.properties.postnummer] = f);
-      anbMatch.forEach(f=> uniqueAktMap[f.properties.postnummer] = f);
-      const fAktuelle = Object.values(uniqueAktMap);
+      const anbMatch  = geoAnb.features.filter(f=>  normAkt.includes(f.properties.postnummer.trim()));
+      const aktMap = {};
+      baseMatch.forEach(f=> aktMap[f.properties.postnummer] = f);
+      anbMatch.forEach(f=>  aktMap[f.properties.postnummer] = f);
+      const fAktuelle = Object.values(aktMap);
 
-      // Green: abo_treff_anbud against geoAnb
+      // Grønt lag mot filtrert_anbud.geojson
       const fAbo = geoAnb.features.filter(f=> normAbo.includes(f.properties.postnummer.trim()));
 
-      // Red: anbud_postnummer against geoAnb
+      // Rødt lag mot filtrert_anbud.geojson
       const fAnbud = geoAnb.features.filter(f=> normAnb.includes(f.properties.postnummer.trim()));
 
-      // 6) Update counts
+      // 6) Oppdater tellere
       document.getElementById('countAktuelle').innerText = fAktuelle.length;
       document.getElementById('countAbo').innerText       = fAbo.length;
       document.getElementById('countAnbud').innerText     = fAnbud.length;
 
-      // 7) Build FeatureCollections
-      const collAktuelle = { type:'FeatureCollection', features:fAktuelle };
-      const collAbo      = { type:'FeatureCollection', features:fAbo };
-      const collAnbud    = { type:'FeatureCollection', features:fAnbud };
+      // 7) Bygg FeatureCollections
+      const collAkt = {type:'FeatureCollection',features:fAktuelle};
+      const collAbo = {type:'FeatureCollection',features:fAbo};
+      const collAnb = {type:'FeatureCollection',features:fAnbud};
 
-      // 8) Create layers
-      const layerAktuelle = L.geoJSON(collAktuelle,{
+      // 8) Opprett lag
+      const layerAkt = L.geoJSON(collAkt,{
         coordsToLatLng:coords3035tilLatLng,
         style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#3388ff'})
       });
@@ -120,46 +121,41 @@
         coordsToLatLng:coords3035tilLatLng,
         style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#33cc33'})
       });
-      // Sett uniquePostnummers til array av unike i JSON
-const uniquePostnummers = [...new Set(geoAktData.features.map(f => f.properties.postnummer.trim()))];
-
-// Etter normalisering av listeAktuelle:
-const missing = normAkt.filter(pn => !uniquePostnummers.includes(pn));
-console.log('Poster som ikke matcher i GeoJSON:', missing);
-
-      const layerAnbud = L.geoJSON(collAnbud,{
+      const layerAnb = L.geoJSON(collAnb,{
         coordsToLatLng:coords3035tilLatLng,
         style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#ff3333'})
       });
 
-      // 9) Bind popups
-      [layerAktuelle,layerAbo,layerAnbud].forEach(layer=>
-        layer.eachLayer(l=>l.bindPopup(`<strong>${l.feature.properties.postnummer}</strong>`))
+      // 9) Popups
+      [layerAkt,layerAbo,layerAnb].forEach(layer=>
+        layer.eachLayer(l=>
+          l.bindPopup(`<strong>${l.feature.properties.postnummer}</strong>`)
+        )
       );
 
       // 10) Toggle & zoom
       function oppdater(){
         document.getElementById('toggleAktuelle').checked
-          ? map.addLayer(layerAktuelle) : map.removeLayer(layerAktuelle);
+          ? map.addLayer(layerAkt) : map.removeLayer(layerAkt);
         document.getElementById('toggleAbo').checked
           ? map.addLayer(layerAbo) : map.removeLayer(layerAbo);
         document.getElementById('toggleAnbud').checked
-          ? map.addLayer(layerAnbud) : map.removeLayer(layerAnbud);
+          ? map.addLayer(layerAnb) : map.removeLayer(layerAnb);
 
-        const vis = [layerAktuelle,layerAbo,layerAnbud]
-          .flatMap(l=> map.hasLayer(l)? l.getLayers(): []);
-        if(vis.length){
-          const fg = L.featureGroup(vis);
+        const visible = [layerAkt,layerAbo,layerAnb]
+          .flatMap(l=> map.hasLayer(l) ? l.getLayers() : []);
+        if(visible.length){
+          const fg = L.featureGroup(visible);
           map.fitBounds(fg.getBounds().pad(0.05));
         }
       }
       ['toggleAktuelle','toggleAbo','toggleAnbud']
-        .forEach(id=>document.getElementById(id).addEventListener('change',oppdater));
+        .forEach(id=> document.getElementById(id).addEventListener('change', oppdater));
 
-      // initial
+      // Initial
       oppdater();
     })
-    .catch(err=>console.error('Feil ved innlasting/behandling:',err));
+    .catch(err=>console.error('Feil ved innlasting/behandling:', err));
   </script>
 </body>
 </html>
