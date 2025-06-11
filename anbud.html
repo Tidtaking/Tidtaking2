@@ -89,7 +89,7 @@
       lesCSV('aktuelle_postnummer.csv', 'postnummer'),
       lesCSV('abo_treff_anbud.csv', 'postnummer'),
       lesCSV('anbud_postnummer.csv', 'postnummer'),
-      fetch('alle_postnummer.geojson')
+      fetch('https://raw.githubusercontent.com/Tidtaking/Tidtaking2/main/alle_postnummer.geojson')
         .then(response => {
           if (!response.ok) throw new Error('Feil ved lasting av alle_postnummer.geojson: ' + response.statusText);
           return response.json();
