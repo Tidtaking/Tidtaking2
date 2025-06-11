@@ -113,7 +113,7 @@
       });
     }
 
-    // 4) Last inn tre CSV-er og én GeoJSON (ingen parse-logging ved feil)
+    // 4) Last inn tre CSV-er og én GeoJSON
     Promise.all([
       lesCSV('aktuelle_postnummer.csv', 'postnummer'),
       lesCSV('abo_treff_anbud.csv', 'postnummer'),
@@ -122,23 +122,36 @@
         .then(response => response.ok ? response.text() : '')
         .then(text => {
           if (!text.trim()) {
-            // Tom eller ikke-funnet fil → tom FeatureCollection
             return { type: 'FeatureCollection', features: [] };
           }
           try {
             return JSON.parse(text);
           } catch {
-            // Ugyldig JSON → tom FeatureCollection
             return { type: 'FeatureCollection', features: [] };
           }
         })
     ])
     .then(([listeAktuelle, listeAbo, listeAnbud, geoAllData]) => {
-      // 5) Filtrer features mot listene
+      // DEBUG: skriv ut info for feilsøking
+      console.log('Antall CSV: aktuelle=', listeAktuelle.length, 'abo=', listeAbo.length, 'anbud=', listeAnbud.length);
+      const sampleList = listeAktuelle.slice(0,5);
+      console.log('Eksempel postnummer fra aktuelle_postnummer.csv:', sampleList);
       const features = Array.isArray(geoAllData.features) ? geoAllData.features : [];
-      const fAktuelle = features.filter(feat => listeAktuelle.includes((feat.properties.postnummer || '').trim()));
-      const fAbo = features.filter(feat => listeAbo.includes((feat.properties.postnummer || '').trim()));
-      const fAnbud = features.filter(feat => listeAnbud.includes((feat.properties.postnummer || '').trim()));
+      console.log('Antall features i alle_postnummer.geojson:', features.length);
+      if (features.length > 0) {
+        console.log('Eksempel egenskaper på feature[0]:', Object.keys(features[0].properties));
+      }
+
+      // 5) Filtrer features mot listene
+      const fAktuelle = features.filter(feat => listeAktuelle.includes(String(feat.properties.postnummer).trim()));
+      const fAbo = features.filter(feat => listeAbo.includes(String(feat.properties.postnummer).trim()));
+      const fAnbud = features.filter(feat => listeAnbud.includes(String(feat.properties.postnummer).trim()));
+
+      // Legg til et debug-lag med alle features (grå kontur)
+      const debugLayer = L.geoJSON(geoAllData, {
+        coordsToLatLng,
+        style: () => ({ color: '#888', weight: 1, fillOpacity: 0 }),
+      }).addTo(map);
 
       // 6) Bygg FeatureCollections
       const collAktuelle = { type: 'FeatureCollection', features: fAktuelle };
@@ -146,26 +159,22 @@
       const collAnbud = { type: 'FeatureCollection', features: fAnbud };
 
       // 7) Opprett Leaflet-lag
-      const layerAktuelle = L.geoJSON(collAktuelle, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#333333', weight: 1, fillOpacity: 0.5, fillColor: '#3388ff' }), onEachFeature: (feature, layer) => layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`) });
-      const layerAbo = L.geoJSON(collAbo, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#333333', weight: 1, fillOpacity: 0.5, fillColor: '#33cc33' }), onEachFeature: (feature, layer) => layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`) });
-      const layerAnbud = L.geoJSON(collAnbud, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#333333', weight: 1, fillOpacity: 0.5, fillColor: '#ff3333' }), onEachFeature: (feature, layer) => layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`) });
+      const layerAktuelle = L.geoJSON(collAktuelle, { coordsToLatLng, style: () => ({ color: '#333', weight: 1, fillOpacity: 0.5, fillColor: '#3388ff' }) });
+      const layerAbo = L.geoJSON(collAbo, { coordsToLatLng, style: () => ({ color: '#333', weight: 1, fillOpacity: 0.5, fillColor: '#3c3' }) });
+      const layerAnbud = L.geoJSON(collAnbud, { coordsToLatLng, style: () => ({ color: '#333', weight: 1, fillOpacity: 0.5, fillColor: '#f33' }) });
 
       // 8) Toggle-visning og zoom
       function oppdater() {
+        map.hasLayer(debugLayer) || map.addLayer(debugLayer);
         document.getElementById('toggleAktuelle').checked ? map.addLayer(layerAktuelle) : map.removeLayer(layerAktuelle);
         document.getElementById('toggleAbo').checked ? map.addLayer(layerAbo) : map.removeLayer(layerAbo);
         document.getElementById('toggleAnbud').checked ? map.addLayer(layerAnbud) : map.removeLayer(layerAnbud);
-
-        const alleLag = [layerAktuelle, layerAbo, layerAnbud];
-        const synligeLayers = alleLag.filter(l => map.hasLayer(l)).flatMap(l => l.getLayers());
-        if (synligeLayers.length) {
-          const fg = L.featureGroup(synligeLayers);
-          map.fitBounds(fg.getBounds().pad(0.05));
+        const visibleLayers = [layerAktuelle, layerAbo, layerAnbud].filter(l => map.hasLayer(l)).flatMap(l => l.getLayers());
+        if (visibleLayers.length) {
+          map.fitBounds(L.featureGroup(visibleLayers).getBounds().pad(0.05));
         }
       }
       ['toggleAktuelle','toggleAbo','toggleAnbud'].forEach(id => document.getElementById(id).addEventListener('change', oppdater));
-
-      // Initial visning
       oppdater();
     })
     .catch(err => console.error('Feil ved innlasting/behandling:', err));
