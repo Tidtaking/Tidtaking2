@@ -113,45 +113,32 @@
       });
     }
 
-    // 4) Last inn tre CSV-er og én GeoJSON (med fallback ved ugyldig eller tom JSON)
+    // 4) Last inn tre CSV-er og én GeoJSON (ingen parse-logging ved feil)
     Promise.all([
       lesCSV('aktuelle_postnummer.csv', 'postnummer'),
       lesCSV('abo_treff_anbud.csv', 'postnummer'),
       lesCSV('anbud_postnummer.csv', 'postnummer'),
       fetch('alle_postnummer.geojson')
-        .then(response => {
-          if (!response.ok) {
-            console.error('Feil ved lasting av alle_postnummer.geojson:', response.statusText);
-            return '{}';
-          }
-          return response.text();
-        })
+        .then(response => response.ok ? response.text() : '')
         .then(text => {
-          if (!text) {
-            console.warn('alle_postnummer.geojson er tom eller ikke funnet. Bruker tomt FeatureCollection.');
+          if (!text.trim()) {
+            // Tom eller ikke-funnet fil → tom FeatureCollection
             return { type: 'FeatureCollection', features: [] };
           }
           try {
             return JSON.parse(text);
-          } catch (parseError) {
-            console.error('Ugyldig JSON i alle_postnummer.geojson:', parseError);
-            // Returner tomt FeatureCollection som fallback
+          } catch {
+            // Ugyldig JSON → tom FeatureCollection
             return { type: 'FeatureCollection', features: [] };
           }
         })
     ])
     .then(([listeAktuelle, listeAbo, listeAnbud, geoAllData]) => {
-      // 5) Filtrer features mot de ulike listene
+      // 5) Filtrer features mot listene
       const features = Array.isArray(geoAllData.features) ? geoAllData.features : [];
-      const fAktuelle = features.filter(feat =>
-        listeAktuelle.includes((feat.properties.postnummer || '').trim())
-      );
-      const fAbo = features.filter(feat =>
-        listeAbo.includes((feat.properties.postnummer || '').trim())
-      );
-      const fAnbud = features.filter(feat =>
-        listeAnbud.includes((feat.properties.postnummer || '').trim())
-      );
+      const fAktuelle = features.filter(feat => listeAktuelle.includes((feat.properties.postnummer || '').trim()));
+      const fAbo = features.filter(feat => listeAbo.includes((feat.properties.postnummer || '').trim()));
+      const fAnbud = features.filter(feat => listeAnbud.includes((feat.properties.postnummer || '').trim()));
 
       // 6) Bygg FeatureCollections
       const collAktuelle = { type: 'FeatureCollection', features: fAktuelle };
