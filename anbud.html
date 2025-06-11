@@ -10,9 +10,17 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
+
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; }
-    #map { width: 100%; height: 100vh; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
     #controls {
       position: absolute;
       top: 10px;
@@ -25,20 +33,29 @@
       font-family: sans-serif;
       font-size: 14px;
     }
-    #controls label { display: flex; align-items: center; margin-bottom: 4px; }
-    #controls input[type="checkbox"] { margin-right: 6px; }
+    #controls label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    #controls input[type="checkbox"] {
+      margin-right: 6px;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
     <label>
-      <input type="checkbox" id="toggleAktuelle" checked /> Vis «Abo utenfor anbud» (blått)
+      <input type="checkbox" id="toggleAktuelle" checked />
+      Vis «Abo utenfor anbud» (blått lag)
     </label>
     <label>
-      <input type="checkbox" id="toggleAbo" checked /> Vis «abo_treff_anbud» (grønt)
+      <input type="checkbox" id="toggleAbo" checked />
+      Vis «abo_treff_anbud» (grønt lag)
     </label>
     <label>
-      <input type="checkbox" id="toggleAnbud" checked /> Vis «anbudet» (rødt)
+      <input type="checkbox" id="toggleAnbud" checked />
+      Vis «anbudet» (rødt lag)
     </label>
   </div>
   <div id="map"></div>
@@ -51,32 +68,44 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
-    // Initialiser kart
+    // 1) Initialiser kart
     const map = L.map('map').setView([60.0, 10.0], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors', maxZoom: 18
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
     }).addTo(map);
 
-    // Definer projeksjon og konverteringsfunksjon
-    proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
+    // 2) EPSG:3035 → WGS84
+    proj4.defs("EPSG:3035",
+      "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs"
+    );
     function coords3035tilLatLng(coords) {
       const [x, y] = coords;
-      const [lon, lat] = proj4('EPSG:3035', 'WGS84', [x, y]);
+      const [lon, lat] = proj4("EPSG:3035", "WGS84", [x, y]);
       return L.latLng(lat, lon);
     }
 
-    // CSV-leser
+    // 3) CSV-leser
     function lesCSV(sti, feltNavn) {
       return new Promise((resolve, reject) => {
         Papa.parse(sti, {
           download: true,
           header: true,
+          dynamicTyping: false,
           skipEmptyLines: true,
           complete: result => {
             const data = result.data.filter(r => Object.keys(r).length);
-            if (!data.length) return reject(new Error(`Ingen rader i ${sti}`));
-            if (!(feltNavn in data[0])) return reject(new Error(`CSV ${sti} mangler kolonnen "${feltNavn}".`));
-            const liste = data.map(r => String(r[feltNavn]).trim()).filter(v => v);
+            if (!data.length) {
+              reject(new Error(`Ingen rader i ${sti}`));
+              return;
+            }
+            if (!(feltNavn in data[0])) {
+              reject(new Error(`CSV ${sti} mangler kolonnen "${feltNavn}".`));
+              return;
+            }
+            const liste = data
+              .map(r => r[feltNavn] ? String(r[feltNavn]).trim() : null)
+              .filter(v => v);
             resolve(liste);
           },
           error: err => reject(err)
@@ -84,69 +113,102 @@
       });
     }
 
-    // Last inn CSV-er og GeoJSON
+    // 4) Last inn alle tre CSV-er og to GeoJSON-filer
     Promise.all([
       lesCSV('aktuelle_postnummer.csv', 'postnummer'),
       lesCSV('abo_treff_anbud.csv', 'postnummer'),
       lesCSV('anbud_postnummer.csv', 'postnummer'),
-      fetch('https://raw.githubusercontent.com/Tidtaking/Tidtaking2/main/alle_postnummer.geojson')
-        .then(response => {
-          if (!response.ok) throw new Error('Feil ved lasting av alle_postnummer.geojson: ' + response.statusText);
-          return response.json();
-        })
+      fetch('filtrert_postnummer.geojson').then(r => {
+        if (!r.ok) throw new Error('Feil ved lasting av filtrert_postnummer.geojson');
+        return r.json();
+      }),
+      fetch('filtrert_anbud.geojson').then(r => {
+        if (!r.ok) throw new Error('Feil ved lasting av filtrert_anbud.geojson');
+        return r.json();
+      })
     ])
-    .then(([listeAktuelle, listeAbo, listeAnbud, geoData]) => {
-      // Bygg og filtrer features
-      const features = Array.isArray(geoData.features) ? geoData.features : [];
+    .then(([listeAktuelle, listeAbo, listeAnbud, geoAktuelleData, geoAnbudData]) => {
+      // 5) Filtrer features
+      const fAktuelle = geoAktuelleData.features.filter(feat =>
+        listeAktuelle.includes((feat.properties.postnummer || '').trim())
+      );
+      const fAbo = geoAnbudData.features.filter(feat =>
+        listeAbo.includes((feat.properties.postnummer || '').trim())
+      );
+      const fAnbud = geoAnbudData.features.filter(feat =>
+        listeAnbud.includes((feat.properties.postnummer || '').trim())
+      );
 
-      const collAktuelle = {
-        type: 'FeatureCollection',
-        features: features.filter(f => listeAktuelle.includes((f.properties.postnummer || '').trim()))
-      };
-      const collAbo = {
-        type: 'FeatureCollection',
-        features: features.filter(f => listeAbo.includes((f.properties.postnummer || '').trim()))
-      };
-      const collAnbud = {
-        type: 'FeatureCollection',
-        features: features.filter(f => listeAnbud.includes((f.properties.postnummer || '').trim()))
-      };
+      // 6) Bygg FeatureCollections
+      const collAktuelle = { type: 'FeatureCollection', features: fAktuelle };
+      const collAbo = { type: 'FeatureCollection', features: fAbo };
+      const collAnbud = { type: 'FeatureCollection', features: fAnbud };
 
-      // Opprett lag med popups
+      // 7) Opprett Leaflet-lag
       const layerAktuelle = L.geoJSON(collAktuelle, {
         coordsToLatLng: coords3035tilLatLng,
-        style: () => ({ color: '#3388ff', weight: 1, fillOpacity: 0.5 }),
-        onEachFeature: (feature, layer) => layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`)
-      }).addTo(map);
+        style: () => ({
+          color: '#333333',
+          weight: 1,
+          fillOpacity: 0.5,
+          fillColor: '#3388ff'
+        }),
+        onEachFeature: (feature, layer) => {
+          layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`);
+        }
+      });
 
       const layerAbo = L.geoJSON(collAbo, {
         coordsToLatLng: coords3035tilLatLng,
-        style: () => ({ color: '#33cc33', weight: 1, fillOpacity: 0.5 }),
-        onEachFeature: (feature, layer) => layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`)
+        style: () => ({
+          color: '#333333',
+          weight: 1,
+          fillOpacity: 0.5,
+          fillColor: '#33cc33'
+        }),
+        onEachFeature: (feature, layer) => {
+          layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`);
+        }
       });
 
       const layerAnbud = L.geoJSON(collAnbud, {
         coordsToLatLng: coords3035tilLatLng,
-        style: () => ({ color: '#ff3333', weight: 1, fillOpacity: 0.5 }),
-        onEachFeature: (feature, layer) => layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`)
+        style: () => ({
+          color: '#333333',
+          weight: 1,
+          fillOpacity: 0.5,
+          fillColor: '#ff3333'
+        }),
+        onEachFeature: (feature, layer) => {
+          layer.bindPopup(`<strong>${feature.properties.postnummer}</strong>`);
+        }
       });
 
-      // Toggle visning og zoom
+      // 8) Toggle-visning og zoom
       function oppdater() {
-        document.getElementById('toggleAktuelle').checked ? map.addLayer(layerAktuelle) : map.removeLayer(layerAktuelle);
-        document.getElementById('toggleAbo').checked      ? map.addLayer(layerAbo)      : map.removeLayer(layerAbo);
-        document.getElementById('toggleAnbud').checked    ? map.addLayer(layerAnbud)    : map.removeLayer(layerAnbud);
+        document.getElementById('toggleAktuelle').checked
+          ? map.addLayer(layerAktuelle)
+          : map.removeLayer(layerAktuelle);
+        document.getElementById('toggleAbo').checked
+          ? map.addLayer(layerAbo)
+          : map.removeLayer(layerAbo);
+        document.getElementById('toggleAnbud').checked
+          ? map.addLayer(layerAnbud)
+          : map.removeLayer(layerAnbud);
 
-        const aktive = [layerAktuelle, layerAbo, layerAnbud]
+        // Samle synlige layers for zoom
+        const alleLag = [layerAktuelle, layerAbo, layerAnbud];
+        const synligeLayers = alleLag
           .filter(l => map.hasLayer(l))
           .flatMap(l => l.getLayers());
-        if (aktive.length) {
-          map.fitBounds(L.featureGroup(aktive).getBounds().pad(0.05));
+        if (synligeLayers.length) {
+          const fg = L.featureGroup(synligeLayers);
+          map.fitBounds(fg.getBounds().pad(0.05));
         }
       }
-      ['toggleAktuelle', 'toggleAbo', 'toggleAnbud'].forEach(id =>
-        document.getElementById(id).addEventListener('change', oppdater)
-      );
+
+      ['toggleAktuelle','toggleAbo','toggleAnbud']
+        .forEach(id => document.getElementById(id).addEventListener('change', oppdater));
 
       // Initial visning
       oppdater();
