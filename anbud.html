@@ -120,6 +120,13 @@
         coordsToLatLng:coords3035tilLatLng,
         style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#33cc33'})
       });
+      // Sett uniquePostnummers til array av unike i JSON
+const uniquePostnummers = [...new Set(geoAktData.features.map(f => f.properties.postnummer.trim()))];
+
+// Etter normalisering av listeAktuelle:
+const missing = normAkt.filter(pn => !uniquePostnummers.includes(pn));
+console.log('Poster som ikke matcher i GeoJSON:', missing);
+
       const layerAnbud = L.geoJSON(collAnbud,{
         coordsToLatLng:coords3035tilLatLng,
         style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#ff3333'})
