@@ -118,10 +118,25 @@
       lesCSV('aktuelle_postnummer.csv', 'postnummer'),
       lesCSV('abo_treff_anbud.csv', 'postnummer'),
       lesCSV('anbud_postnummer.csv', 'postnummer'),
-      fetch('alle_postnummer.geojson').then(r => {
-        if (!r.ok) throw new Error('Feil ved lasting av alle_postnummer.geojson');
-        return r.json();
-      })
+      // Bedre feilhåndtering for GeoJSON
+      fetch('alle_postnummer.geojson')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Feil ved lasting av alle_postnummer.geojson: ' + response.statusText);
+          }
+          return response.text();
+        })
+        .then(text => {
+          if (!text) {
+            throw new Error('alle_postnummer.geojson er tom eller ikke funnet');
+          }
+          try {
+            return JSON.parse(text);
+          } catch (parseError) {
+            console.error('Ugyldig JSON i alle_postnummer.geojson:', parseError, text);
+            throw new Error('Ugyldig JSON i alle_postnummer.geojson');
+          }
+        })
     ])
     .then(([listeAktuelle, listeAbo, listeAnbud, geoAllData]) => {
       // 5) Filtrer features mot de ulike listene
