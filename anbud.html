@@ -70,17 +70,30 @@
       });
     }
 
-    // 4) Last inn tre CSV-er og to GeoJSON-filer
-    Promise.all([
-      lesCSVRows('aktuelle_postnummer.csv'),
-      lesCSVRows('abo_treff_anbud.csv'),
-      lesCSVRows('anbud_postnummer.csv'),
-      fetch('postnummer_part01.geojson').then(r=>r.json()),
-      fetch('postnummer_part02.geojson').then(r=>r.json()),
-      fetch('postnummer_part03.geojson').then(r=>r.json()),
-      fetch('filtrert_anbud.geojson').then(r=>r.json())
-    ])
-    .then(([rowsAkt, rowsAbo, rowsAnb, geoBase, geoAnb])=>{
+   Promise.all([
+  lesCSVRows('aktuelle_postnummer.csv'),
+  lesCSVRows('abo_treff_anbud.csv'),
+  lesCSVRows('anbud_postnummer.csv'),
+  fetch('postnummer_part01.geojson').then(r=>r.json()),
+  fetch('postnummer_part02.geojson').then(r=>r.json()),
+  fetch('postnummer_part03.geojson').then(r=>r.json()),
+  fetch('filtrert_anbud.geojson').then(r=>r.json())
+])
+.then(([rowsAkt, rowsAbo, rowsAnb, geoBase1, geoBase2, geoBase3, geoAnb])=>{
+  // Slå sammen features fra alle geoBase-filer:
+  const alleBaseFeatures = [
+    ...geoBase1.features,
+    ...geoBase2.features,
+    ...geoBase3.features
+  ];
+  // Lag nytt objekt:
+  const geoBase = {type: 'FeatureCollection', features: alleBaseFeatures};
+
+  // Så kan du bruke geoBase videre, som før!
+  // (Resten av koden under trenger ikke endres)
+  ...
+});
+
       // Normaliser til fire-sifret postnummer
       const norm = rows => Array.from(new Set(
         rows.map(r=>r.postnummer.trim().padStart(4,'0'))
