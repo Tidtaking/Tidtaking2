@@ -15,7 +15,8 @@
       font-family:sans-serif; font-size:14px;
     }
     #controls label { display:flex; align-items:center; margin-bottom:4px }
-    #controls input { margin-right:6px }
+    #controls input[type=text] { flex:1; margin-right:6px; padding:4px; }
+    #controls button { padding:4px 8px; }
     #controls span.count { margin-left:auto; font-weight:bold }
   </style>
 </head>
@@ -36,6 +37,15 @@
       anbudet
       <span id="countAnbud" class="count">0</span>
     </label>
+    <label>
+      <input type="checkbox" id="toggleBrukt" checked/>
+      abo_bruktidag_anbud
+      <span id="countBrukt" class="count">0</span>
+    </label>
+    <div style="margin-top:8px; display:flex;">
+      <input type="text" id="searchInput" placeholder="Søk poststed eller nr" />
+      <button id="searchBtn">Søk</button>
+    </div>
   </div>
   <div id="map"></div>
 
@@ -70,102 +80,101 @@
       });
     }
 
-  Promise.all([
-  lesCSVRows('aktuelle_postnummer.csv'),
-  lesCSVRows('abo_treff_anbud.csv'),
-  lesCSVRows('anbud_postnummer.csv'),
-  fetch('postnummer_part01.geojson').then(r=>r.json()),
-  fetch('postnummer_part02.geojson').then(r=>r.json()),
-  fetch('postnummer_part03.geojson').then(r=>r.json()),
-  fetch('filtrert_anbud.geojson').then(r=>r.json())
-])
-.then(([rowsAkt, rowsAbo, rowsAnb, geoBase1, geoBase2, geoBase3, geoAnb])=>{
-  // Slå sammen features fra alle geoBase-filer:
-  const alleBaseFeatures = [
-    ...geoBase1.features,
-    ...geoBase2.features,
-    ...geoBase3.features
-  ];
-  // Lag nytt objekt:
-  const geoBase = {type: 'FeatureCollection', features: alleBaseFeatures};
+    Promise.all([
+      lesCSVRows('aktuelle_postnummer.csv'),
+      lesCSVRows('abo_treff_anbud.csv'),
+      lesCSVRows('anbud_postnummer.csv'),
+      lesCSVRows('abo_bruktidag_anbud.csv'),
+      fetch('postnummer_part01.geojson').then(r=>r.json()),
+      fetch('postnummer_part02.geojson').then(r=>r.json()),
+      fetch('postnummer_part03.geojson').then(r=>r.json()),
+      fetch('filtrert_anbud.geojson').then(r=>r.json())
+    ])
+    .then(([rowsAkt, rowsAbo, rowsAnb, rowsBrukt, geoBase1, geoBase2, geoBase3, geoAnb])=>{
+      // Kombiner base geo
+      const alleBaseFeatures = [...geoBase1.features, ...geoBase2.features, ...geoBase3.features];
+      const geoBase = { type: 'FeatureCollection', features: alleBaseFeatures };
 
-  // Normaliser til fire-sifret postnummer
-  const norm = rows => Array.from(new Set(
-    rows.map(r=>r.postnummer.trim().padStart(4,'0'))
-  ));
-  const normAkt = norm(rowsAkt);
-  const normAbo = norm(rowsAbo);
-  const normAnb = norm(rowsAnb);
+      // Normaliser postnummer
+      const norm = rows=> Array.from(new Set(rows.map(r=>r.postnummer.trim().padStart(4,'0'))));
+      const normAkt = norm(rowsAkt);
+      const normAbo = norm(rowsAbo);
+      const normAnb = norm(rowsAnb);
+      const normBrukt = norm(rowsBrukt);
 
-  // 5) Filtrer features
-  // Blått lag fra begge JSON-filer
-  const baseMatch = geoBase.features.filter(f=> normAkt.includes(f.properties.postnummer.trim()));
-  const anbMatch  = geoAnb.features.filter(f=>  normAkt.includes(f.properties.postnummer.trim()));
-  const aktMap = {};
-  baseMatch.forEach(f=> aktMap[f.properties.postnummer] = f);
-  anbMatch.forEach(f=>  aktMap[f.properties.postnummer] = f);
-  const fAktuelle = Object.values(aktMap);
+      // Filtrer
+      const baseMatch = geoBase.features.filter(f=> normAkt.includes(f.properties.postnummer.trim()));
+      const anbMatch  = geoAnb.features.filter(f=> normAkt.includes(f.properties.postnummer.trim()));
+      const aktMap = {};
+      baseMatch.forEach(f=> aktMap[f.properties.postnummer] = f);
+      anbMatch.forEach(f=> aktMap[f.properties.postnummer] = f);
+      const fAktuelle = Object.values(aktMap);
 
-  // Grønt lag mot filtrert_anbud.geojson
-  const fAbo = geoAnb.features.filter(f=> normAbo.includes(f.properties.postnummer.trim()));
+      const fAbo = geoAnb.features.filter(f=> normAbo.includes(f.properties.postnummer.trim()));
+      const fAnbud = geoAnb.features.filter(f=> normAnb.includes(f.properties.postnummer.trim()));
+      const fBrukt = geoAnb.features.filter(f=> normBrukt.includes(f.properties.postnummer.trim()));
 
-  // Rødt lag mot filtrert_anbud.geojson
-  const fAnbud = geoAnb.features.filter(f=> normAnb.includes(f.properties.postnummer.trim()));
+      // Oppdater tellere
+      document.getElementById('countAktuelle').innerText = fAktuelle.length;
+      document.getElementById('countAbo').innerText       = fAbo.length;
+      document.getElementById('countAnbud').innerText     = fAnbud.length;
+      document.getElementById('countBrukt').innerText     = fBrukt.length;
 
-  // 6) Oppdater tellere
-  document.getElementById('countAktuelle').innerText = fAktuelle.length;
-  document.getElementById('countAbo').innerText       = fAbo.length;
-  document.getElementById('countAnbud').innerText     = fAnbud.length;
+      // FeatureCollections
+      const collAkt = { type:'FeatureCollection', features: fAktuelle };
+      const collAbo = { type:'FeatureCollection', features: fAbo };
+      const collAnb = { type:'FeatureCollection', features: fAnbud };
+      const collBrukt = { type:'FeatureCollection', features: fBrukt };
 
-  // 7) Bygg FeatureCollections
-  const collAkt = {type:'FeatureCollection',features:fAktuelle};
-  const collAbo = {type:'FeatureCollection',features:fAbo};
-  const collAnb = {type:'FeatureCollection',features:fAnbud};
+      // Lag lag
+      const layerAkt = L.geoJSON(collAkt, { coordsToLatLng: coords3035tilLatLng, style:()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#3388ff' }) });
+      const layerAbo = L.geoJSON(collAbo, { coordsToLatLng: coords3035tilLatLng, style:()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#33cc33' }) });
+      const layerAnb = L.geoJSON(collAnb, { coordsToLatLng: coords3035tilLatLng, style:()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#ff3333' }) });
+      const layerBrukt = L.geoJSON(collBrukt, { coordsToLatLng: coords3035tilLatLng, style:()=>({ color:'#333', weight:1, fillOpacity:0.5, fillColor:'#ffff00' }) });
 
-  // 8) Opprett lag
-  const layerAkt = L.geoJSON(collAkt,{
-    coordsToLatLng:coords3035tilLatLng,
-    style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#3388ff'})
-  });
-  const layerAbo = L.geoJSON(collAbo,{
-    coordsToLatLng:coords3035tilLatLng,
-    style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#33cc33'})
-  });
-  const layerAnb = L.geoJSON(collAnb,{
-    coordsToLatLng:coords3035tilLatLng,
-    style:()=>({color:'#333',weight:1,fillOpacity:0.5,fillColor:'#ff3333'})
-  });
+      // Popups
+      [layerAkt, layerAbo, layerAnb, layerBrukt].forEach(layer =>
+        layer.eachLayer(l => l.bindPopup(`<strong>${l.feature.properties.postnummer}</strong><br>${l.feature.properties.poststed||''}`))
+      );
 
-  // 9) Popups
-  [layerAkt,layerAbo,layerAnb].forEach(layer=>
-    layer.eachLayer(l=>
-      l.bindPopup(`<strong>${l.feature.properties.postnummer}</strong>`)
-    )
-  );
+      // Toggle & zoom
+      function oppdater(){
+        document.getElementById('toggleAktuelle').checked ? map.addLayer(layerAkt) : map.removeLayer(layerAkt);
+        document.getElementById('toggleAbo').checked      ? map.addLayer(layerAbo) : map.removeLayer(layerAbo);
+        document.getElementById('toggleAnbud').checked    ? map.addLayer(layerAnb) : map.removeLayer(layerAnb);
+        document.getElementById('toggleBrukt').checked    ? map.addLayer(layerBrukt) : map.removeLayer(layerBrukt);
 
-  // 10) Toggle & zoom
-  function oppdater(){
-    document.getElementById('toggleAktuelle').checked
-      ? map.addLayer(layerAkt) : map.removeLayer(layerAkt);
-    document.getElementById('toggleAbo').checked
-      ? map.addLayer(layerAbo) : map.removeLayer(layerAbo);
-    document.getElementById('toggleAnbud').checked
-      ? map.addLayer(layerAnb) : map.removeLayer(layerAnb);
+        const visible = [layerAkt, layerAbo, layerAnb, layerBrukt]
+          .flatMap(l=> map.hasLayer(l) ? l.getLayers() : []);
+        if(visible.length){
+          const fg = L.featureGroup(visible);
+          map.fitBounds(fg.getBounds().pad(0.05));
+        }
+      }
+      ['toggleAktuelle','toggleAbo','toggleAnbud','toggleBrukt']
+        .forEach(id=> document.getElementById(id).addEventListener('change', oppdater));
 
-    const visible = [layerAkt,layerAbo,layerAnb]
-      .flatMap(l=> map.hasLayer(l) ? l.getLayers() : []);
-    if(visible.length){
-      const fg = L.featureGroup(visible);
-      map.fitBounds(fg.getBounds().pad(0.05));
-    }
-  }
-  ['toggleAktuelle','toggleAbo','toggleAnbud']
-    .forEach(id=> document.getElementById(id).addEventListener('change', oppdater));
+      // Initial visning
+      oppdater();
 
-  // Initial
-  oppdater();
-})
-.catch(err=>console.error('Feil ved innlasting/behandling:', err));
+      // Søkefunksjon
+      const searchFeatures = [...collAkt.features, ...collAbo.features, ...collAnb.features, ...collBrukt.features];
+      function searchMap(){
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        if(!q) return;
+        const matches = searchFeatures.filter(f =>
+          f.properties.postnummer.toLowerCase() === q ||
+          (f.properties.poststed && f.properties.poststed.toLowerCase().includes(q))
+        );
+        if(!matches.length){ alert('Ingen resultater for "'+q+'"'); return; }
+        const gruppe = L.geoJSON({ type:'FeatureCollection', features: matches }, { coordsToLatLng: coords3035tilLatLng });
+        map.fitBounds(gruppe.getBounds().pad(0.05));
+        gruppe.eachLayer(l => l.openPopup());
+      }
+      document.getElementById('searchBtn').addEventListener('click', searchMap);
+      document.getElementById('searchInput').addEventListener('keyup', e=>{ if(e.key=== 'Enter') searchMap(); });
+    })
+    .catch(err=> console.error('Feil ved innlasting/behandling:', err));
   </script>
 </body>
 </html>
