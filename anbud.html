@@ -84,7 +84,11 @@
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
       lesCSVRows('anbud_postnummer.csv'),
-      lesCSVRows('abo_bruktidag_anbud.csv'),
+      // Håndter manglende eller tom CSV uten å avbryte
+      lesCSVRows('abo_bruktidag_anbud.csv').catch(e => {
+        console.warn('Ingen rader i abo_bruktidag_anbud.csv, fortsetter med tomt sett');
+        return [];
+      }),
       fetch('postnummer_part01.geojson').then(r=>r.json()),
       fetch('postnummer_part02.geojson').then(r=>r.json()),
       fetch('postnummer_part03.geojson').then(r=>r.json()),
