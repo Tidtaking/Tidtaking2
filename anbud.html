@@ -301,30 +301,25 @@
         Innenfor:dInnenfor, Utenfor:dUtenfor
       };
 
-  function searchMap(){
+ function searchMap(){
   const qRaw = document.getElementById('searchInput').value.trim().toLowerCase();
   if(!qRaw) return;
   Object.values(layers).forEach(l=>map.removeLayer(l));
   const matchedPostnr = new Set();
 
-  // Lag et flagg for om søket er et postnummer
   const erPostnummer = /^\d{4}$/.test(qRaw);
 
-  // Funksjon for å teste om en avis inkluderer søketeksten
   function avisMatcher(avisMap) {
     return Array.from(avisMap.keys()).some(a => a.includes(qRaw));
   }
 
-  // Samle poster som matcher
   Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
     Object.entries(mapData).forEach(([p,info])=>{
       if(erPostnummer){
-        // Eksakt postnummer eller avis-match
         if(p === qRaw || avisMatcher(info.avis)){
           matchedPostnr.add(p);
         }
       } else {
-        // Mindre enn 4 tegn eller mer - søk kun i avis
         if(avisMatcher(info.avis)){
           matchedPostnr.add(p);
         }
@@ -332,7 +327,6 @@
     });
   });
 
-  // Filtrer geojson features for treff
   const matches = [...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>
     matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
   );
@@ -343,19 +337,15 @@
     return alert(`Ingen treff for "${qRaw}"`);
   }
 
-  // Lag tabell med summering kun for den avis (eller totalt om postnummer søk)
+  let totalSum = 0;
   let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
   Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
-    // Finn postnumre i dette filteret som matcher
     const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
 
-    // Summer antall basert på søk:
     let sumCount = 0;
     if(erPostnummer){
-      // Postnummer-søk: summer total antall for postnummer i filter
       sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
     } else {
-      // Avis-søk: summer kun antall for denne avisen i hvert postnummer
       keys.forEach(p=>{
         const avisMap = mapData[p]?.avis;
         if(avisMap){
@@ -368,6 +358,8 @@
       });
     }
 
+    totalSum += sumCount;
+
     const color = filterColors[filterKey] || '#000';
     html += `<tr>
       <td>${filterKeys[filterKey]}</td>
@@ -376,10 +368,15 @@
       <td>${sumCount}</td>
     </tr>`;
   });
+
+  html += `<tr style="font-weight:bold; background:#eef;">
+    <td colspan="3">Totalt</td>
+    <td>${totalSum}</td>
+  </tr>`;
+
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  // Oppdater lastMatches til eksport (som før)
   lastMatches = matches.map(f=>{
     const p = f.properties.postnummer.trim().padStart(4,'0');
     let filt = null;
@@ -396,7 +393,6 @@
   });
   exportBtn.disabled = false;
 
-  // Vis treff på kart (som før)
   const grp = L.geoJSON(matches,{
     coordsToLatLng:coords3035tilLatLng,
     style:()=>({color:'#555',fillOpacity:0.3,weight:2})
@@ -412,6 +408,7 @@
   });
   map.fitBounds(grp.getBounds().pad(0.05));
 }
+
 
 
 
