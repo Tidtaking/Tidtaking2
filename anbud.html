@@ -115,17 +115,19 @@
       return L.latLng(lat,lon);
     }
 
-    async function lesCSVRows(url){
-      try {
-        const res = await fetch(url);
-        if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-        const text = await res.text();
-        return Papa.parse(text,{header:true,skipEmptyLines:true,delimiter:';'}).data;
-      } catch(e) {
-        console.warn('Kunne ikke lese',url,e);
-        return [];
-      }
-    }
+async function lesCSVRows(url){
+  try {
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+    const text = await res.text();
+    // Ikke spesifiser delimiter, la PapaParse autodetektere
+    return Papa.parse(text, {header:true, skipEmptyLines:true}).data;
+  } catch(e) {
+    console.warn('Kunne ikke lese',url,e);
+    return [];
+  }
+}
+
 
     function group(rows, label = '') {
       const m = {};
