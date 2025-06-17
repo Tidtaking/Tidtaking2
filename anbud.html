@@ -137,15 +137,21 @@
       }
     }
 
+    // Fleksibel gruppering basert på varianter av kolonnenavn
     function group(rows){
       const m = {};
       rows.forEach(r=>{
-        const p = r.postnummer?.trim().padStart(4,'0');
+        // Finn postnummer med flere mulige navn
+        const p = (r.postnummer || r.Postnummer || r.postNr || r.PostNr || '').toString().trim().padStart(4,'0');
         if(!p) return;
-        const num = r.antall ? Number(r.antall) : 0;
+        // Finn antall med ulike navn
+        const antallRaw = r.antall ?? r.Antall ?? r.Frekvens ?? r.frekvens ?? '0';
+        const num = Number(antallRaw) || 0;
+        // Finn avis
+        const avisRaw = r.avis ?? r.Avis ?? '';
         if(!m[p]) m[p] = {count:0, avis:new Set()};
         m[p].count += num;
-        if(r.avis) m[p].avis.add(r.avis.toLowerCase());
+        if(avisRaw) m[p].avis.add(avisRaw.toString().toLowerCase());
       });
       return m;
     }
