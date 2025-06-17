@@ -20,7 +20,7 @@
       font-family:sans-serif;
       font-size:14px;
       line-height:1.4;
-      width:280px;
+      width:300px;
     }
     /* Striped bakgrunn for filterrader */
     #controls label {
@@ -48,7 +48,7 @@
       display:flex;
       flex-direction:column;
       align-items:flex-end;
-      min-width:80px;
+      min-width:90px;
     }
     #controls .counts .count {
       font-weight:bold;
@@ -66,13 +66,32 @@
       padding:4px 8px;
     }
     #search-summary {
-      margin-top:8px;
-      font-weight:bold;
+      margin-top:12px;
+    }
+    /* Tabell-styling for søkeresultater */
+    #search-summary table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      margin-top:4px;
+    }
+    #search-summary th, #search-summary td {
+      border:1px solid #ddd;
+      padding:6px;
+      text-align:left;
+    }
+    #search-summary th {
+      background-color:#f4f4f4;
+      font-weight:600;
+    }
+    #search-summary tr:nth-child(odd) td {
+      background-color:rgba(0,0,0,0.02);
     }
   </style>
 </head>
 <body>
   <div id="controls">
+    <!-- Filtervisning -->
     <label>
       <input type="checkbox" id="toggleAktuelle" checked />
       <div class="label-content">
@@ -113,6 +132,7 @@
         </div>
       </div>
     </label>
+    <!-- Søk -->
     <div style="margin-top:8px; display:flex;">
       <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
       <button id="searchBtn">Søk</button>
@@ -162,8 +182,8 @@
       fetch('postnummer_part03.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
     ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb])=>{
-      const dA=group(aRows), dB=group(bRows), dC=group(cRows), dD=group(dRows);
-      const nA=Object.keys(dA), nB=Object.keys(dB), nC=Object.keys(dC), nD=Object.keys(dD);
+      const dA=group(aRows),dB=group(bRows),dC=group(cRows),dD=group(dRows);
+      const nA=Object.keys(dA),nB=Object.keys(dB),nC=Object.keys(dC),nD=Object.keys(dD);
 
       const base=[...g1.features,...g2.features,...g3.features];
       const geoBase={type:'FeatureCollection',features:base};
@@ -181,7 +201,7 @@
         const sum=arr.reduce((s,f)=>s+f.properties.antall,0);
         document.getElementById('sumCount'+id).innerText=`${sum} antall`;
       }
-      upd('Aktuelle',fA); upd('Abo',fB); upd('Anbud',fC); upd('Brukt',fD);
+      upd('Aktuelle',fA);upd('Abo',fB);upd('Anbud',fC);upd('Brukt',fD);
 
       const layers={
         Aktuelle:L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
@@ -201,22 +221,44 @@
 
       const csvMaps={Aktuelle:dA,Abo:dB,Anbud:dC,Brukt:dD};
       function searchMap(){
-        const q=document.getElementById('searchInput').value.trim().toLowerCase();if(!q)return;
+        const q=document.getElementById('searchInput').value.trim().toLowerCase(); if(!q) return;
         Object.values(layers).forEach(layer=>map.removeLayer(layer));
         const matched=new Set();
-        Object.entries(csvMaps).forEach(([_,mapData])=>{Object.entries(mapData).forEach(([p,info])=>{const pc=p.toLowerCase();const avis=Array.from(info.avis).join(', ').toLowerCase();if(pc===q||avis.includes(q))matched.add(p);});});
+        Object.entries(csvMaps).forEach(([_,mapData])=>{ Object.entries(mapData).forEach(([p,info])=>{
+          const pc=p.toLowerCase();
+          const avis=Array.from(info.avis).join(', ').toLowerCase();
+          if(pc===q || avis.includes(q)) matched.add(p);
+        }); });
         const matches=[...fA,...fB,...fC,...fD].filter(f=>matched.has(f.properties.postnummer.trim()));
-        if(!matches.length){document.getElementById('search-summary').innerText='';return alert(`Ingen treff for "${q}"`);}        
-        let html='<ul style="padding-left:1em;margin:0;">';
-        Object.entries(csvMaps).forEach(([key,mapData])=>{const keys=Object.keys(mapData).filter(p=>matched.has(p));const postCount=keys.length;const sumCount=keys.reduce((s,p)=>s+(mapData[p].count||0),0);const label={Aktuelle:'Abo utenfor anbud (blått)',Abo:'abo_treff_anbud (grønt)',Anbud:'anbudet (rødt)',Brukt:'abo_bruktidag_anbud (gult)'}[key];html+=`<li><strong>${label}:</strong> ${postCount} postnumre, totalt ${sumCount}</li>`;});
-        html+='</ul>';
-        document.getElementById('search-summary').innerHTML=html;
-        const grp=L.geoJSON(matches,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#555',fillOpacity:0.3,weight:2})}).addTo(map);
-        grp.eachLayer(layer=>{const p=layer.feature.properties;layer.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);layer.openPopup();});
+        if(!matches.length){ document.getElementById('search-summary').innerHTML=''; return alert(`Ingen treff for "${q}"`); }
+        
+        // Bygg tabell for søkeoppsummering
+        let html = '<table><thead><tr><th>Filter</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
+        Object.entries(csvMaps).forEach(([key,mapData]) => {
+          const keys = Object.keys(mapData).filter(p => matched.has(p));
+          const postCount = keys.length;
+          const sumCount  = keys.reduce((s,p) => s + (mapData[p].count || 0), 0);
+          const label = {
+            Aktuelle: 'Abo utenfor anbud',
+            Abo: 'abo_treff_anbud',
+            Anbud: 'anbudet',
+            Brukt: 'abo_bruktidag_anbud'
+          }[key];
+          html += `<tr><td>${label}</td><td>${postCount}</td><td>${sumCount}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        document.getElementById('search-summary').innerHTML = html;
+
+        const grp = L.geoJSON(matches, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#555',fillOpacity:0.3,weight:2}) }).addTo(map);
+        grp.eachLayer(layer => {
+          const p = layer.feature.properties;
+          layer.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+          layer.openPopup();
+        });
         map.fitBounds(grp.getBounds().pad(0.05));
       }
       document.getElementById('searchBtn').addEventListener('click',searchMap);
-      document.getElementById('searchInput').addEventListener('keyup',e=>e.key==='Enter'&&searchMap());
+      document.getElementById('searchInput').addEventListener('keyup',e => e.key==='Enter' && searchMap());
     });
   </script>
 </body>
