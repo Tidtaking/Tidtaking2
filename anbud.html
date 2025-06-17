@@ -9,25 +9,104 @@
     html, body { height:100%; margin:0; padding:0; }
     #map { width:100%; height:100vh; }
     #controls {
-      position:absolute; top:10px; right:10px; z-index:1000;
-      background:white; padding:10px; border-radius:4px;
+      position:absolute;
+      top:10px;
+      right:10px;
+      z-index:1000;
+      background:white;
+      padding:10px;
+      border-radius:4px;
       box-shadow:0 2px 6px rgba(0,0,0,0.3);
-      font-family:sans-serif; font-size:14px; line-height:1.4;
+      font-family:sans-serif;
+      font-size:14px;
+      line-height:1.4;
+      width:280px;
     }
-    #controls label { display:flex; align-items:center; margin-bottom:6px; }
-    #controls .label-text { margin-left:6px; }
-    #controls span.count { margin-left:auto; font-weight:bold; color:#0077cc; }
-    #controls input[type='text'] { flex:1; margin-right:6px; padding:4px; }
-    #controls button { padding:4px 8px; }
-    #search-summary { margin-top:8px; font-weight:bold; }
+    #controls label {
+      display:flex;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    #controls .label-content {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      width:100%;
+      margin-left:6px;
+    }
+    #controls .label-text {
+      font-weight:500;
+      flex:1;
+    }
+    #controls .counts {
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      min-width:80px;
+    }
+    #controls .counts .count {
+      font-weight:bold;
+      color:#0077cc;
+    }
+    #controls .counts .count + .count {
+      margin-top:4px;
+    }
+    #controls input[type='text'] {
+      flex:1;
+      margin-right:6px;
+      padding:4px;
+    }
+    #controls button {
+      padding:4px 8px;
+    }
+    #search-summary {
+      margin-top:8px;
+      font-weight:bold;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label><input type="checkbox" id="toggleAktuelle" checked /><span class="label-text">Abo utenfor anbud</span><span id="postCountAktuelle" class="count">0</span><span class="label-text">postnumre</span><span id="sumCountAktuelle" class="count">0</span><span class="label-text">antall (blått)</span></label>
-    <label><input type="checkbox" id="toggleAbo" checked /><span class="label-text">abo_maks_anbud</span><span id="postCountAbo" class="count">0</span><span class="label-text">postnumre</span><span id="sumCountAbo" class="count">0</span><span class="label-text">antall (grønt)</span></label>
-    <label><input type="checkbox" id="toggleAnbud" checked /><span class="label-text">anbudet</span><span id="postCountAnbud" class="count">0</span><span class="label-text">postnumre</span><span id="sumCountAnbud" class="count">0</span><span class="label-text">antall (rødt)</span></label>
-    <label><input type="checkbox" id="toggleBrukt" checked /><span class="label-text">abo_bruktidag_anbud</span><span id="postCountBrukt" class="count">0</span><span class="label-text">postnumre</span><span id="sumCountBrukt" class="count">0</span><span class="label-text">antall (gult)</span></label>
+    <label>
+      <input type="checkbox" id="toggleAktuelle" checked />
+      <div class="label-content">
+        <span class="label-text">Abo utenfor anbud</span>
+        <div class="counts">
+          <span id="postCountAktuelle" class="count">0 postnumre</span>
+          <span id="sumCountAktuelle" class="count">0 antall</span>
+        </div>
+      </div>
+    </label>
+    <label>
+      <input type="checkbox" id="toggleAbo" checked />
+      <div class="label-content">
+        <span class="label-text">abo_treff_anbud</span>
+        <div class="counts">
+          <span id="postCountAbo" class="count">0 postnumre</span>
+          <span id="sumCountAbo" class="count">0 antall</span>
+        </div>
+      </div>
+    </label>
+    <label>
+      <input type="checkbox" id="toggleAnbud" checked />
+      <div class="label-content">
+        <span class="label-text">anbudet</span>
+        <div class="counts">
+          <span id="postCountAnbud" class="count">0 postnumre</span>
+          <span id="sumCountAnbud" class="count">0 antall</span>
+        </div>
+      </div>
+    </label>
+    <label>
+      <input type="checkbox" id="toggleBrukt" checked />
+      <div class="label-content">
+        <span class="label-text">abo_bruktidag_anbud</span>
+        <div class="counts">
+          <span id="postCountBrukt" class="count">0 postnumre</span>
+          <span id="sumCountBrukt" class="count">0 antall</span>
+        </div>
+      </div>
+    </label>
     <div style="margin-top:8px; display:flex;">
       <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
       <button id="searchBtn">Søk</button>
@@ -40,42 +119,33 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
-    // Initialize map
     const map = L.map('map').setView([60,10],5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap contributors', maxZoom:18 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:18 }).addTo(map);
 
-    // Projection
     proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
-    function coords3035tilLatLng(c){ const [x,y] = c; const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]); return L.latLng(lat,lon); }
+    function coords3035tilLatLng(c){ const [x,y]=c; const [lon,lat]=proj4('EPSG:3035','WGS84',[x,y]); return L.latLng(lat,lon); }
 
-    // CSV parsing
     async function lesCSVRows(url){
       try {
         const res = await fetch(url);
         if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
         const text = await res.text();
-        return Papa.parse(text, { header:true, skipEmptyLines:true, delimiter:';' }).data;
-      } catch(e) {
-        console.warn('Kunne ikke lese',url,e);
-        return [];
-      }
+        return Papa.parse(text,{ header:true, skipEmptyLines:true, delimiter:';' }).data;
+      } catch(e){ console.warn('Kunne ikke lese',url,e); return []; }
     }
 
-    // Group rows
     function group(rows){
-      const map = {};
-      rows.forEach(r => {
-        const p = r.postnummer?.trim().padStart(4,'0');
-        if(!p) return;
-        const num = r.antall ? Number(r.antall) : 0;
-        if(!map[p]) map[p] = { count:0, avis:new Set() };
-        map[p].count += num;
-        if(r.avis) map[p].avis.add(r.avis);
+      const m = {};
+      rows.forEach(r=>{
+        const p=r.postnummer?.trim().padStart(4,'0'); if(!p) return;
+        const num = r.antall?Number(r.antall):0;
+        if(!m[p]) m[p]={count:0,avis:new Set()};
+        m[p].count+=num;
+        if(r.avis) m[p].avis.add(r.avis);
       });
-      return map;
+      return m;
     }
 
-    // Load data
     Promise.all([
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
@@ -85,114 +155,51 @@
       fetch('postnummer_part02.geojson').then(r=>r.json()),
       fetch('postnummer_part03.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
-    ]).then(([aRows,bRows,cRows,dRows, g1,g2,g3,geoAnb]) => {
-      const dA = group(aRows), dB = group(bRows), dC = group(cRows), dD = group(dRows);
-      const nA = Object.keys(dA), nB = Object.keys(dB), nC = Object.keys(dC), nD = Object.keys(dD);
+    ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb])=>{
+      const dA=group(aRows),dB=group(bRows),dC=group(cRows),dD=group(dRows);
+      const nA=Object.keys(dA),nB=Object.keys(dB),nC=Object.keys(dC),nD=Object.keys(dD);
 
-      const base = [...g1.features, ...g2.features, ...g3.features];
-      const geoBase = { type:'FeatureCollection', features: base };
+      const base=[...g1.features,...g2.features,...g3.features];
+      const geoBase={type:'FeatureCollection',features:base};
 
-      const fA = Array.from(new Set([
-        ...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim())),
-        ...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim()))
-      ]));
-      const fB = geoAnb.features.filter(f=>nB.includes(f.properties.postnummer.trim()));
-      const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim()));
-      const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim()));
+      const fA=Array.from(new Set([...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim())),...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim()))]));
+      const fB=geoAnb.features.filter(f=>nB.includes(f.properties.postnummer.trim()));
+      const fC=geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim()));
+      const fD=geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim()));
 
-      function enrich(arr, mapData){ arr.forEach(f=>{
-        const p = f.properties.postnummer.trim();
-        const info = mapData[p] || {count:0, avis:new Set()};
-        f.properties.antall = info.count;
-        f.properties.avis   = Array.from(info.avis).join(', ');
-      }); }
-      enrich(fA,dA); enrich(fB,dB); enrich(fC,dC); enrich(fD,dD);
+      function enrich(arr,mapData){arr.forEach(f=>{const p=f.properties.postnummer.trim();const info=mapData[p]||{count:0,avis:new Set()};f.properties.antall=info.count;f.properties.avis=Array.from(info.avis).join(', ');});}
+      enrich(fA,dA);enrich(fB,dB);enrich(fC,dC);enrich(fD,dD);
 
-      function upd(id, arr){
-        document.getElementById('postCount'+id).innerText = arr.length;
-        const sum = arr.reduce((s,f)=>s+f.properties.antall, 0);
-        document.getElementById('sumCount'+id).innerText = sum;
+      function upd(id,arr){
+        document.getElementById('postCount'+id).innerText=`${arr.length} postnumre`;
+        const sum=arr.reduce((s,f)=>s+f.properties.antall,0);
+        document.getElementById('sumCount'+id).innerText=`${sum} antall`;
       }
-      upd('Aktuelle', fA);
-      upd('Abo', fB);
-      upd('Anbud', fC);
-      upd('Brukt', fD);
+      upd('Aktuelle',fA);upd('Abo',fB);upd('Anbud',fC);upd('Brukt',fD);
 
-      const layers = {
-        Aktuelle: L.geoJSON(fA, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1}) }),
-        Abo:      L.geoJSON(fB, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1}) }),
-        Anbud:    L.geoJSON(fC, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1}) }),
-        Brukt:    L.geoJSON(fD, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1}) })
+      const layers={
+        Aktuelle:L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
+        Abo:L.geoJSON(fB,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1})}),
+        Anbud:L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1})}),
+        Brukt:L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1})})
       };
-      Object.values(layers).forEach(layer=> layer.eachLayer(l=>{
-        const p = l.feature.properties;
-        l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
-      }));
+      Object.values(layers).forEach(layer=>layer.eachLayer(l=>{const p=l.feature.properties;l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);}));
+      function updLayers(){Object.entries(layers).forEach(([k,lyr])=>{document.getElementById('toggle'+k).checked?map.addLayer(lyr):map.removeLayer(lyr);});const vis=Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);if(vis.length)map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));}
+      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>document.getElementById('toggle'+k).addEventListener('change',updLayers));updLayers();
 
-      function updLayers(){
-        Object.entries(layers).forEach(([k,lyr]) => {
-          document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
-        });
-        const vis = Object.values(layers)
-          .flatMap(l => map.hasLayer(l) ? l.getLayers() : []);
-        if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
-      }
-      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>
-        document.getElementById('toggle'+k).addEventListener('change',updLayers)
-      );
-      updLayers();
-
-      // Search
-      const csvMaps = { Aktuelle: dA, Abo: dB, Anbud: dC, Brukt: dD };
+      const csvMaps={Aktuelle:dA,Abo:dB,Anbud:dC,Brukt:dD};
       function searchMap(){
-        const q = document.getElementById('searchInput').value.trim().toLowerCase();
-        if(!q) return;
+        const q=document.getElementById('searchInput').value.trim().toLowerCase();if(!q)return;
         Object.values(layers).forEach(layer=>map.removeLayer(layer));
-
-        // Samle matchede postnummer fra CSV
-        const matchedNums = new Set();
-        Object.values(csvMaps).forEach(mapData => {
-          Object.entries(mapData).forEach(([p,info]) => {
-            const pc = p.toLowerCase();
-            const avis = Array.from(info.avis).join(', ').toLowerCase();
-            if(pc === q || avis.includes(q)) matchedNums.add(p);
-          });
-        });
-        // Filtrer geojson for matches
-        const matches = [...fA, ...fB, ...fC, ...fD].filter(f => matchedNums.has(f.properties.postnummer.trim()));
-
-        if(!matches.length) {
-          document.getElementById('search-summary').innerText = '';
-          return alert(`Ingen treff for "${q}"`);
-        }
-
-        // Oppsummering per filter
-        let html = '<ul style="padding-left:1em;margin:0;">';
-        Object.entries(csvMaps).forEach(([key,mapData]) => {
-          const keys = Object.keys(mapData).filter(p => matchedNums.has(p));
-          const postCount = keys.length;
-          const sumCount = keys.reduce((s,p) => s + (mapData[p].count || 0), 0);
-          const label = {
-            Aktuelle: 'Abo utenfor anbud (blått)',
-            Abo: 'abo_treff_anbud (grønt)',
-            Anbud: 'anbudet (rødt)',
-            Brukt: 'abo_bruktidag_anbud (gult)'
-          }[key];
-          html += `<li><strong>${label}:</strong> ${postCount} postnumre, totalt ${sumCount}</li>`;
-        });
-        html += '</ul>';
-        document.getElementById('search-summary').innerHTML = html;
-
-        // Legg til polygoner med popup
-        const grp = L.geoJSON(matches, {
-          coordsToLatLng: coords3035tilLatLng,
-          style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 })
-        }).addTo(map);
-        grp.eachLayer(layer => {
-          const p = layer.feature.properties;
-          layer.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
-          layer.openPopup();
-        });
+        const matched=new Set();Object.entries(csvMaps).forEach(([_,mapData])=>{Object.entries(mapData).forEach(([p,info])=>{const pc=p.toLowerCase();const avis=Array.from(info.avis).join(', ').toLowerCase();if(pc===q||avis.includes(q))matched.add(p);});});
+        const matches=[...fA,...fB,...fC,...fD].filter(f=>matched.has(f.properties.postnummer.trim()));
+        if(!matches.length){document.getElementById('search-summary').innerText='';return alert(`Ingen treff for "${q}"`);}        
+        let html='<ul style="padding-left:1em;margin:0;">';
+        Object.entries(csvMaps).forEach(([key,mapData])=>{const keys=Object.keys(mapData).filter(p=>matched.has(p));const postCount=keys.length;const sumCount=keys.reduce((s,p)=>s+(mapData[p].count||0),0);const label={Aktuelle:'Abo utenfor anbud (blått)',Abo:'abo_treff_anbud (grønt)',Anbud:'anbudet (rødt)',Brukt:'abo_bruktidag_anbud (gult)'}[key];html+=`<li><strong>${label}:</strong> ${postCount} postnumre, totalt ${sumCount}</li>`;});
+        html+='</ul>';
+        document.getElementById('search-summary').innerHTML=html;
+        const grp=L.geoJSON(matches,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#555',fillOpacity:0.3,weight:2})}).addTo(map);
+        grp.eachLayer(layer=>{const p=layer.feature.properties;layer.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);layer.openPopup();});
         map.fitBounds(grp.getBounds().pad(0.05));
       }
       document.getElementById('searchBtn').addEventListener('click',searchMap);
