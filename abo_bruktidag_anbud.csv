@@ -1,6 +1,6 @@
-postnummer,antall,avis
-1350,10,Romerikes Blad,Budstikka
-1389,7,Indre akerhus Blad
+postnummer
+1350
+1389
 1461
 1475
 1480
@@ -65,23 +65,23 @@ postnummer,antall,avis
 1890
 1892
 1894
-1900;8;Romerikes Blad
+1900
 1903
 1910
 1911
 1912
 1920
 1923
-1925;1;Romerikes Blad
+1925
 1927
 1930
 1940
-1950;2;Romerikes Blad
+1950
 1954
 1960
 1963
 1970
-2000;22;Romerikes Blad
+2000
 2008
 2009
 2015
@@ -102,7 +102,7 @@ postnummer,antall,avis
 2090
 2092
 2093
-2100;8;Romerikes Blad
+2100
 2110
 2114
 2116
