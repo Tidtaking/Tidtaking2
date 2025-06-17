@@ -127,18 +127,32 @@
       }
     }
 
-    function group(rows){
+    function group(rows, label = '') {
       const m = {};
       rows.forEach((r,i) => {
-        const pRaw = r.postnummer ?? r.Postnummer ?? r.postNr ?? r.PostNr ?? r.postnr ?? '';
-        const p = pRaw.toString().trim().padStart(4,'0');
-        if(!p) {
-          console.warn(`Rad ${i} mangler gyldig postnummer:`, r);
+        console.log(`[${label}] Rad ${i}:`, r);
+        const keys = Object.keys(r);
+        const postKey = keys.find(k => /post/i.test(k));
+        const antallKey = keys.find(k => /antall|frekvens/i.test(k));
+        const avisKey = keys.find(k => /avis/i.test(k));
+        
+        if (!postKey) {
+          console.warn(`[${label}] Fant ikke postnummer-kolonne i rad ${i}`, r);
           return;
         }
-        const antallRaw = r.antall ?? r.Antall ?? r.Frekvens ?? r.frekvens ?? '0';
+        
+        const pRaw = r[postKey] ?? '';
+        const p = pRaw.toString().trim().padStart(4,'0');
+        if(!p) {
+          console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
+          return;
+        }
+        
+        const antallRaw = antallKey ? r[antallKey] : '0';
         const num = Number(antallRaw) || 0;
-        const avisRaw = r.avis ?? r.Avis ?? '';
+        
+        const avisRaw = avisKey ? r[avisKey] : '';
+        
         if(!m[p]) m[p] = {count:0, avis:new Set()};
         m[p].count += num;
         if(avisRaw) m[p].avis.add(avisRaw.toString().toLowerCase());
@@ -168,8 +182,12 @@
       fetch('postnummer_part03.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
     ]).then(([aRows,bRows,cRows,dRows,eRows,fRows,g1,g2,g3,geoAnb])=>{
-      const dA = group(aRows), dB = group(bRows), dC = group(cRows), dD = group(dRows);
-      const dInnenfor = group(eRows), dUtenfor = group(fRows);
+      const dA = group(aRows, 'Aktuelle');
+      const dB = group(bRows, 'Abo');
+      const dC = group(cRows, 'Anbud');
+      const dD = group(dRows, 'Brukt');
+      const dInnenfor = group(eRows, 'Innenfor');
+      const dUtenfor = group(fRows, 'Utenfor');
 
       const nA = Object.keys(dA).map(p => p.padStart(4,'0'));
       const nB = Object.keys(dB).map(p => p.padStart(4,'0'));
@@ -181,11 +199,6 @@
       const base = [...g1.features,...g2.features,...g3.features];
       const geoBase = {type:'FeatureCollection',features:base};
 
-      console.log('Innenfor postnummer i CSV:', nInnenfor.slice(0,10));
-      console.log('Innenfor postnummer i geoAnb:', geoAnb.features.slice(0,10).map(f => f.properties.postnummer));
-      console.log('Utenfor postnummer i CSV:', nUtenfor.slice(0,10));
-      console.log('Utenfor postnummer i geoBase:', geoBase.features.slice(0,10).map(f => f.properties.postnummer));
-
       const fA = Array.from(new Set([
         ...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim().padStart(4,'0'))),
         ...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim().padStart(4,'0')))
@@ -195,9 +208,6 @@
       const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
       const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
       const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
-
-      console.log('Innenfor filtrerte features:', fInnenfor.length);
-      console.log('Utenfor filtrerte features:', fUtenfor.length);
 
       function enrich(arr,mapData){
         arr.forEach(f=>{
@@ -310,7 +320,7 @@
       searchBtn.addEventListener('click',searchMap);
       document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
 
-            exportBtn.addEventListener('click',()=>{
+      exportBtn.addEventListener('click',()=>{
         if(!lastMatches.length) return;
         const csv = Papa.unparse(lastMatches);
         const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -323,7 +333,6 @@
         URL.revokeObjectURL(url);
       });
 
-    });
   </script>
 </body>
 </html>
