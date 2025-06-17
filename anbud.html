@@ -143,37 +143,45 @@
       updLayers();
 
       // Search
-      const allF = [...fA,...fB,...fC,...fD];
+      const allKeys = new Set();
+      // Collect all postnummer-key matches from CSV-maps
+      allKeys.forEach(()=>{});
+      const csvMaps = { Aktuelle: dA, Abo: dB, Anbud: dC, Brukt: dD };
       function searchMap(){
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if(!q) return;
         Object.values(layers).forEach(layer=>map.removeLayer(layer));
 
-        const matches = allF.filter(f=>{
-          const p = f.properties.postnummer.toLowerCase();
-          const sted = (f.properties.poststed||'').toLowerCase();
-          const avis = (f.properties.avis||'').toLowerCase();
-          return p === q || sted.includes(q) || avis.includes(q);
+        // Finn alle unike postnummer fra alle grupper som matcher søkeord
+        const matchedNums = new Set();
+        Object.entries(csvMaps).forEach(([_,mapData]) => {
+          Object.keys(mapData).forEach(p => {
+            const pc = p.toLowerCase();
+            const avis = Array.from(mapData[p].avis).join(', ').toLowerCase();
+            if(pc === q || avis.includes(q)) matchedNums.add(p);
+          });
         });
+        // Finn geoJSON-features for disse postnumrene
+        const matches = [...fA, ...fB, ...fC, ...fD].filter(f => matchedNums.has(f.properties.postnummer.trim()));
 
         if(!matches.length) {
           document.getElementById('search-summary').innerText = '';
           return alert(`Ingen treff for "${q}"`);
         }
 
-        // Oppsummering per filter
-        const grupper = {
-          Aktuelle: { n: nA,    label: 'Abo utenfor anbud (blått)' },
-          Abo:      { n: nB,    label: 'abo_treff_anbud (grønt)' },
-          Anbud:    { n: nC,    label: 'anbudet (rødt)'  },
-          Brukt:    { n: nD,    label: 'abo_bruktidag_anbud (gult)' }
-        };
+        // Oppsummering per filter basert på CSV-data
         let html = '<ul style="padding-left:1em;margin:0;">';
-        Object.entries(grupper).forEach(([key,info]) => {
-          const grpMatches = matches.filter(f => info.n.includes(f.properties.postnummer.trim()));
-          const postCount = grpMatches.length;
-          const sumCount  = grpMatches.reduce((s,f)=>s+f.properties.antall, 0);
-          html += `<li><strong>${info.label}:</strong> ${postCount} postnumre, totalt ${sumCount}</li>`;
+        Object.entries(csvMaps).forEach(([key,mapData]) => {
+          const keys = Object.keys(mapData).filter(p => matchedNums.has(p));
+          const postCount = keys.length;
+          const sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+          const label = {
+            Aktuelle: 'Abo utenfor anbud (blått)',
+            Abo: 'abo_treff_anbud (grønt)',
+            Anbud: 'anbudet (rødt)',
+            Brukt: 'abo_bruktidag_anbud (gult)'
+          }[key];
+          html += `<li><strong>${label}:</strong> ${postCount} postnumre, totalt ${sumCount}</li>`;
         });
         html += '</ul>';
         document.getElementById('search-summary').innerHTML = html;
