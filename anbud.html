@@ -171,9 +171,21 @@
 
       // Søkefunksjon
       const allF=[...fAktuelle,...fAboArr,...fAnbArr,...fBruktArr];
-      function searchMap(){ const q=document.getElementById('searchInput').value.trim().toLowerCase(); if(!q) return;
-        const m=allF.filter(f=>f.properties.postnummer.toLowerCase()===q||(f.properties.poststed||'').toLowerCase().includes(q));
-        if(!m.length) return alert(`Ingen treff for "${q}"`);
+      function searchMap(){
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        if(!q) return;
+        // Filtrer på postnummer, poststed eller avis
+        const matches = allF.filter(f => {
+          const p = f.properties.postnummer.toLowerCase();
+          const sted = (f.properties.poststed||'').toLowerCase();
+          const avis = (f.properties.avis||'').toLowerCase();
+          return p === q || sted.includes(q) || avis.includes(q);
+        });
+        if(!matches.length) return alert(`Ingen treff for "${q}"`);
+        const grp = L.geoJSON({ type:'FeatureCollection', features: matches }, { coordsToLatLng: coords3035tilLatLng });
+        map.fitBounds(grp.getBounds().pad(0.05));
+        grp.eachLayer(l => l.openPopup());
+      }"`);
         const grp=L.geoJSON({type:'FeatureCollection',features:m},{coordsToLatLng:coords3035tilLatLng});
         map.fitBounds(grp.getBounds().pad(0.05));grp.eachLayer(l=>l.openPopup());
       }
