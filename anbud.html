@@ -22,10 +22,16 @@
       line-height:1.4;
       width:280px;
     }
+    /* Striped bakgrunn for filterrader */
     #controls label {
       display:flex;
       align-items:center;
       margin-bottom:10px;
+      padding:4px;
+      border-radius:4px;
+    }
+    #controls label:nth-of-type(odd) {
+      background-color: rgba(0,0,0,0.03);
     }
     #controls .label-content {
       display:flex;
@@ -156,8 +162,8 @@
       fetch('postnummer_part03.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
     ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb])=>{
-      const dA=group(aRows),dB=group(bRows),dC=group(cRows),dD=group(dRows);
-      const nA=Object.keys(dA),nB=Object.keys(dB),nC=Object.keys(dC),nD=Object.keys(dD);
+      const dA=group(aRows), dB=group(bRows), dC=group(cRows), dD=group(dRows);
+      const nA=Object.keys(dA), nB=Object.keys(dB), nC=Object.keys(dC), nD=Object.keys(dD);
 
       const base=[...g1.features,...g2.features,...g3.features];
       const geoBase={type:'FeatureCollection',features:base};
@@ -175,7 +181,7 @@
         const sum=arr.reduce((s,f)=>s+f.properties.antall,0);
         document.getElementById('sumCount'+id).innerText=`${sum} antall`;
       }
-      upd('Aktuelle',fA);upd('Abo',fB);upd('Anbud',fC);upd('Brukt',fD);
+      upd('Aktuelle',fA); upd('Abo',fB); upd('Anbud',fC); upd('Brukt',fD);
 
       const layers={
         Aktuelle:L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
@@ -184,14 +190,21 @@
         Brukt:L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1})})
       };
       Object.values(layers).forEach(layer=>layer.eachLayer(l=>{const p=l.feature.properties;l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);}));
-      function updLayers(){Object.entries(layers).forEach(([k,lyr])=>{document.getElementById('toggle'+k).checked?map.addLayer(lyr):map.removeLayer(lyr);});const vis=Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);if(vis.length)map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));}
-      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>document.getElementById('toggle'+k).addEventListener('change',updLayers));updLayers();
+
+      function updLayers(){
+        Object.entries(layers).forEach(([k,lyr])=>{document.getElementById('toggle'+k).checked?map.addLayer(lyr):map.removeLayer(lyr);});
+        const vis=Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
+        if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
+      }
+      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>document.getElementById('toggle'+k).addEventListener('change',updLayers));
+      updLayers();
 
       const csvMaps={Aktuelle:dA,Abo:dB,Anbud:dC,Brukt:dD};
       function searchMap(){
         const q=document.getElementById('searchInput').value.trim().toLowerCase();if(!q)return;
         Object.values(layers).forEach(layer=>map.removeLayer(layer));
-        const matched=new Set();Object.entries(csvMaps).forEach(([_,mapData])=>{Object.entries(mapData).forEach(([p,info])=>{const pc=p.toLowerCase();const avis=Array.from(info.avis).join(', ').toLowerCase();if(pc===q||avis.includes(q))matched.add(p);});});
+        const matched=new Set();
+        Object.entries(csvMaps).forEach(([_,mapData])=>{Object.entries(mapData).forEach(([p,info])=>{const pc=p.toLowerCase();const avis=Array.from(info.avis).join(', ').toLowerCase();if(pc===q||avis.includes(q))matched.add(p);});});
         const matches=[...fA,...fB,...fC,...fD].filter(f=>matched.has(f.properties.postnummer.trim()));
         if(!matches.length){document.getElementById('search-summary').innerText='';return alert(`Ingen treff for "${q}"`);}        
         let html='<ul style="padding-left:1em;margin:0;">';
