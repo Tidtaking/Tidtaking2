@@ -81,7 +81,7 @@
     </label>
     <!-- Søk og eksport -->
     <div style="margin-top:8px; display:flex; align-items:center;">
-      <input type="text" id="searchInput" placeholder="Søk sted, pnr eller avis" />
+      <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
       <button id="searchBtn">Søk</button>
       <button id="exportBtn" disabled>Eksporter CSV</button>
     </div>
@@ -101,7 +101,11 @@
 
     // Projeksjon
     proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
-    function coords3035tilLatLng(c){ const [x,y]=c; const [lon,lat]=proj4('EPSG:3035','WGS84',[x,y]); return L.latLng(lat,lon); }
+    function coords3035tilLatLng(c){
+      const [x,y] = c;
+      const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
+      return L.latLng(lat,lon);
+    }
 
     // Hent og parser CSV
     async function lesCSVRows(url){
@@ -132,8 +136,14 @@
 
     // Lagrer siste søket
     let lastMatches = [];
+    const filterKeys = {
+      Aktuelle:'Abo utenfor anbud',
+      Abo:'abo_treff_anbud',
+      Anbud:'anbudet',
+      Brukt:'abo_bruktidag_anbud'
+    };
 
-    // Last data
+    // Last data og opprett lag
     Promise.all([
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
@@ -157,96 +167,127 @@
       const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim()));
 
       // Berik med antall og avis
-      function enrich(arr, mapData){
-        arr.forEach(f => {
-          const p = f.properties.postnummer.trim();
-          const info = mapData[p] || {count:0, avis:new Set()};
-          f.properties.antall = info.count;
-          f.properties.avis = Array.from(info.avis).join(', ');
+      function enrich(arr,mapData){
+        arr.forEach(f=>{
+          const p=f.properties.postnummer.trim();
+          const info=mapData[p]||{count:0,avis:new Set()};
+          f.properties.antall=info.count;
+          f.properties.avis=Array.from(info.avis).join(', ');
         });
       }
-      enrich(fA, dA); enrich(fB, dB); enrich(fC, dC); enrich(fD, dD);
+      enrich(fA,dA); enrich(fB,dB); enrich(fC,dC); enrich(fD,dD);
 
       // Oppdater filter-tall
-      ['Aktuelle','Abo','Anbud','Brukt'].forEach((k,i) => {
-        const arr = [fA,fB,fC,fD][i];
+      ['Aktuelle','Abo','Anbud','Brukt'].forEach((k,i)=>{
+        const arr=[fA,fB,fC,fD][i];
         document.getElementById('postCount'+k).innerText = `${arr.length} postnumre`;
-        const sum = arr.reduce((s,f) => s+f.properties.antall, 0);
+        const sum = arr.reduce((s,f)=>s+f.properties.antall,0);
         document.getElementById('sumCount'+k).innerText = `${sum} antall`;
       });
 
       // Lag layers og bindinger
       const layers = {
-        Aktuelle: L.geoJSON(fA, {coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
-        Abo:      L.geoJSON(fB, {coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1})}),
-        Anbud:    L.geoJSON(fC, {coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1})}),
-        Brukt:    L.geoJSON(fD, {coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1})})
+        Aktuelle: L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
+        Abo:      L.geoJSON(fB,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1})}),
+        Anbud:    L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1})}),
+        Brukt:    L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1})})
       };
-      Object.values(layers).forEach(layer => layer.eachLayer(l => {
-        const p = l.feature.properties;
+      Object.values(layers).forEach(layer=>layer.eachLayer(l=>{
+        const p=l.feature.properties;
         l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
       }));
 
       // Toggle layers
       function oppdaterLag(){
-        Object.entries(layers).forEach(([k,lyr]) => {
+        Object.entries(layers).forEach(([k,lyr])=>{
           document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
         });
-        const vis = Object.values(layers).flatMap(l => map.hasLayer(l)?l.getLayers():[]);
+        const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
         if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
       }
-      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k => document.getElementById('toggle'+k).addEventListener('change',oppdaterLag));
+      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>
+        document.getElementById('toggle'+k).addEventListener('change',oppdaterLag)
+      );
       oppdaterLag();
 
       // Knapper
-      const searchBtn = document.getElementById('searchBtn');
-      const exportBtn = document.getElementById('exportBtn');
+      const searchBtn = document.getElementById('searchBtn'),
+            exportBtn = document.getElementById('exportBtn');
+      const csvMaps = {Aktuelle:dA,Abo:dB,Anbud:dC,Brukt:dD};
 
-      // Search-funksjon med CSV-export
-      const csvMaps = {Aktuelle:dA, Abo:dB, Anbud:dC, Brukt:dD};
+      // Search + eksport
       function searchMap(){
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if(!q) return;
         Object.values(layers).forEach(l=>map.removeLayer(l));
         const matched = new Set();
-        Object.values(csvMaps).forEach(mapData => {
-          Object.entries(mapData).forEach(([p,info]) => {
-            if(p.toLowerCase()===q || Array.from(info.avis).some(a=>a.includes(q))) matched.add(p);
+        Object.entries(csvMaps).forEach(([k,mapData])=>{
+          Object.entries(mapData).forEach(([p,info])=>{
+            if(p.toLowerCase()===q || Array.from(info.avis).some(a=>a.includes(q)))
+              matched.add(p);
           });
         });
-        const matches = [...fA,...fB,...fC,...fD].filter(f => matched.has(f.properties.postnummer.trim()));
-        if(!matches.length){ document.getElementById('search-summary').innerHTML=''; exportBtn.disabled=true; return alert(`Ingen treff for "${q}"`); }
+        const matches = [...fA,...fB,...fC,...fD].filter(f=>matched.has(f.properties.postnummer.trim()));
+        if(!matches.length){
+          document.getElementById('search-summary').innerHTML='';
+          exportBtn.disabled = true;
+          return alert(`Ingen treff for "${q}"`);
+        }
         // Bygg tabell
         let html = '<table><thead><tr><th>Filter</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
-        Object.entries(csvMaps).forEach(([key,mapData]) => {
-          const keys = Object.keys(mapData).filter(p => matched.has(p));
+        Object.entries(csvMaps).forEach(([key,mapData])=>{
+          const keys = Object.keys(mapData).filter(p=>matched.has(p));
           const postCount = keys.length;
-          const sumCount = keys.reduce((s,p) => s + mapData[p].count, 0);
-          const label = {Aktuelle:'Abo utenfor anbud',Abo:'abo_treff_anbud',Anbud:'anbudet',Brukt:'abo_bruktidag_anbud'}[key];
-          html += `<tr><td>${label}</td><td>${postCount}</td><td>${sumCount}</td></tr>`;
+          const sumCount = keys.reduce((s,p)=>s+mapData[p].count,0);
+          html += `<tr><td>${filterKeys[key]}</td><td>${postCount}</td><td>${sumCount}</td></tr>`;
         });
         html += '</tbody></table>';
         document.getElementById('search-summary').innerHTML = html;
-        // Forbered eksport data
-        lastMatches = matches.map(f=>({postnummer:f.properties.postnummer, antall:f.properties.antall, avis:f.properties.avis}));
+
+        // Forbered eksportdata
+        lastMatches = matches.map(f=>{
+          const p = f.properties.postnummer;
+          const filt = Object.entries({Aktuelle:nA,Abo:nB,Anbud:nC,Brukt:nD})
+                         .find(([k,arr])=>arr.includes(p))[0];
+          return {
+            filter: filterKeys[filt],
+            postnummer: p,
+            antall: f.properties.antall,
+            avis: f.properties.avis
+          };
+        });
         exportBtn.disabled = false;
-        // Vis matches på kartet
-        const grp = L.geoJSON(matches,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#555',fillOpacity:0.3,weight:2})}).addTo(map);
-        grp.eachLayer(l=>{ const p=l.feature.properties; l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`); l.openPopup(); });
+
+        // Vis på kartet
+        const grp = L.geoJSON(matches,{
+          coordsToLatLng:coords3035tilLatLng,
+          style:()=>({color:'#555',fillOpacity:0.3,weight:2})
+        }).addTo(map);
+        grp.eachLayer(l=>{
+          const p=l.feature.properties;
+          l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+          l.openPopup();
+        });
         map.fitBounds(grp.getBounds().pad(0.05));
       }
-      searchBtn.addEventListener('click', searchMap);
-      document.getElementById('searchInput').addEventListener('keyup', e => e.key==='Enter' && searchMap());
 
-      // Eksport CSV
-      exportBtn.addEventListener('click', () => {
+      searchBtn.addEventListener('click', searchMap);
+      document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter'&&searchMap());
+
+      // Eksporter CSV
+      exportBtn.addEventListener('click', ()=>{
         if(!lastMatches.length) return;
         const csv = Papa.unparse(lastMatches);
         const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob); const a = document.createElement('a');
-        a.href = url; a.download = 'sokeresultater.csv'; document.body.appendChild(a);
-        a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'sokeresultater.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       });
+
     });
   </script>
 </body>
