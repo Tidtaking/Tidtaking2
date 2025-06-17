@@ -30,63 +30,20 @@
       padding:4px;
       border-radius:4px;
     }
-    #controls label:nth-of-type(odd) {
-      background-color: rgba(0,0,0,0.03);
-    }
-    #controls .label-content {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      width:100%;
-      margin-left:6px;
-    }
-    #controls .label-text {
-      font-weight:500;
-      flex:1;
-    }
-    #controls .counts {
-      display:flex;
-      flex-direction:column;
-      align-items:flex-end;
-      min-width:90px;
-    }
-    #controls .counts .count {
-      font-weight:bold;
-      color:#0077cc;
-    }
-    #controls .counts .count + .count {
-      margin-top:4px;
-    }
-    #controls input[type='text'] {
-      flex:1;
-      margin-right:6px;
-      padding:4px;
-    }
-    #controls button {
-      padding:4px 8px;
-    }
-    #search-summary {
-      margin-top:12px;
-    }
+    #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
+    #controls .label-content { display:flex; justify-content:space-between; align-items:center; width:100%; margin-left:6px; }
+    #controls .label-text { font-weight:500; flex:1; }
+    #controls .counts { display:flex; flex-direction:column; align-items:flex-end; min-width:90px; }
+    #controls .counts .count { font-weight:bold; color:#0077cc; }
+    #controls .counts .count + .count { margin-top:4px; }
+    #controls input[type='text'] { flex:1; margin-right:6px; padding:4px; }
+    #controls button { padding:4px 8px; }
+    #search-summary { margin-top:12px; }
     /* Tabell-styling for søkeresultater */
-    #search-summary table {
-      width:100%;
-      border-collapse:collapse;
-      font-size:13px;
-      margin-top:4px;
-    }
-    #search-summary th, #search-summary td {
-      border:1px solid #ddd;
-      padding:6px;
-      text-align:left;
-    }
-    #search-summary th {
-      background-color:#f4f4f4;
-      font-weight:600;
-    }
-    #search-summary tr:nth-child(odd) td {
-      background-color:rgba(0,0,0,0.02);
-    }
+    #search-summary table { width:100%; border-collapse:collapse; font-size:13px; margin-top:4px; }
+    #search-summary th, #search-summary td { border:1px solid #ddd; padding:6px; text-align:left; }
+    #search-summary th { background-color:#f4f4f4; font-weight:600; }
+    #search-summary tr:nth-child(odd) td { background-color:rgba(0,0,0,0.02); }
   </style>
 </head>
 <body>
@@ -145,33 +102,48 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
+    // Initialiser kart
     const map = L.map('map').setView([60,10],5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:18 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap contributors', maxZoom:18
+    }).addTo(map);
 
+    // Projeksjon
     proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
-    function coords3035tilLatLng(c){ const [x,y]=c; const [lon,lat]=proj4('EPSG:3035','WGS84',[x,y]); return L.latLng(lat,lon); }
+    function coords3035tilLatLng(c){
+      const [x,y] = c;
+      const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
+      return L.latLng(lat,lon);
+    }
 
+    // Hent og parser CSV
     async function lesCSVRows(url){
       try {
         const res = await fetch(url);
         if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
         const text = await res.text();
-        return Papa.parse(text,{ header:true, skipEmptyLines:true, delimiter:';' }).data;
-      } catch(e){ console.warn('Kunne ikke lese',url,e); return []; }
+        return Papa.parse(text, { header:true, skipEmptyLines:true, delimiter:';' }).data;
+      } catch(e) {
+        console.warn('Kunne ikke lese',url,e);
+        return [];
+      }
     }
 
+    // Gruppér rader
     function group(rows){
-      const m = {};
-      rows.forEach(r=>{
-        const p=r.postnummer?.trim().padStart(4,'0'); if(!p) return;
-        const num = r.antall?Number(r.antall):0;
-        if(!m[p]) m[p]={count:0,avis:new Set()};
-        m[p].count+=num;
-        if(r.avis) m[p].avis.add(r.avis);
+      const map = {};
+      rows.forEach(r => {
+        const p = r.postnummer?.trim().padStart(4,'0');
+        if(!p) return;
+        const num = r.antall ? Number(r.antall) : 0;
+        if(!map[p]) map[p] = { count:0, avis:new Set() };
+        map[p].count += num;
+        if(r.avis) map[p].avis.add(r.avis.toLowerCase());
       });
-      return m;
+      return map;
     }
 
+    // Last data og opprett lag
     Promise.all([
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
@@ -181,84 +153,118 @@
       fetch('postnummer_part02.geojson').then(r=>r.json()),
       fetch('postnummer_part03.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
-    ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb])=>{
-      const dA=group(aRows),dB=group(bRows),dC=group(cRows),dD=group(dRows);
-      const nA=Object.keys(dA),nB=Object.keys(dB),nC=Object.keys(dC),nD=Object.keys(dD);
+    ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb]) => {
+      const dA = group(aRows), dB = group(bRows), dC = group(cRows), dD = group(dRows);
+      const nA = Object.keys(dA), nB = Object.keys(dB), nC = Object.keys(dC), nD = Object.keys(dD);
 
-      const base=[...g1.features,...g2.features,...g3.features];
-      const geoBase={type:'FeatureCollection',features:base};
+      // Kombiner grunnkart
+      const baseFeatures = [...g1.features, ...g2.features, ...g3.features];
+      const geoBase = { type:'FeatureCollection', features: baseFeatures };
 
-      const fA=Array.from(new Set([...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim())),...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim()))]));
-      const fB=geoAnb.features.filter(f=>nB.includes(f.properties.postnummer.trim()));
-      const fC=geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim()));
-      const fD=geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim()));
+      // Filtrer features
+      const fA = Array.from(new Set([
+        ...geoBase.features.filter(f => nA.includes(f.properties.postnummer.trim())),
+        ...geoAnb.features.filter(f => nA.includes(f.properties.postnummer.trim()))
+      ]));
+      const fB = geoAnb.features.filter(f => nB.includes(f.properties.postnummer.trim()));
+      const fC = geoAnb.features.filter(f => nC.includes(f.properties.postnummer.trim()));
+      const fD = geoAnb.features.filter(f => nD.includes(f.properties.postnummer.trim()));
 
-      function enrich(arr,mapData){arr.forEach(f=>{const p=f.properties.postnummer.trim();const info=mapData[p]||{count:0,avis:new Set()};f.properties.antall=info.count;f.properties.avis=Array.from(info.avis).join(', ');});}
-      enrich(fA,dA);enrich(fB,dB);enrich(fC,dC);enrich(fD,dD);
-
-      function upd(id,arr){
-        document.getElementById('postCount'+id).innerText=`${arr.length} postnumre`;
-        const sum=arr.reduce((s,f)=>s+f.properties.antall,0);
-        document.getElementById('sumCount'+id).innerText=`${sum} antall`;
+      // Berik med antall og avis
+      function enrich(arr, mapData){
+        arr.forEach(f => {
+          const p = f.properties.postnummer.trim();
+          const info = mapData[p] || {count:0, avis:new Set()};
+          f.properties.antall = info.count;
+          f.properties.avis = Array.from(info.avis).join(', ');
+        });
       }
-      upd('Aktuelle',fA);upd('Abo',fB);upd('Anbud',fC);upd('Brukt',fD);
+      enrich(fA, dA);
+      enrich(fB, dB);
+      enrich(fC, dC);
+      enrich(fD, dD);
 
-      const layers={
-        Aktuelle:L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
-        Abo:L.geoJSON(fB,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1})}),
-        Anbud:L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1})}),
-        Brukt:L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1})})
+      // Oppdater filter-tall
+      function oppdaterFilter(id, arr){
+        document.getElementById('postCount'+id).innerText = `${arr.length} postnumre`;
+        const sum = arr.reduce((s,f) => s + f.properties.antall, 0);
+        document.getElementById('sumCount'+id).innerText = `${sum} antall`;
+      }
+      oppdaterFilter('Aktuelle', fA);
+      oppdaterFilter('Abo', fB);
+      oppdaterFilter('Anbud', fC);
+      oppdaterFilter('Brukt', fD);
+
+      // Lag layers
+      const layers = {
+        Aktuelle: L.geoJSON(fA, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1}) }),
+        Abo:      L.geoJSON(fB, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1}) }),
+        Anbud:    L.geoJSON(fC, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1}) }),
+        Brukt:    L.geoJSON(fD, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1}) })
       };
-      Object.values(layers).forEach(layer=>layer.eachLayer(l=>{const p=l.feature.properties;l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);}));
+      Object.values(layers).forEach(layer => layer.eachLayer(l => {
+        const p = l.feature.properties;
+        l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+      }));
 
-      function updLayers(){
-        Object.entries(layers).forEach(([k,lyr])=>{document.getElementById('toggle'+k).checked?map.addLayer(lyr):map.removeLayer(lyr);});
-        const vis=Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
-        if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
+      // Toggle layers
+      function oppdaterLag(){
+        Object.entries(layers).forEach(([k, lyr]) => {
+          document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
+        });
+        const synlige = Object.values(layers).flatMap(l => map.hasLayer(l) ? l.getLayers() : []);
+        if(synlige.length) map.fitBounds(L.featureGroup(synlige).getBounds().pad(0.05));
       }
-      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>document.getElementById('toggle'+k).addEventListener('change',updLayers));
-      updLayers();
+      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k =>
+        document.getElementById('toggle'+k).addEventListener('change', oppdaterLag)
+      );
+      oppdaterLag();
 
-      const csvMaps={Aktuelle:dA,Abo:dB,Anbud:dC,Brukt:dD};
+      // Search-funksjon (ikke skille på store/små)
+      const csvMaps = { Aktuelle: dA, Abo: dB, Anbud: dC, Brukt: dD };
       function searchMap(){
-        const q=document.getElementById('searchInput').value.trim().toLowerCase(); if(!q) return;
-        Object.values(layers).forEach(layer=>map.removeLayer(layer));
-        const matched=new Set();
-        Object.entries(csvMaps).forEach(([_,mapData])=>{ Object.entries(mapData).forEach(([p,info])=>{
-          const pc=p.toLowerCase();
-          const avis=Array.from(info.avis).join(', ').toLowerCase();
-          if(pc===q || avis.includes(q)) matched.add(p);
-        }); });
-        const matches=[...fA,...fB,...fC,...fD].filter(f=>matched.has(f.properties.postnummer.trim()));
-        if(!matches.length){ document.getElementById('search-summary').innerHTML=''; return alert(`Ingen treff for "${q}"`); }
-        
-        // Bygg tabell for søkeoppsummering
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        if(!q) return;
+        // Fjern layers
+        Object.values(layers).forEach(l => map.removeLayer(l));
+
+        // Finn matchede postnummer
+        const matched = new Set();
+        Object.values(csvMaps).forEach(mapData => {
+          Object.entries(mapData).forEach(([p,info]) => {
+            if(p.toLowerCase() === q || Array.from(info.avis).some(a => a.includes(q))) matched.add(p);
+          });
+        });
+
+        const matches = [...fA, ...fB, ...fC, ...fD].filter(f => matched.has(f.properties.postnummer.trim()));
+        if(!matches.length) {
+          document.getElementById('search-summary').innerHTML = '';
+          return alert(`Ingen treff for "${q}"`);
+        }
+
+        // Bygg tabell
         let html = '<table><thead><tr><th>Filter</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
         Object.entries(csvMaps).forEach(([key,mapData]) => {
           const keys = Object.keys(mapData).filter(p => matched.has(p));
           const postCount = keys.length;
-          const sumCount  = keys.reduce((s,p) => s + (mapData[p].count || 0), 0);
-          const label = {
-            Aktuelle: 'Abo utenfor anbud',
-            Abo: 'abo_treff_anbud',
-            Anbud: 'anbudet',
-            Brukt: 'abo_bruktidag_anbud'
-          }[key];
+          const sumCount = keys.reduce((s,p) => s + mapData[p].count, 0);
+          const label = { Aktuelle:'Abo utenfor anbud', Abo:'abo_treff_anbud', Anbud:'anbudet', Brukt:'abo_bruktidag_anbud' }[key];
           html += `<tr><td>${label}</td><td>${postCount}</td><td>${sumCount}</td></tr>`;
         });
         html += '</tbody></table>';
         document.getElementById('search-summary').innerHTML = html;
 
+        // Vis polygoner med popup
         const grp = L.geoJSON(matches, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#555',fillOpacity:0.3,weight:2}) }).addTo(map);
-        grp.eachLayer(layer => {
-          const p = layer.feature.properties;
-          layer.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
-          layer.openPopup();
+        grp.eachLayer(l => {
+          const p = l.feature.properties;
+          l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+          l.openPopup();
         });
         map.fitBounds(grp.getBounds().pad(0.05));
       }
-      document.getElementById('searchBtn').addEventListener('click',searchMap);
-      document.getElementById('searchInput').addEventListener('keyup',e => e.key==='Enter' && searchMap());
+      document.getElementById('searchBtn').addEventListener('click', searchMap);
+      document.getElementById('searchInput').addEventListener('keyup', e => e.key === 'Enter' && searchMap());
     });
   </script>
 </body>
