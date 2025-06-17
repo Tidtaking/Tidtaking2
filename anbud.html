@@ -194,15 +194,31 @@
       function searchMap() {
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if (!q) return;
-        // remove all layers
+        // Remove all existing layers
         Object.values(layers).forEach(layer => map.removeLayer(layer));
-        // filter matches
+        // Filter matches
         const matches = allFeatures.filter(f => {
           const p = f.properties.postnummer.toLowerCase();
           const sted = (f.properties.poststed || '').toLowerCase();
           const avis = (f.properties.avis || '').toLowerCase();
           return p === q || sted.includes(q) || avis.includes(q);
         });
+        if (!matches.length) {
+          alert(`Ingen treff for "${q}"`);
+          return;
+        }
+        // Display only matching polygons with popups
+        const grp = L.geoJSON(matches, {
+          coordsToLatLng: coords3035tilLatLng,
+          style: layer => layer.properties && layer.properties.antall !== undefined ? { color: layer.properties.avis ? '#3388ff' : '#3388ff', fillOpacity: 0.5, weight:1 } : { weight:1 }
+        }).addTo(map);
+        grp.eachLayer(l => {
+          const p = l.feature.properties;
+          l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+          l.openPopup();
+        });
+        map.fitBounds(grp.getBounds().pad(0.05));
+      }
         if (!matches.length) return alert(`Ingen treff for "${q}"`);
         // display matches
         const grp = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng });
