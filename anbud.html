@@ -93,13 +93,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script>
-    // Initialiser kart
     const map = L.map('map').setView([60,10],5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
       attribution:'© OpenStreetMap contributors', maxZoom:18
     }).addTo(map);
 
-    // Projeksjon
     proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
     function coords3035tilLatLng(c){
       const [x,y] = c;
@@ -107,7 +105,6 @@
       return L.latLng(lat,lon);
     }
 
-    // Hent og parser CSV
     async function lesCSVRows(url){
       try {
         const res = await fetch(url);
@@ -120,10 +117,9 @@
       }
     }
 
-    // Gruppér rader
     function group(rows){
       const m = {};
-      rows.forEach(r => {
+      rows.forEach(r=>{
         const p = r.postnummer?.trim().padStart(4,'0');
         if(!p) return;
         const num = r.antall ? Number(r.antall) : 0;
@@ -134,7 +130,6 @@
       return m;
     }
 
-    // Lagrer siste søket
     let lastMatches = [];
     const filterKeys = {
       Aktuelle:'Abo utenfor anbud',
@@ -143,7 +138,6 @@
       Brukt:'abo_bruktidag_anbud'
     };
 
-    // Last data og opprett lag
     Promise.all([
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
@@ -153,7 +147,7 @@
       fetch('postnummer_part02.geojson').then(r=>r.json()),
       fetch('postnummer_part03.geojson').then(r=>r.json()),
       fetch('filtrert_anbud.geojson').then(r=>r.json())
-    ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb]) => {
+    ]).then(([aRows,bRows,cRows,dRows,g1,g2,g3,geoAnb])=>{
       const dA = group(aRows), dB = group(bRows), dC = group(cRows), dD = group(dRows);
       const nA = Object.keys(dA), nB = Object.keys(dB), nC = Object.keys(dC), nD = Object.keys(dD);
       const base = [...g1.features,...g2.features,...g3.features];
@@ -166,38 +160,34 @@
       const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim()));
       const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim()));
 
-      // Berik med antall og avis
       function enrich(arr,mapData){
         arr.forEach(f=>{
-          const p=f.properties.postnummer.trim();
-          const info=mapData[p]||{count:0,avis:new Set()};
-          f.properties.antall=info.count;
-          f.properties.avis=Array.from(info.avis).join(', ');
+          const p = f.properties.postnummer.trim();
+          const info = mapData[p] || {count:0, avis:new Set()};
+          f.properties.antall = info.count;
+          f.properties.avis = Array.from(info.avis).join(', ');
         });
       }
       enrich(fA,dA); enrich(fB,dB); enrich(fC,dC); enrich(fD,dD);
 
-      // Oppdater filter-tall
       ['Aktuelle','Abo','Anbud','Brukt'].forEach((k,i)=>{
-        const arr=[fA,fB,fC,fD][i];
+        const arr = [fA,fB,fC,fD][i];
         document.getElementById('postCount'+k).innerText = `${arr.length} postnumre`;
         const sum = arr.reduce((s,f)=>s+f.properties.antall,0);
         document.getElementById('sumCount'+k).innerText = `${sum} antall`;
       });
 
-      // Lag layers og bindinger
       const layers = {
         Aktuelle: L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
         Abo:      L.geoJSON(fB,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#33cc33',fillOpacity:0.5,weight:1})}),
         Anbud:    L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ff3333',fillOpacity:0.5,weight:1})}),
         Brukt:    L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#ffff00',fillOpacity:0.5,weight:1})})
       };
-      Object.values(layers).forEach(layer=>layer.eachLayer(l=>{
-        const p=l.feature.properties;
+      Object.values(layers).forEach(layer => layer.eachLayer(l=>{
+        const p = l.feature.properties;
         l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
       }));
 
-      // Toggle layers
       function oppdaterLag(){
         Object.entries(layers).forEach(([k,lyr])=>{
           document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
@@ -205,17 +195,13 @@
         const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
         if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
       }
-      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>
-        document.getElementById('toggle'+k).addEventListener('change',oppdaterLag)
-      );
+      ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>document.getElementById('toggle'+k).addEventListener('change',oppdaterLag));
       oppdaterLag();
 
-      // Knapper
-      const searchBtn = document.getElementById('searchBtn'),
-            exportBtn = document.getElementById('exportBtn');
+      const searchBtn = document.getElementById('searchBtn');
+      const exportBtn = document.getElementById('exportBtn');
       const csvMaps = {Aktuelle:dA,Abo:dB,Anbud:dC,Brukt:dD};
 
-      // Search + eksport
       function searchMap(){
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if(!q) return;
@@ -229,11 +215,11 @@
         });
         const matches = [...fA,...fB,...fC,...fD].filter(f=>matched.has(f.properties.postnummer.trim()));
         if(!matches.length){
-          document.getElementById('search-summary').innerHTML='';
+          document.getElementById('search-summary').innerHTML = '';
           exportBtn.disabled = true;
           return alert(`Ingen treff for "${q}"`);
         }
-        // Bygg tabell
+
         let html = '<table><thead><tr><th>Filter</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
         Object.entries(csvMaps).forEach(([key,mapData])=>{
           const keys = Object.keys(mapData).filter(p=>matched.has(p));
@@ -244,13 +230,16 @@
         html += '</tbody></table>';
         document.getElementById('search-summary').innerHTML = html;
 
-        // Forbered eksportdata
+        // Rettet eksport: sjekk filter i prioritert rekkefølge
         lastMatches = matches.map(f=>{
           const p = f.properties.postnummer;
-          const filt = Object.entries({Aktuelle:nA,Abo:nB,Anbud:nC,Brukt:nD})
-                         .find(([k,arr])=>arr.includes(p))[0];
+          let filt = null;
+          if(nA.includes(p)) filt = 'Aktuelle';
+          else if(nB.includes(p)) filt = 'Abo';
+          else if(nC.includes(p)) filt = 'Anbud';
+          else if(nD.includes(p)) filt = 'Brukt';
           return {
-            filter: filterKeys[filt],
+            filter: filterKeys[filt] || '',
             postnummer: p,
             antall: f.properties.antall,
             avis: f.properties.avis
@@ -258,24 +247,22 @@
         });
         exportBtn.disabled = false;
 
-        // Vis på kartet
         const grp = L.geoJSON(matches,{
           coordsToLatLng:coords3035tilLatLng,
           style:()=>({color:'#555',fillOpacity:0.3,weight:2})
         }).addTo(map);
         grp.eachLayer(l=>{
-          const p=l.feature.properties;
+          const p = l.feature.properties;
           l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
           l.openPopup();
         });
         map.fitBounds(grp.getBounds().pad(0.05));
       }
 
-      searchBtn.addEventListener('click', searchMap);
-      document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter'&&searchMap());
+      searchBtn.addEventListener('click',searchMap);
+      document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
 
-      // Eksporter CSV
-      exportBtn.addEventListener('click', ()=>{
+      exportBtn.addEventListener('click',()=>{
         if(!lastMatches.length) return;
         const csv = Papa.unparse(lastMatches);
         const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
