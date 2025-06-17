@@ -152,7 +152,6 @@
     function group(rows, label = '') {
       const m = {};
       rows.forEach((r,i) => {
-        // Lag et kart med nøkkel: lowercase trimmed kolonnenavn, verdi: celleverdi
         const keyMap = {};
         Object.entries(r).forEach(([k,v])=>{
           keyMap[k.trim().toLowerCase()] = v;
@@ -172,9 +171,15 @@
           num = isNaN(n) ? 1 : n;
         }
         const avisRaw = keyMap['avis'] ?? '';
-        if(!m[p]) m[p] = {count:0, avis:new Set()};
+
+        if(!m[p]) m[p] = {count:0, avis:new Map()};
         m[p].count += num;
-        if(avisRaw) m[p].avis.add(avisRaw.toString().toLowerCase());
+
+        if(avisRaw){
+          const avisLower = avisRaw.toString().toLowerCase();
+          const prev = m[p].avis.get(avisLower) || 0;
+          m[p].avis.set(avisLower, prev + num);
+        }
       });
       return m;
     }
@@ -231,9 +236,11 @@
       function enrich(arr,mapData){
         arr.forEach(f=>{
           const p = f.properties.postnummer.trim().padStart(4,'0');
-          const info = mapData[p] || {count:0, avis:new Set()};
+          const info = mapData[p] || {count:0, avis:new Map()};
           f.properties.antall = info.count;
-          f.properties.avis = Array.from(info.avis).join(', ');
+          f.properties.avis = Array.from(info.avis.entries())
+                                  .map(([avis,ant]) => `${avis}: ${ant}`)
+                                  .join(', ');
         });
       }
       enrich(fA,dA); enrich(fB,dB); enrich(fC,dC); enrich(fD,dD);
@@ -257,7 +264,11 @@
       };
       Object.values(layers).forEach(layer => layer.eachLayer(l=>{
         const p = l.feature.properties;
-        l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+        l.bindPopup(`
+          <strong>Postnummer: ${p.postnummer}</strong><br>
+          Totalt antall: ${p.antall}<br>
+          Detaljer pr avis: ${p.avis || 'Ingen'}
+        `);
       }));
 
       function oppdaterLag(){
@@ -286,7 +297,7 @@
         const matchedPostnr = new Set();
         Object.entries(csvMaps).forEach(([k,mapData])=>{
           Object.entries(mapData).forEach(([p,info])=>{
-            if(p.toLowerCase()===q || Array.from(info.avis).some(a=>a.includes(q)))
+            if(p.toLowerCase()===q || Array.from(info.avis.keys()).some(a=>a.includes(q)))
               matchedPostnr.add(p);
           });
         });
@@ -297,7 +308,6 @@
           return alert(`Ingen treff for "${q}"`);
         }
 
-        // Summering basert på CSV-data for postnumre som matcher søket
         let html = '<table><thead><tr><th>Filter</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
         Object.entries(csvMaps).forEach(([key,mapData])=>{
           const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
@@ -332,7 +342,11 @@
         }).addTo(map);
         grp.eachLayer(l=>{
           const p = l.feature.properties;
-          l.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+          l.bindPopup(`
+            <strong>Postnummer: ${p.postnummer}</strong><br>
+            Totalt antall: ${p.antall}<br>
+            Detaljer pr avis: ${p.avis || 'Ingen'}
+          `);
           l.openPopup();
         });
         map.fitBounds(grp.getBounds().pad(0.05));
@@ -353,7 +367,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       });
-});
+      });
   </script>
 </body>
 </html>
