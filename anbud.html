@@ -222,15 +222,16 @@ const filterKeys = {
   }
 
   function oppdaterFilterTellinger(){
-    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
-      if(!mapData) return;
-      const postnummerer = Object.keys(mapData);
-      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length} postnumre`;
-      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum} antall`;
-    });
-  }
+  ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+    const mapData = [dC,dD,dInnenfor,dUtenfor][i];
+    if(!mapData) return;
+    const postnummerer = Object.keys(mapData);
+    const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+    document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
+    document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
+  });
+}
+
 
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),
