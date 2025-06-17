@@ -315,27 +315,34 @@
 
         const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
 
-        function avisMatcher(avisMap) {
-          if(erPostnummer) return false;
-          return avisSok.some(sokStr => Array.from(avisMap.keys()).some(a => a.includes(sokStr)));
-        }
+function avisMatcher(avisMap) {
+  if(erPostnummer) return false;
+  if(qRaw.length === 1) {
+    // Eksakt likt søk for 1 tegn
+    return avisSok.some(sokStr => Array.from(avisMap.keys()).some(a => a === sokStr));
+  } else {
+    // Delstreng-søk for 2+ tegn
+    return avisSok.some(sokStr => Array.from(avisMap.keys()).some(a => a.includes(sokStr)));
+  }
+}
 
-        Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
-          Object.entries(mapData).forEach(([pRaw,info])=>{
-            const p = pRaw.padStart(4,'0');
-            if(erPostnummer){
-              if(p === qPostnummer){
-                matchedPostnr.add(p);
-              } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
-                matchedPostnr.add(p);
-              }
-            } else {
-              if(avisMatcher(info.avis)){
-                matchedPostnr.add(p);
-              }
-            }
-          });
-        });
+Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
+  Object.entries(mapData).forEach(([pRaw,info])=>{
+    const p = pRaw.padStart(4,'0');
+    if(erPostnummer){
+      if(p === qPostnummer){
+        matchedPostnr.add(p);
+      } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+        matchedPostnr.add(p);
+      }
+    } else {
+      if(avisMatcher(info.avis)){
+        matchedPostnr.add(p);
+      }
+    }
+  });
+});
+
 
         const matches = [...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>
           matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
