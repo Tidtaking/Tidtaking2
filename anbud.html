@@ -302,42 +302,55 @@
       };
 
       function searchMap(){
-        const qRaw = document.getElementById('searchInput').value.trim().toLowerCase();
-        if(!qRaw) return;
-        Object.values(layers).forEach(l=>map.removeLayer(l));
-        const matchedPostnr = new Set();
+  const qRaw = document.getElementById('searchInput').value.trim().toLowerCase();
+  if(!qRaw) return;
+  Object.values(layers).forEach(l=>map.removeLayer(l));
+  const matchedPostnr = new Set();
 
-        if(/^\d{4}$/.test(qRaw)){
-          // Eksakt 4 sifre søk i postnummer eller avis
-          Object.entries(csvMaps).forEach(([k,mapData])=>{
-            Object.entries(mapData).forEach(([p,info])=>{
-              const postnummerMatch = p === qRaw;
-              const avisMatch = Array.from(info.avis.keys()).some(a => a.includes(qRaw));
-              if(postnummerMatch || avisMatch) matchedPostnr.add(p);
-            });
-          });
-        } else if(qRaw.length > 0 && qRaw.length < 4){
-          // Mindre enn 4 tegn - søk kun i avis
-          Object.entries(csvMaps).forEach(([k,mapData])=>{
-            Object.entries(mapData).forEach(([p,info])=>{
-              if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))) matchedPostnr.add(p);
-            });
-          });
-        } else {
-          // 5+ tegn - søk i avis (poststed ikke i data nå)
-          Object.entries(csvMaps).forEach(([k,mapData])=>{
-            Object.entries(mapData).forEach(([p,info])=>{
-              if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))) matchedPostnr.add(p);
-            });
-          });
+  // For kort søk (1-3 tegn) søk kun i avis:
+  if(qRaw.length > 0 && qRaw.length < 4){
+    Object.entries(csvMaps).forEach(([k,mapData])=>{
+      for(const [p,info] of Object.entries(mapData)){
+        // Hvis avis inneholder søket
+        if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+          matchedPostnr.add(p);
         }
+      }
+    });
+  }
+  // Eksakt 4 siffer, søk postnummer eller avis
+  else if(/^\d{4}$/.test(qRaw)){
+    Object.entries(csvMaps).forEach(([k,mapData])=>{
+      for(const [p,info] of Object.entries(mapData)){
+        if(p === qRaw || Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+          matchedPostnr.add(p);
+        }
+      }
+    });
+  }
+  // Lengre søk: søk i avis (poststed mangler i data)
+  else {
+    Object.entries(csvMaps).forEach(([k,mapData])=>{
+      for(const [p,info] of Object.entries(mapData)){
+        if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+          matchedPostnr.add(p);
+        }
+      }
+    });
+  }
 
-        const matches = [...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0')));
-        if(!matches.length){
-          document.getElementById('search-summary').innerHTML = '';
-          exportBtn.disabled = true;
-          return alert(`Ingen treff for "${qRaw}"`);
-        }
+  const matches = [...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0')));
+  if(!matches.length){
+    document.getElementById('search-summary').innerHTML = '';
+    exportBtn.disabled = true;
+    return alert(`Ingen treff for "${qRaw}"`);
+  }
+
+  // Resten av funksjonen som før: lage tabell, vise resultat, etc...
+  // (Ingen endring her)
+  // ...
+}
+
 
         let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
         Object.entries(csvMaps).forEach(([key,mapData])=>{
