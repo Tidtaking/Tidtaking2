@@ -6,6 +6,7 @@
 <title>Anbud – Postnummerkart</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+  /* Samme CSS som tidligere */
   html, body { height: 100%; margin: 0; padding: 0; }
   #map { width: 100%; height: 100vh; }
   #controls {
@@ -13,7 +14,7 @@
     background: white; padding: 10px; border-radius: 4px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     font-family: sans-serif; font-size: 14px; line-height: 1.4;
-    width: 420px;
+    width: 440px;
   }
   #controls label {
     display: flex; align-items: center; margin-bottom: 10px;
@@ -33,7 +34,7 @@
   #controls .counts .count + .count {
     margin-top: 4px;
   }
-  #controls input[type='text'] {
+  #controls input[type='text'], #controls input[type='password'] {
     flex: 1; margin-right: 6px; padding: 4px;
   }
   #controls button {
@@ -108,6 +109,11 @@
     <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
     <button id="searchBtn">Søk</button>
     <button id="exportBtn" disabled>Eksporter CSV</button>
+  </div>
+  <div style="margin-top:8px; display:flex; align-items:center;">
+    <input type="password" id="passwordInput" placeholder="Skriv inn passord for navnesøk" />
+    <button id="loginBtn">Aktiver navnesøk</button>
+    <span id="loginStatus" style="margin-left:10px; font-weight:bold;"></span>
   </div>
   <div id="search-summary"></div>
 </div>
@@ -195,6 +201,21 @@
     return m;
   }
 
+  let kanSokeNavn = false;
+  const riktigPassord = "hemmelig123"; // Endre passord her
+
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    const pw = document.getElementById('passwordInput').value;
+    if(pw === riktigPassord){
+      kanSokeNavn = true;
+      document.getElementById('loginStatus').innerText = "Navnesøk aktivert";
+      document.getElementById('passwordInput').value = '';
+    } else {
+      kanSokeNavn = false;
+      document.getElementById('loginStatus').innerText = "Feil passord";
+    }
+  });
+
   let lastMatches = [];
   const filterKeys = {
     Anbud:'anbudet',
@@ -244,21 +265,12 @@
         const p = f.properties.postnummer.trim().padStart(4,'0');
         const info = mapData[p] || {count:0, avis:new Map()};
         f.properties.antall = info.count;
-        // Oversett avisid til navn i popup-tekst
         f.properties.avis = Array.from(info.avis.entries())
                                 .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
                                 .join(', ');
       });
     }
     enrich(fC,dC); enrich(fD,dD); enrich(fInnenfor,dInnenfor); enrich(fUtenfor,dUtenfor);
-
-    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
-      const postnummerer = Object.keys(mapData);
-      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length} postnumre`;
-      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum} antall`;
-    });
 
     const layers = {
       Anbud:    L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})}),
@@ -310,6 +322,13 @@
 
       function avisMatcher(avisMap) {
         if(erPostnummer) return false;
+        if(!kanSokeNavn) {
+          // Kun søk på ID når ikke innlogget
+          return avisSok.some(sokStr => {
+            return Array.from(avisMap.keys()).some(avisId => avisId === sokStr);
+          });
+        }
+        // Søker også på navn når innlogget
         return avisSok.some(sokStr => {
           return Array.from(avisMap.keys()).some(avisId => {
             const navn = avisNavnMap[avisId] ? avisNavnMap[avisId].toLowerCase() : avisId.toLowerCase();
@@ -347,7 +366,6 @@
         return;
       }
 
-      // Oppsummering med navn i tabell
       let totalSum = 0;
       let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
       Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
@@ -433,7 +451,7 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
-        });
-  </script>
+    });
+</script>
 </body>
 </html>
