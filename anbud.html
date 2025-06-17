@@ -307,16 +307,22 @@
   Object.values(layers).forEach(l=>map.removeLayer(l));
   const matchedPostnr = new Set();
 
+  // Sjekk om søket er eksakt postnummer (4 siffer)
   const erPostnummer = /^\d{4}$/.test(qRaw);
 
+  // Splitt søket på komma for å støtte flere aviser, trim og filtrer bort tomme
+  const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+  // Funksjon for å sjekke om avisnavn matcher noen av søk-avisene
   function avisMatcher(avisMap) {
-    return Array.from(avisMap.keys()).some(a => a.includes(qRaw));
+    if(erPostnummer) return false; // ved postnummer-søk sjekkes ikke avis her
+    return avisSok.some(sokStr => Array.from(avisMap.keys()).some(a => a.includes(sokStr)));
   }
 
   Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
     Object.entries(mapData).forEach(([p,info])=>{
       if(erPostnummer){
-        if(p === qRaw || avisMatcher(info.avis)){
+        if(p === qRaw || Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
           matchedPostnr.add(p);
         }
       } else {
@@ -350,7 +356,8 @@
         const avisMap = mapData[p]?.avis;
         if(avisMap){
           for(const [avisName, count] of avisMap.entries()){
-            if(avisName.includes(qRaw)){
+            // summer kun for aviser som matcher noen i søkelisten
+            if(avisSok.some(sokStr => avisName.includes(sokStr))){
               sumCount += count;
             }
           }
@@ -408,8 +415,6 @@
   });
   map.fitBounds(grp.getBounds().pad(0.05));
 }
-
-
 
 
       searchBtn.addEventListener('click',searchMap);
