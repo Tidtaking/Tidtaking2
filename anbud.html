@@ -15,7 +15,6 @@
       font-family:sans-serif; font-size:14px; line-height:1.4;
       width:360px;
     }
-    /* Striped bakgrunn for filterrader */
     #controls label {
       display:flex; align-items:center; margin-bottom:10px;
       padding:4px; border-radius:4px;
@@ -29,7 +28,6 @@
     #controls input[type='text'] { flex:1; margin-right:6px; padding:4px; }
     #controls button { padding:4px 8px; margin-left:4px; }
     #search-summary { margin-top:12px; }
-    /* Tabell-styling for søkeresultater */
     #search-summary table { width:100%; border-collapse:collapse; font-size:13px; margin-top:4px; }
     #search-summary th, #search-summary td { border:1px solid #ddd; padding:6px; text-align:left; }
     #search-summary th { background-color:#f4f4f4; font-weight:600; }
@@ -38,9 +36,7 @@
 </head>
 <body>
   <div id="controls">
-    <!-- Filtervisning -->
-    <label>
-      <input type="checkbox" id="toggleAktuelle" checked />
+    <label><input type="checkbox" id="toggleAktuelle" checked />
       <div class="label-content">
         <span class="label-text">Abo utenfor anbud</span>
         <div class="counts">
@@ -49,8 +45,7 @@
         </div>
       </div>
     </label>
-    <label>
-      <input type="checkbox" id="toggleAbo" checked />
+    <label><input type="checkbox" id="toggleAbo" checked />
       <div class="label-content">
         <span class="label-text">abo_treff_anbud</span>
         <div class="counts">
@@ -59,8 +54,7 @@
         </div>
       </div>
     </label>
-    <label>
-      <input type="checkbox" id="toggleAnbud" checked />
+    <label><input type="checkbox" id="toggleAnbud" checked />
       <div class="label-content">
         <span class="label-text">anbudet</span>
         <div class="counts">
@@ -69,8 +63,7 @@
         </div>
       </div>
     </label>
-    <label>
-      <input type="checkbox" id="toggleBrukt" checked />
+    <label><input type="checkbox" id="toggleBrukt" checked />
       <div class="label-content">
         <span class="label-text">abo_bruktidag_anbud</span>
         <div class="counts">
@@ -79,8 +72,7 @@
         </div>
       </div>
     </label>
-    <label>
-      <input type="checkbox" id="toggleInnenfor" checked />
+    <label><input type="checkbox" id="toggleInnenfor" checked />
       <div class="label-content">
         <span class="label-text">Innenfor anbud</span>
         <div class="counts">
@@ -89,8 +81,7 @@
         </div>
       </div>
     </label>
-    <label>
-      <input type="checkbox" id="toggleUtenfor" checked />
+    <label><input type="checkbox" id="toggleUtenfor" checked />
       <div class="label-content">
         <span class="label-text">Utenfor anbud</span>
         <div class="counts">
@@ -99,7 +90,6 @@
         </div>
       </div>
     </label>
-    <!-- Søk og eksport -->
     <div style="margin-top:8px; display:flex; align-items:center;">
       <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
       <button id="searchBtn">Søk</button>
@@ -140,17 +130,14 @@
     function group(rows){
       const m = {};
       rows.forEach((r,i) => {
-        // Flere mulige kolonnenavn for postnummer
         const pRaw = r.postnummer ?? r.Postnummer ?? r.postNr ?? r.PostNr ?? r.postnr ?? '';
         const p = pRaw.toString().trim().padStart(4,'0');
         if(!p) {
           console.warn(`Rad ${i} mangler gyldig postnummer:`, r);
           return;
         }
-        // Flere mulige kolonnenavn for antall
         const antallRaw = r.antall ?? r.Antall ?? r.Frekvens ?? r.frekvens ?? '0';
         const num = Number(antallRaw) || 0;
-        // Flere mulige kolonnenavn for avis
         const avisRaw = r.avis ?? r.Avis ?? '';
         if(!m[p]) m[p] = {count:0, avis:new Set()};
         m[p].count += num;
@@ -183,15 +170,22 @@
     ]).then(([aRows,bRows,cRows,dRows,eRows,fRows,g1,g2,g3,geoAnb])=>{
       const dA = group(aRows), dB = group(bRows), dC = group(cRows), dD = group(dRows);
       const dInnenfor = group(eRows), dUtenfor = group(fRows);
-      // Sørg for at alle nøklene er padet likt
+
       const nA = Object.keys(dA).map(p => p.padStart(4,'0'));
       const nB = Object.keys(dB).map(p => p.padStart(4,'0'));
       const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
       const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
       const nInnenfor = Object.keys(dInnenfor).map(p => p.padStart(4,'0'));
       const nUtenfor = Object.keys(dUtenfor).map(p => p.padStart(4,'0'));
+
       const base = [...g1.features,...g2.features,...g3.features];
       const geoBase = {type:'FeatureCollection',features:base};
+
+      console.log('Innenfor postnummer i CSV:', nInnenfor.slice(0,10));
+      console.log('Innenfor postnummer i geoAnb:', geoAnb.features.slice(0,10).map(f => f.properties.postnummer));
+      console.log('Utenfor postnummer i CSV:', nUtenfor.slice(0,10));
+      console.log('Utenfor postnummer i geoBase:', geoBase.features.slice(0,10).map(f => f.properties.postnummer));
+
       const fA = Array.from(new Set([
         ...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim().padStart(4,'0'))),
         ...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim().padStart(4,'0')))
@@ -201,6 +195,9 @@
       const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
       const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
       const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+
+      console.log('Innenfor filtrerte features:', fInnenfor.length);
+      console.log('Utenfor filtrerte features:', fUtenfor.length);
 
       function enrich(arr,mapData){
         arr.forEach(f=>{
@@ -326,7 +323,6 @@
         URL.revokeObjectURL(url);
       });
 
-    });
   </script>
 </body>
 </html>
