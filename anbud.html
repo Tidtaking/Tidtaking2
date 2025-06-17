@@ -148,8 +148,12 @@
           return;
         }
         
-        const antallRaw = antallKey ? r[antallKey] : '0';
-        const num = Number(antallRaw) || 0;
+        let num = 1; // default antall pr postnummer hvis ikke definert
+        if (antallKey) {
+          const antallRaw = r[antallKey];
+          num = Number(antallRaw);
+          if (isNaN(num)) num = 1;
+        }
         
         const avisRaw = avisKey ? r[avisKey] : '';
         
@@ -332,7 +336,8 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       });
- });
+      });
+
   </script>
 </body>
 </html>
