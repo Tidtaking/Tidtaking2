@@ -164,34 +164,6 @@
       return {};
     }
   }
-  function oppdaterFilterTellinger(){
-  ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-    const mapData = [dC,dD,dInnenfor,dUtenfor][i];
-    const postnummerer = Object.keys(mapData);
-    const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-    document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length} postnumre`;
-    document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum} antall`;
-  });
-}
-
-// Kall oppdatering direkte etter at data er lastet og gruppert:
-oppdaterFilterTellinger();
-
-// Kall også oppdatering når passord godkjennes:
-document.getElementById('loginBtn').addEventListener('click', () => {
-  const pw = document.getElementById('passwordInput').value;
-  if(pw === riktigPassord){
-    kanSokeNavn = true;
-    document.getElementById('loginStatus').innerText = "Navnesøk aktivert";
-    document.getElementById('passwordInput').value = '';
-    enrichAll();
-    oppdaterFilterTellinger(); // <-- viktig her
-  } else {
-    kanSokeNavn = false;
-    document.getElementById('loginStatus').innerText = "Feil passord";
-  }
-});
-
 
   function group(rows, label = '') {
     const m = {};
@@ -237,8 +209,8 @@ document.getElementById('loginBtn').addEventListener('click', () => {
       kanSokeNavn = true;
       document.getElementById('loginStatus').innerText = "Navnesøk aktivert";
       document.getElementById('passwordInput').value = '';
-      // Oppdater polygonene til å vise navn
       enrichAll();
+      oppdaterFilterTellinger();
     } else {
       kanSokeNavn = false;
       document.getElementById('loginStatus').innerText = "Feil passord";
@@ -298,6 +270,17 @@ document.getElementById('loginBtn').addEventListener('click', () => {
     }));
   }
 
+  function oppdaterFilterTellinger(){
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
+      if(!mapData) return;
+      const postnummerer = Object.keys(mapData);
+      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length} postnumre`;
+      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum} antall`;
+    });
+  }
+
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),
     lesCSVRows('abo_bruktidag_anbud.csv'),
@@ -329,6 +312,7 @@ document.getElementById('loginBtn').addEventListener('click', () => {
     fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
 
     enrichAll();
+    oppdaterFilterTellinger();
 
     layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
     layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
@@ -356,6 +340,8 @@ document.getElementById('loginBtn').addEventListener('click', () => {
     );
     oppdaterLag();
 
+    const searchBtn = document.getElementById('searchBtn');
+    const exportBtn = document.getElementById('exportBtn');
     const csvMaps = { Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor };
 
     function searchMap(){
