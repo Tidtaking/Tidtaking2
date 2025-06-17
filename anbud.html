@@ -6,19 +6,19 @@
   <title>Anbud – Postnummerkart</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    html, body { height:100%; margin:0; padding:0 }
-    #map { width:100%; height:100vh }
+    html, body { height:100%; margin:0; padding:0; }
+    #map { width:100%; height:100vh; }
     #controls {
       position:absolute; top:10px; right:10px; z-index:1000;
       background:white; padding:10px; border-radius:4px;
       box-shadow:0 2px 6px rgba(0,0,0,0.3);
       font-family:sans-serif; font-size:14px; line-height:1.4;
     }
-    #controls label { display:flex; align-items:center; margin-bottom:6px }
-    #controls .label-text { margin-left:6px }
-    #controls span.count { margin-left:auto; font-weight:bold; color:#0077cc }
-    #controls input[type=text] { flex:1; margin-right:6px; padding:4px }
-    #controls button { padding:4px 8px }
+    #controls label { display:flex; align-items:center; margin-bottom:6px; }
+    #controls .label-text { margin-left:6px; }
+    #controls span.count { margin-left:auto; font-weight:bold; color:#0077cc; }
+    #controls input[type=text] { flex:1; margin-right:6px; padding:4px; }
+    #controls button { padding:4px 8px; }
   </style>
 </head>
 <body>
@@ -55,7 +55,7 @@
       <span id="sumCountBrukt" class="count">0</span>
       <span class="label-text">antall (gult)</span>
     </label>
-    <div style="margin-top:8px; display:flex">
+    <div style="margin-top:8px; display:flex;">
       <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
       <button id="searchBtn">Søk</button>
     </div>
@@ -80,35 +80,35 @@
       return L.latLng(lat, lon);
     }
 
-    // Fetch and parse CSV
-    async function lesCSVRows(sti) {
+    // Parse CSV rows
+    async function lesCSVRows(url) {
       try {
-        const res = await fetch(sti);
-        if (!res.ok) throw new Error(`${sti}: HTTP ${res.status}`);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
         const text = await res.text();
         const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter: ';' });
         return parsed.data;
       } catch (e) {
-        console.warn('Kunne ikke lese', sti, e);
+        console.warn('Kunne ikke lese', url, e);
         return [];
       }
     }
 
-    // Group rows by postnummer
+    // Group by postnummer
     function group(rows) {
-      const m = {};
+      const map = {};
       rows.forEach(r => {
         const p = r.postnummer?.trim().padStart(4, '0');
         if (!p) return;
         const num = r.antall ? Number(r.antall) : 0;
-        if (!m[p]) m[p] = { count: 0, avis: new Set() };
-        m[p].count += num;
-        if (r.avis) m[p].avis.add(r.avis);
+        if (!map[p]) map[p] = { count: 0, avis: new Set() };
+        map[p].count += num;
+        if (r.avis) map[p].avis.add(r.avis);
       });
-      return m;
+      return map;
     }
 
-    // Load all data
+    // Load data\    
     Promise.all([
       lesCSVRows('aktuelle_postnummer.csv'),
       lesCSVRows('abo_treff_anbud.csv'),
@@ -119,15 +119,15 @@
       fetch('postnummer_part03.geojson').then(r => r.json()),
       fetch('filtrert_anbud.geojson').then(r => r.json())
     ]).then(([aktRows, aboRows, anbRows, bruktRows, g1, g2, g3, geoAnb]) => {
-      // Group CSV data
+      // Process CSV data
       const dAkt = group(aktRows), dAbo = group(aboRows), dAnb = group(anbRows), dBrukt = group(bruktRows);
       const normAkt = Object.keys(dAkt), normAbo = Object.keys(dAbo), normAnb = Object.keys(dAnb), normBrukt = Object.keys(dBrukt);
 
-      // Combine base geojson
+      // Combine base geo
       const baseFeatures = [...g1.features, ...g2.features, ...g3.features];
       const geoBase = { type: 'FeatureCollection', features: baseFeatures };
 
-      // Filter features per layer
+      // Filter features
       const fAktuelle = Array.from(new Set([
         ...geoBase.features.filter(f => normAkt.includes(f.properties.postnummer.trim())),
         ...geoAnb.features.filter(f => normAkt.includes(f.properties.postnummer.trim()))
@@ -136,7 +136,7 @@
       const fAnbArr = geoAnb.features.filter(f => normAnb.includes(f.properties.postnummer.trim()));
       const fBruktArr = geoAnb.features.filter(f => normBrukt.includes(f.properties.postnummer.trim()));
 
-      // Enrich features with count and avis
+      // Enrich features
       function enrich(features, dataMap) {
         features.forEach(f => {
           const p = f.properties.postnummer.trim();
@@ -150,7 +150,7 @@
       enrich(fAnbArr, dAnb);
       enrich(fBruktArr, dBrukt);
 
-      // Update counters
+      // Update counts
       function updateCount(id, arr) {
         document.getElementById('postCount' + id).innerText = arr.length;
         const sum = arr.reduce((s, f) => s + f.properties.antall, 0);
@@ -176,7 +176,7 @@
         })
       );
 
-      // Toggle & zoom
+      // Initial add layers
       function oppdater() {
         Object.entries(layers).forEach(([key, layer]) => {
           document.getElementById('toggle' + key).checked ? map.addLayer(layer) : map.removeLayer(layer);
@@ -184,16 +184,19 @@
         const visible = Object.values(layers).flatMap(layer => map.hasLayer(layer) ? layer.getLayers() : []);
         if (visible.length) map.fitBounds(L.featureGroup(visible).getBounds().pad(0.05));
       }
-      ['Aktuelle', 'Abo', 'Anbud', 'Brukt'].forEach(key =>
-        document.getElementById('toggle' + key).addEventListener('change', oppdater)
+      ['Aktuelle', 'Abo', 'Anbud', 'Brukt'].forEach(k =>
+        document.getElementById('toggle' + k).addEventListener('change', oppdater)
       );
       oppdater();
 
-      // Search function
+      // Search function - show only matches
       const allFeatures = [...fAktuelle, ...fAboArr, ...fAnbArr, ...fBruktArr];
       function searchMap() {
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if (!q) return;
+        // remove all layers
+        Object.values(layers).forEach(layer => map.removeLayer(layer));
+        // filter matches
         const matches = allFeatures.filter(f => {
           const p = f.properties.postnummer.toLowerCase();
           const sted = (f.properties.poststed || '').toLowerCase();
@@ -201,7 +204,9 @@
           return p === q || sted.includes(q) || avis.includes(q);
         });
         if (!matches.length) return alert(`Ingen treff for "${q}"`);
-        const grp = L.geoJSON({ type: 'FeatureCollection', features: matches }, { coordsToLatLng: coords3035tilLatLng });
+        // display matches
+        const grp = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng });
+        grp.addTo(map);
         map.fitBounds(grp.getBounds().pad(0.05));
         grp.eachLayer(l => l.openPopup());
       }
