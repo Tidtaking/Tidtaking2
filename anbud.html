@@ -28,25 +28,25 @@
       <input type="checkbox" id="toggleAktuelle" checked />
       <span class="label-text">Abo utenfor anbud</span>
       <span id="countAktuelle" class="count">0</span>
-      <span class="label-text">postnumre, antall (blått)</span>
+      <span class="label-text">antall (blått)</span>
     </label>
     <label>
       <input type="checkbox" id="toggleAbo" checked />
       <span class="label-text">abo_treff_anbud</span>
       <span id="countAbo" class="count">0</span>
-      <span class="label-text">postnumre, antall (grønt)</span>
+      <span class="label-text">antall (grønt)</span>
     </label>
     <label>
       <input type="checkbox" id="toggleAnbud" checked />
       <span class="label-text">anbudet</span>
       <span id="countAnbud" class="count">0</span>
-      <span class="label-text">postnumre, antall (rødt)</span>
+      <span class="label-text">antall (rødt)</span>
     </label>
     <label>
       <input type="checkbox" id="toggleBrukt" checked />
       <span class="label-text">abo_bruktidag_anbud</span>
       <span id="countBrukt" class="count">0</span>
-      <span class="label-text">postnumre, antall (gult)</span>
+      <span class="label-text">antall (gult)</span>
     </label>
     <div style="margin-top:8px; display:flex">
       <input type="text" id="searchInput" placeholder="Søk poststed eller nr" />
@@ -126,10 +126,10 @@
       }
       enrich(fAktuelle,dAkt); enrich(fAboArr,dAbo); enrich(fAnbArr,dAnb); enrich(fBruktArr,dBrukt);
 
-      // Oppdater tellere (postnumre og sum antall)
+      // Oppdater tellere
       function updateCount(id,arr){
-        const sum=arr.reduce((s,f)=>s+f.properties.antall,0);
-        document.getElementById('count'+id).innerText=`${arr.length}, ${sum}`;
+        const sum = arr.reduce((s,f) => s + f.properties.antall, 0);
+        document.getElementById('count'+id).innerText = `${sum}`;
       }
       updateCount('Aktuelle',fAktuelle);
       updateCount('Abo',fAboArr);
