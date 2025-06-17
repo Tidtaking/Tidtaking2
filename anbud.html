@@ -115,23 +115,22 @@
       return L.latLng(lat,lon);
     }
 
-async function lesCSVRows(url){
-  try {
-    const res = await fetch(url);
-    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-    const text = await res.text();
-    // Ikke spesifiser delimiter, la PapaParse autodetektere
-    return Papa.parse(text, {header:true, skipEmptyLines:true}).data;
-  } catch(e) {
-    console.warn('Kunne ikke lese',url,e);
-    return [];
-  }
-}
-
+    async function lesCSVRows(url){
+      try {
+        const res = await fetch(url);
+        if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+        const text = await res.text();
+        return Papa.parse(text,{header:true,skipEmptyLines:true}).data;
+      } catch(e) {
+        console.warn('Kunne ikke lese',url,e);
+        return [];
+      }
+    }
 
     function group(rows, label = '') {
       const m = {};
       rows.forEach((r,i) => {
+        // Debug utskrift kan fjernes etter behov
         console.log(`[${label}] Rad ${i}:`, r);
         const keys = Object.keys(r);
         const postKey = keys.find(k => /post/i.test(k));
@@ -226,14 +225,14 @@ async function lesCSVRows(url){
       enrich(fA,dA); enrich(fB,dB); enrich(fC,dC); enrich(fD,dD);
       enrich(fInnenfor,dInnenfor); enrich(fUtenfor,dUtenfor);
 
-     ['Aktuelle','Abo','Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-  const mapData = [dA,dB,dC,dD,dInnenfor,dUtenfor][i];
-  const postnummerer = Object.keys(mapData);
-  const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-  document.getElementById('postCount'+k).innerText = `${postnummerer.length} postnumre`;
-  document.getElementById('sumCount'+k).innerText = `${antallSum} antall`;
-});
-
+      // Oppdater filtertelling basert på CSV-data (unik postnummer + sum antall)
+      ['Aktuelle','Abo','Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+        const mapData = [dA,dB,dC,dD,dInnenfor,dUtenfor][i];
+        const postnummerer = Object.keys(mapData);
+        const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+        document.getElementById('postCount'+k).innerText = `${postnummerer.length} postnumre`;
+        document.getElementById('sumCount'+k).innerText = `${antallSum} antall`;
+      });
 
       const layers = {
         Aktuelle: L.geoJSON(fA,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:'#3388ff',fillOpacity:0.5,weight:1})}),
@@ -271,25 +270,26 @@ async function lesCSVRows(url){
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if(!q) return;
         Object.values(layers).forEach(l=>map.removeLayer(l));
-        const matched = new Set();
+        const matchedPostnr = new Set();
         Object.entries(csvMaps).forEach(([k,mapData])=>{
           Object.entries(mapData).forEach(([p,info])=>{
             if(p.toLowerCase()===q || Array.from(info.avis).some(a=>a.includes(q)))
-              matched.add(p);
+              matchedPostnr.add(p);
           });
         });
-        const matches = [...fA,...fB,...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>matched.has(f.properties.postnummer.trim().padStart(4,'0')));
+        const matches = [...fA,...fB,...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0')));
         if(!matches.length){
           document.getElementById('search-summary').innerHTML = '';
           exportBtn.disabled = true;
           return alert(`Ingen treff for "${q}"`);
         }
 
+        // Summering basert på CSV-data for postnumre som matcher søket
         let html = '<table><thead><tr><th>Filter</th><th>Postnumre</th><th>Totalt antall</th></tr></thead><tbody>';
         Object.entries(csvMaps).forEach(([key,mapData])=>{
-          const keys = Object.keys(mapData).filter(p=>matched.has(p));
+          const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
           const postCount = keys.length;
-          const sumCount = keys.reduce((s,p)=>s+mapData[p].count,0);
+          const sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
           html += `<tr><td>${filterKeys[key]}</td><td>${postCount}</td><td>${sumCount}</td></tr>`;
         });
         html += '</tbody></table>';
@@ -340,8 +340,7 @@ async function lesCSVRows(url){
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       });
-      });
-
+});
   </script>
 </body>
 </html>
