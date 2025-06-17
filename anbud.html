@@ -1,455 +1,439 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Anbud – Postnummerkart</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    html, body { height: 100%; margin: 0; padding: 0; }
-    #map { width: 100%; height: 100vh; }
-    #controls {
-      position: absolute; top: 10px; right: 10px; z-index: 1000;
-      background: white; padding: 10px; border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      font-family: sans-serif; font-size: 14px; line-height: 1.4;
-      width: 400px;
-    }
-    #controls label {
-      display: flex; align-items: center; margin-bottom: 10px;
-      padding: 4px; border-radius: 4px;
-    }
-    #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
-    #controls .label-content {
-      display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px;
-    }
-    #controls .label-text { font-weight: 500; flex: 1; }
-    #controls .counts {
-      display: flex; flex-direction: column; align-items: flex-end; min-width: 90px;
-    }
-    #controls .counts .count {
-      font-weight: bold; color: #0077cc;
-    }
-    #controls .counts .count + .count {
-      margin-top: 4px;
-    }
-    #controls input[type='text'] {
-      flex: 1; margin-right: 6px; padding: 4px;
-    }
-    #controls button {
-      padding: 4px 8px; margin-left: 4px;
-    }
-    #search-summary {
-      margin-top: 12px;
-    }
-    #search-summary table {
-      width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px;
-    }
-    #search-summary th, #search-summary td {
-      border: 1px solid #ddd; padding: 6px; text-align: left;
-      vertical-align: middle;
-    }
-    #search-summary th {
-      background-color: #f4f4f4; font-weight: 600;
-    }
-    #search-summary tr:nth-child(odd) td {
-      background-color: rgba(0,0,0,0.02);
-    }
-    .color-box {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 1px solid #999;
-      border-radius: 3px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Anbud – Postnummerkart</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body { height: 100%; margin: 0; padding: 0; }
+  #map { width: 100%; height: 100vh; }
+  #controls {
+    position: absolute; top: 10px; right: 10px; z-index: 1000;
+    background: white; padding: 10px; border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-family: sans-serif; font-size: 14px; line-height: 1.4;
+    width: 420px;
+  }
+  #controls label {
+    display: flex; align-items: center; margin-bottom: 10px;
+    padding: 4px; border-radius: 4px;
+  }
+  #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
+  #controls .label-content {
+    display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px;
+  }
+  #controls .label-text { font-weight: 500; flex: 1; }
+  #controls .counts {
+    display: flex; flex-direction: column; align-items: flex-end; min-width: 90px;
+  }
+  #controls .counts .count {
+    font-weight: bold; color: #0077cc;
+  }
+  #controls .counts .count + .count {
+    margin-top: 4px;
+  }
+  #controls input[type='text'] {
+    flex: 1; margin-right: 6px; padding: 4px;
+  }
+  #controls button {
+    padding: 4px 8px; margin-left: 4px;
+  }
+  #search-summary {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  #search-summary table {
+    width: 100%; border-collapse: collapse; margin-top: 4px;
+  }
+  #search-summary th, #search-summary td {
+    border: 1px solid #ddd; padding: 6px; text-align: left;
+    vertical-align: middle;
+  }
+  #search-summary th {
+    background-color: #f4f4f4; font-weight: 600;
+  }
+  #search-summary tr:nth-child(odd) td {
+    background-color: rgba(0,0,0,0.02);
+  }
+  .color-box {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #999;
+    border-radius: 3px;
+  }
+</style>
 </head>
 <body>
-  <div id="controls">
-    <!-- Skjult 'Aktuelle' filter -->
-    <label style="display:none;"><input type="checkbox" id="toggleAktuelle" checked />
-      <div class="label-content">
-        <span class="label-text">Abo utenfor anbud</span>
-        <div class="counts">
-          <span id="postCountAktuelle" class="count">0 postnumre</span>
-          <span id="sumCountAktuelle" class="count">0 antall</span>
-        </div>
+<div id="controls">
+  <label><input type="checkbox" id="toggleAnbud" checked />
+    <div class="label-content">
+      <span class="label-text">anbudet</span>
+      <div class="counts">
+        <span id="postCountAnbud" class="count">0 postnumre</span>
+        <span id="sumCountAnbud" class="count">0 antall</span>
       </div>
-    </label>
-
-    <!-- Skjult 'Abo' filter -->
-    <label style="display:none;"><input type="checkbox" id="toggleAbo" checked />
-      <div class="label-content">
-        <span class="label-text">abo_treff_anbud</span>
-        <div class="counts">
-          <span id="postCountAbo" class="count">0 postnumre</span>
-          <span id="sumCountAbo" class="count">0 antall</span>
-        </div>
-      </div>
-    </label>
-
-    <!-- Resten av filtrene vises -->
-    <label><input type="checkbox" id="toggleAnbud" checked />
-      <div class="label-content">
-        <span class="label-text">anbudet</span>
-        <div class="counts">
-          <span id="postCountAnbud" class="count">0 postnumre</span>
-          <span id="sumCountAnbud" class="count">0 antall</span>
-        </div>
-      </div>
-    </label>
-    <label><input type="checkbox" id="toggleBrukt" checked />
-      <div class="label-content">
-        <span class="label-text">abo_bruktidag_anbud</span>
-        <div class="counts">
-          <span id="postCountBrukt" class="count">0 postnumre</span>
-          <span id="sumCountBrukt" class="count">0 antall</span>
-        </div>
-      </div>
-    </label>
-    <label><input type="checkbox" id="toggleInnenfor" checked />
-      <div class="label-content">
-        <span class="label-text">Innenfor anbud</span>
-        <div class="counts">
-          <span id="postCountInnenfor" class="count">0 postnumre</span>
-          <span id="sumCountInnenfor" class="count">0 antall</span>
-        </div>
-      </div>
-    </label>
-    <label><input type="checkbox" id="toggleUtenfor" checked />
-      <div class="label-content">
-        <span class="label-text">Utenfor anbud</span>
-        <div class="counts">
-          <span id="postCountUtenfor" class="count">0 postnumre</span>
-          <span id="sumCountUtenfor" class="count">0 antall</span>
-        </div>
-      </div>
-    </label>
-
-    <div style="margin-top:8px; display:flex; align-items:center;">
-      <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
-      <button id="searchBtn">Søk</button>
-      <button id="exportBtn" disabled>Eksporter CSV</button>
     </div>
-    <div id="search-summary"></div>
+  </label>
+  <label><input type="checkbox" id="toggleBrukt" checked />
+    <div class="label-content">
+      <span class="label-text">abo_bruktidag_anbud</span>
+      <div class="counts">
+        <span id="postCountBrukt" class="count">0 postnumre</span>
+        <span id="sumCountBrukt" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+  <label><input type="checkbox" id="toggleInnenfor" checked />
+    <div class="label-content">
+      <span class="label-text">Innenfor anbud</span>
+      <div class="counts">
+        <span id="postCountInnenfor" class="count">0 postnumre</span>
+        <span id="sumCountInnenfor" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+  <label><input type="checkbox" id="toggleUtenfor" checked />
+    <div class="label-content">
+      <span class="label-text">Utenfor anbud</span>
+      <div class="counts">
+        <span id="postCountUtenfor" class="count">0 postnumre</span>
+        <span id="sumCountUtenfor" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+
+  <div style="margin-top:8px; display:flex; align-items:center;">
+    <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
+    <button id="searchBtn">Søk</button>
+    <button id="exportBtn" disabled>Eksporter CSV</button>
   </div>
-  <div id="map"></div>
+  <div id="search-summary"></div>
+</div>
+<div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script>
-    const map = L.map('map').setView([60,10],5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'© OpenStreetMap contributors', maxZoom:18
-    }).addTo(map);
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+  const map = L.map('map').setView([60,10],5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap contributors', maxZoom:18
+  }).addTo(map);
 
-    proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
-    function coords3035tilLatLng(c){
-      const [x,y] = c;
-      const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
-      return L.latLng(lat,lon);
+  proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
+  function coords3035tilLatLng(c){
+    const [x,y] = c;
+    const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
+    return L.latLng(lat,lon);
+  }
+
+  async function lesCSVRows(url){
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+      const text = await res.text();
+      return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
+    } catch(e) {
+      console.warn('Kunne ikke lese', url, e);
+      return [];
     }
+  }
 
-    async function lesCSVRows(url){
-      try {
-        const res = await fetch(url);
-        if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-        const text = await res.text();
-        return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
-      } catch(e) {
-        console.warn('Kunne ikke lese', url, e);
-        return [];
-      }
-    }
-
-    function group(rows, label = '') {
-      const m = {};
-      rows.forEach((r,i) => {
-        const keyMap = {};
-        Object.entries(r).forEach(([k,v])=>{
-          keyMap[k.trim().toLowerCase()] = v;
-        });
-        const pRaw = keyMap['postnummer'] ?? '';
-        const p = pRaw.toString().trim().padStart(4,'0');
-        if(!p) {
-          console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
-          return;
-        }
-        let num = 1;
-        if('antall' in keyMap){
-          const n = Number(keyMap['antall']);
-          num = isNaN(n) ? 1 : n;
-        } else if ('frekvens' in keyMap){
-          const n = Number(keyMap['frekvens']);
-          num = isNaN(n) ? 1 : n;
-        }
-        const avisRaw = keyMap['avis'] ?? '';
-
-        if(!m[p]) m[p] = {count:0, avis:new Map()};
-        m[p].count += num;
-
-        if(avisRaw){
-          const avisLower = avisRaw.toString().toLowerCase();
-          const prev = m[p].avis.get(avisLower) || 0;
-          m[p].avis.set(avisLower, prev + num);
+  async function lesAvisnavn(url) {
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+      const text = await res.text();
+      const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
+      const map = {};
+      data.forEach(r => {
+        if(r.ID && r.avis){
+          map[r.ID.trim()] = r.avis.trim();
         }
       });
-      return m;
+      return map;
+    } catch(e) {
+      console.warn('Kunne ikke lese avisnavn', e);
+      return {};
     }
+  }
 
-    let lastMatches = [];
-    const filterKeys = {
-      Anbud:'anbudet',
-      Brukt:'abo_bruktidag_anbud',
-      Innenfor:'Innenfor anbud',
-      Utenfor:'Utenfor anbud'
+  function group(rows, label = '') {
+    const m = {};
+    rows.forEach((r,i) => {
+      const keyMap = {};
+      Object.entries(r).forEach(([k,v])=>{
+        keyMap[k.trim().toLowerCase()] = v;
+      });
+      const pRaw = keyMap['postnummer'] ?? '';
+      const p = pRaw.toString().trim().padStart(4,'0');
+      if(!p) {
+        console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
+        return;
+      }
+      let num = 1;
+      if('antall' in keyMap){
+        const n = Number(keyMap['antall']);
+        num = isNaN(n) ? 1 : n;
+      } else if ('frekvens' in keyMap){
+        const n = Number(keyMap['frekvens']);
+        num = isNaN(n) ? 1 : n;
+      }
+      const avisRaw = keyMap['avis'] ?? '';
+
+      if(!m[p]) m[p] = {count:0, avis:new Map()};
+      m[p].count += num;
+
+      if(avisRaw){
+        const avisLower = avisRaw.toString().toLowerCase();
+        const prev = m[p].avis.get(avisLower) || 0;
+        m[p].avis.set(avisLower, prev + num);
+      }
+    });
+    return m;
+  }
+
+  let lastMatches = [];
+  const filterKeys = {
+    Anbud:'anbudet',
+    Brukt:'abo_bruktidag_anbud',
+    Innenfor:'Innenfor anbud',
+    Utenfor:'Utenfor anbud'
+  };
+
+  const filterColors = {
+    Anbud: '#ff3333',
+    Brukt: '#ffff00',
+    Innenfor: '#663399',
+    Utenfor: '#ff9900'
+  };
+
+  Promise.all([
+    lesCSVRows('anbud_postnummer.csv'),
+    lesCSVRows('abo_bruktidag_anbud.csv'),
+    lesCSVRows('innenforanbud.csv'),
+    lesCSVRows('utenforanbud.csv'),
+    lesAvisnavn('avisid.csv'),
+    fetch('postnummer_part01.geojson').then(r=>r.json()),
+    fetch('postnummer_part02.geojson').then(r=>r.json()),
+    fetch('postnummer_part03.geojson').then(r=>r.json()),
+    fetch('filtrert_anbud.geojson').then(r=>r.json())
+  ]).then(([cRows,dRows,eRows,fRows, avisNavnMap, g1,g2,g3,geoAnb])=>{
+    const dC = group(cRows, 'Anbud');
+    const dD = group(dRows, 'Brukt');
+    const dInnenfor = group(eRows, 'Innenfor');
+    const dUtenfor = group(fRows, 'Utenfor');
+
+    const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
+    const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
+    const nInnenfor = Object.keys(dInnenfor).map(p => p.padStart(4,'0'));
+    const nUtenfor = Object.keys(dUtenfor).map(p => p.padStart(4,'0'));
+
+    const base = [...g1.features,...g2.features,...g3.features];
+    const geoBase = {type:'FeatureCollection',features:base};
+
+    const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+
+    function enrich(arr,mapData){
+      arr.forEach(f=>{
+        const p = f.properties.postnummer.trim().padStart(4,'0');
+        const info = mapData[p] || {count:0, avis:new Map()};
+        f.properties.antall = info.count;
+        // Oversett avisid til navn i popup-tekst
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
+                                .join(', ');
+      });
+    }
+    enrich(fC,dC); enrich(fD,dD); enrich(fInnenfor,dInnenfor); enrich(fUtenfor,dUtenfor);
+
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
+      const postnummerer = Object.keys(mapData);
+      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length} postnumre`;
+      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum} antall`;
+    });
+
+    const layers = {
+      Anbud:    L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})}),
+      Brukt:    L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})}),
+      Innenfor: L.geoJSON(fInnenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Innenfor,fillOpacity:0.5,weight:1})}),
+      Utenfor:  L.geoJSON(fUtenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Utenfor,fillOpacity:0.5,weight:1})}),
     };
+    Object.values(layers).forEach(layer => layer.eachLayer(l=>{
+      const p = l.feature.properties;
+      l.bindPopup(`
+        <strong>Postnummer: ${p.postnummer}</strong><br>
+        Totalt antall: ${p.antall}<br>
+        Detaljer pr avis: ${p.avis || 'Ingen'}
+      `);
+    }));
 
-    const filterColors = {
-      Anbud: '#ff3333',
-      Brukt: '#ffff00',
-      Innenfor: '#663399',
-      Utenfor: '#ff9900'
-    };
+    function oppdaterLag(){
+      Object.entries(layers).forEach(([k,lyr])=>{
+        document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
+      });
+      const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
+      if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
+    }
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>
+      document.getElementById('toggle'+k).addEventListener('change',oppdaterLag)
+    );
+    oppdaterLag();
 
-    Promise.all([
-      lesCSVRows('aktuelle_postnummer.csv'),      // fortsatt lastes men ikke brukt i visning/søk
-      lesCSVRows('abo_treff_anbud.csv'),          // fortsatt lastes men ikke brukt i visning/søk
-      lesCSVRows('anbud_postnummer.csv'),
-      lesCSVRows('abo_bruktidag_anbud.csv'),
-      lesCSVRows('innenforanbud.csv'),
-      lesCSVRows('utenforanbud.csv'),
-      fetch('postnummer_part01.geojson').then(r=>r.json()),
-      fetch('postnummer_part02.geojson').then(r=>r.json()),
-      fetch('postnummer_part03.geojson').then(r=>r.json()),
-      fetch('filtrert_anbud.geojson').then(r=>r.json())
-    ]).then(([aRows,bRows,cRows,dRows,eRows,fRows,g1,g2,g3,geoAnb])=>{
-      // gruppering som før, men vi bruker bare nødvendige datasett her:
-      const dA = group(aRows, 'Aktuelle'); // lastes men brukes ikke
-      const dB = group(bRows, 'Abo');      // lastes men brukes ikke
-      const dC = group(cRows, 'Anbud');
-      const dD = group(dRows, 'Brukt');
-      const dInnenfor = group(eRows, 'Innenfor');
-      const dUtenfor = group(fRows, 'Utenfor');
+    const searchBtn = document.getElementById('searchBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const csvMaps = { Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor };
 
-      const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
-      const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
-      const nInnenfor = Object.keys(dInnenfor).map(p => p.padStart(4,'0'));
-      const nUtenfor = Object.keys(dUtenfor).map(p => p.padStart(4,'0'));
+    let searchLayer = null;
 
-      const base = [...g1.features,...g2.features,...g3.features];
-      const geoBase = {type:'FeatureCollection',features:base};
+    function searchMap(){
+      const qRawInput = document.getElementById('searchInput').value.trim();
+      const qRaw = qRawInput.toLowerCase();
+      if(!qRaw) return;
+      Object.values(layers).forEach(l=>map.removeLayer(l));
+      if(searchLayer){
+        map.removeLayer(searchLayer);
+        searchLayer = null;
+      }
 
-      // Filtrerte features
-      const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
-      const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
-      const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
-      const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+      const matchedPostnr = new Set();
+      const erPostnummer = /^\d{4}$/.test(qRawInput);
+      const qPostnummer = erPostnummer ? qRawInput.padStart(4,'0') : null;
+      const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
 
-      function enrich(arr,mapData){
-        arr.forEach(f=>{
-          const p = f.properties.postnummer.trim().padStart(4,'0');
-          const info = mapData[p] || {count:0, avis:new Map()};
-          f.properties.antall = info.count;
-          f.properties.avis = Array.from(info.avis.entries())
-                                  .map(([avis,ant]) => `${avis}: ${ant}`)
-                                  .join(', ');
+      function avisMatcher(avisMap) {
+        if(erPostnummer) return false;
+        return avisSok.some(sokStr => {
+          return Array.from(avisMap.keys()).some(avisId => {
+            const navn = avisNavnMap[avisId] ? avisNavnMap[avisId].toLowerCase() : avisId.toLowerCase();
+            return avisId === sokStr || navn.includes(sokStr);
+          });
         });
       }
-      enrich(fC,dC); enrich(fD,dD); enrich(fInnenfor,dInnenfor); enrich(fUtenfor,dUtenfor);
 
-      ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-        const mapData = [dC,dD,dInnenfor,dUtenfor][i];
-        const postnummerer = Object.keys(mapData);
-        const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-        document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length} postnumre`;
-        document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum} antall`;
+      Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
+        Object.entries(mapData).forEach(([pRaw,info])=>{
+          const p = pRaw.padStart(4,'0');
+          if(erPostnummer){
+            if(p === qPostnummer){
+              matchedPostnr.add(p);
+            } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+              matchedPostnr.add(p);
+            }
+          } else {
+            if(avisMatcher(info.avis)){
+              matchedPostnr.add(p);
+            }
+          }
+        });
       });
 
-      const layers = {
-        Anbud:    L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})}),
-        Brukt:    L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})}),
-        Innenfor: L.geoJSON(fInnenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Innenfor,fillOpacity:0.5,weight:1})}),
-        Utenfor:  L.geoJSON(fUtenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Utenfor,fillOpacity:0.5,weight:1})}),
-      };
-      Object.values(layers).forEach(layer => layer.eachLayer(l=>{
+      const allFeatures = [...fC,...fD,...fInnenfor,...fUtenfor];
+      const matches = allFeatures.filter(f =>
+        matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
+      );
+
+      if(!matches.length){
+        document.getElementById('search-summary').innerHTML = '';
+        exportBtn.disabled = true;
+        alert(`Ingen treff for "${qRawInput}"`);
+        return;
+      }
+
+      // Oppsummering med navn i tabell
+      let totalSum = 0;
+      let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
+      Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
+        const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
+        let sumCount = 0;
+        if(erPostnummer){
+          sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+        } else {
+          keys.forEach(p=>{
+            const avisMap = mapData[p]?.avis;
+            if(avisMap){
+              for(const [avisId, count] of avisMap.entries()){
+                const navn = avisNavnMap[avisId] || avisId;
+                if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
+                  sumCount += count;
+                }
+              }
+            }
+          });
+        }
+        totalSum += sumCount;
+        const color = filterColors[filterKey] || '#000';
+        html += `<tr>
+          <td>${filterKeys[filterKey]}</td>
+          <td><span class="color-box" style="background:${color};"></span></td>
+          <td>${keys.length}</td>
+          <td>${sumCount}</td>
+        </tr>`;
+      });
+      html += `<tr style="font-weight:bold; background:#eef;">
+        <td colspan="3">Totalt</td>
+        <td>${totalSum}</td>
+      </tr>`;
+      html += '</tbody></table>';
+      document.getElementById('search-summary').innerHTML = html;
+
+      lastMatches = matches.map(f=>{
+        const p = f.properties.postnummer.trim().padStart(4,'0');
+        let filt = null;
+        if(nC.includes(p)) filt = 'Anbud';
+        else if(nD.includes(p)) filt = 'Brukt';
+        else if(nInnenfor.includes(p)) filt = 'Innenfor';
+        else if(nUtenfor.includes(p)) filt = 'Utenfor';
+        return {
+          filter: filterKeys[filt] || '',
+          postnummer: p,
+          antall: f.properties.antall,
+          avis: f.properties.avis
+        };
+      });
+      exportBtn.disabled = false;
+
+      searchLayer = L.geoJSON(matches,{
+        coordsToLatLng:coords3035tilLatLng,
+        style:()=>({color:'#555',fillOpacity:0.3,weight:2})
+      }).addTo(map);
+
+      searchLayer.eachLayer(l=>{
         const p = l.feature.properties;
         l.bindPopup(`
           <strong>Postnummer: ${p.postnummer}</strong><br>
           Totalt antall: ${p.antall}<br>
           Detaljer pr avis: ${p.avis || 'Ingen'}
         `);
-      }));
-
-      function oppdaterLag(){
-        Object.entries(layers).forEach(([k,lyr])=>{
-          document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
-        });
-        const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
-        if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
-      }
-      ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>
-        document.getElementById('toggle'+k).addEventListener('change',oppdaterLag)
-      );
-      oppdaterLag();
-
-      const searchBtn = document.getElementById('searchBtn');
-      const exportBtn = document.getElementById('exportBtn');
-      const csvMaps = {
-        Anbud:dC, Brukt:dD,
-        Innenfor:dInnenfor, Utenfor:dUtenfor
-      };
-
-      let searchLayer = null; // Holder laget for søket
-
-      function searchMap(){
-        const qRawInput = document.getElementById('searchInput').value.trim();
-        const qRaw = qRawInput.toLowerCase();
-        if(!qRaw) return;
-        Object.values(layers).forEach(l=>map.removeLayer(l));
-        const matchedPostnr = new Set();
-
-        const erPostnummer = /^\d{4}$/.test(qRawInput);
-        const qPostnummer = erPostnummer ? qRawInput.padStart(4,'0') : null;
-
-        const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
-
-function avisMatcher(avisMap) {
-  if(erPostnummer) return false;
-  if(qRaw.length === 1) {
-    // Eksakt likt søk for 1 tegn
-    return avisSok.some(sokStr => Array.from(avisMap.keys()).some(a => a === sokStr));
-  } else {
-    // Delstreng-søk for 2+ tegn
-    return avisSok.some(sokStr => Array.from(avisMap.keys()).some(a => a.includes(sokStr)));
-  }
-}
-
-Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
-  Object.entries(mapData).forEach(([pRaw,info])=>{
-    const p = pRaw.padStart(4,'0');
-    if(erPostnummer){
-      if(p === qPostnummer){
-        matchedPostnr.add(p);
-      } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
-        matchedPostnr.add(p);
-      }
-    } else {
-      if(avisMatcher(info.avis)){
-        matchedPostnr.add(p);
-      }
-    }
-  });
-});
-
-
-        const matches = [...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>
-          matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
-        );
-
-        if(!matches.length){
-          document.getElementById('search-summary').innerHTML = '';
-          exportBtn.disabled = true;
-          alert(`Ingen treff for "${qRawInput}"`);
-          return;
-        }
-
-        let totalSum = 0;
-        let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
-        Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
-          const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
-
-          let sumCount = 0;
-          if(erPostnummer){
-            sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-          } else {
-            keys.forEach(p=>{
-              const avisMap = mapData[p]?.avis;
-              if(avisMap){
-                for(const [avisName, count] of avisMap.entries()){
-                  if(avisSok.some(sokStr => avisName.includes(sokStr))){
-                    sumCount += count;
-                  }
-                }
-              }
-            });
-          }
-
-          totalSum += sumCount;
-
-          const color = filterColors[filterKey] || '#000';
-          html += `<tr>
-            <td>${filterKeys[filterKey]}</td>
-            <td><span class="color-box" style="background:${color};"></span></td>
-            <td>${keys.length}</td>
-            <td>${sumCount}</td>
-          </tr>`;
-        });
-
-        html += `<tr style="font-weight:bold; background:#eef;">
-          <td colspan="3">Totalt</td>
-          <td>${totalSum}</td>
-        </tr>`;
-
-        html += '</tbody></table>';
-        document.getElementById('search-summary').innerHTML = html;
-
-        lastMatches = matches.map(f=>{
-          const p = f.properties.postnummer.trim().padStart(4,'0');
-          let filt = null;
-          if(nC.includes(p)) filt = 'Anbud';
-          else if(nD.includes(p)) filt = 'Brukt';
-          else if(nInnenfor.includes(p)) filt = 'Innenfor';
-          else if(nUtenfor.includes(p)) filt = 'Utenfor';
-          return {
-            filter: filterKeys[filt] || '',
-            postnummer: p,
-            antall: f.properties.antall,
-            avis: f.properties.avis
-          };
-        });
-        exportBtn.disabled = false;
-
-        if(searchLayer){
-          map.removeLayer(searchLayer);
-          searchLayer = null;
-        }
-
-        searchLayer = L.geoJSON(matches,{
-          coordsToLatLng:coords3035tilLatLng,
-          style:()=>({color:'#555',fillOpacity:0.3,weight:2})
-        }).addTo(map);
-
-        searchLayer.eachLayer(l=>{
-          const p = l.feature.properties;
-          l.bindPopup(`
-            <strong>Postnummer: ${p.postnummer}</strong><br>
-            Totalt antall: ${p.antall}<br>
-            Detaljer pr avis: ${p.avis || 'Ingen'}
-          `);
-          l.openPopup();
-        });
-
-        map.fitBounds(searchLayer.getBounds().pad(0.05));
-      }
-
-      searchBtn.addEventListener('click',searchMap);
-      document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
-
-      exportBtn.addEventListener('click',()=>{
-        if(!lastMatches.length) return;
-        const csv = Papa.unparse(lastMatches);
-        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'sokeresultater.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        l.openPopup();
       });
-});
+
+      map.fitBounds(searchLayer.getBounds().pad(0.05));
+    }
+
+    searchBtn.addEventListener('click',searchMap);
+    document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
+
+    exportBtn.addEventListener('click',()=>{
+      if(!lastMatches.length) return;
+      const csv = Papa.unparse(lastMatches);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'sokeresultater.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+        });
   </script>
 </body>
 </html>
