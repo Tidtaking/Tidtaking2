@@ -143,25 +143,22 @@
       updLayers();
 
       // Search
-      const allKeys = new Set();
-      // Collect all postnummer-key matches from CSV-maps
-      allKeys.forEach(()=>{});
       const csvMaps = { Aktuelle: dA, Abo: dB, Anbud: dC, Brukt: dD };
       function searchMap(){
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         if(!q) return;
         Object.values(layers).forEach(layer=>map.removeLayer(layer));
 
-        // Finn alle unike postnummer fra alle grupper som matcher søkeord
+        // Samle matchede postnummer fra CSV
         const matchedNums = new Set();
-        Object.entries(csvMaps).forEach(([_,mapData]) => {
-          Object.keys(mapData).forEach(p => {
+        Object.values(csvMaps).forEach(mapData => {
+          Object.entries(mapData).forEach(([p,info]) => {
             const pc = p.toLowerCase();
-            const avis = Array.from(mapData[p].avis).join(', ').toLowerCase();
+            const avis = Array.from(info.avis).join(', ').toLowerCase();
             if(pc === q || avis.includes(q)) matchedNums.add(p);
           });
         });
-        // Finn geoJSON-features for disse postnumrene
+        // Filtrer geojson for matches
         const matches = [...fA, ...fB, ...fC, ...fD].filter(f => matchedNums.has(f.properties.postnummer.trim()));
 
         if(!matches.length) {
@@ -169,12 +166,12 @@
           return alert(`Ingen treff for "${q}"`);
         }
 
-        // Oppsummering per filter basert på CSV-data
+        // Oppsummering per filter
         let html = '<ul style="padding-left:1em;margin:0;">';
         Object.entries(csvMaps).forEach(([key,mapData]) => {
           const keys = Object.keys(mapData).filter(p => matchedNums.has(p));
           const postCount = keys.length;
-          const sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+          const sumCount = keys.reduce((s,p) => s + (mapData[p].count || 0), 0);
           const label = {
             Aktuelle: 'Abo utenfor anbud (blått)',
             Abo: 'abo_treff_anbud (grønt)',
@@ -186,8 +183,16 @@
         html += '</ul>';
         document.getElementById('search-summary').innerHTML = html;
 
-        const grp = L.geoJSON(matches, { coordsToLatLng:coords3035tilLatLng, style:()=>({color:'#555',fillOpacity:0.3,weight:2}) }).addTo(map);
-        grp.eachLayer(l=>l.openPopup());
+        // Legg til polygoner med popup
+        const grp = L.geoJSON(matches, {
+          coordsToLatLng: coords3035tilLatLng,
+          style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 })
+        }).addTo(map);
+        grp.eachLayer(layer => {
+          const p = layer.feature.properties;
+          layer.bindPopup(`<strong>${p.postnummer}</strong><br>Antall: ${p.antall}<br>Avis: ${p.avis}`);
+          layer.openPopup();
+        });
         map.fitBounds(grp.getBounds().pad(0.05));
       }
       document.getElementById('searchBtn').addEventListener('click',searchMap);
