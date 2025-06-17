@@ -169,11 +169,11 @@
       ['Aktuelle','Abo','Anbud','Brukt'].forEach(k=>document.getElementById('toggle'+k).addEventListener('change',oppdater));
       oppdater();
 
-      // Søkefunksjon
-      const allF=[...fAktuelle,...fAboArr,...fAnbArr,...fBruktArr];
-      function searchMap(){
+            // Søkefunksjon
+      const allF = [...fAktuelle, ...fAboArr, ...fAnbArr, ...fBruktArr];
+      function searchMap() {
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
-        if(!q) return;
+        if (!q) return;
         // Filtrer på postnummer, poststed eller avis
         const matches = allF.filter(f => {
           const p = f.properties.postnummer.toLowerCase();
@@ -181,6 +181,17 @@
           const avis = (f.properties.avis||'').toLowerCase();
           return p === q || sted.includes(q) || avis.includes(q);
         });
+        if (!matches.length) {
+          alert(`Ingen treff for "${q}"`);
+          return;
+        }
+        const grp = L.geoJSON({ type:'FeatureCollection', features: matches }, { coordsToLatLng: coords3035tilLatLng });
+        map.fitBounds(grp.getBounds().pad(0.05));
+        grp.eachLayer(l => l.openPopup());
+      }
+      document.getElementById('searchBtn').addEventListener('click', searchMap);
+      document.getElementById('searchInput').addEventListener('keyup', e => e.key === 'Enter' && searchMap());
+    });
         if(!matches.length) return alert(`Ingen treff for "${q}"`);
         const grp = L.geoJSON({ type:'FeatureCollection', features: matches }, { coordsToLatLng: coords3035tilLatLng });
         map.fitBounds(grp.getBounds().pad(0.05));
