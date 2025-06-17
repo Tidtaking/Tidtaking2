@@ -79,7 +79,7 @@
     async function lesCSVRows(sti){
       try{
         const res=await fetch(sti); if(!res.ok) throw new Error(`${sti}: HTTP ${res.status}`);
-        const text=await res.text(); const parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
+        const text=await res.text(); const parsed=Papa.parse(text, {header:true, skipEmptyLines:true, delimiter:';'} );
         return parsed.data;
       }catch(e){ console.warn('Kunne ikke lese',sti,e); return []; }
     }
@@ -88,7 +88,7 @@
       const map={};
       rows.forEach(r=>{
         const p=r.postnummer?.trim().padStart(4,'0'); if(!p) return;
-        const num=Number(r.antall)||1;
+        const num = r.antall ? Number(r.antall) : 0;
         if(!map[p]) map[p]={count:0, avis:new Set()};
         map[p].count+=num;
         if(r.avis) map[p].avis.add(r.avis);
