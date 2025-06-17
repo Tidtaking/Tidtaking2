@@ -137,17 +137,20 @@
       }
     }
 
-    // Fleksibel gruppering basert på varianter av kolonnenavn
     function group(rows){
       const m = {};
-      rows.forEach(r=>{
-        // Finn postnummer med flere mulige navn
-        const p = (r.postnummer || r.Postnummer || r.postNr || r.PostNr || '').toString().trim().padStart(4,'0');
-        if(!p) return;
-        // Finn antall med ulike navn
+      rows.forEach((r,i) => {
+        // Flere mulige kolonnenavn for postnummer
+        const pRaw = r.postnummer ?? r.Postnummer ?? r.postNr ?? r.PostNr ?? r.postnr ?? '';
+        const p = pRaw.toString().trim().padStart(4,'0');
+        if(!p) {
+          console.warn(`Rad ${i} mangler gyldig postnummer:`, r);
+          return;
+        }
+        // Flere mulige kolonnenavn for antall
         const antallRaw = r.antall ?? r.Antall ?? r.Frekvens ?? r.frekvens ?? '0';
         const num = Number(antallRaw) || 0;
-        // Finn avis
+        // Flere mulige kolonnenavn for avis
         const avisRaw = r.avis ?? r.Avis ?? '';
         if(!m[p]) m[p] = {count:0, avis:new Set()};
         m[p].count += num;
@@ -180,23 +183,28 @@
     ]).then(([aRows,bRows,cRows,dRows,eRows,fRows,g1,g2,g3,geoAnb])=>{
       const dA = group(aRows), dB = group(bRows), dC = group(cRows), dD = group(dRows);
       const dInnenfor = group(eRows), dUtenfor = group(fRows);
-      const nA = Object.keys(dA), nB = Object.keys(dB), nC = Object.keys(dC), nD = Object.keys(dD);
-      const nInnenfor = Object.keys(dInnenfor), nUtenfor = Object.keys(dUtenfor);
+      // Sørg for at alle nøklene er padet likt
+      const nA = Object.keys(dA).map(p => p.padStart(4,'0'));
+      const nB = Object.keys(dB).map(p => p.padStart(4,'0'));
+      const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
+      const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
+      const nInnenfor = Object.keys(dInnenfor).map(p => p.padStart(4,'0'));
+      const nUtenfor = Object.keys(dUtenfor).map(p => p.padStart(4,'0'));
       const base = [...g1.features,...g2.features,...g3.features];
       const geoBase = {type:'FeatureCollection',features:base};
       const fA = Array.from(new Set([
-        ...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim())),
-        ...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim()))
+        ...geoBase.features.filter(f=>nA.includes(f.properties.postnummer.trim().padStart(4,'0'))),
+        ...geoAnb.features.filter(f=>nA.includes(f.properties.postnummer.trim().padStart(4,'0')))
       ]));
-      const fB = geoAnb.features.filter(f=>nB.includes(f.properties.postnummer.trim()));
-      const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim()));
-      const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim()));
-      const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim()));
-      const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim()));
+      const fB = geoAnb.features.filter(f=>nB.includes(f.properties.postnummer.trim().padStart(4,'0')));
+      const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
+      const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
+      const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+      const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
 
       function enrich(arr,mapData){
         arr.forEach(f=>{
-          const p = f.properties.postnummer.trim();
+          const p = f.properties.postnummer.trim().padStart(4,'0');
           const info = mapData[p] || {count:0, avis:new Set()};
           f.properties.antall = info.count;
           f.properties.avis = Array.from(info.avis).join(', ');
@@ -255,7 +263,7 @@
               matched.add(p);
           });
         });
-        const matches = [...fA,...fB,...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>matched.has(f.properties.postnummer.trim()));
+        const matches = [...fA,...fB,...fC,...fD,...fInnenfor,...fUtenfor].filter(f=>matched.has(f.properties.postnummer.trim().padStart(4,'0')));
         if(!matches.length){
           document.getElementById('search-summary').innerHTML = '';
           exportBtn.disabled = true;
@@ -273,7 +281,7 @@
         document.getElementById('search-summary').innerHTML = html;
 
         lastMatches = matches.map(f=>{
-          const p = f.properties.postnummer;
+          const p = f.properties.postnummer.trim().padStart(4,'0');
           let filt = null;
           if(nA.includes(p)) filt = 'Aktuelle';
           else if(nB.includes(p)) filt = 'Abo';
