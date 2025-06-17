@@ -6,7 +6,6 @@
 <title>Anbud – Postnummerkart</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  /* Samme CSS som tidligere */
   html, body { height: 100%; margin: 0; padding: 0; }
   #map { width: 100%; height: 100vh; }
   #controls {
@@ -210,6 +209,8 @@
       kanSokeNavn = true;
       document.getElementById('loginStatus').innerText = "Navnesøk aktivert";
       document.getElementById('passwordInput').value = '';
+      // Oppdater polygonene til å vise navn
+      enrichAll();
     } else {
       kanSokeNavn = false;
       document.getElementById('loginStatus').innerText = "Feil passord";
@@ -231,6 +232,44 @@
     Utenfor: '#ff9900'
   };
 
+  let dC, dD, dInnenfor, dUtenfor;
+  let fC, fD, fInnenfor, fUtenfor;
+  let avisNavnMap;
+  const layers = {};
+  let searchLayer = null;
+
+  function enrich(arr,mapData){
+    arr.forEach(f=>{
+      const p = f.properties.postnummer.trim().padStart(4,'0');
+      const info = mapData[p] || {count:0, avis:new Map()};
+      f.properties.antall = info.count;
+      if(kanSokeNavn){
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
+                                .join(', ');
+      } else {
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisId}: ${ant}`)
+                                .join(', ');
+      }
+    });
+  }
+
+  function enrichAll(){
+    enrich(fC,dC);
+    enrich(fD,dD);
+    enrich(fInnenfor,dInnenfor);
+    enrich(fUtenfor,dUtenfor);
+    Object.values(layers).forEach(layer => layer.eachLayer(l=>{
+      const p = l.feature.properties;
+      l.setPopupContent(`
+        <strong>Postnummer: ${p.postnummer}</strong><br>
+        Totalt antall: ${p.antall}<br>
+        Detaljer pr avis: ${p.avis || 'Ingen'}
+      `);
+    }));
+  }
+
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),
     lesCSVRows('abo_bruktidag_anbud.csv'),
@@ -241,11 +280,12 @@
     fetch('postnummer_part02.geojson').then(r=>r.json()),
     fetch('postnummer_part03.geojson').then(r=>r.json()),
     fetch('filtrert_anbud.geojson').then(r=>r.json())
-  ]).then(([cRows,dRows,eRows,fRows, avisNavnMap, g1,g2,g3,geoAnb])=>{
-    const dC = group(cRows, 'Anbud');
-    const dD = group(dRows, 'Brukt');
-    const dInnenfor = group(eRows, 'Innenfor');
-    const dUtenfor = group(fRows, 'Utenfor');
+  ]).then(([cRows,dRows,eRows,fRows, avisMap, g1,g2,g3,geoAnb])=>{
+    dC = group(cRows, 'Anbud');
+    dD = group(dRows, 'Brukt');
+    dInnenfor = group(eRows, 'Innenfor');
+    dUtenfor = group(fRows, 'Utenfor');
+    avisNavnMap = avisMap;
 
     const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
     const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
@@ -255,29 +295,18 @@
     const base = [...g1.features,...g2.features,...g3.features];
     const geoBase = {type:'FeatureCollection',features:base};
 
-    const fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
-    const fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
-    const fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
-    const fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
 
-    function enrich(arr,mapData){
-      arr.forEach(f=>{
-        const p = f.properties.postnummer.trim().padStart(4,'0');
-        const info = mapData[p] || {count:0, avis:new Map()};
-        f.properties.antall = info.count;
-        f.properties.avis = Array.from(info.avis.entries())
-                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
-                                .join(', ');
-      });
-    }
-    enrich(fC,dC); enrich(fD,dD); enrich(fInnenfor,dInnenfor); enrich(fUtenfor,dUtenfor);
+    enrichAll();
 
-    const layers = {
-      Anbud:    L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})}),
-      Brukt:    L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})}),
-      Innenfor: L.geoJSON(fInnenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Innenfor,fillOpacity:0.5,weight:1})}),
-      Utenfor:  L.geoJSON(fUtenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Utenfor,fillOpacity:0.5,weight:1})}),
-    };
+    layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
+    layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
+    layers.Innenfor = L.geoJSON(fInnenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Innenfor,fillOpacity:0.5,weight:1})});
+    layers.Utenfor  = L.geoJSON(fUtenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Utenfor,fillOpacity:0.5,weight:1})});
+
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
       l.bindPopup(`
@@ -303,8 +332,6 @@
     const exportBtn = document.getElementById('exportBtn');
     const csvMaps = { Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor };
 
-    let searchLayer = null;
-
     function searchMap(){
       const qRawInput = document.getElementById('searchInput').value.trim();
       const qRaw = qRawInput.toLowerCase();
@@ -323,12 +350,10 @@
       function avisMatcher(avisMap) {
         if(erPostnummer) return false;
         if(!kanSokeNavn) {
-          // Kun søk på ID når ikke innlogget
           return avisSok.some(sokStr => {
             return Array.from(avisMap.keys()).some(avisId => avisId === sokStr);
           });
         }
-        // Søker også på navn når innlogget
         return avisSok.some(sokStr => {
           return Array.from(avisMap.keys()).some(avisId => {
             const navn = avisNavnMap[avisId] ? avisNavnMap[avisId].toLowerCase() : avisId.toLowerCase();
@@ -435,6 +460,9 @@
 
       map.fitBounds(searchLayer.getBounds().pad(0.05));
     }
+
+    const searchBtn = document.getElementById('searchBtn');
+    const exportBtn = document.getElementById('exportBtn');
 
     searchBtn.addEventListener('click',searchMap);
     document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
