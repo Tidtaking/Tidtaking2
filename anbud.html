@@ -310,7 +310,7 @@
       searchBtn.addEventListener('click',searchMap);
       document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
 
-      exportBtn.addEventListener('click',()=>{
+            exportBtn.addEventListener('click',()=>{
         if(!lastMatches.length) return;
         const csv = Papa.unparse(lastMatches);
         const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -323,6 +323,7 @@
         URL.revokeObjectURL(url);
       });
 
+    });
   </script>
 </body>
 </html>
