@@ -304,12 +304,14 @@
       let searchLayer = null; // Holder laget for søket
 
       function searchMap(){
-        const qRaw = document.getElementById('searchInput').value.trim().toLowerCase();
+        const qRawInput = document.getElementById('searchInput').value.trim();
+        const qRaw = qRawInput.toLowerCase();
         if(!qRaw) return;
         Object.values(layers).forEach(l=>map.removeLayer(l));
         const matchedPostnr = new Set();
 
-        const erPostnummer = /^\d{4}$/.test(qRaw);
+        const erPostnummer = /^\d{4}$/.test(qRawInput);
+        const qPostnummer = erPostnummer ? qRawInput.padStart(4,'0') : null;
 
         const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -319,9 +321,12 @@
         }
 
         Object.entries(csvMaps).forEach(([filterKey,mapData])=>{
-          Object.entries(mapData).forEach(([p,info])=>{
+          Object.entries(mapData).forEach(([pRaw,info])=>{
+            const p = pRaw.padStart(4,'0');
             if(erPostnummer){
-              if(p === qRaw || Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+              if(p === qPostnummer){
+                matchedPostnr.add(p);
+              } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
                 matchedPostnr.add(p);
               }
             } else {
@@ -339,7 +344,7 @@
         if(!matches.length){
           document.getElementById('search-summary').innerHTML = '';
           exportBtn.disabled = true;
-          alert(`Ingen treff for "${qRaw}"`);
+          alert(`Ingen treff for "${qRawInput}"`);
           return;
         }
 
@@ -399,7 +404,6 @@
         });
         exportBtn.disabled = false;
 
-        // Fjern forrige søkelag hvis det finnes
         if(searchLayer){
           map.removeLayer(searchLayer);
           searchLayer = null;
