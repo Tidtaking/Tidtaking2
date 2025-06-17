@@ -100,6 +100,18 @@
     const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
     return L.latLng(lat,lon);
   }
+const filterColors = {
+  Anbud: '#ff3333',
+  Brukt: '#ffff00',
+  Innenfor: '#663399',
+  Utenfor: '#ff9900'
+};
+const filterKeys = {
+  Anbud: 'anbudet',
+  Brukt: 'abo_bruktidag_anbud',
+  Innenfor: 'Innenfor anbud',
+  Utenfor: 'Utenfor anbud'
+};
 
   async function lesCSVRows(url){
     try {
