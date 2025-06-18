@@ -3,29 +3,66 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Anbud – Postnummerkart</title>
+<title>Anbud – Postnummerkart med Heatmap</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  /* Samme CSS som før, ikke vist for korthet */
   html, body { height: 100%; margin: 0; padding: 0; }
   #map { width: 100%; height: 100vh; }
-  /* ... resten av CSS ... */
-  #controls { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-family: sans-serif; font-size: 14px; line-height: 1.4; width: 440px; }
-  #controls label { display: flex; align-items: center; margin-bottom: 10px; padding: 4px; border-radius: 4px; }
+  #controls {
+    position: absolute; top: 10px; right: 10px; z-index: 1000;
+    background: white; padding: 10px; border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-family: sans-serif; font-size: 14px; line-height: 1.4;
+    width: 460px;
+  }
+  #controls label {
+    display: flex; align-items: center; margin-bottom: 10px;
+    padding: 4px; border-radius: 4px;
+  }
   #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
-  #controls .label-content { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px; }
+  #controls .label-content {
+    display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px;
+  }
   #controls .label-text { font-weight: 500; flex: 1; }
-  #controls .counts { display: flex; flex-direction: column; align-items: flex-end; min-width: 90px; }
-  #controls .counts .count { font-weight: bold; color: #0077cc; }
-  #controls .counts .count + .count { margin-top: 4px; }
-  #controls input[type='text'], #controls input[type='password'] { flex: 1; margin-right: 6px; padding: 4px; }
-  #controls button { padding: 4px 8px; margin-left: 4px; }
-  #search-summary { margin-top: 12px; font-size: 13px; }
-  #search-summary table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-  #search-summary th, #search-summary td { border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: middle; }
-  #search-summary th { background-color: #f4f4f4; font-weight: 600; }
-  #search-summary tr:nth-child(odd) td { background-color: rgba(0,0,0,0.02); }
-  .color-box { display: inline-block; width: 18px; height: 18px; border: 1px solid #999; border-radius: 3px; }
+  #controls .counts {
+    display: flex; flex-direction: column; align-items: flex-end; min-width: 90px;
+  }
+  #controls .counts .count {
+    font-weight: bold; color: #0077cc;
+  }
+  #controls .counts .count + .count {
+    margin-top: 4px;
+  }
+  #controls input[type='text'], #controls input[type='password'] {
+    flex: 1; margin-right: 6px; padding: 4px;
+  }
+  #controls button {
+    padding: 4px 8px; margin-left: 4px;
+  }
+  #search-summary {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  #search-summary table {
+    width: 100%; border-collapse: collapse; margin-top: 4px;
+  }
+  #search-summary th, #search-summary td {
+    border: 1px solid #ddd; padding: 6px; text-align: left;
+    vertical-align: middle;
+  }
+  #search-summary th {
+    background-color: #f4f4f4; font-weight: 600;
+  }
+  #search-summary tr:nth-child(odd) td {
+    background-color: rgba(0,0,0,0.02);
+  }
+  .color-box {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #999;
+    border-radius: 3px;
+  }
 </style>
 </head>
 <body>
@@ -77,6 +114,10 @@
     <button id="loginBtn">Aktiver navnesøk</button>
     <span id="loginStatus" style="margin-left:10px; font-weight:bold;"></span>
   </div>
+  <!-- Heatmap toggle knapp -->
+  <div style="margin-top:8px; display:flex; align-items:center;">
+    <button id="toggleHeatmapBtn" disabled>Vis heatmap</button>
+  </div>
   <div id="search-summary"></div>
 </div>
 <div id="map"></div>
@@ -84,10 +125,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
-  // --- Definer variablene HER, EN GANG ---
   const searchBtn = document.getElementById('searchBtn');
   const exportBtn = document.getElementById('exportBtn');
+  const heatmapBtn = document.getElementById('toggleHeatmapBtn');
 
   const map = L.map('map').setView([60,10],5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -100,18 +142,6 @@
     const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
     return L.latLng(lat,lon);
   }
-const filterColors = {
-  Anbud: '#ff3333',
-  Brukt: '#ffff00',
-  Innenfor: '#663399',
-  Utenfor: '#ff9900'
-};
-const filterKeys = {
-  Anbud: 'anbudet',
-  Brukt: 'abo_bruktidag_anbud',
-  Innenfor: 'Innenfor anbud',
-  Utenfor: 'Utenfor anbud'
-};
 
   async function lesCSVRows(url){
     try {
@@ -180,14 +210,30 @@ const filterKeys = {
   }
 
   let kanSokeNavn = false;
-  const riktigPassord = "hemmelig123"; // Endre passord her
+  const riktigPassord = "hemmelig123";
 
   let dC, dD, dInnenfor, dUtenfor;
   let fC, fD, fInnenfor, fUtenfor;
   let avisNavnMap;
   const layers = {};
   let searchLayer = null;
+  let heatLayer = null;
+  let showingHeatmap = false;
   let lastMatches = [];
+
+  const filterColors = {
+    Anbud: '#ff3333',
+    Brukt: '#ffff00',
+    Innenfor: '#663399',
+    Utenfor: '#ff9900'
+  };
+
+  const filterKeys = {
+    Anbud: 'anbudet',
+    Brukt: 'abo_bruktidag_anbud',
+    Innenfor: 'Innenfor anbud',
+    Utenfor: 'Utenfor anbud'
+  };
 
   function enrich(arr,mapData){
     arr.forEach(f=>{
@@ -222,16 +268,15 @@ const filterKeys = {
   }
 
   function oppdaterFilterTellinger(){
-  ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-    const mapData = [dC,dD,dInnenfor,dUtenfor][i];
-    if(!mapData) return;
-    const postnummerer = Object.keys(mapData);
-    const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-    document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
-    document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
-  });
-}
-
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
+      if(!mapData) return;
+      const postnummerer = Object.keys(mapData);
+      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
+      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
+    });
+  }
 
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),
@@ -292,11 +337,10 @@ const filterKeys = {
     );
     oppdaterLag();
 
-    // --- Legg event listeners på searchBtn og exportBtn EN GANG her ---
-    searchBtn.addEventListener('click',searchMap);
+    searchBtn.addEventListener('click', searchMap);
     document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
 
-    exportBtn.addEventListener('click',()=>{
+    exportBtn.addEventListener('click', () => {
       if(!lastMatches.length) return;
       const csv = Papa.unparse(lastMatches);
       const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -308,10 +352,24 @@ const filterKeys = {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
+  });
 
-  }); // end Promise.all
+  function getPolygonCentroid(feature){
+    const geom = feature.geometry;
+    if(geom.type === 'Polygon'){
+      const coords = geom.coordinates[0];
+      let latSum = 0, lngSum = 0;
+      coords.forEach(([lng,lat])=>{
+        latSum += lat;
+        lngSum += lng;
+      });
+      const len = coords.length;
+      return [latSum/len, lngSum/len];
+    }
+    // For MultiPolygon eller andre typer kan du legge til senere
+    return [0,0];
+  }
 
-  // --- Søkefunksjon ---
   function searchMap(){
     const qRawInput = document.getElementById('searchInput').value.trim();
     const qRaw = qRawInput.toLowerCase();
@@ -320,6 +378,13 @@ const filterKeys = {
     if(searchLayer){
       map.removeLayer(searchLayer);
       searchLayer = null;
+    }
+    if(heatLayer){
+      map.removeLayer(heatLayer);
+      heatLayer = null;
+      showingHeatmap = false;
+      heatmapBtn.innerText = 'Vis heatmap';
+      heatmapBtn.disabled = true;
     }
 
     const matchedPostnr = new Set();
@@ -367,6 +432,7 @@ const filterKeys = {
     if(!matches.length){
       document.getElementById('search-summary').innerHTML = '';
       exportBtn.disabled = true;
+      heatmapBtn.disabled = true;
       alert(`Ingen treff for "${qRawInput}"`);
       return;
     }
@@ -396,13 +462,13 @@ const filterKeys = {
       html += `<tr>
         <td>${filterKeys[filterKey]}</td>
         <td><span class="color-box" style="background:${color};"></span></td>
-        <td>${keys.length}</td>
-        <td>${sumCount}</td>
+        <td>${keys.length.toLocaleString()}</td>
+        <td>${sumCount.toLocaleString()}</td>
       </tr>`;
     });
     html += `<tr style="font-weight:bold; background:#eef;">
       <td colspan="3">Totalt</td>
-      <td>${totalSum}</td>
+      <td>${totalSum.toLocaleString()}</td>
     </tr>`;
     html += '</tbody></table>';
     document.getElementById('search-summary').innerHTML = html;
@@ -423,9 +489,48 @@ const filterKeys = {
     });
     exportBtn.disabled = false;
 
+    // Lag heatmap-punkter:
+    const heatPointsRaw = matches.map(f => {
+      const [lat, lng] = getPolygonCentroid(f);
+      return [lat, lng, f.properties.antall || 1];
+    });
+    const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
+    const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
+
+    heatmapBtn.disabled = false;
+    showingHeatmap = false;
+    heatmapBtn.innerText = 'Vis heatmap';
+
+    heatmapBtn.onclick = () => {
+      if(showingHeatmap){
+        // Vis polygon igjen
+        if(heatLayer){
+          map.removeLayer(heatLayer);
+          heatLayer = null;
+        }
+        if(searchLayer){
+          map.addLayer(searchLayer);
+        }
+        heatmapBtn.innerText = 'Vis heatmap';
+        showingHeatmap = false;
+      } else {
+        // Vis heatmap
+        if(searchLayer){
+          map.removeLayer(searchLayer);
+        }
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: 25,
+          blur: 15,
+          maxZoom: 17
+        }).addTo(map);
+        heatmapBtn.innerText = 'Vis polygon';
+        showingHeatmap = true;
+      }
+    };
+
     searchLayer = L.geoJSON(matches,{
-      coordsToLatLng:coords3035tilLatLng,
-      style:()=>({color:'#555',fillOpacity:0.3,weight:2})
+      coordsToLatLng: coords3035tilLatLng,
+      style: ()=>({color:'#555', fillOpacity:0.3, weight:2})
     }).addTo(map);
 
     searchLayer.eachLayer(l=>{
@@ -441,7 +546,7 @@ const filterKeys = {
     map.fitBounds(searchLayer.getBounds().pad(0.05));
   }
 
-  // Passordfunksjon (kan legge på her om ønskelig)
+  // Passordfunksjon
   document.getElementById('loginBtn').addEventListener('click', () => {
     const pw = document.getElementById('passwordInput').value;
     if(pw === riktigPassord){
