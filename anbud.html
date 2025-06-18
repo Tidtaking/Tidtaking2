@@ -114,7 +114,6 @@
     <button id="loginBtn">Aktiver navnesøk</button>
     <span id="loginStatus" style="margin-left:10px; font-weight:bold;"></span>
   </div>
-  <!-- Heatmap toggle knapp -->
   <div style="margin-top:8px; display:flex; align-items:center;">
     <button id="toggleHeatmapBtn" disabled>Vis heatmap</button>
   </div>
@@ -354,14 +353,16 @@
     });
   });
 
+  // Oppdatert centroidfunksjon med projeksjonskonvertering:
   function getPolygonCentroid(feature){
     const geom = feature.geometry;
     if(geom.type === 'Polygon'){
       const coords = geom.coordinates[0];
       let latSum = 0, lngSum = 0;
-      coords.forEach(([lng,lat])=>{
+      coords.forEach(([x,y])=>{
+        const [lon, lat] = proj4('EPSG:3035','WGS84',[x,y]);
         latSum += lat;
-        lngSum += lng;
+        lngSum += lon;
       });
       const len = coords.length;
       return [latSum/len, lngSum/len];
@@ -503,7 +504,6 @@
 
     heatmapBtn.onclick = () => {
       if(showingHeatmap){
-        // Vis polygon igjen
         if(heatLayer){
           map.removeLayer(heatLayer);
           heatLayer = null;
@@ -514,7 +514,6 @@
         heatmapBtn.innerText = 'Vis heatmap';
         showingHeatmap = false;
       } else {
-        // Vis heatmap
         if(searchLayer){
           map.removeLayer(searchLayer);
         }
