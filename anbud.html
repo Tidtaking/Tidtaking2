@@ -524,13 +524,13 @@ heatLayer = L.heatLayer(heatPoints, {
   radius: 15,
   blur: 10,
   maxZoom: 17,
-  gradient: {
-    0.0: 'blue',
-    0.4: 'cyan',
-    0.6: 'lime',
-    0.8: 'yellow',
-    1.0: 'red'
-  }
+gradient: {
+  0.0: '#002288',  // Mørk sterk blå
+  0.3: '#0055ff',  // Klar blå
+  0.5: 'lime',
+  0.7: 'yellow',
+  1.0: 'red'
+}
 }).addTo(map);
 
         heatmapBtn.innerText = 'Vis polygon';
