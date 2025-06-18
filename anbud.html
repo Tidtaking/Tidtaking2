@@ -491,12 +491,15 @@
     exportBtn.disabled = false;
 
     // Lag heatmap-punkter:
-    const heatPointsRaw = matches.map(f => {
-      const [lat, lng] = getPolygonCentroid(f);
-      return [lat, lng, f.properties.antall || 1];
-    });
-    const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
-    const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
+  const intensitetFaktor = 5;  // juster denne etter behov
+
+const heatPointsRaw = matches.map(f => {
+  const [lat, lng] = getPolygonCentroid(f);
+  return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
+});
+const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
+const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
+
 
     heatmapBtn.disabled = false;
     showingHeatmap = false;
