@@ -1,4 +1,162 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Anbud – Postnummerkart med Frekvens-filter</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body { height: 100%; margin: 0; padding: 0; }
+  #map { width: 100%; height: 100vh; }
+  #controls {
+    position: absolute; top: 10px; right: 10px; z-index: 1000;
+    background: white; padding: 10px; border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-family: sans-serif; font-size: 14px; line-height: 1.4;
+    width: 520px;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+  #controls label {
+    display: flex; align-items: center; margin-bottom: 8px;
+    padding: 4px; border-radius: 4px;
+  }
+  #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
+  #controls .label-content {
+    display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px;
+  }
+  #controls .label-text { font-weight: 500; flex: 1; }
+  #controls .counts {
+    display: flex; flex-direction: column; align-items: flex-end; min-width: 90px;
+  }
+  #controls .counts .count {
+    font-weight: bold; color: #0077cc;
+  }
+  #controls .counts .count + .count {
+    margin-top: 4px;
+  }
+  #controls input[type='text'], #controls input[type='password'] {
+    flex: 1; margin-right: 6px; padding: 4px;
+  }
+  #controls button {
+    padding: 4px 8px; margin-left: 4px;
+  }
+  #search-summary {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  #search-summary table {
+    width: 100%; border-collapse: collapse; margin-top: 4px;
+  }
+  #search-summary th, #search-summary td {
+    border: 1px solid #ddd; padding: 6px; text-align: left;
+    vertical-align: middle;
+  }
+  #search-summary th {
+    background-color: #f4f4f4; font-weight: 600;
+  }
+  #search-summary tr:nth-child(odd) td {
+    background-color: rgba(0,0,0,0.02);
+  }
+  .color-box {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #999;
+    border-radius: 3px;
+  }
+  #frekvensFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  #frekvensFilters label {
+    flex: 0 0 60px;
+    font-weight: normal;
+    background: #eee;
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+</style>
+</head>
+<body>
+<div id="controls">
+  <!-- Filtervalg -->
+  <label><input type="checkbox" id="toggleAnbud" checked />
+    <div class="label-content">
+      <span class="label-text">anbudet</span>
+      <div class="counts">
+        <span id="postCountAnbud" class="count">0 postnumre</span>
+        <span id="sumCountAnbud" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+  <label><input type="checkbox" id="toggleBrukt" checked />
+    <div class="label-content">
+      <span class="label-text">abo_bruktidag_anbud</span>
+      <div class="counts">
+        <span id="postCountBrukt" class="count">0 postnumre</span>
+        <span id="sumCountBrukt" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+  <label><input type="checkbox" id="toggleInnenfor" checked />
+    <div class="label-content">
+      <span class="label-text">Innenfor anbud</span>
+      <div class="counts">
+        <span id="postCountInnenfor" class="count">0 postnumre</span>
+        <span id="sumCountInnenfor" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+  <label><input type="checkbox" id="toggleUtenfor" checked />
+    <div class="label-content">
+      <span class="label-text">Utenfor anbud</span>
+      <div class="counts">
+        <span id="postCountUtenfor" class="count">0 postnumre</span>
+        <span id="sumCountUtenfor" class="count">0 antall</span>
+      </div>
+    </div>
+  </label>
+
+  <!-- Frekvensvalg -->
+  <div id="frekvensFilters">
+    <label><input type="checkbox" class="frekvCheckbox" value="1" checked /> Man</label>
+    <label><input type="checkbox" class="frekvCheckbox" value="2" checked /> Tir</label>
+    <label><input type="checkbox" class="frekvCheckbox" value="3" checked /> Ons</label>
+    <label><input type="checkbox" class="frekvCheckbox" value="4" checked /> Tor</label>
+    <label><input type="checkbox" class="frekvCheckbox" value="5" checked /> Fre</label>
+    <label><input type="checkbox" class="frekvCheckbox" value="6" checked /> Lør</label>
+    <label><input type="checkbox" class="frekvCheckbox" value="7" checked /> Søn</label>
+  </div>
+
+  <div style="margin-top:8px; display:flex; align-items:center;">
+    <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
+    <button id="searchBtn">Søk</button>
+    <button id="exportBtn" disabled>Eksporter CSV</button>
+  </div>
+  <div style="margin-top:8px; display:flex; align-items:center;">
+    <input type="password" id="passwordInput" placeholder="Skriv inn passord for navnesøk" />
+    <button id="loginBtn">Aktiver navnesøk</button>
+    <span id="loginStatus" style="margin-left:10px; font-weight:bold;"></span>
+  </div>
+  <div style="margin-top:8px; display:flex; align-items:center;">
+    <button id="toggleHeatmapBtn" disabled>Vis heatmap</button>
+  </div>
+  <div id="search-summary"></div>
+</div>
+<div id="map"></div>
+
+<!-- Load libraries in correct order -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
 <script>
+  // Her kommer hele JavaScript-koden fra forrige svar, kopiert og tilpasset for enkel liming
+
   let kanSokeNavn = false;
   const riktigPassord = "hemmelig123";
 
@@ -496,3 +654,6 @@
     map.fitBounds(searchLayer.getBounds().pad(0.05));
   }
 </script>
+
+</body>
+</html>
