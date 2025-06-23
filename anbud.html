@@ -499,16 +499,6 @@ keys.forEach(p => {
   }
 });
 
-  totalSum += sumCount;
-  const color = filterColors[filterKey] || '#000';
-  html += `<tr>
-    <td>${filterKeys[filterKey]}</td>
-    <td><span class="color-box" style="background:${color};"></span></td>
-    <td>${keys.length.toLocaleString()}</td>
-    <td>${sumCount.toLocaleString()}</td>
-    <td>${erPostnummer ? '' : formatFrekvenser(samletFrekvenser)}</td>
-  </tr>`;
-});
 html += `<tr style="font-weight:bold; background:#eef;">
   <td colspan="3">Totalt</td>
   <td>${totalSum.toLocaleString()}</td>
