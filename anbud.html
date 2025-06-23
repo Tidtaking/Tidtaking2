@@ -284,11 +284,26 @@
   }
 
   // Funksjon for å formatere frekvensdager til tekst
-  function formatFrekvenser(frekvensSet) {
-    if(!frekvensSet || frekvensSet.size === 0) return '';
-    const dagNavn = {1:'Man',2:'Tir',3:'Ons',4:'Tor',5:'Fre',6:'Lør',7:'Søn'};
-    return Array.from(frekvensSet).sort().map(d => dagNavn[d] || d).join(', ');
-  }
+function formatFrekvenser(frekvenserSet) {
+  const dagMap = {
+    '1': 'Man',
+    '2': 'Tir',
+    '3': 'Ons',
+    '4': 'Tor',
+    '5': 'Fre',
+    '6': 'Lør',
+    '7': 'Søn'
+  };
+
+  // FrekvenserSet inneholder unike tegn (sifre) fra alle frekvenser
+  // Vi lager en sortert array av disse sifrene
+  const dager = Array.from(frekvenserSet)
+    .filter(c => dagMap[c])
+    .sort((a,b) => a-b)
+    .map(c => dagMap[c]);
+
+  return dager.join(', ');
+}
 
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),
