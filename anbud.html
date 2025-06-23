@@ -525,11 +525,11 @@ heatLayer = L.heatLayer(heatPoints, {
   blur: 10,
   maxZoom: 17,
 gradient: {
-  0.0: '#ff0000',  // sterk rød helt fra start
-  0.3: '#ff6600',  // oransje
-  0.6: '#ffff00',  // gul
-  0.8: '#aaff00',  // lys grønn
-  1.0: '#00ff00'   // grønn på topp
+  0.0: 'rgba(255,0,0,1.0)',   // helt ugjennomsiktig, sterk rød
+  0.2: 'rgba(255,0,0,0.8)',
+  0.4: 'rgba(255,0,0,0.6)',
+  0.6: 'rgba(255,0,0,0.4)',
+  1.0: 'rgba(255,0,0,0.1)'
 }
 }).addTo(map);
 
