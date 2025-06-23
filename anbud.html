@@ -295,8 +295,6 @@ function formatFrekvenser(frekvenserSet) {
     '7': 'Søn'
   };
 
-  // FrekvenserSet inneholder unike tegn (sifre) fra alle frekvenser
-  // Vi lager en sortert array av disse sifrene
   const dager = Array.from(frekvenserSet)
     .filter(c => dagMap[c])
     .sort((a,b) => a-b)
@@ -304,6 +302,7 @@ function formatFrekvenser(frekvenserSet) {
 
   return dager.join(', ');
 }
+
 
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),
@@ -474,21 +473,32 @@ Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).for
   if(erPostnummer){
     sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
   } else {
-    keys.forEach(p=>{
-      const avisMap = mapData[p]?.avis;
-      if(avisMap){
-        for(const [avisId, avisData] of avisMap.entries()){
-          const navn = avisNavnMap[avisId] || avisId;
-          if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
-            sumCount += avisData.count;
-            if(avisData.frekvenser){
-              avisData.frekvenser.forEach(f => samletFrekvenser.add(f));
+keys.forEach(p => {
+  const avisMap = mapData[p]?.avis;
+  if (avisMap) {
+    for (const [avisId, avisData] of avisMap.entries()) {
+      const navn = avisNavnMap[avisId] || avisId;
+      if (avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))) {
+        sumCount += avisData.count;
+        if (avisData.frekvenser) {
+          // avisData.frekvenser kan være et Set med heltall eller strenger som '123456'
+          avisData.frekvenser.forEach(frekv => {
+            // Dersom frekv er en streng som '123456', split til sifre:
+            if(typeof frekv === 'string') {
+              for (const s of frekv) {
+                samletFrekvenser.add(s);
+              }
+            } else {
+              // Hvis det er tall, gjør om til streng og legg til:
+              samletFrekvenser.add(frekv.toString());
             }
-          }
+          });
         }
       }
-    });
+    }
   }
+});
+
   totalSum += sumCount;
   const color = filterColors[filterKey] || '#000';
   html += `<tr>
