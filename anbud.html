@@ -376,22 +376,24 @@
     return [0,0];
   }
 
-  function formatFrekvenser(frekvenserSet) {
-    const dagMap = {
-      '1': 'Man',
-      '2': 'Tir',
-      '3': 'Ons',
-      '4': 'Tor',
-      '5': 'Fre',
-      '6': 'Lør',
-      '7': 'Søn'
-    };
-    const dager = Array.from(frekvenserSet)
-      .filter(c => dagMap[c])
-      .sort((a,b) => a-b)
-      .map(c => dagMap[c]);
-    return dager.join(', ');
-  }
+function formatFrekvenser(frekvenserSet) {
+  const dagMap = {
+    '1': 'Man',
+    '2': 'Tir',
+    '3': 'Ons',
+    '4': 'Tor',
+    '5': 'Fre',
+    '6': 'Lør',
+    '7': 'Søn'
+  };
+  const dager = Array.from(frekvenserSet)
+    .map(c => c.toString())
+    .filter(c => dagMap[c])
+    .sort((a,b) => Number(a) - Number(b))
+    .map(c => dagMap[c]);
+  return dager.join(', ');
+}
+
 
   function searchMap(){
     const qRawInput = document.getElementById('searchInput').value.trim();
