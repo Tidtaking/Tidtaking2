@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -176,7 +175,7 @@
     }
   }
 
-  // Grupperer og summerer antall og avis per postnummer
+  // Grupperer og summerer antall, avis og frekvens per postnummer
   function group(rows, label = '') {
     const m = {};
     rows.forEach((r,i) => {
@@ -196,14 +195,20 @@
         num = isNaN(n) ? 1 : n;
       }
       const avisRaw = keyMap['avis'] ?? '';
+      const frekvensRaw = keyMap['frekvens'] ?? '';
 
       if(!m[p]) m[p] = {count:0, avis:new Map()};
       m[p].count += num;
 
       if(avisRaw){
         const avisLower = avisRaw.toString().toLowerCase();
-        const prev = m[p].avis.get(avisLower) || 0;
-        m[p].avis.set(avisLower, prev + num);
+        const prev = m[p].avis.get(avisLower) || {count:0, frekvenser:new Set()};
+        prev.count += num;
+        if(frekvensRaw){
+          const frekArr = frekvensRaw.toString().split(',').map(f => parseInt(f.trim())).filter(f => !isNaN(f));
+          frekArr.forEach(f => prev.frekvenser.add(f));
+        }
+        m[p].avis.set(avisLower, prev);
       }
     });
     return m;
@@ -242,11 +247,11 @@
       f.properties.antall = info.count;
       if(kanSokeNavn){
         f.properties.avis = Array.from(info.avis.entries())
-                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
+                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant.count}`)
                                 .join(', ');
       } else {
         f.properties.avis = Array.from(info.avis.entries())
-                                .map(([avisId,ant]) => `${avisId}: ${ant}`)
+                                .map(([avisId,ant]) => `${avisId}: ${ant.count}`)
                                 .join(', ');
       }
     });
@@ -276,6 +281,13 @@
       document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
       document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
     });
+  }
+
+  // Funksjon for å formatere frekvensdager til tekst
+  function formatFrekvenser(frekvensSet) {
+    if(!frekvensSet || frekvensSet.size === 0) return '';
+    const dagNavn = {1:'Man',2:'Tir',3:'Ons',4:'Tor',5:'Fre',6:'Lør',7:'Søn'};
+    return Array.from(frekvensSet).sort().map(d => dagNavn[d] || d).join(', ');
   }
 
   Promise.all([
@@ -438,20 +450,25 @@
     }
 
     let totalSum = 0;
-    let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th><th>Frekvensdager</th></tr></thead><tbody>';
     Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
       const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
       let sumCount = 0;
+      let samletFrekvenser = new Set();
+
       if(erPostnummer){
         sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
       } else {
         keys.forEach(p=>{
           const avisMap = mapData[p]?.avis;
           if(avisMap){
-            for(const [avisId, count] of avisMap.entries()){
+            for(const [avisId, avisData] of avisMap.entries()){
               const navn = avisNavnMap[avisId] || avisId;
               if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
-                sumCount += count;
+                sumCount += avisData.count;
+                if(avisData.frekvenser){
+                  avisData.frekvenser.forEach(f => samletFrekvenser.add(f));
+                }
               }
             }
           }
@@ -464,11 +481,12 @@
         <td><span class="color-box" style="background:${color};"></span></td>
         <td>${keys.length.toLocaleString()}</td>
         <td>${sumCount.toLocaleString()}</td>
+        <td>${erPostnummer ? '' : formatFrekvenser(samletFrekvenser)}</td>
       </tr>`;
     });
     html += `<tr style="font-weight:bold; background:#eef;">
-      <td colspan="3">Totalt</td>
-      <td>${totalSum.toLocaleString()}</td>
+      <td colspan="4">Totalt</td>
+      <td></td>
     </tr>`;
     html += '</tbody></table>';
     document.getElementById('search-summary').innerHTML = html;
@@ -489,9 +507,7 @@
     });
     exportBtn.disabled = false;
 
-    // Lag heatmap-punkter:
-    const intensitetFaktor = 5;  // juster denne etter behov
-
+    const intensitetFaktor = 5;
     const heatPointsRaw = matches.map(f => {
       const [lat, lng] = getPolygonCentroid(f);
       return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
@@ -523,7 +539,7 @@
           blur: 10,
           maxZoom: 17,
           gradient: {
-            0.0: 'rgba(255,0,0,1.0)',   // sterk rød
+            0.0: 'rgba(255,0,0,1.0)',
             0.2: 'rgba(255,0,0,0.8)',
             0.4: 'rgba(255,0,0,0.6)',
             0.6: 'rgba(255,0,0,0.4)',
@@ -553,7 +569,6 @@
     map.fitBounds(searchLayer.getBounds().pad(0.05));
   }
 
-  // Passordfunksjon
   document.getElementById('loginBtn').addEventListener('click', () => {
     const pw = document.getElementById('passwordInput').value;
     if(pw === riktigPassord){
