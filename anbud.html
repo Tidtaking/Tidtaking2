@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="no">
 <head>
@@ -129,521 +130,428 @@
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
   const searchBtn = document.getElementById('searchBtn');
-const exportBtn = document.getElementById('exportBtn');
-const heatmapBtn = document.getElementById('toggleHeatmapBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const heatmapBtn = document.getElementById('toggleHeatmapBtn');
 
-// Legg til frekvensfiltre i kontrollpanelet (kan settes dynamisk hvis ønskelig)
-const frekvCheckboxContainer = document.createElement('div');
-frekvCheckboxContainer.style.margin = '10px 0';
-frekvCheckboxContainer.style.display = 'flex';
-frekvCheckboxContainer.style.flexWrap = 'wrap';
-frekvCheckboxContainer.style.gap = '6px';
+  const map = L.map('map').setView([60,10],5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap contributors', maxZoom:18
+  }).addTo(map);
 
-const dagNavn = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
-const frekvCheckboxes = [];
-
-for(let i=1; i<=7; i++){
-  const label = document.createElement('label');
-  label.style.fontWeight = 'normal';
-  label.style.background = '#eee';
-  label.style.borderRadius = '4px';
-  label.style.padding = '2px 6px';
-  label.style.cursor = 'pointer';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.value = i.toString();
-  cb.checked = true;
-  cb.style.marginRight = '4px';
-  frekvCheckboxes.push(cb);
-  label.appendChild(cb);
-  label.appendChild(document.createTextNode(dagNavn[i-1]));
-  frekvCheckboxContainer.appendChild(label);
-}
-document.getElementById('controls').insertBefore(frekvCheckboxContainer, document.getElementById('searchInput').parentElement);
-
-// Map og Leaflet oppsett (samme som før)
-const map = L.map('map').setView([60,10],5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap contributors', maxZoom:18
-}).addTo(map);
-
-proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
-function coords3035tilLatLng(c){
-  const [x,y] = c;
-  const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
-  return L.latLng(lat,lon);
-}
-
-async function lesCSVRows(url){
-  try {
-    const res = await fetch(url);
-    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-    const text = await res.text();
-    return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
-  } catch(e) {
-    console.warn('Kunne ikke lese', url, e);
-    return [];
+  proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
+  function coords3035tilLatLng(c){
+    const [x,y] = c;
+    const [lon,lat] = proj4('EPSG:3035','WGS84',[x,y]);
+    return L.latLng(lat,lon);
   }
-}
 
-async function lesAvisnavn(url) {
-  try {
-    const res = await fetch(url);
-    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-    const text = await res.text();
-    const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
-    const map = {};
-    data.forEach(r => {
-      if(r.ID && r.avis){
-        map[r.ID.trim()] = r.avis.trim();
-      }
-    });
-    return map;
-  } catch(e) {
-    console.warn('Kunne ikke lese avisnavn', e);
-    return {};
+  async function lesCSVRows(url){
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+      const text = await res.text();
+      return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
+    } catch(e) {
+      console.warn('Kunne ikke lese', url, e);
+      return [];
+    }
   }
-}
 
-// Nå lagrer vi også frekvens (set av unike frekvenser for avis pr postnummer)
-function group(rows, label = '') {
-  const m = {};
-  rows.forEach((r,i) => {
-    const keyMap = {};
-    Object.entries(r).forEach(([k,v])=>{
-      keyMap[k.trim().toLowerCase()] = v;
-    });
-    const pRaw = keyMap['postnummer'] ?? '';
-    const p = pRaw.toString().trim().padStart(4,'0');
-    if(!p) {
-      console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
-      return;
-    }
-    let num = 1;
-    if('antall' in keyMap){
-      const n = Number(keyMap['antall']);
-      num = isNaN(n) ? 1 : n;
-    }
-    const avisRaw = keyMap['avis'] ?? '';
-    const frekvensRaw = keyMap['frekvens'] ?? '';
-
-    if(!m[p]) m[p] = {count:0, avis:new Map()};
-    m[p].count += num;
-
-    if(avisRaw){
-      const avisLower = avisRaw.toString().toLowerCase();
-      if(!m[p].avis.has(avisLower)) m[p].avis.set(avisLower, {count:0, frekvenser: new Set()});
-      const cur = m[p].avis.get(avisLower);
-      cur.count += num;
-      if(frekvensRaw) cur.frekvenser.add(frekvensRaw.toString());
-    }
-  });
-  return m;
-}
-
-let kanSokeNavn = false;
-const riktigPassord = "hemmelig123";
-
-let dC, dD, dInnenfor, dUtenfor;
-let fC, fD, fInnenfor, fUtenfor;
-let avisNavnMap;
-const layers = {};
-let searchLayer = null;
-let heatLayer = null;
-let showingHeatmap = false;
-let lastMatches = [];
-
-const filterColors = {
-  Anbud: '#ff3333',
-  Brukt: '#ffff00',
-  Innenfor: '#663399',
-  Utenfor: '#ff9900'
-};
-
-const filterKeys = {
-  Anbud: 'anbudet',
-  Brukt: 'abo_bruktidag_anbud',
-  Innenfor: 'Innenfor anbud',
-  Utenfor: 'Utenfor anbud'
-};
-
-function hentValgteFrekvenser(){
-  return frekvCheckboxes.filter(cb=>cb.checked).map(cb=>cb.value);
-}
-
-function frekvensMatcher(frekvensSet, valgte){
-  for(const v of valgte){
-    if(frekvensSet.has(v)) return true;
-  }
-  return false;
-}
-
-function enrich(arr,mapData){
-  const valgteFrekvenser = hentValgteFrekvenser();
-  arr.forEach(f=>{
-    const p = f.properties.postnummer.trim().padStart(4,'0');
-    const info = mapData[p] || {count:0, avis:new Map()};
-    let totalCount = 0;
-    const avisStrings = [];
-    for(const [avisId, avisData] of info.avis.entries()){
-      if(!avisData.frekvenser || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-        totalCount += avisData.count;
-        if(kanSokeNavn){
-          avisStrings.push(`${avisNavnMap[avisId] || avisId}: ${avisData.count}`);
-        } else {
-          avisStrings.push(`${avisId}: ${avisData.count}`);
+  async function lesAvisnavn(url) {
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+      const text = await res.text();
+      const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
+      const map = {};
+      data.forEach(r => {
+        if(r.ID && r.avis){
+          map[r.ID.trim()] = r.avis.trim();
         }
-      }
+      });
+      return map;
+    } catch(e) {
+      console.warn('Kunne ikke lese avisnavn', e);
+      return {};
     }
-    f.properties.antall = totalCount;
-    f.properties.avis = avisStrings.join(', ');
-  });
-}
-
-function enrichAll(){
-  enrich(fC,dC);
-  enrich(fD,dD);
-  enrich(fInnenfor,dInnenfor);
-  enrich(fUtenfor,dUtenfor);
-  Object.values(layers).forEach(layer => layer.eachLayer(l=>{
-    const p = l.feature.properties;
-    l.setPopupContent(`
-      <strong>Postnummer: ${p.postnummer}</strong><br>
-      Totalt antall: ${p.antall}<br>
-      Detaljer pr avis: ${p.avis || 'Ingen'}
-    `);
-  }));
-}
-
-function oppdaterFilterTellinger(){
-  const valgteFrekvenser = hentValgteFrekvenser();
-  ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
-    const mapData = [dC,dD,dInnenfor,dUtenfor][i];
-    if(!mapData) return;
-    const postnummerer = Object.keys(mapData).filter(p=>{
-      const avisMap = mapData[p].avis;
-      for(const avisData of avisMap.values()){
-        if(!avisData.frekvenser || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-          return true;
-        }
-      }
-      return false;
-    });
-    const antallSum = postnummerer.reduce((s,p) => {
-      const avisMap = mapData[p].avis;
-      let sum = 0;
-      for(const avisData of avisMap.values()){
-        if(!avisData.frekvenser || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-          sum += avisData.count;
-        }
-      }
-      return s+sum;
-    }, 0);
-    document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
-    document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
-  });
-}
-
-Promise.all([
-  lesCSVRows('anbud_postnummer.csv'),
-  lesCSVRows('abo_bruktidag_anbud.csv'),
-  lesCSVRows('innenforanbud.csv'),
-  lesCSVRows('utenforanbud.csv'),
-  lesAvisnavn('avisid.csv'),
-  fetch('postnummer_part01.geojson').then(r=>r.json()),
-  fetch('postnummer_part02.geojson').then(r=>r.json()),
-  fetch('postnummer_part03.geojson').then(r=>r.json()),
-  fetch('filtrert_anbud.geojson').then(r=>r.json())
-]).then(([cRows,dRows,eRows,fRows, avisMap, g1,g2,g3,geoAnb])=>{
-  dC = group(cRows, 'Anbud');
-  dD = group(dRows, 'Brukt');
-  dInnenfor = group(eRows, 'Innenfor');
-  dUtenfor = group(fRows, 'Utenfor');
-  avisNavnMap = avisMap;
-
-  const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
-  const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
-  const nInnenfor = Object.keys(dInnenfor).map(p => p.padStart(4,'0'));
-  const nUtenfor = Object.keys(dUtenfor).map(p => p.padStart(4,'0'));
-
-  const base = [...g1.features,...g2.features,...g3.features];
-  const geoBase = {type:'FeatureCollection',features:base};
-
-  fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
-  fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
-  fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
-  fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
-
-  enrichAll();
-  oppdaterFilterTellinger();
-
-  layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
-  layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
-  layers.Innenfor = L.geoJSON(fInnenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Innenfor,fillOpacity:0.5,weight:1})});
-  layers.Utenfor  = L.geoJSON(fUtenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Utenfor,fillOpacity:0.5,weight:1})});
-
-  Object.values(layers).forEach(layer => layer.eachLayer(l=>{
-    const p = l.feature.properties;
-    l.bindPopup(`
-      <strong>Postnummer: ${p.postnummer}</strong><br>
-      Totalt antall: ${p.antall}<br>
-      Detaljer pr avis: ${p.avis || 'Ingen'}
-    `);
-  }));
-
-  function oppdaterLag(){
-    Object.entries(layers).forEach(([k,lyr])=>{
-      document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
-    });
-    const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
-    if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
   }
-  ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>
-    document.getElementById('toggle'+k).addEventListener('change',()=>{
-      oppdaterLag();
-      enrichAll();
-      oppdaterFilterTellinger();
-    })
-  );
-  oppdaterLag();
 
-  frekvCheckboxes.forEach(cb => cb.addEventListener('change', () => {
+  // Grupperer og summerer antall og avis per postnummer
+  function group(rows, label = '') {
+    const m = {};
+    rows.forEach((r,i) => {
+      const keyMap = {};
+      Object.entries(r).forEach(([k,v])=>{
+        keyMap[k.trim().toLowerCase()] = v;
+      });
+      const pRaw = keyMap['postnummer'] ?? '';
+      const p = pRaw.toString().trim().padStart(4,'0');
+      if(!p) {
+        console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
+        return;
+      }
+      let num = 1;
+      if('antall' in keyMap){
+        const n = Number(keyMap['antall']);
+        num = isNaN(n) ? 1 : n;
+      }
+      const avisRaw = keyMap['avis'] ?? '';
+
+      if(!m[p]) m[p] = {count:0, avis:new Map()};
+      m[p].count += num;
+
+      if(avisRaw){
+        const avisLower = avisRaw.toString().toLowerCase();
+        const prev = m[p].avis.get(avisLower) || 0;
+        m[p].avis.set(avisLower, prev + num);
+      }
+    });
+    return m;
+  }
+
+  let kanSokeNavn = false;
+  const riktigPassord = "hemmelig123";
+
+  let dC, dD, dInnenfor, dUtenfor;
+  let fC, fD, fInnenfor, fUtenfor;
+  let avisNavnMap;
+  const layers = {};
+  let searchLayer = null;
+  let heatLayer = null;
+  let showingHeatmap = false;
+  let lastMatches = [];
+
+  const filterColors = {
+    Anbud: '#ff3333',
+    Brukt: '#ffff00',
+    Innenfor: '#663399',
+    Utenfor: '#ff9900'
+  };
+
+  const filterKeys = {
+    Anbud: 'anbudet',
+    Brukt: 'abo_bruktidag_anbud',
+    Innenfor: 'Innenfor anbud',
+    Utenfor: 'Utenfor anbud'
+  };
+
+  function enrich(arr,mapData){
+    arr.forEach(f=>{
+      const p = f.properties.postnummer.trim().padStart(4,'0');
+      const info = mapData[p] || {count:0, avis:new Map()};
+      f.properties.antall = info.count;
+      if(kanSokeNavn){
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
+                                .join(', ');
+      } else {
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisId}: ${ant}`)
+                                .join(', ');
+      }
+    });
+  }
+
+  function enrichAll(){
+    enrich(fC,dC);
+    enrich(fD,dD);
+    enrich(fInnenfor,dInnenfor);
+    enrich(fUtenfor,dUtenfor);
+    Object.values(layers).forEach(layer => layer.eachLayer(l=>{
+      const p = l.feature.properties;
+      l.setPopupContent(`
+        <strong>Postnummer: ${p.postnummer}</strong><br>
+        Totalt antall: ${p.antall}<br>
+        Detaljer pr avis: ${p.avis || 'Ingen'}
+      `);
+    }));
+  }
+
+  function oppdaterFilterTellinger(){
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
+      if(!mapData) return;
+      const postnummerer = Object.keys(mapData);
+      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
+      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
+    });
+  }
+
+  Promise.all([
+    lesCSVRows('anbud_postnummer.csv'),
+    lesCSVRows('abo_bruktidag_anbud.csv'),
+    lesCSVRows('innenforanbud.csv'),
+    lesCSVRows('utenforanbud.csv'),
+    lesAvisnavn('avisid.csv'),
+    fetch('postnummer_part01.geojson').then(r=>r.json()),
+    fetch('postnummer_part02.geojson').then(r=>r.json()),
+    fetch('postnummer_part03.geojson').then(r=>r.json()),
+    fetch('filtrert_anbud.geojson').then(r=>r.json())
+  ]).then(([cRows,dRows,eRows,fRows, avisMap, g1,g2,g3,geoAnb])=>{
+    dC = group(cRows, 'Anbud');
+    dD = group(dRows, 'Brukt');
+    dInnenfor = group(eRows, 'Innenfor');
+    dUtenfor = group(fRows, 'Utenfor');
+    avisNavnMap = avisMap;
+
+    const nC = Object.keys(dC).map(p => p.padStart(4,'0'));
+    const nD = Object.keys(dD).map(p => p.padStart(4,'0'));
+    const nInnenfor = Object.keys(dInnenfor).map(p => p.padStart(4,'0'));
+    const nUtenfor = Object.keys(dUtenfor).map(p => p.padStart(4,'0'));
+
+    const base = [...g1.features,...g2.features,...g3.features];
+    const geoBase = {type:'FeatureCollection',features:base};
+
+    fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+    fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
+
     enrichAll();
     oppdaterFilterTellinger();
-  }));
 
-  searchBtn.addEventListener('click', searchMap);
-  document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
+    layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
+    layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
+    layers.Innenfor = L.geoJSON(fInnenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Innenfor,fillOpacity:0.5,weight:1})});
+    layers.Utenfor  = L.geoJSON(fUtenfor,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Utenfor,fillOpacity:0.5,weight:1})});
 
-  exportBtn.addEventListener('click', () => {
-    if(!lastMatches.length) return;
-    const csv = Papa.unparse(lastMatches);
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'sokeresultater.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    Object.values(layers).forEach(layer => layer.eachLayer(l=>{
+      const p = l.feature.properties;
+      l.bindPopup(`
+        <strong>Postnummer: ${p.postnummer}</strong><br>
+        Totalt antall: ${p.antall}<br>
+        Detaljer pr avis: ${p.avis || 'Ingen'}
+      `);
+    }));
+
+    function oppdaterLag(){
+      Object.entries(layers).forEach(([k,lyr])=>{
+        document.getElementById('toggle'+k).checked ? map.addLayer(lyr) : map.removeLayer(lyr);
+      });
+      const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers():[]);
+      if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
+    }
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>
+      document.getElementById('toggle'+k).addEventListener('change',oppdaterLag)
+    );
+    oppdaterLag();
+
+    searchBtn.addEventListener('click', searchMap);
+    document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
+
+    exportBtn.addEventListener('click', () => {
+      if(!lastMatches.length) return;
+      const csv = Papa.unparse(lastMatches);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'sokeresultater.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
   });
-});
 
-function getPolygonCentroid(feature){
-  const geom = feature.geometry;
-  if(geom.type === 'Polygon'){
-    const coords = geom.coordinates[0];
-    let latSum = 0, lngSum = 0;
-    coords.forEach(([x,y])=>{
-      const [lon, lat] = proj4('EPSG:3035','WGS84',[x,y]);
-      latSum += lat;
-      lngSum += lon;
-    });
-    const len = coords.length;
-    return [latSum/len, lngSum/len];
-  }
-  return [0,0];
-}
-
-function searchMap(){
-  const qRawInput = document.getElementById('searchInput').value.trim();
-  const qRaw = qRawInput.toLowerCase();
-  if(!qRaw) return;
-  Object.values(layers).forEach(l=>map.removeLayer(l));
-  if(searchLayer){
-    map.removeLayer(searchLayer);
-    searchLayer = null;
-  }
-  if(heatLayer){
-    map.removeLayer(heatLayer);
-    heatLayer = null;
-    showingHeatmap = false;
-    heatmapBtn.innerText = 'Vis heatmap';
-    heatmapBtn.disabled = true;
-  }
-
-  const matchedPostnr = new Set();
-  const erPostnummer = /^\d{4}$/.test(qRawInput);
-  const qPostnummer = erPostnummer ? qRawInput.padStart(4,'0') : null;
-  const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
-  const valgteFrekvenser = hentValgteFrekvenser();
-
-  function avisMatcher(avisMap) {
-    if(erPostnummer) return false;
-    if(!kanSokeNavn) {
-      return avisSok.some(sokStr => {
-        return Array.from(avisMap.keys()).some(avisId => avisId === sokStr);
+  function getPolygonCentroid(feature){
+    const geom = feature.geometry;
+    if(geom.type === 'Polygon'){
+      const coords = geom.coordinates[0];
+      let latSum = 0, lngSum = 0;
+      coords.forEach(([x,y])=>{
+        const [lon, lat] = proj4('EPSG:3035','WGS84',[x,y]);
+        latSum += lat;
+        lngSum += lon;
       });
+      const len = coords.length;
+      return [latSum/len, lngSum/len];
     }
-    return avisSok.some(sokStr => {
-      return Array.from(avisMap.keys()).some(avisId => {
-        const navn = avisNavnMap[avisId] ? avisNavnMap[avisId].toLowerCase() : avisId.toLowerCase();
-        return avisId === sokStr || navn.includes(sokStr);
-      });
-    });
+    return [0,0];
   }
 
-  // Sjekk frekvens overlap for et avisobjekt
-  function checkFrekvensOverlap(avisData, valgte){
-    if(!avisData.frekvenser || avisData.frekvenser.size === 0) return true;
-    for(const f of valgte){
-      if(avisData.frekvenser.has(f)) return true;
+  function searchMap(){
+    const qRawInput = document.getElementById('searchInput').value.trim();
+    const qRaw = qRawInput.toLowerCase();
+    if(!qRaw) return;
+    Object.values(layers).forEach(l=>map.removeLayer(l));
+    if(searchLayer){
+      map.removeLayer(searchLayer);
+      searchLayer = null;
     }
-    return false;
-  }
+    if(heatLayer){
+      map.removeLayer(heatLayer);
+      heatLayer = null;
+      showingHeatmap = false;
+      heatmapBtn.innerText = 'Vis heatmap';
+      heatmapBtn.disabled = true;
+    }
 
-  Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
-    Object.entries(mapData).forEach(([pRaw,info])=>{
-      const p = pRaw.padStart(4,'0');
-      if(erPostnummer){
-        if(p === qPostnummer){
-          // Sjekk om minst en avis med frekvens overlapper
-          const harFrekvensOk = Array.from(info.avis.values()).some(avisData => checkFrekvensOverlap(avisData, valgteFrekvenser));
-          if(harFrekvensOk) matchedPostnr.add(p);
-        } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
-          const harFrekvensOk = Array.from(info.avis.values()).some(avisData => checkFrekvensOverlap(avisData, valgteFrekvenser));
-          if(harFrekvensOk) matchedPostnr.add(p);
-        }
-      } else {
-        if(avisMatcher(info.avis)){
-          const harFrekvensOk = Array.from(info.avis.values()).some(avisData => checkFrekvensOverlap(avisData, valgteFrekvenser));
-          if(harFrekvensOk) matchedPostnr.add(p);
-        }
+    const matchedPostnr = new Set();
+    const erPostnummer = /^\d{4}$/.test(qRawInput);
+    const qPostnummer = erPostnummer ? qRawInput.padStart(4,'0') : null;
+    const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    function avisMatcher(avisMap) {
+      if(erPostnummer) return false;
+      if(!kanSokeNavn) {
+        return avisSok.some(sokStr => {
+          return Array.from(avisMap.keys()).some(avisId => avisId === sokStr);
+        });
       }
-    });
-  });
+      return avisSok.some(sokStr => {
+        return Array.from(avisMap.keys()).some(avisId => {
+          const navn = avisNavnMap[avisId] ? avisNavnMap[avisId].toLowerCase() : avisId.toLowerCase();
+          return avisId === sokStr || navn.includes(sokStr);
+        });
+      });
+    }
 
-  const allFeatures = [...fC,...fD,...fInnenfor,...fUtenfor];
-  const matches = allFeatures.filter(f =>
-    matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
-  );
-
-  if(!matches.length){
-    document.getElementById('search-summary').innerHTML = '';
-    exportBtn.disabled = true;
-    heatmapBtn.disabled = true;
-    alert(`Ingen treff for "${qRawInput}"`);
-    return;
-  }
-
-  let totalSum = 0;
-  let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
-  Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
-    const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
-    let sumCount = 0;
-    if(erPostnummer){
-      sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-    } else {
-      keys.forEach(p=>{
-        const avisMap = mapData[p]?.avis;
-        if(avisMap){
-          for(const [avisId, avisData] of avisMap.entries()){
-            const navn = avisNavnMap[avisId] || avisId;
-            if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
-              if(checkFrekvensOverlap(avisData, valgteFrekvenser)) {
-                sumCount += avisData.count;
-              }
-            }
+    Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
+      Object.entries(mapData).forEach(([pRaw,info])=>{
+        const p = pRaw.padStart(4,'0');
+        if(erPostnummer){
+          if(p === qPostnummer){
+            matchedPostnr.add(p);
+          } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
+            matchedPostnr.add(p);
+          }
+        } else {
+          if(avisMatcher(info.avis)){
+            matchedPostnr.add(p);
           }
         }
       });
+    });
+
+    const allFeatures = [...fC,...fD,...fInnenfor,...fUtenfor];
+    const matches = allFeatures.filter(f =>
+      matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
+    );
+
+    if(!matches.length){
+      document.getElementById('search-summary').innerHTML = '';
+      exportBtn.disabled = true;
+      heatmapBtn.disabled = true;
+      alert(`Ingen treff for "${qRawInput}"`);
+      return;
     }
-    totalSum += sumCount;
-    const color = filterColors[filterKey] || '#000';
-    html += `<tr>
-      <td>${filterKeys[filterKey]}</td>
-      <td><span class="color-box" style="background:${color};"></span></td>
-      <td>${keys.length.toLocaleString()}</td>
-      <td>${sumCount.toLocaleString()}</td>
+
+    let totalSum = 0;
+    let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th></tr></thead><tbody>';
+    Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
+      const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
+      let sumCount = 0;
+      if(erPostnummer){
+        sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+      } else {
+        keys.forEach(p=>{
+          const avisMap = mapData[p]?.avis;
+          if(avisMap){
+            for(const [avisId, count] of avisMap.entries()){
+              const navn = avisNavnMap[avisId] || avisId;
+              if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
+                sumCount += count;
+              }
+            }
+          }
+        });
+      }
+      totalSum += sumCount;
+      const color = filterColors[filterKey] || '#000';
+      html += `<tr>
+        <td>${filterKeys[filterKey]}</td>
+        <td><span class="color-box" style="background:${color};"></span></td>
+        <td>${keys.length.toLocaleString()}</td>
+        <td>${sumCount.toLocaleString()}</td>
+      </tr>`;
+    });
+    html += `<tr style="font-weight:bold; background:#eef;">
+      <td colspan="3">Totalt</td>
+      <td>${totalSum.toLocaleString()}</td>
     </tr>`;
-  });
-  html += `<tr style="font-weight:bold; background:#eef;">
-    <td colspan="3">Totalt</td>
-    <td>${totalSum.toLocaleString()}</td>
-  </tr>`;
-  html += '</tbody></table>';
-  document.getElementById('search-summary').innerHTML = html;
+    html += '</tbody></table>';
+    document.getElementById('search-summary').innerHTML = html;
 
-  lastMatches = matches.map(f=>{
-    const p = f.properties.postnummer.trim().padStart(4,'0');
-    let filt = null;
-    if(dC && Object.keys(dC).includes(p)) filt = 'Anbud';
-    else if(dD && Object.keys(dD).includes(p)) filt = 'Brukt';
-    else if(dInnenfor && Object.keys(dInnenfor).includes(p)) filt = 'Innenfor';
-    else if(dUtenfor && Object.keys(dUtenfor).includes(p)) filt = 'Utenfor';
-    return {
-      filter: filterKeys[filt] || '',
-      postnummer: p,
-      antall: f.properties.antall,
-      avis: f.properties.avis
-    };
-  });
-  exportBtn.disabled = false;
+    lastMatches = matches.map(f=>{
+      const p = f.properties.postnummer.trim().padStart(4,'0');
+      let filt = null;
+      if(dC && Object.keys(dC).includes(p)) filt = 'Anbud';
+      else if(dD && Object.keys(dD).includes(p)) filt = 'Brukt';
+      else if(dInnenfor && Object.keys(dInnenfor).includes(p)) filt = 'Innenfor';
+      else if(dUtenfor && Object.keys(dUtenfor).includes(p)) filt = 'Utenfor';
+      return {
+        filter: filterKeys[filt] || '',
+        postnummer: p,
+        antall: f.properties.antall,
+        avis: f.properties.avis
+      };
+    });
+    exportBtn.disabled = false;
 
-  // Lag heatmap-punkter:
-  const intensitetFaktor = 5;  // juster denne etter behov
+    // Lag heatmap-punkter:
+    const intensitetFaktor = 5;  // juster denne etter behov
 
-  const heatPointsRaw = matches.map(f => {
-    const [lat, lng] = getPolygonCentroid(f);
-    return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
-  });
-  const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
-  const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
+    const heatPointsRaw = matches.map(f => {
+      const [lat, lng] = getPolygonCentroid(f);
+      return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
+    });
+    const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
+    const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
 
-  heatmapBtn.disabled = false;
-  showingHeatmap = false;
-  heatmapBtn.innerText = 'Vis heatmap';
+    heatmapBtn.disabled = false;
+    showingHeatmap = false;
+    heatmapBtn.innerText = 'Vis heatmap';
 
-  heatmapBtn.onclick = () => {
-    if(showingHeatmap){
-      if(heatLayer){
-        map.removeLayer(heatLayer);
-        heatLayer = null;
-      }
-      if(searchLayer){
-        map.addLayer(searchLayer);
-      }
-      heatmapBtn.innerText = 'Vis heatmap';
-      showingHeatmap = false;
-    } else {
-      if(searchLayer){
-        map.removeLayer(searchLayer);
-      }
-      heatLayer = L.heatLayer(heatPoints, {
-        radius: 15,
-        blur: 10,
-        maxZoom: 17,
-        gradient: {
-          0.0: 'rgba(255,0,0,1.0)',   // sterk rød
-          0.2: 'rgba(255,0,0,0.8)',
-          0.4: 'rgba(255,0,0,0.6)',
-          0.6: 'rgba(255,0,0,0.4)',
-          1.0: 'rgba(255,0,0,0.2)'
+    heatmapBtn.onclick = () => {
+      if(showingHeatmap){
+        if(heatLayer){
+          map.removeLayer(heatLayer);
+          heatLayer = null;
         }
-      }).addTo(map);
-      heatmapBtn.innerText = 'Vis polygon';
-      showingHeatmap = true;
-    }
-  };
+        if(searchLayer){
+          map.addLayer(searchLayer);
+        }
+        heatmapBtn.innerText = 'Vis heatmap';
+        showingHeatmap = false;
+      } else {
+        if(searchLayer){
+          map.removeLayer(searchLayer);
+        }
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: 15,
+          blur: 10,
+          maxZoom: 17,
+          gradient: {
+            0.0: 'rgba(255,0,0,1.0)',   // sterk rød
+            0.2: 'rgba(255,0,0,0.8)',
+            0.4: 'rgba(255,0,0,0.6)',
+            0.6: 'rgba(255,0,0,0.4)',
+            1.0: 'rgba(255,0,0,0.2)'
+          }
+        }).addTo(map);
+        heatmapBtn.innerText = 'Vis polygon';
+        showingHeatmap = true;
+      }
+    };
 
-  searchLayer = L.geoJSON(matches,{
-    coordsToLatLng: coords3035tilLatLng,
-    style: ()=>({color:'#555', fillOpacity:0.3, weight:2})
-  }).addTo(map);
+    searchLayer = L.geoJSON(matches,{
+      coordsToLatLng: coords3035tilLatLng,
+      style: ()=>({color:'#555', fillOpacity:0.3, weight:2})
+    }).addTo(map);
 
-  searchLayer.eachLayer(l=>{
-    const p = l.feature.properties;
-    l.bindPopup(`
-      <strong>Postnummer: ${p.postnummer}</strong><br>
-      Totalt antall: ${p.antall}<br>
-      Detaljer pr avis: ${p.avis || 'Ingen'}
-    `);
-    l.openPopup();
-  });
+    searchLayer.eachLayer(l=>{
+      const p = l.feature.properties;
+      l.bindPopup(`
+        <strong>Postnummer: ${p.postnummer}</strong><br>
+        Totalt antall: ${p.antall}<br>
+        Detaljer pr avis: ${p.avis || 'Ingen'}
+      `);
+      l.openPopup();
+    });
 
-  map.fitBounds(searchLayer.getBounds().pad(0.05));
-}
-
+    map.fitBounds(searchLayer.getBounds().pad(0.05));
+  }
 
   // Passordfunksjon
   document.getElementById('loginBtn').addEventListener('click', () => {
