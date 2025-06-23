@@ -128,6 +128,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
+  // Funksjon for oppdatering av tellinger (må være definert tidlig)
+  function oppdaterFilterTellinger(){
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
+      const mapData = [dC,dD,dInnenfor,dUtenfor][i];
+      if(!mapData) return;
+      const postnummerer = Object.keys(mapData);
+      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
+      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
+      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
+    });
+  }
+
   const searchBtn = document.getElementById('searchBtn');
   const exportBtn = document.getElementById('exportBtn');
   const heatmapBtn = document.getElementById('toggleHeatmapBtn');
@@ -205,7 +217,7 @@
         const prev = m[p].avis.get(avisLower) || {count:0, frekvenser:new Set()};
         prev.count += num;
         if(frekvensRaw){
-          const frekArr = frekvensRaw.toString().split(',').map(f => f.trim()).filter(f => f !== '');
+          const frekArr = frekvensRaw.toString().split(',').map(f => parseInt(f.trim())).filter(f => !isNaN(f));
           frekArr.forEach(f => prev.frekvenser.add(f));
         }
         m[p].avis.set(avisLower, prev);
@@ -270,26 +282,6 @@
         Detaljer pr avis: ${p.avis || 'Ingen'}
       `);
     }));
-  }
-
-  // Funksjon for å formatere frekvensdager til tekst
-  function formatFrekvenser(frekvenserSet) {
-    const dagMap = {
-      '1': 'Man',
-      '2': 'Tir',
-      '3': 'Ons',
-      '4': 'Tor',
-      '5': 'Fre',
-      '6': 'Lør',
-      '7': 'Søn'
-    };
-
-    const dager = Array.from(frekvenserSet)
-      .filter(c => dagMap[c])
-      .sort((a,b) => a-b)
-      .map(c => dagMap[c]);
-
-    return dager.join(', ');
   }
 
   Promise.all([
@@ -384,6 +376,23 @@
     return [0,0];
   }
 
+  function formatFrekvenser(frekvenserSet) {
+    const dagMap = {
+      '1': 'Man',
+      '2': 'Tir',
+      '3': 'Ons',
+      '4': 'Tor',
+      '5': 'Fre',
+      '6': 'Lør',
+      '7': 'Søn'
+    };
+    const dager = Array.from(frekvenserSet)
+      .filter(c => dagMap[c])
+      .sort((a,b) => a-b)
+      .map(c => dagMap[c]);
+    return dager.join(', ');
+  }
+
   function searchMap(){
     const qRawInput = document.getElementById('searchInput').value.trim();
     const qRaw = qRawInput.toLowerCase();
@@ -452,11 +461,13 @@
     }
 
     let totalSum = 0;
+    let samletFrekvenser = new Set();
+
     let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th><th>Frekvensdager</th></tr></thead><tbody>';
     Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
       const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
       let sumCount = 0;
-      let samletFrekvenser = new Set();
+      let filterFrekvenser = new Set();
 
       if(erPostnummer){
         sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
@@ -472,9 +483,11 @@
                   avisData.frekvenser.forEach(frekv => {
                     if(typeof frekv === 'string') {
                       for (const s of frekv) {
+                        filterFrekvenser.add(s);
                         samletFrekvenser.add(s);
                       }
                     } else {
+                      filterFrekvenser.add(frekv.toString());
                       samletFrekvenser.add(frekv.toString());
                     }
                   });
@@ -491,13 +504,13 @@
         <td><span class="color-box" style="background:${color};"></span></td>
         <td>${keys.length.toLocaleString()}</td>
         <td>${sumCount.toLocaleString()}</td>
-        <td>${erPostnummer ? '' : formatFrekvenser(samletFrekvenser)}</td>
+        <td>${formatFrekvenser(filterFrekvenser)}</td>
       </tr>`;
     });
     html += `<tr style="font-weight:bold; background:#eef;">
       <td colspan="3">Totalt</td>
       <td>${totalSum.toLocaleString()}</td>
-      <td></td>
+      <td>${formatFrekvenser(samletFrekvenser)}</td>
     </tr>`;
     html += '</tbody></table>';
     document.getElementById('search-summary').innerHTML = html;
