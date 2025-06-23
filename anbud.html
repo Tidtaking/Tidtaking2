@@ -216,11 +216,24 @@
         const avisLower = avisRaw.toString().toLowerCase();
         const prev = m[p].avis.get(avisLower) || {count:0, frekvenser:new Set()};
         prev.count += num;
-        if(frekvensRaw){
-          const frekArr = frekvensRaw.toString().split(',').map(f => parseInt(f.trim())).filter(f => !isNaN(f));
-          frekArr.forEach(f => prev.frekvenser.add(f));
-        }
-        m[p].avis.set(avisLower, prev);
+if(frekvensRaw){
+  // Split først på komma
+  const deler = frekvensRaw.toString().split(',');
+  deler.forEach(del => {
+    const delTrim = del.trim();
+    // Hvis del inneholder flere sifre sammen (f.eks "123456"), splitt i enkelttegn
+    if(delTrim.length > 1 && !delTrim.includes(',')){
+      for(const s of delTrim){
+        if(s >= '1' && s <= '7') prev.frekvenser.add(s);
+      }
+    } else {
+      // enkelt siffer
+      if(delTrim >= '1' && delTrim <= '7') prev.frekvenser.add(delTrim);
+    }
+  });
+}
+m[p].avis.set(avisLower, prev);
+
       }
     });
     return m;
