@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Anbud – Postnummerkart med Frekvens-filter</title>
+<title>Anbud – Postnummerkart med Heatmap</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   html, body { height: 100%; margin: 0; padding: 0; }
@@ -13,12 +13,12 @@
     background: white; padding: 10px; border-radius: 4px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     font-family: sans-serif; font-size: 14px; line-height: 1.4;
-    width: 520px;
+    width: 460px;
     max-height: 95vh;
     overflow-y: auto;
   }
   #controls label {
-    display: flex; align-items: center; margin-bottom: 8px;
+    display: flex; align-items: center; margin-bottom: 10px;
     padding: 4px; border-radius: 4px;
   }
   #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
@@ -65,24 +65,10 @@
     border: 1px solid #999;
     border-radius: 3px;
   }
-  #frekvensFilters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  #frekvensFilters label {
-    flex: 0 0 60px;
-    font-weight: normal;
-    background: #eee;
-    border-radius: 4px;
-    padding: 2px 6px;
-  }
 </style>
 </head>
 <body>
 <div id="controls">
-  <!-- Filtervalg -->
   <label><input type="checkbox" id="toggleAnbud" checked />
     <div class="label-content">
       <span class="label-text">anbudet</span>
@@ -120,17 +106,6 @@
     </div>
   </label>
 
-  <!-- Frekvensvalg -->
-  <div id="frekvensFilters">
-    <label><input type="checkbox" class="frekvCheckbox" value="1" checked /> Man</label>
-    <label><input type="checkbox" class="frekvCheckbox" value="2" checked /> Tir</label>
-    <label><input type="checkbox" class="frekvCheckbox" value="3" checked /> Ons</label>
-    <label><input type="checkbox" class="frekvCheckbox" value="4" checked /> Tor</label>
-    <label><input type="checkbox" class="frekvCheckbox" value="5" checked /> Fre</label>
-    <label><input type="checkbox" class="frekvCheckbox" value="6" checked /> Lør</label>
-    <label><input type="checkbox" class="frekvCheckbox" value="7" checked /> Søn</label>
-  </div>
-
   <div style="margin-top:8px; display:flex; align-items:center;">
     <input type="text" id="searchInput" placeholder="Søk poststed, nr eller avis" />
     <button id="searchBtn">Søk</button>
@@ -148,22 +123,14 @@
 </div>
 <div id="map"></div>
 
-<!-- Load libraries in correct order -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
-
 <script>
-  // Her kommer hele JavaScript-koden fra forrige svar, kopiert og tilpasset for enkel liming
-
-  let kanSokeNavn = false;
-  const riktigPassord = "hemmelig123";
-
   const searchBtn = document.getElementById('searchBtn');
   const exportBtn = document.getElementById('exportBtn');
   const heatmapBtn = document.getElementById('toggleHeatmapBtn');
-  const frekvCheckboxes = Array.from(document.querySelectorAll('.frekvCheckbox'));
 
   const map = L.map('map').setView([60,10],5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -208,13 +175,7 @@
     }
   }
 
-  const harFrekvens = {
-    Anbud: false,
-    Brukt: false,
-    Innenfor: true,
-    Utenfor: true
-  };
-
+  // Grupperer og summerer antall og avis per postnummer
   function group(rows, label = '') {
     const m = {};
     rows.forEach((r,i) => {
@@ -232,30 +193,23 @@
       if('antall' in keyMap){
         const n = Number(keyMap['antall']);
         num = isNaN(n) ? 1 : n;
-      } else if ('frekvens' in keyMap){
-        const n = Number(keyMap['frekvens']);
-        num = isNaN(n) ? 1 : n;
       }
       const avisRaw = keyMap['avis'] ?? '';
-      const frekvensRaw = keyMap['frekvens'] ?? '';
 
       if(!m[p]) m[p] = {count:0, avis:new Map()};
       m[p].count += num;
 
       if(avisRaw){
         const avisLower = avisRaw.toString().toLowerCase();
-        if(!m[p].avis.has(avisLower)){
-          m[p].avis.set(avisLower, {count:0, frekvenser: new Set()});
-        }
-        const current = m[p].avis.get(avisLower);
-        current.count += num;
-        if(frekvensRaw) {
-          current.frekvenser.add(frekvensRaw.toString());
-        }
+        const prev = m[p].avis.get(avisLower) || 0;
+        m[p].avis.set(avisLower, prev + num);
       }
     });
     return m;
   }
+
+  let kanSokeNavn = false;
+  const riktigPassord = "hemmelig123";
 
   let dC, dD, dInnenfor, dUtenfor;
   let fC, fD, fInnenfor, fUtenfor;
@@ -280,43 +234,28 @@
     Utenfor: 'Utenfor anbud'
   };
 
-  function hentValgteFrekvenser(){
-    return frekvCheckboxes.filter(cb=>cb.checked).map(cb=>cb.value);
-  }
-
-  function frekvensMatcher(frekvensSet, valgte){
-    for(const v of valgte){
-      if(frekvensSet.has(v)) return true;
-    }
-    return false;
-  }
-
-  function enrich(arr,mapData, valgteFrekvenser, harFrekv){
+  function enrich(arr,mapData){
     arr.forEach(f=>{
       const p = f.properties.postnummer.trim().padStart(4,'0');
       const info = mapData[p] || {count:0, avis:new Map()};
-      let totalCount = 0;
-      const avisStrings = [];
-      for(const [avisId, avisData] of info.avis.entries()){
-        if(!harFrekv || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-          totalCount += avisData.count;
-          if(kanSokeNavn){
-            avisStrings.push(`${avisNavnMap[avisId] || avisId}: ${avisData.count}`);
-          } else {
-            avisStrings.push(`${avisId}: ${avisData.count}`);
-          }
-        }
+      f.properties.antall = info.count;
+      if(kanSokeNavn){
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant}`)
+                                .join(', ');
+      } else {
+        f.properties.avis = Array.from(info.avis.entries())
+                                .map(([avisId,ant]) => `${avisId}: ${ant}`)
+                                .join(', ');
       }
-      f.properties.antall = totalCount;
-      f.properties.avis = avisStrings.join(', ');
     });
   }
 
-  function enrichAll(valgteFrekvenser){
-    enrich(fC,dC,valgteFrekvenser, harFrekvens.Anbud);
-    enrich(fD,dD,valgteFrekvenser, harFrekvens.Brukt);
-    enrich(fInnenfor,dInnenfor,valgteFrekvenser, harFrekvens.Innenfor);
-    enrich(fUtenfor,dUtenfor,valgteFrekvenser, harFrekvens.Utenfor);
+  function enrichAll(){
+    enrich(fC,dC);
+    enrich(fD,dD);
+    enrich(fInnenfor,dInnenfor);
+    enrich(fUtenfor,dUtenfor);
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
       l.setPopupContent(`
@@ -327,30 +266,12 @@
     }));
   }
 
-  function oppdaterFilterTellinger(valgteFrekvenser){
+  function oppdaterFilterTellinger(){
     ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
       const mapData = [dC,dD,dInnenfor,dUtenfor][i];
       if(!mapData) return;
-      const postnummerer = Object.keys(mapData).filter(p=>{
-        const avisMap = mapData[p].avis;
-        if(!harFrekvens[k]) return true; // teller alt uten frekvens
-        for(const [avisId, avisData] of avisMap.entries()){
-          if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-            return true;
-          }
-        }
-        return false;
-      });
-      const antallSum = postnummerer.reduce((s,p) => {
-        const avisMap = mapData[p].avis;
-        let sum = 0;
-        for(const [avisId, avisData] of avisMap.entries()){
-          if(!harFrekvens[k] || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-            sum += avisData.count;
-          }
-        }
-        return s+sum;
-      }, 0);
+      const postnummerer = Object.keys(mapData);
+      const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
       document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
       document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
     });
@@ -386,8 +307,8 @@
     fInnenfor = geoAnb.features.filter(f=>nInnenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
     fUtenfor = geoBase.features.filter(f=>nUtenfor.includes(f.properties.postnummer.trim().padStart(4,'0')));
 
-    enrichAll(hentValgteFrekvenser());
-    oppdaterFilterTellinger(hentValgteFrekvenser());
+    enrichAll();
+    oppdaterFilterTellinger();
 
     layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
     layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
@@ -411,16 +332,9 @@
       if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
     }
     ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>
-      document.getElementById('toggle'+k).addEventListener('change', oppdaterLag)
+      document.getElementById('toggle'+k).addEventListener('change',oppdaterLag)
     );
     oppdaterLag();
-
-    frekvCheckboxes.forEach(cb => cb.addEventListener('change', () => {
-      const valgte = hentValgteFrekvenser();
-      enrichAll(valgte);
-      oppdaterFilterTellinger(valgte);
-      oppdaterLag();
-    }));
 
     searchBtn.addEventListener('click', searchMap);
     document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
@@ -476,7 +390,6 @@
     const erPostnummer = /^\d{4}$/.test(qRawInput);
     const qPostnummer = erPostnummer ? qRawInput.padStart(4,'0') : null;
     const avisSok = erPostnummer ? [] : qRaw.split(',').map(s => s.trim()).filter(Boolean);
-    const valgteFrekvenser = hentValgteFrekvenser();
 
     function avisMatcher(avisMap) {
       if(erPostnummer) return false;
@@ -498,33 +411,17 @@
         const p = pRaw.padStart(4,'0');
         if(erPostnummer){
           if(p === qPostnummer){
-            if(checkFrekvensOverlap(info, valgteFrekvenser, filterKey)){
-              matchedPostnr.add(p);
-            }
+            matchedPostnr.add(p);
           } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
-            if(checkFrekvensOverlap(info, valgteFrekvenser, filterKey)){
-              matchedPostnr.add(p);
-            }
+            matchedPostnr.add(p);
           }
         } else {
           if(avisMatcher(info.avis)){
-            if(checkFrekvensOverlap(info, valgteFrekvenser, filterKey)){
-              matchedPostnr.add(p);
-            }
+            matchedPostnr.add(p);
           }
         }
       });
     });
-
-    function checkFrekvensOverlap(info, valgteFrekvenser, filterKey){
-      if(!harFrekvens[filterKey]) return true;
-      for(const avisData of info.avis.values()){
-        if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-          return true;
-        }
-      }
-      return false;
-    }
 
     const allFeatures = [...fC,...fD,...fInnenfor,...fUtenfor];
     const matches = allFeatures.filter(f =>
@@ -544,18 +441,16 @@
     Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
       const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
       let sumCount = 0;
-      if(!harFrekvens[filterKey]){
+      if(erPostnummer){
         sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
       } else {
         keys.forEach(p=>{
           const avisMap = mapData[p]?.avis;
           if(avisMap){
-            for(const [avisId, avisData] of avisMap.entries()){
+            for(const [avisId, count] of avisMap.entries()){
               const navn = avisNavnMap[avisId] || avisId;
               if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
-                if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
-                  sumCount += avisData.count;
-                }
+                sumCount += count;
               }
             }
           }
@@ -593,9 +488,12 @@
     });
     exportBtn.disabled = false;
 
+    // Lag heatmap-punkter:
+    const intensitetFaktor = 5;  // juster denne etter behov
+
     const heatPointsRaw = matches.map(f => {
       const [lat, lng] = getPolygonCentroid(f);
-      return [lat, lng, f.properties.antall || 1];
+      return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
     });
     const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
     const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
@@ -613,22 +511,22 @@
         if(searchLayer){
           map.addLayer(searchLayer);
         }
-        heatmapBtn.innerText = 'Vis polygon';
+        heatmapBtn.innerText = 'Vis heatmap';
         showingHeatmap = false;
       } else {
         if(searchLayer){
           map.removeLayer(searchLayer);
         }
         heatLayer = L.heatLayer(heatPoints, {
-          radius: 25,
-          blur: 15,
+          radius: 15,
+          blur: 10,
           maxZoom: 17,
           gradient: {
-            0.0: 'rgba(255,0,0,0.6)',
-            0.2: 'rgba(255,0,0,0.4)',
-            0.4: 'rgba(255,0,0,0.3)',
-            0.6: 'rgba(255,0,0,0.2)',
-            1.0: 'rgba(255,0,0,0.05)'
+            0.0: 'rgba(255,0,0,1.0)',   // sterk rød
+            0.2: 'rgba(255,0,0,0.8)',
+            0.4: 'rgba(255,0,0,0.6)',
+            0.6: 'rgba(255,0,0,0.4)',
+            1.0: 'rgba(255,0,0,0.2)'
           }
         }).addTo(map);
         heatmapBtn.innerText = 'Vis polygon';
@@ -653,7 +551,21 @@
 
     map.fitBounds(searchLayer.getBounds().pad(0.05));
   }
-</script>
 
+  // Passordfunksjon
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    const pw = document.getElementById('passwordInput').value;
+    if(pw === riktigPassord){
+      kanSokeNavn = true;
+      document.getElementById('loginStatus').innerText = "Navnesøk aktivert";
+      document.getElementById('passwordInput').value = '';
+      enrichAll();
+      oppdaterFilterTellinger();
+    } else {
+      kanSokeNavn = false;
+      document.getElementById('loginStatus').innerText = "Feil passord";
+    }
+  });
+</script>
 </body>
 </html>
