@@ -201,6 +201,14 @@
     }
   }
 
+  // Data om frekvens kun for Innenfor og Utenfor:
+  const harFrekvens = {
+    Anbud: false,
+    Brukt: false,
+    Innenfor: true,
+    Utenfor: true
+  };
+
   // Nå lagres frekvens som Set per avis pr postnummer:
   function group(rows, label = '') {
     const m = {};
@@ -237,7 +245,6 @@
         const current = m[p].avis.get(avisLower);
         current.count += num;
         if(frekvensRaw) {
-          // frekvens kan være flere tall, men her antar 1 verdi pr rad
           current.frekvenser.add(frekvensRaw.toString());
         }
       }
@@ -271,12 +278,10 @@
     Utenfor: 'Utenfor anbud'
   };
 
-  // Hent valgte frekvenser (string array)
   function hentValgteFrekvenser(){
     return frekvCheckboxes.filter(cb=>cb.checked).map(cb=>cb.value);
   }
 
-  // Sjekk om et frekvens-set overlapper med valgte frekvenser:
   function frekvensMatcher(frekvensSet, valgte){
     for(const v of valgte){
       if(frekvensSet.has(v)) return true;
@@ -284,16 +289,14 @@
     return false;
   }
 
-  // Oppdater polygon-egenskaper med antall og avis (viser kun frekvens-data som matcher valgt frekvens):
-  function enrich(arr,mapData, valgteFrekvenser){
+  function enrich(arr,mapData, valgteFrekvenser, harFrekv){
     arr.forEach(f=>{
       const p = f.properties.postnummer.trim().padStart(4,'0');
       const info = mapData[p] || {count:0, avis:new Map()};
-      // summer antall kun for valgte frekvenser:
       let totalCount = 0;
       const avisStrings = [];
       for(const [avisId, avisData] of info.avis.entries()){
-        if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
+        if(!harFrekv || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
           totalCount += avisData.count;
           if(kanSokeNavn){
             avisStrings.push(`${avisNavnMap[avisId] || avisId}: ${avisData.count}`);
@@ -308,10 +311,10 @@
   }
 
   function enrichAll(valgteFrekvenser){
-    enrich(fC,dC,valgteFrekvenser);
-    enrich(fD,dD,valgteFrekvenser);
-    enrich(fInnenfor,dInnenfor,valgteFrekvenser);
-    enrich(fUtenfor,dUtenfor,valgteFrekvenser);
+    enrich(fC,dC,valgteFrekvenser, harFrekvens.Anbud);
+    enrich(fD,dD,valgteFrekvenser, harFrekvens.Brukt);
+    enrich(fInnenfor,dInnenfor,valgteFrekvenser, harFrekvens.Innenfor);
+    enrich(fUtenfor,dUtenfor,valgteFrekvenser, harFrekvens.Utenfor);
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
       l.setPopupContent(`
@@ -327,8 +330,8 @@
       const mapData = [dC,dD,dInnenfor,dUtenfor][i];
       if(!mapData) return;
       const postnummerer = Object.keys(mapData).filter(p=>{
-        // kun med valgte frekvenser:
         const avisMap = mapData[p].avis;
+        if(!harFrekvens[k]) return true; // teller alt uten frekvens
         for(const [avisId, avisData] of avisMap.entries()){
           if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
             return true;
@@ -340,7 +343,7 @@
         const avisMap = mapData[p].avis;
         let sum = 0;
         for(const [avisId, avisData] of avisMap.entries()){
-          if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
+          if(!harFrekvens[k] || frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
             sum += avisData.count;
           }
         }
@@ -493,18 +496,17 @@
         const p = pRaw.padStart(4,'0');
         if(erPostnummer){
           if(p === qPostnummer){
-            // Sjekk frekvens overlapper:
-            if(checkFrekvensOverlap(info, valgteFrekvenser)){
+            if(checkFrekvensOverlap(info, valgteFrekvenser, filterKey)){
               matchedPostnr.add(p);
             }
           } else if(Array.from(info.avis.keys()).some(a => a.includes(qRaw))){
-            if(checkFrekvensOverlap(info, valgteFrekvenser)){
+            if(checkFrekvensOverlap(info, valgteFrekvenser, filterKey)){
               matchedPostnr.add(p);
             }
           }
         } else {
           if(avisMatcher(info.avis)){
-            if(checkFrekvensOverlap(info, valgteFrekvenser)){
+            if(checkFrekvensOverlap(info, valgteFrekvenser, filterKey)){
               matchedPostnr.add(p);
             }
           }
@@ -512,7 +514,8 @@
       });
     });
 
-    function checkFrekvensOverlap(info, valgteFrekvenser){
+    function checkFrekvensOverlap(info, valgteFrekvenser, filterKey){
+      if(!harFrekvens[filterKey]) return true;
       for(const avisData of info.avis.values()){
         if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
           return true;
@@ -539,7 +542,7 @@
     Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
       const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
       let sumCount = 0;
-      if(erPostnummer){
+      if(!harFrekvens[filterKey]){
         sumCount = keys.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
       } else {
         keys.forEach(p=>{
@@ -548,7 +551,6 @@
             for(const [avisId, avisData] of avisMap.entries()){
               const navn = avisNavnMap[avisId] || avisId;
               if(avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr))){
-                // kun tell frekvenser som matcher:
                 if(frekvensMatcher(avisData.frekvenser, valgteFrekvenser)){
                   sumCount += avisData.count;
                 }
@@ -610,7 +612,7 @@
         if(searchLayer){
           map.addLayer(searchLayer);
         }
-        heatmapBtn.innerText = 'Vis heatmap';
+        heatmapBtn.innerText = 'Vis polygon';
         showingHeatmap = false;
       } else {
         if(searchLayer){
@@ -651,7 +653,8 @@
     map.fitBounds(searchLayer.getBounds().pad(0.05));
   }
 
-  // Passordfunksjon
+  let kanSokeNavn = false;
+  const riktigPassord = "hemmelig123";
   document.getElementById('loginBtn').addEventListener('click', () => {
     const pw = document.getElementById('passwordInput').value;
     if(pw === riktigPassord){
