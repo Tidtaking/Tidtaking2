@@ -565,11 +565,12 @@ l.setPopupContent(`
     <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
   </tr>`;
 
-  if(samletAviserTotal.size > 0){
-    html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
-      <td colspan="5">Aviser som matcher søket: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
-    </tr>`;
-  }
+if(samletAviserTotal.size > 0){
+  html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
+    <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
+  </tr>`;
+}
+
 
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
