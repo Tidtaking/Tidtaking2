@@ -157,24 +157,26 @@
     }
   }
 
-  async function lesAvisnavn(url) {
-    try {
-      const res = await fetch(url);
-      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-      const text = await res.text();
-      const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
-      const map = {};
-      data.forEach(r => {
-        if(r.ID && r.avis){
-          map[r.ID.trim()] = r.avis.trim();
-        }
-      });
-      return map;
-    } catch(e) {
-      console.warn('Kunne ikke lese avisnavn', e);
-      return {};
-    }
+async function lesAvisnavn(url) {
+  try {
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+    const text = await res.text();
+    const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
+    const map = {};
+    data.forEach(r => {
+      if(r.ID && r.avis){
+        const key = r.ID.trim().toLowerCase();
+        map[key] = r.avis.trim();
+      }
+    });
+    return map;
+  } catch(e) {
+    console.warn('Kunne ikke lese avisnavn', e);
+    return {};
   }
+}
+
 
   function group(rows, label = '') {
     const m = {};
