@@ -297,24 +297,39 @@
   }
 
   // Parsing av søk: postnummer (4 siffer), avis (tekst/id) og frekvensdager (1-7)
-  function parseSearchInput(input) {
-    const parts = input.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-    const frekvensSok = new Set();
-    const avisSok = [];
-    let postnummerSok = null;
+ function parseSearchInput(input) {
+  const dagMap = {
+    'man': '1',
+    'tir': '2',
+    'ons': '3',
+    'tor': '4',
+    'fre': '5',
+    'lør': '6',
+    'lor': '6',
+    'søn': '7',
+    'son': '7'
+  };
 
-    parts.forEach(p => {
-      if (/^\d{4}$/.test(p)) {
-        postnummerSok = p;
-      } else if (/^[1-7]$/.test(p)) {
-        frekvensSok.add(p);
-      } else {
-        avisSok.push(p);
-      }
-    });
+  const parts = input.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  const frekvensSok = new Set();
+  const avisSok = [];
+  let postnummerSok = null;
 
-    return {postnummerSok, avisSok, frekvensSok};
-  }
+  parts.forEach(p => {
+    if (/^\d{4}$/.test(p)) {
+      postnummerSok = p;
+    } else if (/^[1-7]$/.test(p)) {
+      frekvensSok.add(p);
+    } else if (dagMap[p]) {
+      frekvensSok.add(dagMap[p]);
+    } else {
+      avisSok.push(p);
+    }
+  });
+
+  return {postnummerSok, avisSok, frekvensSok};
+}
+
 
   function avisMatcher(avisMap, avisSok, kanSokeNavn, avisNavnMap) {
     if(avisSok.length === 0) return true;
