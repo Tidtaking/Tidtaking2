@@ -189,55 +189,58 @@
 
   // Grupperer og summerer antall, avis og frekvens per postnummer
   function group(rows, label = '') {
-    const m = {};
-    rows.forEach((r,i) => {
-      const keyMap = {};
-      Object.entries(r).forEach(([k,v])=>{
-        keyMap[k.trim().toLowerCase()] = v;
-      });
-      const pRaw = keyMap['postnummer'] ?? '';
-      const p = pRaw.toString().trim().padStart(4,'0');
-      if(!p) {
-        console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
-        return;
-      }
-      let num = 1;
-      if('antall' in keyMap){
-        const n = Number(keyMap['antall']);
-        num = isNaN(n) ? 1 : n;
-      }
-      const avisRaw = keyMap['avis'] ?? '';
-      const frekvensRaw = keyMap['frekvens'] ?? '';
+  const m = {};
+  rows.forEach((r,i) => {
+    const keyMap = {};
+    Object.entries(r).forEach(([k,v])=>{
+      keyMap[k.trim().toLowerCase()] = (typeof v === 'string') ? v.trim() : v;
+    });
 
-      if(!m[p]) m[p] = {count:0, avis:new Map()};
-      m[p].count += num;
+    const pRaw = keyMap['postnummer'] ?? '';
+    const p = pRaw.toString().padStart(4,'0');
+    if(!p) {
+      console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
+      return;
+    }
 
-      if(avisRaw){
-        const avisLower = avisRaw.toString().toLowerCase();
-        const prev = m[p].avis.get(avisLower) || {count:0, frekvenser:new Set()};
-        prev.count += num;
-if(frekvensRaw){
-  // Split først på komma
-  const deler = frekvensRaw.toString().split(',');
-  deler.forEach(del => {
-    const delTrim = del.trim();
-    // Hvis del inneholder flere sifre sammen (f.eks "123456"), splitt i enkelttegn
-    if(delTrim.length > 1 && !delTrim.includes(',')){
-      for(const s of delTrim){
-        if(s >= '1' && s <= '7') prev.frekvenser.add(s);
+    let num = 1;
+    if('antall' in keyMap){
+      const n = Number(keyMap['antall'].toString().trim());
+      num = isNaN(n) ? 1 : n;
+    }
+
+    const avisRaw = keyMap['avis'] ?? '';
+    const frekvensRaw = keyMap['frekvens'] ?? '';
+
+    if(!m[p]) m[p] = {count:0, avis:new Map()};
+    m[p].count += num;
+
+    if(avisRaw){
+      const avisLower = avisRaw.toString().toLowerCase();
+      const prev = m[p].avis.get(avisLower) || {count:0, frekvenser:new Set()};
+      prev.count += num;
+
+      if(frekvensRaw){
+        // Split først på komma, håndter både "123456" og "2,4,6"
+        const deler = frekvensRaw.toString().split(',');
+        deler.forEach(del => {
+          const delTrim = del.trim();
+          if(delTrim.length > 1 && !delTrim.includes(',')){
+            for(const s of delTrim){
+              if(s >= '1' && s <= '7') prev.frekvenser.add(s);
+            }
+          } else {
+            if(delTrim >= '1' && delTrim <= '7') prev.frekvenser.add(delTrim);
+          }
+        });
       }
-    } else {
-      // enkelt siffer
-      if(delTrim >= '1' && delTrim <= '7') prev.frekvenser.add(delTrim);
+
+      m[p].avis.set(avisLower, prev);
     }
   });
+  return m;
 }
-m[p].avis.set(avisLower, prev);
 
-      }
-    });
-    return m;
-  }
 
   let kanSokeNavn = false;
   const riktigPassord = "hemmelig123";
