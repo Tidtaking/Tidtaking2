@@ -575,20 +575,45 @@ if(samletAviserTotal.size > 0){
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  lastMatches = matches.map(f=>{
-    const p = f.properties.postnummer.trim().padStart(4,'0');
-    let filt = null;
-    if(dC && Object.keys(dC).includes(p)) filt = 'Anbud';
-    else if(dD && Object.keys(dD).includes(p)) filt = 'Brukt';
-    else if(dInnenfor && Object.keys(dInnenfor).includes(p)) filt = 'Innenfor';
-    else if(dUtenfor && Object.keys(dUtenfor).includes(p)) filt = 'Utenfor';
-    return {
-      filter: filterKeys[filt] || '',
+lastMatches = [];
+matches.forEach(f => {
+  const p = f.properties.postnummer.trim().padStart(4,'0');
+  let filt = null;
+  if(dC && Object.keys(dC).includes(p)) filt = 'Anbud';
+  else if(dD && Object.keys(dD).includes(p)) filt = 'Brukt';
+  else if(dInnenfor && Object.keys(dInnenfor).includes(p)) filt = 'Innenfor';
+  else if(dUtenfor && Object.keys(dUtenfor).includes(p)) filt = 'Utenfor';
+
+  const filterNavn = filterKeys[filt] || '';
+  const antallTotal = f.properties.antall;
+
+  const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
+  const avisMap = mapData[p]?.avis || new Map();
+
+  if (avisMap.size === 0) {
+    // Hvis ingen avisdata, lag rad med tom avis
+    lastMatches.push({
+      filter: filterNavn,
       postnummer: p,
-      antall: f.properties.antall,
-      avis: f.properties.avis
-    };
-  });
+      antall_total: antallTotal,
+      avis: '',
+      antall_avis: 0
+    });
+  } else {
+    // Lag rad for hver avis med antall
+    avisMap.forEach((avisData, avisId) => {
+      const navn = avisNavnMap[avisId] || avisId;
+      lastMatches.push({
+        filter: filterNavn,
+        postnummer: p,
+        antall_total: antallTotal,
+        avis: navn,
+        antall_avis: avisData.count
+      });
+    });
+  }
+});
+
   exportBtn.disabled = false;
 
   const intensitetFaktor = 5;
