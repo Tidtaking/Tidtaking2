@@ -277,11 +277,12 @@
     enrich(fUtenfor,dUtenfor);
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
-      l.setPopupContent(`
-        <strong>Postnummer: ${p.postnummer}</strong><br>
-        Totalt antall: ${p.antall}<br>
-        Detaljer pr avis: ${p.avis || 'Ingen'}
-      `);
+l.setPopupContent(`
+  <strong>Postnummer: ${p.postnummer}</strong><br>
+  Totalt antall: ${p.antall}<br>
+  Detaljer pr avis: ${p.avis || 'Ingen'}<br>
+  Frekvensdager: ${formatFrekvenser(new Set([].concat(...Array.from(p.avisMap?.values() || []).map(a => Array.from(a.frekvenser)))))} 
+`);
     }));
   }
 
