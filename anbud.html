@@ -255,22 +255,24 @@ async function lesAvisnavn(url) {
     Utenfor: 'Utenfor anbud'
   };
 
-  function enrich(arr,mapData){
-    arr.forEach(f=>{
-      const p = f.properties.postnummer.trim().padStart(4,'0');
-      const info = mapData[p] || {count:0, avis:new Map()};
-      f.properties.antall = info.count;
-      if(kanSokeNavn){
-        f.properties.avis = Array.from(info.avis.entries())
-                                .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant.count}`)
-                                .join(', ');
-      } else {
-        f.properties.avis = Array.from(info.avis.entries())
-                                .map(([avisId,ant]) => `${avisId}: ${ant.count}`)
-                                .join(', ');
-      }
-    });
-  }
+function enrich(arr,mapData){
+  arr.forEach(f=>{
+    const p = f.properties.postnummer.trim().padStart(4,'0');
+    const info = mapData[p] || {count:0, avis:new Map()};
+    f.properties.antall = info.count;
+    f.properties.avisMap = info.avis;  // <-- Legger til avisMap her
+    if(kanSokeNavn){
+      f.properties.avis = Array.from(info.avis.entries())
+                              .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant.count}`)
+                              .join(', ');
+    } else {
+      f.properties.avis = Array.from(info.avis.entries())
+                              .map(([avisId,ant]) => `${avisId}: ${ant.count}`)
+                              .join(', ');
+    }
+  });
+}
+
 
   function enrichAll(){
     enrich(fC,dC);
