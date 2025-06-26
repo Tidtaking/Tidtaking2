@@ -601,16 +601,18 @@ matches.forEach(f => {
     });
   } else {
     // Lag rad for hver avis med antall
-    avisMap.forEach((avisData, avisId) => {
-      const navn = avisNavnMap[avisId] || avisId;
-      lastMatches.push({
-        filter: filterNavn,
-        postnummer: p,
-        antall_total: antallTotal,
-        avis: navn,
-        antall_avis: avisData.count
-      });
-    });
+avisMap.forEach((avisData, avisId) => {
+  const renAvisId = avisId.trim().toLowerCase();
+  const navn = avisNavnMap[renAvisId] || avisId;
+  lastMatches.push({
+    filter: filterNavn,
+    postnummer: p,
+    antall_total: antallTotal,
+    avis: navn,
+    antall_avis: avisData.count
+  });
+});
+
   }
 });
 
