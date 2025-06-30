@@ -522,62 +522,84 @@ l.setPopupContent(`
   }
 
   let totalSum = 0;
-  let samletFrekvenserTotal = new Set();
-  let samletAviserTotal = new Set();
+let samletFrekvenserTotal = new Set();
+let samletAviserTotal = new Set();
 
-  let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk</th><th>Frekvensdager</th></tr></thead><tbody>';
+let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
-  Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
-    const keys = Object.keys(mapData).filter(p=>matchedPostnr.has(p));
-    let sumCount = 0;
-    let samletFrekvenser = new Set();
+Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+  const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
+  let sumCount = 0;       // Sum unik, dagens metode
+  let sumAlleDager = 0;   // Ny sum som teller alle dager (inkl overlapp)
+  let samletFrekvenser = new Set();
 
-    keys.forEach(p => {
-      const avisMap = mapData[p]?.avis;
-      if (avisMap) {
-        for (const [avisId, avisData] of avisMap.entries()) {
-          const navn = avisNavnMap[avisId] || avisId;
-          const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
-          const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
+  keys.forEach(p => {
+    const avisMap = mapData[p]?.avis;
+    if (avisMap) {
+      for (const [avisId, avisData] of avisMap.entries()) {
+        const navn = avisNavnMap[avisId] || avisId;
+        const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
 
-          if(avisMatch && frekMatch){
-            sumCount += avisData.count;
-            avisData.frekvenser.forEach(f => {
-              samletFrekvenser.add(f.toString());
-              samletFrekvenserTotal.add(f.toString());
-            });
-            samletAviserTotal.add(navn);
-          }
+        if (!avisMatch) continue;
+
+        // Summer alle dager (duplikater), dvs. for hver frekvens som matches i søket:
+        if (frekvensSok.size === 0) {
+          sumAlleDager += avisData.count;
+        } else {
+          avisData.frekvenser.forEach(frek => {
+            if (frekvensSok.has(frek.toString())) {
+              sumAlleDager += avisData.count;
+            }
+          });
+        }
+
+        // Sum unik som tidligere (basert på om noen av frekvensene matcher søket)
+        const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
+        if (frekMatch) {
+          sumCount += avisData.count;
+          avisData.frekvenser.forEach(f => {
+            samletFrekvenser.add(f.toString());
+            samletFrekvenserTotal.add(f.toString());
+          });
+          samletAviserTotal.add(navn);
         }
       }
-    });
-
-    totalSum += sumCount;
-    const color = filterColors[filterKey] || '#000';
-    html += `<tr>
-      <td>${filterKeys[filterKey]}</td>
-      <td><span class="color-box" style="background:${color};"></span></td>
-      <td>${keys.length.toLocaleString()}</td>
-      <td>${sumCount.toLocaleString()}</td>
-      <td>${formatFrekvenser(samletFrekvenser)}</td>
-    </tr>`;
+    }
   });
 
-  html += `<tr style="font-weight:bold; background:#eef;">
-    <td colspan="3">Totalt</td>
-    <td>${totalSum.toLocaleString()}</td>
-    <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
+  totalSum += sumCount;
+  const color = filterColors[filterKey] || '#000';
+  html += `<tr>
+    <td>${filterKeys[filterKey]}</td>
+    <td><span class="color-box" style="background:${color};"></span></td>
+    <td>${keys.length.toLocaleString()}</td>
+    <td>${sumCount.toLocaleString()}</td>
+    <td>${formatFrekvenser(samletFrekvenser)}</td>
   </tr>`;
 
-if(samletAviserTotal.size > 0){
+  // Ny rad med sum av alle dager med duplikater
+  html += `<tr style="font-size: 12px; color: #444;">
+    <td colspan="3" style="text-align:right; font-style: italic;">Sum alle dager (duplikater):</td>
+    <td>${sumAlleDager.toLocaleString()}</td>
+    <td></td>
+  </tr>`;
+});
+
+html += `<tr style="font-weight:bold; background:#eef;">
+  <td colspan="3">Totalt</td>
+  <td>${totalSum.toLocaleString()}</td>
+  <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
+</tr>`;
+
+if (samletAviserTotal.size > 0) {
   html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
     <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
   </tr>`;
 }
 
+html += '</tbody></table>';
+document.getElementById('search-summary').innerHTML = html;
 
-  html += '</tbody></table>';
-  document.getElementById('search-summary').innerHTML = html;
 
 lastMatches = [];
 
