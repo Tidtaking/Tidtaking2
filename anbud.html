@@ -580,45 +580,44 @@ if(samletAviserTotal.size > 0){
   document.getElementById('search-summary').innerHTML = html;
 
 lastMatches = [];
-matches.forEach(f => {
-  const p = f.properties.postnummer.trim().padStart(4,'0');
-  let filt = null;
-  if(dC && Object.keys(dC).includes(p)) filt = 'Anbud';
-  else if(dD && Object.keys(dD).includes(p)) filt = 'Brukt';
-  else if(dInnenfor && Object.keys(dInnenfor).includes(p)) filt = 'Innenfor';
-  else if(dUtenfor && Object.keys(dUtenfor).includes(p)) filt = 'Utenfor';
 
-  const filterNavn = filterKeys[filt] || '';
+matches.forEach(f => {
+  const p = f.properties.postnummer.trim().padStart(4, '0');
   const antallTotal = f.properties.antall;
 
-  const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
-  const avisMap = mapData[p]?.avis || new Map();
+  ['Anbud', 'Brukt', 'Innenfor', 'Utenfor'].forEach(filt => {
+    const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
+    if (!mapData[p]) return; // hopp over hvis postnummer ikke i filteret
 
-  if (avisMap.size === 0) {
-    // Hvis ingen avisdata, lag rad med tom avis
-    lastMatches.push({
-      filter: filterNavn,
-      postnummer: p,
-      antall_total: antallTotal,
-      avis: '',
-      antall_avis: 0
-    });
-  } else {
-    // Lag rad for hver avis med antall
-avisMap.forEach((avisData, avisId) => {
-  const renAvisId = avisId.trim().toLowerCase();
-  const navn = avisNavnMap[renAvisId] || avisId;
-  lastMatches.push({
-    filter: filterNavn,
-    postnummer: p,
-    antall_total: antallTotal,
-    avis: navn,
-    antall_avis: avisData.count
+    const filterNavn = filterKeys[filt] || '';
+    const avisMap = mapData[p]?.avis || new Map();
+
+    if (avisMap.size === 0) {
+      // Ingen avisdata - lag en rad med tom avis
+      lastMatches.push({
+        filter: filterNavn,
+        postnummer: p,
+        antall_total: antallTotal,
+        avis: '',
+        antall_avis: 0
+      });
+    } else {
+      // Lag rad for hver avis med antall
+      avisMap.forEach((avisData, avisId) => {
+        const renAvisId = avisId.trim().toLowerCase();
+        const navn = avisNavnMap[renAvisId] || avisId;
+        lastMatches.push({
+          filter: filterNavn,
+          postnummer: p,
+          antall_total: antallTotal,
+          avis: navn,
+          antall_avis: avisData.count
+        });
+      });
+    }
   });
 });
 
-  }
-});
 
   exportBtn.disabled = false;
 
