@@ -471,16 +471,28 @@ l.setPopupContent(`
     return [0,0];
   }
 
-  function searchMap(){
-  const qRawInput = document.getElementById('searchInput').value.trim();
-  if(!qRawInput) return;
+  function searchMap() {
+  const startTime = performance.now();
 
-  Object.values(layers).forEach(l=>map.removeLayer(l));
-  if(searchLayer){
+  const qRawInput = document.getElementById('searchInput').value.trim();
+  if (!qRawInput) return;
+
+  // Sjekk om søket er eksakt "N dag frekvens"
+  const dagFreqMatch = qRawInput.match(/^(\d) dag frekvens$/i);
+  if (dagFreqMatch) {
+    const ønsketDager = Number(dagFreqMatch[1]);
+    searchExactDayFrequency(ønsketDager);
+    return;
+  }
+
+  // --- Vanlig søk ---
+
+  Object.values(layers).forEach(l => map.removeLayer(l));
+  if (searchLayer) {
     map.removeLayer(searchLayer);
     searchLayer = null;
   }
-  if(heatLayer){
+  if (heatLayer) {
     map.removeLayer(heatLayer);
     heatLayer = null;
     showingHeatmap = false;
@@ -488,158 +500,156 @@ l.setPopupContent(`
     heatmapBtn.disabled = true;
   }
 
-  const {postnummerSok, avisSok, frekvensSok} = parseSearchInput(qRawInput);
+  const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
   const matchedPostnr = new Set();
 
-  Object.entries({ Anbud:dC, Brukt:dD, Innenfor:dInnenfor, Utenfor:dUtenfor }).forEach(([filterKey,mapData])=>{
-    Object.entries(mapData).forEach(([pRaw,info])=>{
-      const p = pRaw.padStart(4,'0');
-      if(postnummerSok){
-        if(p === postnummerSok){
+  Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+    Object.entries(mapData).forEach(([pRaw, info]) => {
+      const p = pRaw.padStart(4, '0');
+      if (postnummerSok) {
+        if (p === postnummerSok) {
           matchedPostnr.add(p);
         }
       } else {
         const avisMatch = avisMatcher(info.avis, avisSok, kanSokeNavn, avisNavnMap);
         const frekMatch = frekvensMatcher(info.avis, frekvensSok);
-        if(avisMatch && frekMatch){
+        if (avisMatch && frekMatch) {
           matchedPostnr.add(p);
         }
       }
     });
   });
 
-  const allFeatures = [...fC,...fD,...fInnenfor,...fUtenfor];
+  const allFeatures = [...fC, ...fD, ...fInnenfor, ...fUtenfor];
   const matches = allFeatures.filter(f =>
-    matchedPostnr.has(f.properties.postnummer.trim().padStart(4,'0'))
+    matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0'))
   );
 
-  if(!matches.length){
+  if (!matches.length) {
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
     alert(`Ingen treff for "${qRawInput}"`);
+    document.getElementById('search-timer').innerText = '';
     return;
   }
 
+  // Oppsummering med unike og duplikatsummer (som tidligere)
   let totalSum = 0;
-let samletFrekvenserTotal = new Set();
-let samletAviserTotal = new Set();
+  let samletFrekvenserTotal = new Set();
+  let samletAviserTotal = new Set();
 
-let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
+  let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
-Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
-  const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
-  let sumCount = 0;       // Sum unik, dagens metode
-  let sumAlleDager = 0;   // Ny sum som teller alle dager (inkl overlapp)
-  let samletFrekvenser = new Set();
+  Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+    const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
+    let sumCount = 0;
+    let sumAlleDager = 0;
+    let samletFrekvenser = new Set();
 
-  keys.forEach(p => {
-    const avisMap = mapData[p]?.avis;
-    if (avisMap) {
-      for (const [avisId, avisData] of avisMap.entries()) {
-        const navn = avisNavnMap[avisId] || avisId;
-        const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
+    keys.forEach(p => {
+      const avisMap = mapData[p]?.avis;
+      if (avisMap) {
+        for (const [avisId, avisData] of avisMap.entries()) {
+          const navn = avisNavnMap[avisId] || avisId;
+          const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
 
-        if (!avisMatch) continue;
+          if (!avisMatch) continue;
 
-        // Summer alle dager (duplikater), dvs. for hver frekvens som matches i søket:
-        if (frekvensSok.size === 0) {
-          sumAlleDager += avisData.count;
-        } else {
-          avisData.frekvenser.forEach(frek => {
-            if (frekvensSok.has(frek.toString())) {
-              sumAlleDager += avisData.count;
-            }
-          });
-        }
+          // Summer alle dager (duplikater)
+          if (frekvensSok.size === 0) {
+            sumAlleDager += avisData.count;
+          } else {
+            avisData.frekvenser.forEach(frek => {
+              if (frekvensSok.has(frek.toString())) {
+                sumAlleDager += avisData.count;
+              }
+            });
+          }
 
-        // Sum unik som tidligere (basert på om noen av frekvensene matcher søket)
-        const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
-        if (frekMatch) {
-          sumCount += avisData.count;
-          avisData.frekvenser.forEach(f => {
-            samletFrekvenser.add(f.toString());
-            samletFrekvenserTotal.add(f.toString());
-          });
-          samletAviserTotal.add(navn);
+          // Sum unik som tidligere
+          const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
+          if (frekMatch) {
+            sumCount += avisData.count;
+            avisData.frekvenser.forEach(f => {
+              samletFrekvenser.add(f.toString());
+              samletFrekvenserTotal.add(f.toString());
+            });
+            samletAviserTotal.add(navn);
+          }
         }
       }
-    }
+    });
+
+    totalSum += sumCount;
+    const color = filterColors[filterKey] || '#000';
+    html += `<tr>
+      <td>${filterKeys[filterKey]}</td>
+      <td><span class="color-box" style="background:${color};"></span></td>
+      <td>${keys.length.toLocaleString()}</td>
+      <td>${sumCount.toLocaleString()}</td>
+      <td>${formatFrekvenser(samletFrekvenser)}</td>
+    </tr>`;
+
+    // Rad for sum alle dager (duplikater)
+    html += `<tr style="font-size: 12px; color: #444;">
+      <td colspan="3" style="text-align:right; font-style: italic;">Sum alle dager (duplikater):</td>
+      <td>${sumAlleDager.toLocaleString()}</td>
+      <td></td>
+    </tr>`;
   });
 
-  totalSum += sumCount;
-  const color = filterColors[filterKey] || '#000';
-  html += `<tr>
-    <td>${filterKeys[filterKey]}</td>
-    <td><span class="color-box" style="background:${color};"></span></td>
-    <td>${keys.length.toLocaleString()}</td>
-    <td>${sumCount.toLocaleString()}</td>
-    <td>${formatFrekvenser(samletFrekvenser)}</td>
+  html += `<tr style="font-weight:bold; background:#eef;">
+    <td colspan="3">Totalt</td>
+    <td>${totalSum.toLocaleString()}</td>
+    <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
   </tr>`;
 
-  // Ny rad med sum av alle dager med duplikater
-  html += `<tr style="font-size: 12px; color: #444;">
-    <td colspan="3" style="text-align:right; font-style: italic;">Sum alle dager (duplikater):</td>
-    <td>${sumAlleDager.toLocaleString()}</td>
-    <td></td>
-  </tr>`;
-});
+  if (samletAviserTotal.size > 0) {
+    html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
+      <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
+    </tr>`;
+  }
 
-html += `<tr style="font-weight:bold; background:#eef;">
-  <td colspan="3">Totalt</td>
-  <td>${totalSum.toLocaleString()}</td>
-  <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
-</tr>`;
+  html += '</tbody></table>';
+  document.getElementById('search-summary').innerHTML = html;
 
-if (samletAviserTotal.size > 0) {
-  html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
-    <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
-  </tr>`;
-}
+  // Bygg lastMatches med alle filtre (som tidligere)
+  lastMatches = [];
+  matches.forEach(f => {
+    const p = f.properties.postnummer.trim().padStart(4, '0');
+    const antallTotal = f.properties.antall;
 
-html += '</tbody></table>';
-document.getElementById('search-summary').innerHTML = html;
+    ['Anbud', 'Brukt', 'Innenfor', 'Utenfor'].forEach(filt => {
+      const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
+      if (!mapData[p]) return;
 
+      const filterNavn = filterKeys[filt] || '';
+      const avisMap = mapData[p]?.avis || new Map();
 
-lastMatches = [];
-
-matches.forEach(f => {
-  const p = f.properties.postnummer.trim().padStart(4, '0');
-  const antallTotal = f.properties.antall;
-
-  ['Anbud', 'Brukt', 'Innenfor', 'Utenfor'].forEach(filt => {
-    const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
-    if (!mapData[p]) return; // hopp over hvis postnummer ikke i filteret
-
-    const filterNavn = filterKeys[filt] || '';
-    const avisMap = mapData[p]?.avis || new Map();
-
-    if (avisMap.size === 0) {
-      // Ingen avisdata - lag en rad med tom avis
-      lastMatches.push({
-        filter: filterNavn,
-        postnummer: p,
-        antall_total: antallTotal,
-        avis: '',
-        antall_avis: 0
-      });
-    } else {
-      // Lag rad for hver avis med antall
-      avisMap.forEach((avisData, avisId) => {
-        const renAvisId = avisId.trim().toLowerCase();
-        const navn = avisNavnMap[renAvisId] || avisId;
+      if (avisMap.size === 0) {
         lastMatches.push({
           filter: filterNavn,
           postnummer: p,
           antall_total: antallTotal,
-          avis: navn,
-          antall_avis: avisData.count
+          avis: '',
+          antall_avis: 0
         });
-      });
-    }
+      } else {
+        avisMap.forEach((avisData, avisId) => {
+          const renAvisId = avisId.trim().toLowerCase();
+          const navn = avisNavnMap[renAvisId] || avisId;
+          lastMatches.push({
+            filter: filterNavn,
+            postnummer: p,
+            antall_total: antallTotal,
+            avis: navn,
+            antall_avis: avisData.count
+          });
+        });
+      }
+    });
   });
-});
-
 
   exportBtn.disabled = false;
 
@@ -656,18 +666,18 @@ matches.forEach(f => {
   heatmapBtn.innerText = 'Vis heatmap';
 
   heatmapBtn.onclick = () => {
-    if(showingHeatmap){
-      if(heatLayer){
+    if (showingHeatmap) {
+      if (heatLayer) {
         map.removeLayer(heatLayer);
         heatLayer = null;
       }
-      if(searchLayer){
+      if (searchLayer) {
         map.addLayer(searchLayer);
       }
       heatmapBtn.innerText = 'Vis heatmap';
       showingHeatmap = false;
     } else {
-      if(searchLayer){
+      if (searchLayer) {
         map.removeLayer(searchLayer);
       }
       heatLayer = L.heatLayer(heatPoints, {
@@ -687,12 +697,12 @@ matches.forEach(f => {
     }
   };
 
-  searchLayer = L.geoJSON(matches,{
+  searchLayer = L.geoJSON(matches, {
     coordsToLatLng: coords3035tilLatLng,
-    style: ()=>({color:'#555', fillOpacity:0.3, weight:2})
+    style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 })
   }).addTo(map);
 
-  searchLayer.eachLayer(l=>{
+  searchLayer.eachLayer(l => {
     const p = l.feature.properties;
     l.bindPopup(`
       <strong>Postnummer: ${p.postnummer}</strong><br>
@@ -703,7 +713,108 @@ matches.forEach(f => {
   });
 
   map.fitBounds(searchLayer.getBounds().pad(0.05));
+
+  const endTime = performance.now();
+  const elapsed = endTime - startTime;
+  document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
+
+
+// Egen funksjon for eksakt "N dag frekvens"-søk:
+function searchExactDayFrequency(antallDager) {
+  const startTime = performance.now();
+
+  // Samle features som matcher eksakt antall frekvensdager (kun Innenfor og Utenfor)
+  const allFeatures = [...fInnenfor, ...fUtenfor];
+
+  const matches = allFeatures.filter(f => {
+    const p = f.properties.postnummer.trim().padStart(4, '0');
+    const innenforData = dInnenfor[p];
+    const utenforData = dUtenfor[p];
+    const avisMap = innenforData?.avis || utenforData?.avis || new Map();
+
+    for (const avisData of avisMap.values()) {
+      if (avisData.frekvenser.size === antallDager) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  if (!matches.length) {
+    document.getElementById('search-summary').innerHTML = '';
+    exportBtn.disabled = true;
+    heatmapBtn.disabled = true;
+    alert(`Ingen treff for "${antallDager} dag frekvens"`);
+    document.getElementById('search-timer').innerText = '';
+    return;
+  }
+
+  lastMatches = [];
+  matches.forEach(f => {
+    const p = f.properties.postnummer.trim().padStart(4, '0');
+    const antallTotal = f.properties.antall;
+
+    ['Innenfor', 'Utenfor'].forEach(filt => {
+      const mapData = { Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
+      if (!mapData[p]) return;
+
+      const filterNavn = filterKeys[filt] || '';
+      const avisMap = mapData[p]?.avis || new Map();
+
+      avisMap.forEach((avisData, avisId) => {
+        if (avisData.frekvenser.size === antallDager) {
+          const renAvisId = avisId.trim().toLowerCase();
+          const navn = avisNavnMap[renAvisId] || avisId;
+          lastMatches.push({
+            filter: filterNavn,
+            postnummer: p,
+            antall_total: antallTotal,
+            avis: navn,
+            antall_avis: avisData.count
+          });
+        }
+      });
+    });
+  });
+
+  exportBtn.disabled = false;
+  heatmapBtn.disabled = false;
+
+  if (searchLayer) {
+    map.removeLayer(searchLayer);
+    searchLayer = null;
+  }
+  if (heatLayer) {
+    map.removeLayer(heatLayer);
+    heatLayer = null;
+    showingHeatmap = false;
+    heatmapBtn.innerText = 'Vis heatmap';
+  }
+
+  searchLayer = L.geoJSON(matches, {
+    coordsToLatLng: coords3035tilLatLng,
+    style: () => ({ color: '#0077cc', fillOpacity: 0.4, weight: 2 })
+  }).addTo(map);
+
+  searchLayer.eachLayer(l => {
+    const p = l.feature.properties;
+    l.bindPopup(`
+      <strong>Postnummer: ${p.postnummer}</strong><br>
+      Totalt antall: ${p.antall}<br>
+      Detaljer pr avis: ${p.avis || 'Ingen'}
+    `);
+  });
+
+  map.fitBounds(searchLayer.getBounds().pad(0.05));
+
+  document.getElementById('search-summary').innerHTML = `<p>Fant ${matches.length} postnummer med eksakt ${antallDager} dag${antallDager > 1 ? 'er' : ''} frekvens.</p>`;
+
+  const endTime = performance.now();
+  const elapsed = endTime - startTime;
+  document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
+}
+
 
 
   document.getElementById('loginBtn').addEventListener('click', () => {
