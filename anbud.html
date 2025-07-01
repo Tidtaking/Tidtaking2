@@ -726,9 +726,9 @@ function searchExactDayFrequency(antallDager) {
 
   const allFeatures = [...fInnenfor, ...fUtenfor];
 
+  // Samle alle postnumre som har minst en avis med eksakt antall frekvensdager
   const matchedPostnr = new Set();
 
-  // Samle postnumre som har minst en avis med eksakt antall frekvensdager
   allFeatures.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
     const innenforData = dInnenfor[p];
@@ -752,73 +752,80 @@ function searchExactDayFrequency(antallDager) {
     return;
   }
 
-  // Filtrer features til kun de som matcher
-  const matches = allFeatures.filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
+  // Agreger data: total antall per avis og filter
+  // Struktur: { filterNavn: { avisNavn: sumAntall, ... }, ... }
+  const aggregert = {
+    Innenfor: {},
+    Utenfor: {}
+  };
 
-  // Bygg tabell og summering
-  let totalSum = 0;
-  let samletAviserTotal = new Set();
-
-  let html = '<table><thead><tr><th>Filter</th><th>Postnummer</th><th>Totalt antall</th><th>Avis</th><th>Antall avis</th></tr></thead><tbody>';
-
-  lastMatches = [];
-
-  matches.forEach(f => {
-    const p = f.properties.postnummer.trim().padStart(4, '0');
-    const antallTotal = f.properties.antall;
-
+  matchedPostnr.forEach(p => {
     ['Innenfor', 'Utenfor'].forEach(filt => {
       const mapData = { Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
       if (!mapData[p]) return;
 
-      const filterNavn = filterKeys[filt] || '';
       const avisMap = mapData[p]?.avis || new Map();
 
       avisMap.forEach((avisData, avisId) => {
         if (avisData.frekvenser.size === antallDager) {
           const renAvisId = avisId.trim().toLowerCase();
           const navn = avisNavnMap[renAvisId] || avisId;
-
-          totalSum += avisData.count;
-          samletAviserTotal.add(navn);
-
-          html += `<tr>
-            <td>${filterNavn}</td>
-            <td>${p}</td>
-            <td>${antallTotal.toLocaleString()}</td>
-            <td>${navn}</td>
-            <td>${avisData.count.toLocaleString()}</td>
-          </tr>`;
-
-          lastMatches.push({
-            filter: filterNavn,
-            postnummer: p,
-            antall_total: antallTotal,
-            avis: navn,
-            antall_avis: avisData.count
-          });
+          aggregert[filt][navn] = (aggregert[filt][navn] || 0) + avisData.count;
         }
       });
     });
   });
 
+  // Lag HTML-tabell med aggregert data
+  let totalSum = 0;
+  let samletAviserTotal = new Set();
+
+  let html = '<table><thead><tr><th>Filter</th><th>Avis</th><th>Sum antall</th></tr></thead><tbody>';
+
+  Object.entries(aggregert).forEach(([filterNavn, avisData]) => {
+    Object.entries(avisData).forEach(([avisNavn, sumAntall]) => {
+      totalSum += sumAntall;
+      samletAviserTotal.add(avisNavn);
+      html += `<tr>
+        <td>${filterNavn}</td>
+        <td>${avisNavn}</td>
+        <td>${sumAntall.toLocaleString()}</td>
+      </tr>`;
+    });
+  });
+
   html += `<tr style="font-weight:bold; background:#eef;">
-    <td colspan="4">Totalt</td>
+    <td colspan="2">Totalt</td>
     <td>${totalSum.toLocaleString()}</td>
   </tr>`;
 
   if (samletAviserTotal.size > 0) {
     html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
-      <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
+      <td colspan="3">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
     </tr>`;
   }
 
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
+  // Bygg lastMatches slik at eksport inneholder disse aggregerte radene
+  lastMatches = [];
+  Object.entries(aggregert).forEach(([filterNavn, avisData]) => {
+    Object.entries(avisData).forEach(([avisNavn, sumAntall]) => {
+      lastMatches.push({
+        filter: filterNavn,
+        postnummer: '',  // Ikke relevant her
+        antall_total: sumAntall,
+        avis: avisNavn,
+        antall_avis: sumAntall
+      });
+    });
+  });
+
   exportBtn.disabled = false;
   heatmapBtn.disabled = false;
 
+  // Vis polygoner for treff:
   if (searchLayer) {
     map.removeLayer(searchLayer);
     searchLayer = null;
@@ -829,6 +836,8 @@ function searchExactDayFrequency(antallDager) {
     showingHeatmap = false;
     heatmapBtn.innerText = 'Vis heatmap';
   }
+
+  const matches = allFeatures.filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
 
   searchLayer = L.geoJSON(matches, {
     coordsToLatLng: coords3035tilLatLng,
@@ -850,6 +859,7 @@ function searchExactDayFrequency(antallDager) {
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
+
 
 
 
