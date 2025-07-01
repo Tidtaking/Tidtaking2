@@ -842,9 +842,10 @@ function searchExactDayFrequency(antallDager) {
 
   html += `</tbody></table>`;
 
-  html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
-    Antall aviser som matcher søket: ${samletAviser.length}. Aviser: ${samletAviser.join(', ')}
-  </p>`;
+html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
+  <strong>Antall aviser som matcher søket: ${samletAviser.length}.</strong> Aviser: ${samletAviser.join(', ')}
+</p>`;
+
 
   document.getElementById('search-summary').innerHTML = html;
 
