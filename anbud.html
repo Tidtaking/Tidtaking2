@@ -750,7 +750,6 @@ function searchExactDayFrequency(antallDager) {
     return;
   }
 
-  // Map for å konvertere frekvensnummer til dagtekst
   const dagMap = {
     '1': 'Man',
     '2': 'Tir',
@@ -761,8 +760,8 @@ function searchExactDayFrequency(antallDager) {
     '7': 'Søn'
   };
 
-  // Aggreger per avis med filter som kolonner, og samler frekvenser som tekst
-  // Struktur: { avisNavn: { Innenfor: {sum: x, frekvens: "Man, Ons"}, Utenfor: {...} } }
+  // Aggreger per avis og filter, lagrer også frekvensdager
+  // Struktur: { avisNavn: { Innenfor: {sum, frekvens}, Utenfor: {...} } }
   const aggregert = {};
 
   matchedPostnr.forEach(p => {
@@ -777,7 +776,6 @@ function searchExactDayFrequency(antallDager) {
           const renAvisId = avisId.trim().toLowerCase();
           const navn = avisNavnMap[renAvisId] || avisId;
 
-          // Formatér frekvenser til dagtekst
           const frekvensTekst = Array.from(avisData.frekvenser)
             .map(f => dagMap[f.toString()] || f.toString())
             .sort()
@@ -786,8 +784,7 @@ function searchExactDayFrequency(antallDager) {
           if (!aggregert[navn]) aggregert[navn] = {};
           if (!aggregert[navn][filt]) aggregert[navn][filt] = { sum: 0, frekvens: frekvensTekst };
           aggregert[navn][filt].sum += avisData.count;
-          // Hvis samme avis/filter har flere frekvenser, duplikater kan skje,
-          // men med samme frekvensTekst, så det går fint å vise det slik.
+          // FrekvensTekst antas å være samme for samme avis/filter, så vi overskriver ikke.
         }
       });
     });
@@ -800,9 +797,10 @@ function searchExactDayFrequency(antallDager) {
     <thead>
       <tr>
         <th>Avis</th>
-        <th>Innenfor (Antall / Dager)</th>
-        <th>Utenfor (Antall / Dager)</th>
+        <th>Innenfor</th>
+        <th>Utenfor</th>
         <th>Totalt</th>
+        <th>Frekvensdager</th>
       </tr>
     </thead>
     <tbody>`;
@@ -819,18 +817,19 @@ function searchExactDayFrequency(antallDager) {
     totalPerFilter.Innenfor += innenforSum;
     totalPerFilter.Utenfor += utenforSum;
 
-    const innenforTekst = innenforSum ? `${innenforSum.toLocaleString()} / ${innenforData.frekvens}` : '';
-    const utenforTekst = utenforSum ? `${utenforSum.toLocaleString()} / ${utenforData.frekvens}` : '';
+    // Bruk frekvens fra Innenfor om tilgjengelig, ellers Utenfor
+    const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
 
     html += `<tr>
       <td>${avis}</td>
-      <td>${innenforTekst}</td>
-      <td>${utenforTekst}</td>
+      <td>${innenforSum ? innenforSum.toLocaleString() : ''}</td>
+      <td>${utenforSum ? utenforSum.toLocaleString() : ''}</td>
       <td>${sum.toLocaleString()}</td>
+      <td>${frekvensTekst}</td>
     </tr>`;
 
-    if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: innenforData.frekvens });
-    if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: utenforData.frekvens });
+    if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: frekvensTekst });
+    if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: frekvensTekst });
   });
 
   const grandTotal = totalPerFilter.Innenfor + totalPerFilter.Utenfor;
@@ -839,6 +838,7 @@ function searchExactDayFrequency(antallDager) {
     <td>${totalPerFilter.Innenfor.toLocaleString()}</td>
     <td>${totalPerFilter.Utenfor.toLocaleString()}</td>
     <td>${grandTotal.toLocaleString()}</td>
+    <td></td>
   </tr>`;
 
   html += `</tbody></table>`;
@@ -885,12 +885,6 @@ function searchExactDayFrequency(antallDager) {
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
-
-
-
-
-
-
 
 
   document.getElementById('loginBtn').addEventListener('click', () => {
