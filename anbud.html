@@ -751,7 +751,6 @@ function searchExactDayFrequency(antallDager) {
   }
 
   // Aggreger per avis med filter som kolonner
-  // Struktur: { avisNavn: { Innenfor: sum, Utenfor: sum } }
   const aggregert = {};
 
   matchedPostnr.forEach(p => {
@@ -773,7 +772,6 @@ function searchExactDayFrequency(antallDager) {
     });
   });
 
-  // Lag tabell HTML
   let totalPerFilter = { Innenfor: 0, Utenfor: 0 };
   let samletAviser = Object.keys(aggregert).sort();
 
@@ -805,12 +803,10 @@ function searchExactDayFrequency(antallDager) {
       <td>${sum.toLocaleString()}</td>
     </tr>`;
 
-    // Lag eksportrader (én rad per avis per filter)
     if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum });
     if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum });
   });
 
-  // Totalsum rad
   const grandTotal = totalPerFilter.Innenfor + totalPerFilter.Utenfor;
   html += `<tr style="font-weight:bold; background:#eef;">
     <td>Totalt</td>
@@ -820,12 +816,17 @@ function searchExactDayFrequency(antallDager) {
   </tr>`;
 
   html += `</tbody></table>`;
+
+  // Legg til tekst under tabellen med antall aviser som matcher søket
+  html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
+    Antall aviser som matcher søket: ${samletAviser.length}. Aviser: ${samletAviser.join(', ')}
+  </p>`;
+
   document.getElementById('search-summary').innerHTML = html;
 
   exportBtn.disabled = false;
   heatmapBtn.disabled = false;
 
-  // Vis polygoner for treff
   if (searchLayer) {
     map.removeLayer(searchLayer);
     searchLayer = null;
@@ -859,6 +860,7 @@ function searchExactDayFrequency(antallDager) {
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
+
 
 
 
