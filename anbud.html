@@ -760,8 +760,8 @@ function searchExactDayFrequency(antallDager) {
     '7': 'Søn'
   };
 
-  // Aggreger per avis og filter, lagrer også frekvensdager
-  // Struktur: { avisNavn: { Innenfor: {sum, frekvens}, Utenfor: {...} } }
+  const dagRekkefølge = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+
   const aggregert = {};
 
   matchedPostnr.forEach(p => {
@@ -776,15 +776,15 @@ function searchExactDayFrequency(antallDager) {
           const renAvisId = avisId.trim().toLowerCase();
           const navn = avisNavnMap[renAvisId] || avisId;
 
-          const frekvensTekst = Array.from(avisData.frekvenser)
-            .map(f => dagMap[f.toString()] || f.toString())
-            .sort()
-            .join(', ');
+          // Formatter frekvensdagene i riktig rekkefølge
+          const frekvensDager = Array.from(avisData.frekvenser)
+            .map(f => dagMap[f.toString()] || f.toString());
+          frekvensDager.sort((a, b) => dagRekkefølge.indexOf(a) - dagRekkefølge.indexOf(b));
+          const frekvensTekst = frekvensDager.join(', ');
 
           if (!aggregert[navn]) aggregert[navn] = {};
           if (!aggregert[navn][filt]) aggregert[navn][filt] = { sum: 0, frekvens: frekvensTekst };
           aggregert[navn][filt].sum += avisData.count;
-          // FrekvensTekst antas å være samme for samme avis/filter, så vi overskriver ikke.
         }
       });
     });
@@ -817,7 +817,6 @@ function searchExactDayFrequency(antallDager) {
     totalPerFilter.Innenfor += innenforSum;
     totalPerFilter.Utenfor += utenforSum;
 
-    // Bruk frekvens fra Innenfor om tilgjengelig, ellers Utenfor
     const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
 
     html += `<tr>
@@ -885,6 +884,7 @@ function searchExactDayFrequency(antallDager) {
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
+
 
 
   document.getElementById('loginBtn').addEventListener('click', () => {
