@@ -724,10 +724,12 @@ l.setPopupContent(`
 function searchExactDayFrequency(antallDager) {
   const startTime = performance.now();
 
-  // Samle features som matcher eksakt antall frekvensdager (kun Innenfor og Utenfor)
   const allFeatures = [...fInnenfor, ...fUtenfor];
 
-  const matches = allFeatures.filter(f => {
+  const matchedPostnr = new Set();
+
+  // Samle postnumre som har minst en avis med eksakt antall frekvensdager
+  allFeatures.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
     const innenforData = dInnenfor[p];
     const utenforData = dUtenfor[p];
@@ -735,13 +737,13 @@ function searchExactDayFrequency(antallDager) {
 
     for (const avisData of avisMap.values()) {
       if (avisData.frekvenser.size === antallDager) {
-        return true;
+        matchedPostnr.add(p);
+        break;
       }
     }
-    return false;
   });
 
-  if (!matches.length) {
+  if (matchedPostnr.size === 0) {
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
@@ -750,7 +752,17 @@ function searchExactDayFrequency(antallDager) {
     return;
   }
 
+  // Filtrer features til kun de som matcher
+  const matches = allFeatures.filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
+
+  // Bygg tabell og summering
+  let totalSum = 0;
+  let samletAviserTotal = new Set();
+
+  let html = '<table><thead><tr><th>Filter</th><th>Postnummer</th><th>Totalt antall</th><th>Avis</th><th>Antall avis</th></tr></thead><tbody>';
+
   lastMatches = [];
+
   matches.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
     const antallTotal = f.properties.antall;
@@ -766,6 +778,18 @@ function searchExactDayFrequency(antallDager) {
         if (avisData.frekvenser.size === antallDager) {
           const renAvisId = avisId.trim().toLowerCase();
           const navn = avisNavnMap[renAvisId] || avisId;
+
+          totalSum += avisData.count;
+          samletAviserTotal.add(navn);
+
+          html += `<tr>
+            <td>${filterNavn}</td>
+            <td>${p}</td>
+            <td>${antallTotal.toLocaleString()}</td>
+            <td>${navn}</td>
+            <td>${avisData.count.toLocaleString()}</td>
+          </tr>`;
+
           lastMatches.push({
             filter: filterNavn,
             postnummer: p,
@@ -777,6 +801,20 @@ function searchExactDayFrequency(antallDager) {
       });
     });
   });
+
+  html += `<tr style="font-weight:bold; background:#eef;">
+    <td colspan="4">Totalt</td>
+    <td>${totalSum.toLocaleString()}</td>
+  </tr>`;
+
+  if (samletAviserTotal.size > 0) {
+    html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
+      <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('search-summary').innerHTML = html;
 
   exportBtn.disabled = false;
   heatmapBtn.disabled = false;
@@ -808,12 +846,11 @@ function searchExactDayFrequency(antallDager) {
 
   map.fitBounds(searchLayer.getBounds().pad(0.05));
 
-  document.getElementById('search-summary').innerHTML = `<p>Fant ${matches.length} postnummer med eksakt ${antallDager} dag${antallDager > 1 ? 'er' : ''} frekvens.</p>`;
-
   const endTime = performance.now();
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
+
 
 
 
