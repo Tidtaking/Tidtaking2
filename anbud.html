@@ -477,16 +477,6 @@ l.setPopupContent(`
   const qRawInput = document.getElementById('searchInput').value.trim();
   if (!qRawInput) return;
 
-  // Sjekk om søket er eksakt "N dag frekvens"
-  const dagFreqMatch = qRawInput.match(/^(\d) dag frekvens$/i);
-  if (dagFreqMatch) {
-    const ønsketDager = Number(dagFreqMatch[1]);
-    searchExactDayFrequency(ønsketDager);
-    return;
-  }
-
-  // --- Vanlig søk ---
-
   Object.values(layers).forEach(l => map.removeLayer(l));
   if (searchLayer) {
     map.removeLayer(searchLayer);
@@ -534,17 +524,18 @@ l.setPopupContent(`
     return;
   }
 
-  // Oppsummering med unike og duplikatsummer (som tidligere)
   let totalSum = 0;
   let samletFrekvenserTotal = new Set();
   let samletAviserTotal = new Set();
+
+  // Ny: total volum med duplikater for alle dager som matcher søket (ikke bare unike)
+  let duplikatSumTotal = 0;
 
   let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
   Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
     const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
     let sumCount = 0;
-    let sumAlleDager = 0;
     let samletFrekvenser = new Set();
 
     keys.forEach(p => {
@@ -553,29 +544,24 @@ l.setPopupContent(`
         for (const [avisId, avisData] of avisMap.entries()) {
           const navn = avisNavnMap[avisId] || avisId;
           const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
-
-          if (!avisMatch) continue;
-
-          // Summer alle dager (duplikater)
-          if (frekvensSok.size === 0) {
-            sumAlleDager += avisData.count;
-          } else {
-            avisData.frekvenser.forEach(frek => {
-              if (frekvensSok.has(frek.toString())) {
-                sumAlleDager += avisData.count;
-              }
-            });
-          }
-
-          // Sum unik som tidligere
           const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
-          if (frekMatch) {
+
+          if (avisMatch && frekMatch) {
             sumCount += avisData.count;
             avisData.frekvenser.forEach(f => {
               samletFrekvenser.add(f.toString());
               samletFrekvenserTotal.add(f.toString());
             });
             samletAviserTotal.add(navn);
+          }
+          // Her kommer beregning av duplikatSumTotal (alle dager, ikke unike)
+          if (avisSok.length === 0 || avisMatch) {
+            for (const f of avisData.frekvenser) {
+              if (frekvensSok.has(f.toString())) {
+                duplikatSumTotal += avisData.count;
+                break; // ikke telle flere ganger samme avis/postnr
+              }
+            }
           }
         }
       }
@@ -591,18 +577,20 @@ l.setPopupContent(`
       <td>${formatFrekvenser(samletFrekvenser)}</td>
     </tr>`;
 
-    // Rad for sum alle dager (duplikater)
     html += `<tr style="font-size: 12px; color: #444;">
       <td colspan="3" style="text-align:right; font-style: italic;">Sum alle dager (duplikater):</td>
-      <td>${sumAlleDager.toLocaleString()}</td>
+      <td>${duplikatSumTotal.toLocaleString()}</td>
       <td></td>
     </tr>`;
+    // Reset duplikatSumTotal for neste filter, hvis du vil ha det per filter
+    // Men hvis total for hele søket: fjern denne resetten
+    duplikatSumTotal = 0;
   });
 
   html += `<tr style="font-weight:bold; background:#eef;">
     <td colspan="3">Totalt</td>
     <td>${totalSum.toLocaleString()}</td>
-    <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
+    <td><strong>${formatFrekvenser(samletFrekvenserTotal)}</strong></td>
   </tr>`;
 
   if (samletAviserTotal.size > 0) {
@@ -614,41 +602,42 @@ l.setPopupContent(`
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  // Bygg lastMatches med alle filtre (som tidligere)
   lastMatches = [];
   matches.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
+    let filt = null;
+    if (dC && Object.keys(dC).includes(p)) filt = 'Anbud';
+    else if (dD && Object.keys(dD).includes(p)) filt = 'Brukt';
+    else if (dInnenfor && Object.keys(dInnenfor).includes(p)) filt = 'Innenfor';
+    else if (dUtenfor && Object.keys(dUtenfor).includes(p)) filt = 'Utenfor';
+
+    const filterNavn = filterKeys[filt] || '';
     const antallTotal = f.properties.antall;
 
-    ['Anbud', 'Brukt', 'Innenfor', 'Utenfor'].forEach(filt => {
-      const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
-      if (!mapData[p]) return;
+    const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
+    const avisMap = mapData[p]?.avis || new Map();
 
-      const filterNavn = filterKeys[filt] || '';
-      const avisMap = mapData[p]?.avis || new Map();
-
-      if (avisMap.size === 0) {
+    if (avisMap.size === 0) {
+      lastMatches.push({
+        filter: filterNavn,
+        postnummer: p,
+        antall_total: antallTotal,
+        avis: '',
+        antall_avis: 0
+      });
+    } else {
+      avisMap.forEach((avisData, avisId) => {
+        const renAvisId = avisId.trim().toLowerCase();
+        const navn = avisNavnMap[renAvisId] || avisId;
         lastMatches.push({
           filter: filterNavn,
           postnummer: p,
           antall_total: antallTotal,
-          avis: '',
-          antall_avis: 0
+          avis: navn,
+          antall_avis: avisData.count
         });
-      } else {
-        avisMap.forEach((avisData, avisId) => {
-          const renAvisId = avisId.trim().toLowerCase();
-          const navn = avisNavnMap[renAvisId] || avisId;
-          lastMatches.push({
-            filter: filterNavn,
-            postnummer: p,
-            antall_total: antallTotal,
-            avis: navn,
-            antall_avis: avisData.count
-          });
-        });
-      }
-    });
+      });
+    }
   });
 
   exportBtn.disabled = false;
@@ -718,6 +707,7 @@ l.setPopupContent(`
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
 }
+
 
 
 // Egen funksjon for eksakt "N dag frekvens"-søk:
