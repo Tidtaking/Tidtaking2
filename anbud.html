@@ -566,21 +566,6 @@ l.setPopupContent(`
               }
             });
           }
-// Summer total volum distribuert (duplikater)
-let duplikatSum = 0;
-Object.values(aggregert).forEach(avisData => {
-  if (avisData.Innenfor) duplikatSum += avisData.Innenfor.sum;
-  if (avisData.Utenfor) duplikatSum += avisData.Utenfor.sum;
-});
-
-// Legg til rad med duplikat-sum rett over totalsum
-html += `<tr style="font-weight:bold; background:#dfd;">
-  <td>Sum alle dager (duplikater)</td>
-  <td>${totalPerFilter.Innenfor.toLocaleString()}</td>
-  <td>${totalPerFilter.Utenfor.toLocaleString()}</td>
-  <td>${duplikatSum.toLocaleString()}</td>
-  <td></td>
-</tr>`;
 
           // Sum unik som tidligere
           const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
