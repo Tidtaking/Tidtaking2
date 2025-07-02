@@ -717,7 +717,7 @@ l.setPopupContent(`
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
-  document.getElementById('search-timer').innerText = `Søket brukte ${elapsed.toFixed(1)} ms`;
+  document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
 }
 
 
