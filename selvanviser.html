@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Utvidet analyse av skyting (revidert + dra/flytt)</title>
+  <title>Utvidet analyse av skyting (dra/flytt + faste regex)</title>
   <meta name="color-scheme" content="light dark" />
   <style>
     :root { --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; --border:#d0d0d0; --accent:#0a7; }
@@ -110,14 +110,23 @@
   </div>
 
   <script>
-    // --- Supabase-klient med UMD ---
+    // --- Supabase-klient (UMD) ---
     const SB_URL = 'https://chzfewhbfkdtcizdxyzk.supabase.co';
     const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA';
     const supabase = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SB_URL, SB_ANON) : null;
 
-    const DRAG_RADIUS = 10; // px, klikk/treff-radius for å gripe et skudd
+    const DRAG_RADIUS = 10; // px for å gripe et skudd
 
-    const state = { currentShots: [], seriesCount: 0, timerRunning: false, startMs: null, elapsedMs: 0, lastWindDir: null, adjustment: { up: 0, down: 0, left: 0, right: 0 }, dragging: { index: -1, offsetX: 0, offsetY: 0 } };
+    const state = {
+      currentShots: [],
+      seriesCount: 0,
+      timerRunning: false,
+      startMs: null,
+      elapsedMs: 0,
+      lastWindDir: null,
+      adjustment: { up: 0, down: 0, left: 0, right: 0 },
+      dragging: { index: -1, offsetX: 0, offsetY: 0 }
+    };
 
     const els = {
       canvas: document.getElementById('targetCanvas'),
@@ -140,7 +149,7 @@
     // Init date to today
     els.date.value = new Date().toISOString().split('T')[0];
 
-    // Canvas setup with HiDPI support
+    // Canvas + HiDPI
     const ctx = els.canvas.getContext('2d');
     function resizeCanvas() {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -228,6 +237,7 @@
 
     function draw() { drawTarget(); drawShots(); drawStats(); }
 
+    // Posisjon
     function canvasPointFromEvent(e){
       const rect = els.canvas.getBoundingClientRect();
       const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -239,7 +249,6 @@
     }
 
     function hitTestShot(x, y) {
-      // sjekk fra toppen (siste skudd tegnes øverst)
       for (let i = state.currentShots.length - 1; i >= 0; i--) {
         const s = state.currentShots[i];
         if (Math.hypot(s.x - x, s.y - y) <= DRAG_RADIUS) return i;
@@ -247,7 +256,7 @@
       return -1;
     }
 
-    // Klikk for å legge til skudd (men ikke hvis vi avslutter et drag)
+    // Dra/flytt
     let justDragged = false;
 
     els.canvas.addEventListener('pointerdown', (e) => {
@@ -261,7 +270,6 @@
         state.dragging.offsetY = y - s.y;
         justDragged = false;
       } else {
-        // ikke startet drag, la pointerup legge til skudd
         state.dragging.index = -1;
       }
     });
@@ -280,12 +288,10 @@
 
     els.canvas.addEventListener('pointerup', (e) => {
       els.canvas.releasePointerCapture(e.pointerId);
-      // hvis vi har dratt, ikke legg til nytt skudd
       if (state.dragging.index >= 0) {
         state.dragging.index = -1;
         if (justDragged) { persistDraft(); return; }
       }
-      // ellers: vanlig klikk -> legg til skudd
       const { x, y } = canvasPointFromEvent(e);
       const score = computeScore(x, y);
       state.currentShots.push({ x, y, score, ts: Date.now() });
@@ -295,7 +301,7 @@
       persistDraft();
     });
 
-    // Tilbake-knapp
+    // Angre
     els.undoBtn.addEventListener('click', () => {
       state.currentShots.pop();
       if (!state.currentShots.length) els.undoBtn.disabled = true;
@@ -304,6 +310,7 @@
       persistDraft();
     });
 
+    // Tidtaker
     function fmt(ms){ const s = Math.floor(ms/1000); const m = Math.floor(s/60); const r = s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}` }
     let rafId = null;
     function tick(){ if(!state.timerRunning) return; const now = Date.now(); const ms = state.elapsedMs + (now - state.startMs); els.timerDisplay.textContent = `Tid: ${fmt(ms)}`; rafId = requestAnimationFrame(tick); }
@@ -313,12 +320,14 @@
       else { state.timerRunning = false; state.elapsedMs += Date.now() - state.startMs; els.timerBtn.textContent = 'Start skytetid'; cancelAnimationFrame(rafId); rafId = null; }
     });
 
+    // Skrumelding
     function updateAdjustmentDisplay(){ els.adjDisp.textContent = `Opp: ${state.adjustment.up} | Ned: ${state.adjustment.down} | Venstre: ${state.adjustment.left} | Høyre: ${state.adjustment.right}`; persistDraft(); }
     document.getElementById('adjUp').addEventListener('click', ()=>{ if(state.adjustment.down>0) state.adjustment.down--; else state.adjustment.up++; updateAdjustmentDisplay(); });
     document.getElementById('adjDown').addEventListener('click', ()=>{ if(state.adjustment.up>0) state.adjustment.up--; else state.adjustment.down++; updateAdjustmentDisplay(); });
     document.getElementById('adjLeft').addEventListener('click', ()=>{ if(state.adjustment.right>0) state.adjustment.right--; else state.adjustment.left++; updateAdjustmentDisplay(); });
     document.getElementById('adjRight').addEventListener('click', ()=>{ if(state.adjustment.left>0) state.adjustment.left--; else state.adjustment.right++; updateAdjustmentDisplay(); });
 
+    // Vær
     function getCompassDirection(deg) { const dirs = ['nord','nordøst','øst','sørøst','sør','sørvest','vest','nordvest']; return dirs[Math.round(deg / 45) % 8]; }
 
     document.getElementById('fetchWeatherBtn').addEventListener('click', async () => {
@@ -350,6 +359,7 @@
       }
     });
 
+    // Lagre serie
     els.saveBtn.addEventListener('click', async () => {
       if (!state.currentShots.length) return;
       const navn = els.name.value.trim() || 'Ukjent';
@@ -362,6 +372,7 @@
       const poeng = state.currentShots.reduce((sum, s) => sum + s.score, 0);
       state.seriesCount++;
 
+      // Miniatyr
       const prev = document.createElement('canvas'); prev.width = 100; prev.height = 100; const pctx = prev.getContext('2d');
       pctx.fillStyle = '#fff'; pctx.fillRect(0,0,100,100);
       for (let j = 10; j >= 1; j--) { pctx.beginPath(); pctx.arc(50, 50, j * 5, 0, Math.PI*2); pctx.strokeStyle = j === 3 ? '#000' : '#ccc'; pctx.lineWidth = j === 3 ? 2 : .5; pctx.stroke(); }
@@ -381,7 +392,6 @@
 
       try {
         if (supabase && typeof supabase.from === 'function') {
-          // Payload med valgfrie gruppekolonner – fjern ukjente ved PGRST204
           let payload = {
             navn, dato, sted, serie: state.seriesCount, skudd: state.currentShots.length,
             poeng, treff, tid, vindretning: dirText, vindgrader: dirDeg, skrumelding,
@@ -406,6 +416,7 @@
         els.saveBtn.disabled = false;
       }
 
+      // Reset
       state.currentShots = [];
       state.adjustment = { up: 0, down: 0, left: 0, right: 0 };
       state.timerRunning = false; state.startMs = null; state.elapsedMs = 0; els.timerBtn.textContent = 'Start skytetid';
@@ -415,24 +426,38 @@
       clearDraft();
     });
 
+    // CSV-eksport (faste regex uten linjeskift i literal)
     els.exportBtn.addEventListener('click', () => {
       const rows = [["Dato","Serie","Sted","Skudd","Poeng","Tid","Retning","Skrudd","Gruppe"]];
       document.querySelectorAll('#resultTable tbody tr').forEach(tr => {
         const cols = Array.from(tr.children).map(td => td.innerText.replace(/
-/g,' ').trim());
+/g, ' ').trim());
         rows.push(cols.slice(0,9));
       });
-      const csv = rows.map(r=>r.map(v=>`"${v.replace(/"/g,'""')}"`).join(',')).join('
+      const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('
 ');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'serier.csv'; a.click(); URL.revokeObjectURL(a.href);
     });
 
+    // Draft
     const DRAFT_KEY = 'selvanviser_draft_v1';
-    function persistDraft(){ const draft = { shots: state.currentShots, adjustment: state.adjustment, lastWindDir: state.lastWindDir, name: els.name.value, date: els.date.value, loc: els.loc.value, elapsedMs: state.timerRunning ? (state.elapsedMs + (Date.now()-state.startMs)) : state.elapsedMs }; localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); }
-    function restoreDraft(){ try { const raw = localStorage.getItem(DRAFT_KEY); if(!raw) return; const d = JSON.parse(raw); state.currentShots = d.shots || []; state.adjustment = d.adjustment || state.adjustment; state.lastWindDir = d.lastWindDir ?? null; els.name.value = d.name || ''; els.date.value = d.date || els.date.value; els.loc.value = d.loc || ''; els.timerDisplay.textContent = `Tid: ${fmt(d.elapsedMs || 0)}`; state.elapsedMs = d.elapsedMs || 0; els.undoBtn.disabled = state.currentShots.length === 0; els.saveBtn.disabled = state.currentShots.length === 0; updateAdjustmentDisplay(); draw(); } catch {} }
+    function persistDraft(){
+      const draft = { shots: state.currentShots, adjustment: state.adjustment, lastWindDir: state.lastWindDir, name: els.name.value, date: els.date.value, loc: els.loc.value, elapsedMs: state.timerRunning ? (state.elapsedMs + (Date.now()-state.startMs)) : state.elapsedMs };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    }
+    function restoreDraft(){
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY); if(!raw) return; const d = JSON.parse(raw);
+        state.currentShots = d.shots || []; state.adjustment = d.adjustment || state.adjustment; state.lastWindDir = d.lastWindDir ?? null;
+        els.name.value = d.name || ''; els.date.value = d.date || els.date.value; els.loc.value = d.loc || '';
+        els.timerDisplay.textContent = `Tid: ${fmt(d.elapsedMs || 0)}`; state.elapsedMs = d.elapsedMs || 0;
+        els.undoBtn.disabled = state.currentShots.length === 0; els.saveBtn.disabled = state.currentShots.length === 0; updateAdjustmentDisplay(); draw();
+      } catch {}
+    }
     function clearDraft(){ localStorage.removeItem(DRAFT_KEY); }
 
+    // DB-status
     async function checkDb() {
       if (!els.dbStatus) return false;
       if (!supabase) { els.dbStatus.textContent = 'DB: ingen tilkobling'; return false; }
@@ -448,6 +473,7 @@
       }
     }
 
+    // Tester
     function addResult(ok, msg){ const li = document.createElement('li'); li.textContent = msg; li.className = ok===true? 'pass' : ok===false? 'fail' : 'skip'; els.testList.appendChild(li); }
     function runTests(){
       els.testList.innerHTML = '';
@@ -462,31 +488,31 @@
       addResult(Math.abs(st.cx - g.center) < 0.01 && Math.abs(st.cy - g.center) < 0.01, 'computeStats: senter beregnes korrekt');
       const adj = { up:0,down:0,left:0,right:0 }; if(adj.down>0) adj.down--; else adj.up++; if(adj.up>0) adj.up--; else adj.down++; addResult(adj.up===0 && adj.down===0, 'Justering opp/ned kansellerer');
       addResult((function(){ const t = fmt(61000); return t==='01:01'; })(), 'Tidsformat 61000ms = 01:01');
-      // Nye tester for CSV/regex
+      // CSV/regex tester
       addResult('a
 b'.replace(/
 /g,' ') === 'a b', 'Regex: newline erstattes i CSV-eksport');
       addResult(['x','y'].join('
 ') === 'x
 y', 'CSV: join med \n');
-      // Test: parser ukjent kolonne fra PostgREST-feil
+      // PostgREST-feilparser
       const missingColRe = /Could not find the '([^']+)' column/i;
       const sample = "Could not find the 'gruppe_es_px' column of 'selvanviser' in the schema cache";
       const m = sample.match(missingColRe);
       addResult(!!m && m[1]==='gruppe_es_px', 'Feilparser: finner manglende kolonnenavn');
-      // Tester for hitTest og flytting
+      // Dra/hitTest
       const shotA = {x:g.center, y:g.center};
       state.currentShots = [shotA];
       const hitIdx = hitTestShot(g.center, g.center);
       addResult(hitIdx === 0, 'hitTest: treffer skudd i sentrum');
-      // Flytt og sjekk score endres for langt hopp
       const before = computeScore(shotA.x, shotA.y);
-      shotA.x = g.center + g.R - 2; shotA.y = g.center; // nesten ytterkant
+      shotA.x = g.center + g.R - 2; shotA.y = g.center;
       const after = computeScore(shotA.x, shotA.y);
       addResult(before !== after, 'Dra: score oppdateres når skudd flyttes');
       state.currentShots = [];
     }
 
+    // Init
     resizeCanvas();
     restoreDraft();
     checkDb();
