@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Utvidet analyse av skyting (dra/flytt + faste regex)</title>
+  <title>Utvidet analyse av skyting</title>
   <meta name="color-scheme" content="light dark" />
   <style>
     :root { --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; --border:#d0d0d0; --accent:#0a7; }
@@ -39,7 +39,7 @@
     .fail { background: #fdeaea; }
     .skip { background: #f4f4f4; }
   </style>
-  <!-- UMD-build av Supabase lastes før app-koden så window.supabase er definert -->
+  <!-- UMD Supabase før app-koden -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
@@ -101,8 +101,8 @@
     </div>
 
     <section id="testPanel" class="card">
-      <details open>
-        <summary>Tester</summary>
+      <details>
+        <summary>Tester (åpne for å se resultater)</summary>
         <ul id="testResults"></ul>
         <button id="runTestsBtn" type="button">Kjør tester på nytt</button>
       </details>
@@ -237,7 +237,7 @@
 
     function draw() { drawTarget(); drawShots(); drawStats(); }
 
-    // Posisjon
+    // Posisjon fra event
     function canvasPointFromEvent(e){
       const rect = els.canvas.getBoundingClientRect();
       const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -426,16 +426,14 @@
       clearDraft();
     });
 
-    // CSV-eksport (faste regex uten linjeskift i literal)
+    // CSV-eksport (korrekte regex og '\n')
     els.exportBtn.addEventListener('click', () => {
       const rows = [["Dato","Serie","Sted","Skudd","Poeng","Tid","Retning","Skrudd","Gruppe"]];
       document.querySelectorAll('#resultTable tbody tr').forEach(tr => {
-        const cols = Array.from(tr.children).map(td => td.innerText.replace(/
-/g, ' ').trim());
+        const cols = Array.from(tr.children).map(td => td.innerText.replace(/\n/g, ' ').trim());
         rows.push(cols.slice(0,9));
       });
-      const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('
-');
+      const csv = rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'serier.csv'; a.click(); URL.revokeObjectURL(a.href);
     });
@@ -489,12 +487,8 @@
       const adj = { up:0,down:0,left:0,right:0 }; if(adj.down>0) adj.down--; else adj.up++; if(adj.up>0) adj.up--; else adj.down++; addResult(adj.up===0 && adj.down===0, 'Justering opp/ned kansellerer');
       addResult((function(){ const t = fmt(61000); return t==='01:01'; })(), 'Tidsformat 61000ms = 01:01');
       // CSV/regex tester
-      addResult('a
-b'.replace(/
-/g,' ') === 'a b', 'Regex: newline erstattes i CSV-eksport');
-      addResult(['x','y'].join('
-') === 'x
-y', 'CSV: join med \n');
+      addResult('a\nb'.replace(/\n/g,' ') === 'a b', 'Regex: newline erstattes i CSV-eksport');
+      addResult(['x','y'].join('\n') === 'x\ny', 'CSV: join med \\n');
       // PostgREST-feilparser
       const missingColRe = /Could not find the '([^']+)' column/i;
       const sample = "Could not find the 'gruppe_es_px' column of 'selvanviser' in the schema cache";
