@@ -355,12 +355,10 @@
     els.exportBtn.addEventListener('click', () => {
       const rows = [["Dato","Serie","Sted","Skudd","Poeng","Tid","Retning","Skrudd","Gruppe"]];
       document.querySelectorAll('#resultTable tbody tr').forEach(tr => {
-        const cols = Array.from(tr.children).map(td => td.innerText.replace(/
-/g,' ').trim());
+        const cols = Array.from(tr.children).map(td => td.innerText.replace(/\n/g,' ').trim());
         rows.push(cols.slice(0,9));
       });
-      const csv = rows.map(r=>r.map(v=>`"${v.replace(/"/g,'""')}"`).join(',')).join('
-');
+      const csv = rows.map(r=>r.map(v=>`"${v.replace(/"/g,'""')}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'serier.csv'; a.click(); URL.revokeObjectURL(a.href);
     });
@@ -399,6 +397,9 @@
       addResult(Math.abs(st.cx - g.center) < 0.01 && Math.abs(st.cy - g.center) < 0.01, 'computeStats: senter beregnes korrekt');
       const adj = { up:0,down:0,left:0,right:0 }; if(adj.down>0) adj.down--; else adj.up++; if(adj.up>0) adj.up--; else adj.down++; addResult(adj.up===0 && adj.down===0, 'Justering opp/ned kansellerer');
       addResult((function(){ const t = fmt(61000); return t==='01:01'; })(), 'Tidsformat 61000ms = 01:01');
+      // Nye tester for CSV/regex
+      addResult('a\nb'.replace(/\n/g,' ') === 'a b', 'Regex: newline erstattes i CSV-eksport');
+      addResult(['x','y'].join('\n') === 'x\ny', 'CSV: join med \n');
     }
 
     resizeCanvas();
