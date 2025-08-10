@@ -44,6 +44,10 @@
     .pass { background: #e8f7ed; }
     .fail { background: #fdeaea; }
     .skip { background: #f4f4f4; }
+
+    /* Live overlay */
+    .canvas-wrap { position: relative; display: block; width: 100%; }
+    #liveOverlay { position:absolute; left:0; top:0; transform:translate(-50%, -140%); padding:4px 6px; border-radius:8px; background:rgba(0,0,0,.75); color:#fff; font-size:12px; line-height:1; pointer-events:none; opacity:0; transition:opacity .08s ease; white-space:nowrap; }
   </style>
   <!-- UMD Supabase før app-koden -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -69,10 +73,14 @@
     <div class="row" style="display:grid; gap:12px; grid-template-columns: 1fr; margin-top: 12px;">
       <section class="card skive-card">
         <h2>Skive</h2>
-        <canvas id="targetCanvas"></canvas>
-        <div id="timerControls" style="margin-top:10px">
+        <div class="canvas-wrap">
+          <canvas id="targetCanvas"></canvas>
+          <div id="liveOverlay" aria-hidden="true">Poeng: 10</div>
+        </div>
+        <div id="timerControls" style="margin-top:10px; display:flex; gap:10px; align-items:center; justify-content:flex-start; flex-wrap:wrap">
           <button id="startStopTimerBtn">Start skytetid</button>
           <div id="timerDisplay">Tid: 00:00</div>
+          <div id="liveReadout" class="muted" style="margin-left:auto;">Live: –</div>
         </div>
 
         <section id="adjustmentControls" aria-label="Manuell skrumelding">
@@ -149,6 +157,8 @@
       dbStatus: document.getElementById('dbStatus'),
       testList: document.getElementById('testResults'),
       runTestsBtn: document.getElementById('runTestsBtn'),
+      liveOverlay: document.getElementById('liveOverlay'),
+      liveReadout: document.getElementById('liveReadout'),
     };
 
     // Dato = i dag
@@ -219,33 +229,69 @@
 
     function draw(){ drawTarget(); drawShots(); drawStats(); }
 
-    // --- Posisjon & hit-test ---
-    function pointFromEvt(e){ const r=els.canvas.getBoundingClientRect(); const dpr=Math.max(1,window.devicePixelRatio||1); const clientX=(e.touches?e.touches[0].clientX:e.clientX); const clientY=(e.touches?e.touches[0].clientY:e.clientY); const x=(clientX-r.left)*dpr; const y=(clientY-r.top)*dpr; return { x:x/dpr, y:y/dpr }; }
+    // --- Posisjon & hit-test + live-UI ---
+    function pointFromEvt(e){
+      const r=els.canvas.getBoundingClientRect(); const dpr=Math.max(1,window.devicePixelRatio||1);
+      const clientX=(e.touches?e.touches[0].clientX:e.clientX);
+      const clientY=(e.touches?e.touches[0].clientY:e.clientY);
+      const x=(clientX-r.left)*dpr; const y=(clientY-r.top)*dpr;
+      return { x:x/dpr, y:y/dpr, clientX, clientY };
+    }
     function hitShot(x,y){ for(let i=state.currentShots.length-1;i>=0;i--){ const s=state.currentShots[i]; if(Math.hypot(s.x-x,s.y-y)<=DRAG_RADIUS) return i; } return -1; }
+
+    function liveInfo(x,y){
+      const {center}=geom();
+      const dx=(x-center); const dy=(y-center);
+      const dist=Math.hypot(dx,dy); const score=computeScore(x,y);
+      return {dx,dy,dist,score};
+    }
+    function updateLiveUI(x,y){
+      const info=liveInfo(x,y);
+      els.liveOverlay.textContent = `Poeng: ${info.score}`;
+      els.liveReadout.textContent = `Live: x=${info.dx.toFixed(0)}, y=${(-info.dy).toFixed(0)} · r=${info.dist.toFixed(1)}px · Poeng=${info.score}`;
+    }
+    function placeOverlay(clientX, clientY){
+      const r=els.canvas.getBoundingClientRect();
+      const ox = clientX - r.left; const oy = clientY - r.top;
+      els.liveOverlay.style.left = `${ox}px`;
+      els.liveOverlay.style.top  = `${oy}px`;
+      els.liveOverlay.style.opacity = '1';
+    }
+    function hideOverlay(){ els.liveOverlay.style.opacity='0'; els.liveReadout.textContent='Live: –'; }
 
     // --- Drag & drop ---
     let justDragged=false;
     els.canvas.addEventListener('pointerdown', (e)=>{
       els.canvas.setPointerCapture(e.pointerId);
-      const {x,y}=pointFromEvt(e); const idx=hitShot(x,y);
+      const {x,y,clientX,clientY}=pointFromEvt(e);
+      placeOverlay(clientX, clientY); updateLiveUI(x,y);
+      const idx=hitShot(x,y);
       if(idx>=0){ const s=state.currentShots[idx]; state.dragging.index=idx; state.dragging.offsetX=x-s.x; state.dragging.offsetY=y-s.y; justDragged=false; }
       else { state.dragging.index=-1; }
     });
     els.canvas.addEventListener('pointermove', (e)=>{
+      const {x,y,clientX,clientY}=pointFromEvt(e);
+      placeOverlay(clientX, clientY); updateLiveUI(x,y);
       if(state.dragging.index<0) return;
-      const {x,y}=pointFromEvt(e); const {cssW}=geom();
+      const {cssW}=geom();
       const nx=Math.max(0,Math.min(cssW,x-state.dragging.offsetX));
       const ny=Math.max(0,Math.min(cssW,y-state.dragging.offsetY));
       const s=state.currentShots[state.dragging.index]; s.x=nx; s.y=ny; s.score=computeScore(nx,ny);
       draw(); justDragged=true;
+      updateLiveUI(nx,ny);
     });
     els.canvas.addEventListener('pointerup', (e)=>{
       els.canvas.releasePointerCapture(e.pointerId);
-      if(state.dragging.index>=0){ state.dragging.index=-1; if(justDragged){ persistDraft(); return; } }
-      const {x,y}=pointFromEvt(e); const score=computeScore(x,y);
+      const {x,y}=pointFromEvt(e);
+      if(state.dragging.index>=0){
+        // Siste posisjon gjelder; skuddet er allerede oppdatert i pointermove
+        state.dragging.index=-1; justDragged=false; persistDraft(); hideOverlay(); return;
+      }
+      const score=computeScore(x,y);
       state.currentShots.push({x,y,score,ts:Date.now()});
-      els.saveBtn.disabled=false; els.undoBtn.disabled=false; draw(); persistDraft();
+      els.saveBtn.disabled=false; els.undoBtn.disabled=false; draw(); persistDraft(); hideOverlay();
     });
+    els.canvas.addEventListener('pointerleave', hideOverlay);
 
     // --- Angre ---
     els.undoBtn.addEventListener('click', ()=>{ state.currentShots.pop(); els.undoBtn.disabled = state.currentShots.length===0; els.saveBtn.disabled = state.currentShots.length===0; draw(); persistDraft(); });
@@ -392,6 +438,9 @@
       // Ekstra tester
       addResult(DRAG_RADIUS === 14, 'Konfig: drag-radius er 14px');
       addResult(typeof window.supabase !== 'undefined', 'UMD: supabase global er definert');
+      // Live-informasjon: verdi gyldig
+      const liveOK = (function(){ const p={x:g.center, y:g.center - g.ringWidth*2}; const sc=computeScore(p.x,p.y); return sc>=0 && sc<=10; })();
+      addResult(liveOK, 'Live: computeScore returnerer gyldig verdi');
     }
 
     // --- Init ---
