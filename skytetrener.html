@@ -2,38 +2,42 @@
 <html lang="no">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Skiskyting – Skyteanalyse Coach (kalibrert scoring)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skiskyting – Auto-Analyse Coach</title>
+  <meta name="theme-color" content="#0b0c10" />
   <style>
     :root { --gap: 14px; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#0b0c10; color:#e9eef2; }
-    header { padding:20px; border-bottom:1px solid #1b1f2a;}
-    h1 { margin:0; font-size:20px; letter-spacing:.3px;}
-    main { display:grid; gap:var(--gap); grid-template-columns: 380px 1fr; padding:var(--gap);}
-    @media (max-width: 900px){ main { grid-template-columns: 1fr; } }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#0b0c10; color:#e9eef2; }
+    header { padding:18px 16px; border-bottom:1px solid #1b1f2a; display:flex; justify-content:space-between; align-items:center; }
+    h1 { margin:0; font-size:18px; letter-spacing:.3px; }
+    main { display:grid; grid-template-columns: 380px 1fr; gap:var(--gap); padding:var(--gap); }
+    @media (max-width: 980px){ main { grid-template-columns: 1fr; } }
     .card { background:#12141c; border:1px solid #1b1f2a; border-radius:12px; padding:16px; }
     .btn { background:#2a67ff; color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; }
     .btn.alt { background:#202636; }
     .btn.ghost { background:transparent; border:1px solid #2d3446; color:#cfd6df; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     input[type=file] { display:none; }
-    label.file { border:1px dashed #2d3446; border-radius:12px; padding:16px; display:block; text-align:center; cursor:pointer; color:#aeb8c7; }
+    label.file { border:1px dashed #2d3446; border-radius:12px; padding:18px; display:block; text-align:center; cursor:pointer; color:#aeb8c7; }
     canvas { width:100%; background:#0b0c10; border-radius:12px; }
     .pill { background:#1b2335; color:#cfd6df; padding:6px 10px; border-radius:999px; font-size:12px; }
     .stat { display:grid; grid-template-columns: 1fr auto; gap:6px; padding:8px 0; border-bottom:1px dashed #1f2738; }
     .stat:last-child{ border-bottom:none; }
-    .shots { display:flex; gap:6px; flex-wrap:wrap; }
-    .shot { width:20px; height:20px; border-radius:50%; background:#2a67ff33; border:1px solid #2a67ff77; display:grid; place-items:center; font-size:10px; }
-    .tips li { margin:6px 0; }
-    .muted { color:#9aa6b2; }
     table { width:100%; border-collapse: collapse; }
     td,th { padding:6px 8px; border-bottom:1px solid #1f2738; text-align:left; font-size:14px; }
+    .muted { color:#9aa6b2; }
+    .shots { display:flex; gap:6px; flex-wrap:wrap; }
+    .shot { width:20px; height:20px; border-radius:50%; background:#2a67ff33; border:1px solid #2a67ff77; display:grid; place-items:center; font-size:10px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🏹 Skiskyting – Skyteanalyse Coach (MVP + ringkalibrering & scoring)</h1>
+    <h1>🏹 Skiskyting – Auto-Analyse Coach</h1>
+    <div class="row">
+      <button class="btn ghost" id="installBtn" title="Installer som app">📲 Installer</button>
+      <a class="btn ghost" href="#" id="exportBtn">⤓ Last ned rapport</a>
+    </div>
   </header>
 
   <main>
@@ -52,31 +56,19 @@
       </div>
 
       <div style="height:16px"></div>
-      <h2>2) Kalibrer</h2>
-      <ol class="muted" style="margin-top:0">
-        <li>Klikk senter av blinken.</li>
-        <li>Klikk et punkt på en valgfri ring.</li>
-        <li>Oppgi ringnummeret du klikket (f.eks. 10).</li>
-      </ol>
-      <div class="row" style="margin-bottom:6px">
-        <button class="btn" id="centerMode">Sett sentrum</button>
-        <button class="btn ghost" id="ringMode">Klikk på ring</button>
-        <input id="ringNumber" type="number" min="1" max="20" placeholder="Ringnr (f.eks. 10)" style="width:140px;padding:10px;border-radius:10px;border:1px solid #2d3446;background:#0f1420;color:#e9eef2">
-        <button class="btn alt" id="applyCalibration">Bruk ringnr</button>
+      <h2>2) Automatisk analyse</h2>
+      <p class="muted">Klikk «Kjør analyse». Appen finner sentrum, ringer og skudd og beregner score automatisk (alt skjer i nettleseren).</p>
+      <div class="row">
+        <button class="btn" id="runAuto">Kjør analyse</button>
+        <button class="btn ghost" id="clearAll">Slett markeringer</button>
       </div>
-      <p class="muted" id="calibInfo">Ikke kalibrert.</p>
+      <p class="muted" id="autoInfo">Ikke kjørt ennå.</p>
 
-      <div class="row" style="margin-top:8px">
-        <button class="btn ghost" id="shotMode">Marker skudd</button>
-        <button class="btn ghost" id="undoShot">Angre siste</button>
-        <button class="btn ghost" id="clearAll">Slett alt</button>
-      </div>
-
-      <div style="height:16px"></div>
+      <div style="height:14px"></div>
       <h2>Analyse</h2>
       <div id="stats">
         <div class="stat"><div>Antall skudd</div><strong id="nShots">0</strong></div>
-        <div class="stat"><div>Gruppesenter vs. senter (mm dx/dy)</div><strong id="centroid">(0,0)</strong></div>
+        <div class="stat"><div>Gruppesenter vs. senter (mm dx/dy)</div><strong id="centroid">–</strong></div>
         <div class="stat"><div>Ekstremspredning (mm)</div><strong id="extSpread">–</strong></div>
         <div class="stat"><div>Gj.snitt radius (mm)</div><strong id="avgRadius">–</strong></div>
         <div class="stat"><div>Horis./vert. std (mm)</div><strong id="stds">–</strong></div>
@@ -85,43 +77,46 @@
         <div class="stat"><div>Biathlon 5/5 (≤10-ring)</div><strong id="biathlonHits">–</strong></div>
       </div>
 
-      <div style="height:16px"></div>
+      <div style="height:14px"></div>
       <h2>Skudd & score</h2>
       <table id="shotTable">
         <thead><tr><th>#</th><th>dx/dy (mm)</th><th>Radius (mm)</th><th>Ring</th><th>Poeng</th></tr></thead>
         <tbody></tbody>
       </table>
 
-      <div style="height:16px"></div>
-      <h2>Treningsråd</h2>
-      <ul id="tips" class="tips"></ul>
-
-      <div style="height:16px"></div>
-      <h2>Lagre i Supabase (valgfritt)</h2>
+      <div style="height:14px"></div>
+      <h2>Lagre (Supabase – valgfritt)</h2>
       <div class="row">
         <input id="sessionName" placeholder="Øktnavn" style="flex:1;padding:10px;border-radius:10px;border:1px solid #2d3446;background:#0f1420;color:#e9eef2"/>
         <button class="btn" id="saveBtn">Lagre</button>
       </div>
-      <p class="muted">Husk å legge inn URL og anon key i koden.</p>
+      <p class="muted">Sett dine nøkler i koden. Lagrer annotert bilde + JSON.</p>
     </section>
 
     <!-- Høyre: lerret -->
     <section class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
-        <div class="muted">Klikk for å markere skudd. Scroll for å zoome. Dra for å panorere.</div>
+        <div class="muted">Scroll for å zoome. Dra for å panorere.</div>
         <div class="shots" id="shotsList"></div>
       </div>
       <canvas id="canvas" width="1400" height="1000"></canvas>
     </section>
   </main>
 
-  <!-- Supabase CDN -->
+  <!-- Supabase (valgfritt) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <!-- OpenCV.js (client-side bildebehandling) -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()"></script>
+
   <script>
     // ---------- Konfig ----------
-       const SB_URL = 'https://chzfewhbfkdtcizdxyzk.supabase.co';
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA';
-    const supabase = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SB_URL, SB_ANON) : null;
+    const SUPABASE_URL = ""; // valgfritt
+    const SUPABASE_ANON_KEY = ""; // valgfritt
+    const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    // mm-kalibrering: estimert ringsteg (mm) for standard pistolrifleblink
+    // Dette justeres automatisk ved ringdeteksjon; her er kun fallback hvis ringfit feiler
+    let pxToMM = null; // regnes ut fra ringsteg
 
     // ---------- State ----------
     const cvs = document.getElementById('canvas');
@@ -131,38 +126,21 @@
     let rotation = 0;
 
     // world <-> screen
-    let scale = 1;
-    let offset = {x:0, y:0};
-    let panning = false;
-    let lastMouse = {x:0, y:0};
+    let scale = 1; let offset = {x:0, y:0};
+    let panning = false; let lastMouse = {x:0, y:0};
 
-    // markering
-    let shots = [];                 // {x,y}
-    let center = null;              // {x,y}
-    let ringPoint = null;           // {x,y} klikket på en ring
-    let ringNumberVal = null;       // heltall (1..)
-    let pxToMM = 0.25;              // fallback før kalibrering
-    let ringStepMM = null;          // mm mellom ringene
-    let ringsOverlayCount = 10;     // tegn 10 ringer som overlay
+    // auto-resultater
+    let auto = { center:null, ringStepPx:null, rings:[], shots:[], ringStepMM:null };
 
-    let mode = 'shot';              // 'center' | 'ring' | 'shot'
-
-    // ---------- UI ----------
+    // ---------- UI refs ----------
     const fileInput = document.getElementById('fileInput');
     const dropzone = document.getElementById('dropzone');
     const rotateLeft = document.getElementById('rotateLeft');
     const resetView = document.getElementById('resetView');
     const zoomInfo = document.getElementById('zoomInfo');
-
-    const centerModeBtn = document.getElementById('centerMode');
-    const ringModeBtn = document.getElementById('ringMode');
-    const ringNumberInput = document.getElementById('ringNumber');
-    const applyCalibrationBtn = document.getElementById('applyCalibration');
-    const calibInfo = document.getElementById('calibInfo');
-
-    const shotModeBtn = document.getElementById('shotMode');
-    const undoShotBtn = document.getElementById('undoShot');
+    const runAutoBtn = document.getElementById('runAuto');
     const clearAllBtn = document.getElementById('clearAll');
+    const autoInfo = document.getElementById('autoInfo');
     const shotsList = document.getElementById('shotsList');
 
     const nShotsEl = document.getElementById('nShots');
@@ -173,230 +151,179 @@
     const biasDirEl = document.getElementById('biasDir');
     const totalScoreEl = document.getElementById('totalScore');
     const biathlonHitsEl = document.getElementById('biathlonHits');
-    const tipsEl = document.getElementById('tips');
     const shotTableBody = document.querySelector('#shotTable tbody');
 
     const saveBtn = document.getElementById('saveBtn');
     const sessionName = document.getElementById('sessionName');
 
-    // ---------- Helpers ----------
+    // ---------- Canvas helpers ----------
     function draw(){
       ctx.clearRect(0,0,cvs.width,cvs.height);
       if(!imgLoaded){
-        ctx.fillStyle = '#9aa6b2';
-        ctx.textAlign='center';
-        ctx.font='16px system-ui';
-        ctx.fillText('Last opp et bilde for å starte', cvs.width/2, cvs.height/2);
-        return;
+        ctx.fillStyle = '#9aa6b2'; ctx.textAlign='center'; ctx.font='16px system-ui';
+        ctx.fillText('Last opp et bilde for å starte', cvs.width/2, cvs.height/2); return;
       }
+      ctx.save(); ctx.translate(offset.x, offset.y); ctx.scale(scale, scale); ctx.save();
+      ctx.rotate(rotation * Math.PI/180); ctx.drawImage(img, 0, 0); ctx.restore();
 
-      const iw = (rotation % 180 === 0) ? img.width : img.height;
-      const ih = (rotation % 180 === 0) ? img.height : img.width;
+      // tegn i bildebasis (samme rotasjon)
+      ctx.save(); ctx.rotate(rotation * Math.PI/180);
 
-      ctx.save();
-      ctx.translate(offset.x, offset.y);
-      ctx.scale(scale, scale);
-      ctx.save();
-      ctx.rotate(rotation * Math.PI/180);
-      ctx.drawImage(img, 0, 0);
-      ctx.restore();
-
-      // Tegn i bildebasis
-      ctx.save();
-      ctx.rotate(rotation * Math.PI/180);
-
-      // Overlay-ringer (kalibrert)
-      if(center && ringStepMM){
-        ctx.strokeStyle = '#48c77499';
-        ctx.lineWidth = 1/scale;
-        for(let r=1; r<=ringsOverlayCount; r++){
-          const radPx = (r * ringStepMM) / pxToMM;
-          ctx.beginPath(); ctx.arc(center.x, center.y, radPx, 0, Math.PI*2); ctx.stroke();
-        }
+      // overlay-ringer
+      if(auto.center && auto.ringStepPx){
+        ctx.strokeStyle = '#48c77499'; ctx.lineWidth = 1/scale;
+        for(let k=1;k<=10;k++){ const r = auto.rings.length? auto.rings[0] + k*auto.ringStepPx : k*auto.ringStepPx; ctx.beginPath(); ctx.arc(auto.center.x, auto.center.y, r, 0, Math.PI*2); ctx.stroke(); }
       }
+      // center
+      if(auto.center){ ctx.beginPath(); ctx.arc(auto.center.x, auto.center.y, 7, 0, Math.PI*2); ctx.lineWidth=2/scale; ctx.strokeStyle='#ffd166'; ctx.stroke(); }
+      // shots
+      ctx.fillStyle='#00d68fff'; ctx.strokeStyle='#002a24';
+      auto.shots.forEach((s,i)=>{ ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI*2); ctx.fill(); ctx.lineWidth=2/scale; ctx.stroke(); ctx.fillStyle='#ffffff'; ctx.font=`${12/scale}px system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(i+1, s.x, s.y-14/scale); ctx.fillStyle='#00d68fff'; });
+      // gruppesenter
+      if(auto.shots.length){ const c = centroid(auto.shots); ctx.beginPath(); ctx.arc(c.x, c.y, 5, 0, Math.PI*2); ctx.fillStyle='#ffd166'; ctx.fill(); }
 
-      // Center
-      if(center){
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, 8, 0, Math.PI*2);
-        ctx.lineWidth = 2/scale;
-        ctx.strokeStyle = '#2a67ff';
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(center.x-12, center.y); ctx.lineTo(center.x+12, center.y);
-        ctx.moveTo(center.x, center.y-12); ctx.lineTo(center.x, center.y+12);
-        ctx.stroke();
-      }
-
-      // Ring-klikk
-      if(ringPoint){
-        ctx.beginPath();
-        ctx.arc(ringPoint.x, ringPoint.y, 6, 0, Math.PI*2);
-        ctx.fillStyle = '#ffd166'; ctx.fill();
-      }
-
-      // Shots
-      ctx.fillStyle = '#00d68fff';
-      ctx.strokeStyle = '#002a24';
-      shots.forEach((s,i)=>{
-        ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI*2); ctx.fill(); ctx.lineWidth = 2/scale; ctx.stroke();
-        ctx.fillStyle = '#ffffff'; ctx.font = `${12/scale}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(i+1, s.x, s.y-14/scale);
-        ctx.fillStyle = '#00d68fff';
-      });
-
-      // Gruppesentroid
-      if(shots.length>0){
-        const c = centroid(shots);
-        ctx.beginPath(); ctx.arc(c.x, c.y, 5, 0, Math.PI*2); ctx.fillStyle = '#ffd166'; ctx.fill();
-      }
-
-      ctx.restore(); // slutt bildebasis
-      ctx.restore();
+      ctx.restore(); ctx.restore();
     }
 
-    function screenToImage(x,y){
-      const ix = (x - offset.x)/scale;
-      const iy = (y - offset.y)/scale;
-      const r = -rotation * Math.PI/180;
-      const rx = ix*Math.cos(r) - iy*Math.sin(r);
-      const ry = ix*Math.sin(r) + iy*Math.cos(r);
-      return {x:rx, y:ry};
-    }
-
-    function centroid(arr){ const n=arr.length; let sx=0, sy=0; arr.forEach(p=>{ sx+=p.x; sy+=p.y; }); return {x:sx/n, y:sy/n}; }
+    function screenToImage(x,y){ const ix=(x-offset.x)/scale, iy=(y-offset.y)/scale; const r=-rotation*Math.PI/180; const rx=ix*Math.cos(r)-iy*Math.sin(r); const ry=ix*Math.sin(r)+iy*Math.cos(r); return {x:rx,y:ry}; }
+    function centroid(arr){ const n=arr.length; let sx=0,sy=0; arr.forEach(p=>{sx+=p.x; sy+=p.y;}); return {x:sx/n, y:sy/n}; }
     function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
 
-    function applyCalibration(){
-      const rn = parseInt(ringNumberInput.value, 10);
-      if(!center || !ringPoint || !rn || rn<=0){ calibInfo.textContent = 'Kalibrering mangler senter, ringpunkt eller ringnummer.'; return; }
-      // ringStepMM = (avstand senter->ring) / ringnummer
-      const dPx = dist(center, ringPoint);
-      const dMM = dPx * pxToMM;
-      ringStepMM = dMM / rn;
-      calibInfo.textContent = `Kalibrert: ${ringStepMM.toFixed(2)} mm per ring (px→mm=${pxToMM.toFixed(3)}).`;
+    // ---------- OpenCV auto ----------
+    let cvReady = false; function onOpenCvReady(){ cvReady = true; }
+    window.onOpenCvReady = onOpenCvReady;
+
+    async function runAuto(){
+      if(!cvReady){ autoInfo.textContent = 'OpenCV laster fortsatt… prøv igjen om et par sek.'; return; }
+      if(!imgLoaded){ autoInfo.textContent = 'Last opp et bilde først.'; return; }
+
+      // lag et Mat av det roterte bildet
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = img.width; tmpCanvas.height = img.height; const tctx = tmpCanvas.getContext('2d');
+      tctx.save(); tctx.translate(img.width/2, img.height/2); tctx.rotate(rotation*Math.PI/180); tctx.drawImage(img, -img.width/2, -img.height/2); tctx.restore();
+      const src = cv.imread(tmpCanvas);
+      let gray = new cv.Mat(); cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+      let blur = new cv.Mat(); cv.GaussianBlur(gray, blur, new cv.Size(7,7), 1.5, 1.5, cv.BORDER_DEFAULT);
+
+      // Hough sirkler – finn mange ringer
+      let circles = new cv.Mat();
+      const minR = Math.floor(Math.min(src.rows, src.cols)*0.15);
+      const maxR = Math.floor(Math.min(src.rows, src.cols)*0.48);
+      cv.HoughCircles(blur, circles, cv.HOUGH_GRADIENT, 1.2, 80, 150, 40, minR, maxR);
+
+      let center = null; let radii = [];
+      if(circles.rows > 0){
+        // circles: 1xN x 3 (x,y,r)
+        let xs = [], ys = [], rs = [];
+        for(let i=0;i<circles.cols;i++){ const x = circles.data32F[i*3]; const y = circles.data32F[i*3+1]; const r = circles.data32F[i*3+2]; xs.push(x); ys.push(y); rs.push(r); }
+        const mean = { x: xs.reduce((a,b)=>a+b,0)/xs.length, y: ys.reduce((a,b)=>a+b,0)/ys.length };
+        // behold sirkler nær gjennomsnittet
+        const ds = xs.map((x,i)=> Math.hypot(x-mean.x, ys[i]-mean.y));
+        const med = ds.slice().sort((a,b)=>a-b)[Math.floor(ds.length/2)];
+        const sd = Math.sqrt(ds.reduce((a,b)=>a+b*b,0)/ds.length - Math.pow(ds.reduce((a,b)=>a+b,0)/ds.length,2));
+        let keep = [];
+        for(let i=0;i<rs.length;i++){ if(ds[i] < med + 1.5*sd) keep.push({x:xs[i], y:ys[i], r:rs[i]}); }
+        if(keep.length >= 3){
+          center = { x: keep.reduce((a,p)=>a+p.x,0)/keep.length, y: keep.reduce((a,p)=>a+p.y,0)/keep.length };
+          radii = keep.map(p=>p.r).sort((a,b)=>a-b);
+        } else { center = mean; radii = rs.sort((a,b)=>a-b); }
+      }
+
+      // Estimer ringsteg (px) som lineær fit
+      let ringStepPx = null;
+      if(radii.length >= 4){ const ks = [...radii.keys()]; const n = ks.length; const sumk=ks.reduce((a,b)=>a+b,0), sumr=radii.reduce((a,b)=>a+b,0); const sumkk=ks.reduce((a,b)=>a+b*b,0), sumkr=ks.reduce((a,b,i)=>a+ks[i]*radii[i],0); const a=(n*sumkr - sumk*sumr)/(n*sumkk - sumk*sumk); ringStepPx = a; }
+
+      // Masker svart skive (bruk stor radius)
+      let mask = new cv.Mat.zeros(src.rows, src.cols, cv.CV_8U);
+      let Rblack = radii.length? Math.floor(radii[Math.floor(radii.length*0.85)]) : Math.floor(Math.min(src.rows, src.cols)*0.35);
+      if(center){ cv.circle(mask, new cv.Point(Math.round(center.x), Math.round(center.y)), Rblack, new cv.Scalar(255,255,255,255), -1); }
+
+      // White top-hat for å løfte lyse hull
+      let kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(15,15));
+      let tophat = new cv.Mat(); cv.morphologyEx(gray, tophat, cv.MORPH_TOPHAT, kernel);
+      let th = new cv.Mat(); cv.threshold(tophat, th, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
+      if(center) cv.bitwise_and(th, mask, th);
+
+      // Finn konturer -> sirkulære blobber
+      let contours = new cv.MatVector(); let hierarchy = new cv.Mat();
+      cv.findContours(th, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let shots = [];
+      for(let i=0;i<contours.size();i++){
+        const c = contours.get(i); const area = cv.contourArea(c);
+        if(area > 20 && area < 1200){
+          const r = cv.minEnclosingCircle(c); const per = cv.arcLength(c, true); const circ = 4*Math.PI*area/(per*per + 1e-6);
+          if(circ > 0.3){ shots.push({x:r.center.x, y:r.center.y}); }
+        }
+        c.delete();
+      }
+      contours.delete(); hierarchy.delete();
+
+      // Sorter stabilt
+      shots.sort((a,b)=> a.x===b.x ? a.y-b.y : a.x-b.x);
+
+      auto.center = center; auto.rings = radii; auto.ringStepPx = ringStepPx; auto.shots = shots;
+
+      // Estimer mm-skala fra ringsteg ved å anta 1 ring = 1 trinn (10->9 osv.) og at 10-ring diameter = 11.5 mm i skiskyting (standard blykort: 11,5mm) –
+      // For klassisk rifleblink kan tallet avvike. Vi lar brukeren justere senere, men bruker 5.75 mm radius som default for 10-ring.
+      // Her bruker vi relativ skåring (ringindex) uten absolutt mm dersom ringfit lykkes.
+      if(ringStepPx){ pxToMM = 5.75 / ringStepPx; auto.ringStepMM = 5.75; } // 1 trinn ≈ 10-ring radius
+
+      src.delete(); gray.delete(); blur.delete(); circles.delete(); mask.delete(); kernel.delete(); tophat.delete(); th.delete();
+
+      autoInfo.textContent = `Funnet ${shots.length} skudd. Ringsteg(px): ${ringStepPx? ringStepPx.toFixed(2):'–'}.`;
       recompute();
       draw();
     }
 
-    function scoreForRadiusMM(rad){
-      if(!ringStepMM) return null;
-      // Lavere radius => høyere poeng. Poeng 10 på [0, <1*step), 9 på [1*step, <2*step) ...
-      const ringIndex = Math.floor(rad / ringStepMM); // 0-bassert
-      const score = Math.max(0, 10 - ringIndex);
-      const ringNumber = ringIndex + 1; // menneskelig talt ring (1=en første ringen fra sentrum)
-      return { score, ringNumber };
-    }
+    function scoreForRadius(radPx){ if(!auto.ringStepPx || !auto.center) return {score:null, ring:null}; const ringIndex = Math.floor(radPx / auto.ringStepPx); const score = Math.max(0, 10 - ringIndex); return { score, ring: ringIndex+1 } }
 
     function recompute(){
-      const tbody = shotTableBody; tbody.innerHTML = '';
-      nShotsEl.textContent = shots.length.toString();
-      tipsEl.innerHTML = '';
-      shotsList.innerHTML = '';
+      const tbody = shotTableBody; tbody.innerHTML=''; shotsList.innerHTML='';
+      const shots = auto.shots || []; nShotsEl.textContent = shots.length.toString();
+      if(!shots.length || !auto.center){ centroidEl.textContent='–'; extSpreadEl.textContent='–'; avgRadiusEl.textContent='–'; stdsEl.textContent='–'; biasDirEl.textContent='–'; totalScoreEl.textContent='–'; biathlonHitsEl.textContent='–'; return; }
 
-      if(shots.length===0){ centroidEl.textContent='(0,0)'; extSpreadEl.textContent='–'; avgRadiusEl.textContent='–'; stdsEl.textContent='–'; biasDirEl.textContent='–'; totalScoreEl.textContent='–'; biathlonHitsEl.textContent='–'; draw(); return; }
+      const c = centroid(shots); let dx = (c.x - auto.center.x) * (pxToMM||1); let dy = (c.y - auto.center.y) * (pxToMM||1);
+      centroidEl.textContent = `${dx.toFixed(1)} / ${dy.toFixed(1)}`;
 
-      const c = centroid(shots);
-      let dx=0, dy=0;
-      if(center){ dx = (c.x - center.x)*pxToMM; dy = (c.y - center.y)*pxToMM; }
-      centroidEl.textContent = `${dx.toFixed(1)} / ${dy.toFixed(1)} mm`;
+      // Spredning
+      let maxd = 0; for(let i=0;i<shots.length;i++){ for(let j=i+1;j<shots.length;j++){ maxd = Math.max(maxd, dist(shots[i], shots[j])); } }
+      extSpreadEl.textContent = ((maxd)*(pxToMM||1)).toFixed(1);
 
-      // Ekstremspredning
-      let maxd = 0;
-      for(let i=0;i<shots.length;i++){
-        for(let j=i+1;j<shots.length;j++){
-          maxd = Math.max(maxd, dist(shots[i], shots[j]));
-        }
-      }
-      extSpreadEl.textContent = (maxd*pxToMM).toFixed(1);
+      const radiiPX = shots.map(s=> dist(s, auto.center)); const avgRmm = radiiPX.reduce((a,b)=>a+b,0)/radiiPX.length * (pxToMM||1); avgRadiusEl.textContent = avgRmm.toFixed(1);
 
-      // Radius/STD
-      const ref = center || c;
-      const radiiMM = shots.map(s => dist(s, ref)*pxToMM);
-      const avgR = radiiMM.reduce((a,b)=>a+b,0)/radiiMM.length;
-      avgRadiusEl.textContent = avgR.toFixed(1);
-
-      const xs = shots.map(s=> (s.x - c.x)*pxToMM);
-      const ys = shots.map(s=> (s.y - c.y)*pxToMM);
+      const xs = shots.map(s=> (s.x - c.x) * (pxToMM||1)); const ys = shots.map(s=> (s.y - c.y) * (pxToMM||1));
       const std = v => { const m=v.reduce((a,b)=>a+b,0)/v.length; return Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/v.length); };
-      const sx = std(xs), sy = std(ys);
-      stdsEl.textContent = `${sx.toFixed(1)} / ${sy.toFixed(1)}`;
+      const sx = std(xs), sy = std(ys); stdsEl.textContent = `${sx.toFixed(1)} / ${sy.toFixed(1)}`;
 
       let bias = '–';
-      if(center){
-        const ang = Math.atan2(dy, dx);
-        const deg = ang*180/Math.PI;
-        const dirs = ['høyre','opph. høyre','oppe','opph. venstre','venstre','nedv. venstre','nede','nedv. høyre','høyre'];
-        const idx = Math.round(((deg+360)%360)/45);
-        bias = `${dirs[idx]} (${Math.hypot(dx,dy).toFixed(1)} mm)`;
-      }
+      { const ang = Math.atan2(dy, dx); const deg = ang*180/Math.PI; const dirs = ['høyre','opph. høyre','oppe','opph. venstre','venstre','nedv. venstre','nede','nedv. høyre','høyre']; const idx = Math.round(((deg+360)%360)/45); bias = `${dirs[idx]} (${Math.hypot(dx,dy).toFixed(1)} mm)`; }
       biasDirEl.textContent = bias;
 
-      // Poengberegning + tabell
-      let total = 0, biathlonHits = 0;
-      shots.forEach((s,i)=>{
-        const rmm = dist(s, center || c)*pxToMM;
-        const scObj = scoreForRadiusMM(rmm);
-        const score = scObj? scObj.score : null;
-        const ringNum = scObj? scObj.ringNumber : '–';
-
-        if(score!=null) total += score;
-        if(ringStepMM && rmm <= ringStepMM) biathlonHits += 1; // "hit" hvis innenfor 10-ringen
-
-        const dxs = center? ((s.x-center.x)*pxToMM) : ((s.x-c.x)*pxToMM);
-        const dys = center? ((s.y-center.y)*pxToMM) : ((s.y-c.y)*pxToMM);
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${i+1}</td><td>${dxs.toFixed(1)} / ${dys.toFixed(1)}</td><td>${rmm.toFixed(1)}</td><td>${ringNum}</td><td>${score==null?'–':score}</td>`;
-        tbody.appendChild(tr);
-
-        const div = document.createElement('div'); div.className='shot'; div.textContent=i+1; shotsList.appendChild(div);
-      });
-      totalScoreEl.textContent = ringStepMM ? `${total}` : '–';
-      biathlonHitsEl.textContent = ringStepMM ? `${biathlonHits}/${shots.length}` : '–';
-
-      // Tips
-      buildTips({dx,dy,sx,sy,spread:maxd*pxToMM,avgR});
-      draw();
+      let total=0, hits=0; shots.forEach((s,i)=>{ const rpx = dist(s, auto.center); const sc = scoreForRadius(rpx); if(sc.score!=null) total+=sc.score; if(rpx <= (auto.ringStepPx||Infinity)) hits++; const dxs = (s.x - auto.center.x)*(pxToMM||1), dys=(s.y - auto.center.y)*(pxToMM||1); const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${dxs.toFixed(1)} / ${dys.toFixed(1)}</td><td>${(rpx*(pxToMM||1)).toFixed(1)}</td><td>${sc.ring??'–'}</td><td>${sc.score??'–'}</td>`; tbody.appendChild(tr); const div=document.createElement('div'); div.className='shot'; div.textContent=i+1; shotsList.appendChild(div); });
+      totalScoreEl.textContent = (auto.ringStepPx? total : '–'); biathlonHitsEl.textContent = (auto.ringStepPx? `${hits}/${shots.length}` : '–');
     }
 
-    function buildTips({dx,dy,sx,sy,spread,avgR}){
-      const T = [];
-      if(spread <= 35 && avgR <= 12){ T.push('God grupping! Fortsett med samme rytme. Øv serie-rutine (5 like skudd).'); }
-      else if (spread <= 55){ T.push('Stabil grupping. Prioritér rent avtrekk og identisk kinnstilling.'); }
-      else { T.push('Stor spredning: jobb med stillingsbygging og avtrekk (tørrtrening 5×10 perfekte trykk).'); }
-
-      if(Math.hypot(dx,dy) > 15){ T.push(`Systematisk avvik ${Math.hypot(dx,dy).toFixed(0)} mm: sjekk nullpunkt/sikte og kroppens naturlige retning før avtrekk.`); }
-      if(sx > sy*1.25){ T.push('Horisontal spredning: typisk avtrekksbevegelse. Øv “overraskende” trykk + oppfølging 1 s.'); }
-      else if (sy > sx*1.25){ T.push('Vertikal spredning: jobb med pusterytme (utpust–kort pause–avtrekk) og jevnt skulderpress.'); }
-
-      T.push('Oppgave: 5×5 skudd – maks 1 klikk justering mellom seriene. Fokus på prosess.');
-      T.push('Oppgave: Tørrtrening 10× – lukk øyne 2 s → åpne → trykk. Sjekk at siktet ikke “dras”.');
-      T.push('Oppgave: “Pause-avtrekk” – tell 1–2 etter utpust før trykk for å unngå krampehold.');
-      tipsEl.innerHTML = T.map(t=>`<li>${t}</li>`).join('');
+    // ---------- Lagring ----------
+    async function saveToSupabase(){
+      if(!supabase){ alert('Supabase er ikke konfigurert.'); return; }
+      if(!imgLoaded){ alert('Last opp bilde først.'); return; }
+      const name = sessionName.value?.trim() || `økt-${new Date().toISOString()}`;
+      const dataURL = cvs.toDataURL('image/jpeg', 0.9); const blob = await (await fetch(dataURL)).blob();
+      const path = `${Date.now()}-${name.replace(/\s+/g,'_')}.jpg`;
+      const up = await supabase.storage.from('targets').upload(path, blob, {contentType:'image/jpeg', upsert:false});
+      if(up.error){ alert('Feil ved opplasting: '+up.error.message); return; }
+      const publicUrl = supabase.storage.from('targets').getPublicUrl(up.data.path).data.publicUrl;
+      const payload = { name, image_url: publicUrl, rotation, calib: { pxToMM, ringStepPx:auto.ringStepPx }, center: auto.center, shots: auto.shots, rings: auto.rings };
+      const ins = await supabase.from('sessions').insert({ name, image_url: publicUrl, payload }).select().single();
+      if(ins.error){ alert('Feil ved lagring: '+ins.error.message); return; }
+      alert('Lagret! Session id: '+ins.data.id);
     }
 
-    // ---------- Lytte på input ----------
-    function loadFile(file){
-      const reader = new FileReader();
-      reader.onload = e => {
-        img = new Image();
-        img.onload = () => {
-          imgLoaded = true;
-          rotation = 0; scale = Math.min(cvs.width/img.width, cvs.height/img.height);
-          offset.x = (cvs.width - img.width*scale)/2;
-          offset.y = (cvs.height - img.height*scale)/2;
-          // reset state
-          shots = []; center = null; ringPoint=null; ringNumberVal=null; ringStepMM=null;
-          pxToMM = 0.25; // fallback
-          calibInfo.textContent = 'Ikke kalibrert.';
-          updateZoomInfo();
-          recompute();
-        }
-        img.src = e.target.result;
-      }
-      reader.readAsDataURL(file);
-    }
+    // ---------- PWA install ----------
+    let deferredPrompt; const installBtn = document.getElementById('installBtn'); window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; installBtn.style.display='inline-flex'; }); installBtn.addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none'; });
 
+    // ---------- Handlers ----------
+    function loadFile(file){ const reader = new FileReader(); reader.onload = e => { img = new Image(); img.onload = () => { imgLoaded = true; rotation=0; scale=Math.min(cvs.width/img.width, cvs.height/img.height); offset.x=(cvs.width-img.width*scale)/2; offset.y=(cvs.height-img.height*scale)/2; auto={ center:null, ringStepPx:null, rings:[], shots:[], ringStepMM:null }; updateZoomInfo(); draw(); }; img.src = e.target.result; }; reader.readAsDataURL(file); }
     function updateZoomInfo(){ zoomInfo.textContent = `Zoom ${(scale*100).toFixed(0)}%`; }
 
     dropzone.addEventListener('dragover', e=>{ e.preventDefault(); dropzone.style.borderColor='#2a67ff';});
@@ -405,105 +332,24 @@
     dropzone.addEventListener('click', ()=> fileInput.click());
     fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) loadFile(fileInput.files[0]); });
 
-    cvs.addEventListener('wheel', e=>{
-      if(!imgLoaded) return;
-      e.preventDefault();
-      const mouse = {x:e.offsetX, y:e.offsetY};
-      const delta = Math.sign(e.deltaY) * -0.1;
-      const newScale = Math.min(5, Math.max(0.2, scale*(1+delta)));
-      const ix = (mouse.x - offset.x)/scale;
-      const iy = (mouse.y - offset.y)/scale;
-      offset.x = mouse.x - ix*newScale;
-      offset.y = mouse.y - iy*newScale;
-      scale = newScale;
-      updateZoomInfo();
-      draw();
-    });
-
-    cvs.addEventListener('mousedown', e=>{
-      if(!imgLoaded) return;
-      if(e.button===1 || e.button===2){ panning=true; lastMouse={x:e.offsetX,y:e.offsetY}; return; }
-      const p = screenToImage(e.offsetX, e.offsetY);
-      if(mode==='center'){ center = p; }
-      else if(mode==='ring'){ ringPoint = p; }
-      else { shots.push(p); }
-      recompute();
-    });
-
-    window.addEventListener('mousemove', e=>{
-      if(panning){ const dx=e.offsetX-lastMouse.x, dy=e.offsetY-lastMouse.y; offset.x+=dx; offset.y+=dy; lastMouse={x:e.offsetX,y:e.offsetY}; draw(); }
-    });
+    cvs.addEventListener('wheel', e=>{ if(!imgLoaded) return; e.preventDefault(); const mouse={x:e.offsetX,y:e.offsetY}; const delta=Math.sign(e.deltaY)*-0.1; const newScale=Math.min(5, Math.max(0.2, scale*(1+delta))); const ix=(mouse.x-offset.x)/scale, iy=(mouse.y-offset.y)/scale; offset.x = mouse.x - ix*newScale; offset.y = mouse.y - iy*newScale; scale = newScale; updateZoomInfo(); draw(); });
+    cvs.addEventListener('mousedown', e=>{ if(!imgLoaded) return; if(e.button===1 || e.button===2){ panning=true; lastMouse={x:e.offsetX,y:e.offsetY}; return; } });
+    window.addEventListener('mousemove', e=>{ if(panning){ const dx=e.offsetX-lastMouse.x, dy=e.offsetY-lastMouse.y; offset.x+=dx; offset.y+=dy; lastMouse={x:e.offsetX,y:e.offsetY}; draw(); } });
     window.addEventListener('mouseup', ()=> panning=false);
     window.addEventListener('contextmenu', e=> e.preventDefault());
 
     rotateLeft.addEventListener('click', ()=>{ rotation = (rotation-90+360)%360; draw(); });
     resetView.addEventListener('click', ()=>{ if(!imgLoaded) return; scale = Math.min(cvs.width/img.width, cvs.height/img.height); offset.x=(cvs.width-img.width*scale)/2; offset.y=(cvs.height-img.height*scale)/2; updateZoomInfo(); draw(); });
 
-    centerModeBtn.addEventListener('click', ()=>{ mode='center'; centerModeBtn.classList.remove('ghost'); ringModeBtn.classList.add('ghost'); shotModeBtn.classList.add('ghost'); });
-    ringModeBtn.addEventListener('click', ()=>{ mode='ring'; ringModeBtn.classList.remove('ghost'); centerModeBtn.classList.add('ghost'); shotModeBtn.classList.add('ghost'); });
-    shotModeBtn.addEventListener('click', ()=>{ mode='shot'; shotModeBtn.classList.remove('ghost'); centerModeBtn.classList.add('ghost'); ringModeBtn.classList.add('ghost'); });
+    runAutoBtn.addEventListener('click', runAuto);
+    clearAllBtn.addEventListener('click', ()=>{ auto={ center:null, ringStepPx:null, rings:[], shots:[], ringStepMM:null }; recompute(); draw(); });
 
-    applyCalibrationBtn.addEventListener('click', ()=>{
-      ringNumberVal = parseInt(ringNumberInput.value,10);
-      applyCalibration();
-    });
+    saveBtn.addEventListener('click', saveToSupabase);
 
-    undoShotBtn.addEventListener('click', ()=>{ shots.pop(); recompute(); });
-    clearAllBtn.addEventListener('click', ()=>{ shots=[]; center=null; ringPoint=null; ringNumberVal=null; ringStepMM=null; recompute(); });
-
-    // ---------- Lagring i Supabase ----------
-    const saveBtnEl = document.getElementById('saveBtn');
-    async function saveToSupabase(){
-      if(!supabase){ alert('Supabase er ikke konfigurert.'); return; }
-      if(!imgLoaded){ alert('Last opp bilde først.'); return; }
-      const name = sessionName.value?.trim() || `økt-${new Date().toISOString()}`;
-      const dataURL = cvs.toDataURL('image/jpeg', 0.9);
-      const blob = await (await fetch(dataURL)).blob();
-      const path = `${Date.now()}-${name.replace(/\s+/g,'_')}.jpg`;
-      const up = await supabase.storage.from('targets').upload(path, blob, {contentType:'image/jpeg', upsert:false});
-      if(up.error){ alert('Feil ved opplasting: '+up.error.message); return; }
-      const publicUrl = supabase.storage.from('targets').getPublicUrl(up.data.path).data.publicUrl;
-
-      const c = shots.length? centroid(shots): null;
-      const perShot = shots.map((s,i)=>{
-        const rmm = center? dist(s, center)*pxToMM : dist(s, c)*pxToMM;
-        const scObj = scoreForRadiusMM(rmm);
-        return {
-          idx: i+1,
-          x: s.x, y: s.y,
-          r_mm: rmm,
-          score: scObj? scObj.score : null,
-          ring: scObj? scObj.ringNumber : null
-        };
-      });
-
-      const payload = {
-        name,
-        image_url: publicUrl,
-        rotation,
-        calib: { pxToMM, ringStepMM, ringsOverlayCount, center, ringPoint, ringNumberVal },
-        shots,
-        perShot,
-        summary: {
-          n: shots.length,
-          totalScore: perShot.reduce((a,b)=>a+(b.score??0),0),
-          biathlonHits: perShot.filter(s=> s.r_mm<= (ringStepMM||Infinity)).length
-        }
-      };
-      const ins = await supabase.from('sessions').insert({ name, image_url: publicUrl, payload }).select().single();
-      if(ins.error){ alert('Feil ved lagring: '+ins.error.message); return; }
-      alert('Lagret! Session id: '+ins.data.id);
-    }
-    saveBtnEl.addEventListener('click', saveToSupabase);
+    // Dummy eksport (PNG)
+    const exportBtn = document.getElementById('exportBtn'); exportBtn.addEventListener('click', (e)=>{ e.preventDefault(); const a=document.createElement('a'); a.href=cvs.toDataURL('image/png'); a.download=`skyteanalyse-${Date.now()}.png`; a.click(); });
 
     // init
-    function initFit(){
-      if(!imgLoaded) return;
-      scale = Math.min(cvs.width/img.width, cvs.height/img.height);
-      offset.x = (cvs.width - img.width*scale)/2;
-      offset.y = (cvs.height - img.height*scale)/2;
-      updateZoomInfo(); draw();
-    }
     draw();
   </script>
 </body>
