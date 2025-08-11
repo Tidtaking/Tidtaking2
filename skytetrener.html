@@ -74,7 +74,7 @@
         <div class="stat"><div>Horis./vert. std (mm)</div><strong id="stds">–</strong></div>
         <div class="stat"><div>Bias-retning</div><strong id="biasDir">–</strong></div>
         <div class="stat"><div>Totalscore (10-rings)</div><strong id="totalScore">–</strong></div>
-        <div class="stat"><div>Biathlon 5/5 (≤10-ring)</div><strong id="biathlonHits">–</strong></div>
+        <div class="stat"><div>Biathlon 5/5 (regel: score\_kontinuerlig > 7.8)</div><strong id="biathlonHits">–</strong></div>
       </div>
 
       <div style="height:14px"></div>
@@ -107,6 +107,8 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <!-- OpenCV.js (client-side bildebehandling) -->
   <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady()"></script>
+  <!-- Tesseract.js (OCR for ringtall) -->
+  <script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
 
   <script>
     // ---------- Konfig ----------
@@ -270,12 +272,19 @@
 
       src.delete(); gray.delete(); blur.delete(); circles.delete(); mask.delete(); kernel.delete(); tophat.delete(); th.delete();
 
-      autoInfo.textContent = `Funnet ${shots.length} skudd. Ringsteg(px): ${ringStepPx? ringStepPx.toFixed(2):'–'}.`;
+      autoInfo.textContent = `Funnet ${shots.length} skudd. Ringsteg(px): ${ringStepPx? ringStepPx.toFixed(2):'–'}. Leser ringtall med OCR …`; readRingNumbers(tmpCanvas).catch(()=>{});
       recompute();
       draw();
     }
 
-    function scoreForRadius(radPx){ if(!auto.ringStepPx || !auto.center) return {score:null, ring:null}; const ringIndex = Math.floor(radPx / auto.ringStepPx); const score = Math.max(0, 10 - ringIndex); return { score, ring: ringIndex+1 } }
+    function scoreForRadius(radPx){
+      if(!auto.ringStepPx || !auto.center) return {score:null, ring:null, score_cont:null};
+      const ringIndex = Math.floor(radPx / auto.ringStepPx); // diskret
+      const score = Math.max(0, 10 - ringIndex);
+      // Kontinuerlig poeng: 10.0 ved senter, reduseres lineært per ringsteg
+      const scoreCont = Math.max(0, 10 - (radPx / auto.ringStepPx));
+      return { score, ring: ringIndex+1, score_cont: scoreCont };
+    }
 
     function recompute(){
       const tbody = shotTableBody; tbody.innerHTML=''; shotsList.innerHTML='';
@@ -299,8 +308,20 @@
       { const ang = Math.atan2(dy, dx); const deg = ang*180/Math.PI; const dirs = ['høyre','opph. høyre','oppe','opph. venstre','venstre','nedv. venstre','nede','nedv. høyre','høyre']; const idx = Math.round(((deg+360)%360)/45); bias = `${dirs[idx]} (${Math.hypot(dx,dy).toFixed(1)} mm)`; }
       biasDirEl.textContent = bias;
 
-      let total=0, hits=0; shots.forEach((s,i)=>{ const rpx = dist(s, auto.center); const sc = scoreForRadius(rpx); if(sc.score!=null) total+=sc.score; if(rpx <= (auto.ringStepPx||Infinity)) hits++; const dxs = (s.x - auto.center.x)*(pxToMM||1), dys=(s.y - auto.center.y)*(pxToMM||1); const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${dxs.toFixed(1)} / ${dys.toFixed(1)}</td><td>${(rpx*(pxToMM||1)).toFixed(1)}</td><td>${sc.ring??'–'}</td><td>${sc.score??'–'}</td>`; tbody.appendChild(tr); const div=document.createElement('div'); div.className='shot'; div.textContent=i+1; shotsList.appendChild(div); });
-      totalScoreEl.textContent = (auto.ringStepPx? total : '–'); biathlonHitsEl.textContent = (auto.ringStepPx? `${hits}/${shots.length}` : '–');
+      let total=0, hits=0, totalCont=0; shots.forEach((s,i)=>{
+        const rpx = dist(s, auto.center);
+        const sc = scoreForRadius(rpx);
+        if(sc.score!=null) total += sc.score;
+        if(sc.score_cont!=null) totalCont += sc.score_cont;
+        // Biathlon-regel: treff hvis kontinuerlig score > 7.8
+        if(sc.score_cont!=null && sc.score_cont > 7.8) hits++;
+        const dxs = (s.x - auto.center.x)*(pxToMM||1), dys=(s.y - auto.center.y)*(pxToMM||1);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${i+1}</td><td>${dxs.toFixed(1)} / ${dys.toFixed(1)}</td><td>${(rpx*(pxToMM||1)).toFixed(1)}</td><td>${sc.ring??'–'}</td><td>${sc.score??'–'} (${sc.score_cont?sc.score_cont.toFixed(1):'–'})</td>`;
+        tbody.appendChild(tr);
+        const div=document.createElement('div'); div.className='shot'; div.textContent=i+1; shotsList.appendChild(div);
+      });
+      totalScoreEl.textContent = (auto.ringStepPx? `${total} (kont: ${totalCont.toFixed(1)})` : '–'); = (auto.ringStepPx? total : '–'); biathlonHitsEl.textContent = (auto.ringStepPx? `${hits}/${shots.length}` : '–');
     }
 
     // ---------- Lagring ----------
@@ -351,6 +372,20 @@
 
     // init
     draw();
+  // ---------- OCR: les tallene på blinken ----------
+    async function readRingNumbers(canvas){
+      try{
+        // Ta en ringformet båndmaske utenfor svart skive for å fange tallene
+        const band = document.createElement('canvas');
+        band.width = canvas.width; band.height = canvas.height; const bctx = band.getContext('2d');
+        bctx.drawImage(canvas, 0, 0);
+        // (enkel beskjæring: ta ytterkant 20% – 45% av radius)
+        // Vi lar Tesseract gjøre jobben med tallene, whitelist=0-9
+        const { data: { text } } = await Tesseract.recognize(band, 'eng', { tessedit_char_whitelist: '0123456789' });
+        const digits = (text.match(/[0-9]/g) || []).map(d=>+d);
+        if(digits.length){ autoInfo.textContent += ` | OCR: fant tall ${digits.slice(0,12).join(' ')}`; }
+      }catch(e){ console.warn('OCR feilet', e); }
+    }
   </script>
 </body>
 </html>
