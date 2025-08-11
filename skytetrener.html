@@ -57,7 +57,7 @@
 
       <div style="height:16px"></div>
       <h2>2) Automatisk analyse</h2>
-      <p class="muted">Klikk «Kjør analyse». Appen finner sentrum, ringer og skudd og beregner score automatisk (alt skjer i nettleseren).</p>
+      <p class="muted">Klikk «Kjør analyse». Appen finner sentrum, ringer og skudd og beregner **hele poeng**. Biathlon-treff telles når kontinuerlig score > <strong>7.8</strong> (ringbryt ⇒ høyere tall).</p>
       <div class="row">
         <button class="btn" id="runAuto">Kjør analyse</button>
         <button class="btn ghost" id="clearAll">Slett markeringer</button>
@@ -73,8 +73,8 @@
         <div class="stat"><div>Gj.snitt radius (mm)</div><strong id="avgRadius">–</strong></div>
         <div class="stat"><div>Horis./vert. std (mm)</div><strong id="stds">–</strong></div>
         <div class="stat"><div>Bias-retning</div><strong id="biasDir">–</strong></div>
-        <div class="stat"><div>Totalscore (10-rings)</div><strong id="totalScore">–</strong></div>
-        <div class="stat"><div>Biathlon 5/5 (regel: score\_kontinuerlig > 7.8)</div><strong id="biathlonHits">–</strong></div>
+        <div class="stat"><div>Totalscore (hele tall)</div><strong id="totalScore">–</strong></div>
+        <div class="stat"><div>Biathlon 5/5 (score > 7.8)</div><strong id="biathlonHits">–</strong></div>
       </div>
 
       <div style="height:14px"></div>
@@ -96,7 +96,7 @@
     <!-- Høyre: lerret -->
     <section class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
-        <div class="muted">Scroll for å zoome. Dra for å panorere.</div>
+        <div class="muted">Scroll for å zoome. Dra for å panorere. Høyre-/midtklikk for pan.</div>
         <div class="shots" id="shotsList"></div>
       </div>
       <canvas id="canvas" width="1400" height="1000"></canvas>
@@ -116,9 +116,8 @@
     const SUPABASE_ANON_KEY = ""; // valgfritt
     const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-    // mm-kalibrering: estimert ringsteg (mm) for standard pistolrifleblink
-    // Dette justeres automatisk ved ringdeteksjon; her er kun fallback hvis ringfit feiler
-    let pxToMM = null; // regnes ut fra ringsteg
+    // mm-skala beregnes fra ringsteg når vi finner ringene
+    let pxToMM = null;
 
     // ---------- State ----------
     const cvs = document.getElementById('canvas');
@@ -174,7 +173,11 @@
       // overlay-ringer
       if(auto.center && auto.ringStepPx){
         ctx.strokeStyle = '#48c77499'; ctx.lineWidth = 1/scale;
-        for(let k=1;k<=10;k++){ const r = auto.rings.length? auto.rings[0] + k*auto.ringStepPx : k*auto.ringStepPx; ctx.beginPath(); ctx.arc(auto.center.x, auto.center.y, r, 0, Math.PI*2); ctx.stroke(); }
+        for(let k=1;k<=10;k++){
+          const base = auto.rings.length? auto.rings[0]: 0;
+          const r = base + k*auto.ringStepPx;
+          ctx.beginPath(); ctx.arc(auto.center.x, auto.center.y, r, 0, Math.PI*2); ctx.stroke();
+        }
       }
       // center
       if(auto.center){ ctx.beginPath(); ctx.arc(auto.center.x, auto.center.y, 7, 0, Math.PI*2); ctx.lineWidth=2/scale; ctx.strokeStyle='#ffd166'; ctx.stroke(); }
@@ -246,15 +249,15 @@
       let th = new cv.Mat(); cv.threshold(tophat, th, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
       if(center) cv.bitwise_and(th, mask, th);
 
-      // Finn konturer -> sirkulære blobber
+      // Finn konturer -> sirkulære blobber (skuddhull)
       let contours = new cv.MatVector(); let hierarchy = new cv.Mat();
       cv.findContours(th, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
       let shots = [];
       for(let i=0;i<contours.size();i++){
         const c = contours.get(i); const area = cv.contourArea(c);
-        if(area > 20 && area < 1200){
-          const r = cv.minEnclosingCircle(c); const per = cv.arcLength(c, true); const circ = 4*Math.PI*area/(per*per + 1e-6);
-          if(circ > 0.3){ shots.push({x:r.center.x, y:r.center.y}); }
+        if(area > 20 && area < 3000){
+          const circle = cv.minEnclosingCircle(c); const per = cv.arcLength(c, true); const circ = 4*Math.PI*area/(per*per + 1e-6);
+          if(circ > 0.3){ shots.push({x:circle.center.x, y:circle.center.y, holeRpx: circle.radius}); }
         }
         c.delete();
       }
@@ -265,25 +268,25 @@
 
       auto.center = center; auto.rings = radii; auto.ringStepPx = ringStepPx; auto.shots = shots;
 
-      // Estimer mm-skala fra ringsteg ved å anta 1 ring = 1 trinn (10->9 osv.) og at 10-ring diameter = 11.5 mm i skiskyting (standard blykort: 11,5mm) –
-      // For klassisk rifleblink kan tallet avvike. Vi lar brukeren justere senere, men bruker 5.75 mm radius som default for 10-ring.
-      // Her bruker vi relativ skåring (ringindex) uten absolutt mm dersom ringfit lykkes.
-      if(ringStepPx){ pxToMM = 5.75 / ringStepPx; auto.ringStepMM = 5.75; } // 1 trinn ≈ 10-ring radius
+      // mm-calib: anta 10-ring radius ~ 5.75mm (biathlon bly)
+      if(ringStepPx){ pxToMM = 5.75 / ringStepPx; auto.ringStepMM = 5.75; }
 
       src.delete(); gray.delete(); blur.delete(); circles.delete(); mask.delete(); kernel.delete(); tophat.delete(); th.delete();
 
-      autoInfo.textContent = `Funnet ${shots.length} skudd. Ringsteg(px): ${ringStepPx? ringStepPx.toFixed(2):'–'}. Leser ringtall med OCR …`; readRingNumbers(tmpCanvas).catch(()=>{});
+      autoInfo.textContent = `Funnet ${shots.length} skudd. Ringsteg(px): ${ringStepPx? ringStepPx.toFixed(2):'–'}. Leser ringtall (OCR)…`;
+      readRingNumbers(tmpCanvas).catch(()=>{});
       recompute();
       draw();
     }
 
-    function scoreForRadius(radPx){
-      if(!auto.ringStepPx || !auto.center) return {score:null, ring:null, score_cont:null};
-      const ringIndex = Math.floor(radPx / auto.ringStepPx); // diskret
-      const score = Math.max(0, 10 - ringIndex);
-      // Kontinuerlig poeng: 10.0 ved senter, reduseres lineært per ringsteg
-      const scoreCont = Math.max(0, 10 - (radPx / auto.ringStepPx));
-      return { score, ring: ringIndex+1, score_cont: scoreCont };
+    // Hele tall for score. Ringbryt: trekk fra hullradius (px) før scoring.
+    function scoreForShot(rpx, holeRpx){
+      if(!auto.ringStepPx || !auto.center) return {score:null, ring:null, cont:null};
+      const rAdj = Math.max(0, rpx - (holeRpx||0)); // begunstiger ringbryt
+      const ringIndex = Math.floor(rAdj / auto.ringStepPx);
+      const score = Math.max(0, 10 - ringIndex); // HELTALL
+      const cont = 10 - (rAdj / auto.ringStepPx); // kun til bruk for 7.8-terskel
+      return { score, ring: ringIndex+1, cont };
     }
 
     function recompute(){
@@ -308,20 +311,23 @@
       { const ang = Math.atan2(dy, dx); const deg = ang*180/Math.PI; const dirs = ['høyre','opph. høyre','oppe','opph. venstre','venstre','nedv. venstre','nede','nedv. høyre','høyre']; const idx = Math.round(((deg+360)%360)/45); bias = `${dirs[idx]} (${Math.hypot(dx,dy).toFixed(1)} mm)`; }
       biasDirEl.textContent = bias;
 
-      let total=0, hits=0, totalCont=0; shots.forEach((s,i)=>{
+      // Poeng + tabell
+      let total=0, hits=0;
+      shots.forEach((s,i)=>{
         const rpx = dist(s, auto.center);
-        const sc = scoreForRadius(rpx);
+        const sc = scoreForShot(rpx, s.holeRpx);
         if(sc.score!=null) total += sc.score;
-        if(sc.score_cont!=null) totalCont += sc.score_cont;
-        // Biathlon-regel: treff hvis kontinuerlig score > 7.8
-        if(sc.score_cont!=null && sc.score_cont > 7.8) hits++;
+        if(sc.cont!=null && sc.cont > 7.8) hits++;
         const dxs = (s.x - auto.center.x)*(pxToMM||1), dys=(s.y - auto.center.y)*(pxToMM||1);
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${i+1}</td><td>${dxs.toFixed(1)} / ${dys.toFixed(1)}</td><td>${(rpx*(pxToMM||1)).toFixed(1)}</td><td>${sc.ring??'–'}</td><td>${sc.score??'–'} (${sc.score_cont?sc.score_cont.toFixed(1):'–'})</td>`;
+        tr.innerHTML=`<td>${i+1}</td><td>${dxs.toFixed(1)} / ${dys.toFixed(1)}</td><td>${(rpx*(pxToMM||1)).toFixed(1)}</td><td>${sc.ring??'–'}</td><td>${sc.score??'–'}</td>`;
         tbody.appendChild(tr);
         const div=document.createElement('div'); div.className='shot'; div.textContent=i+1; shotsList.appendChild(div);
       });
-      totalScoreEl.textContent = (auto.ringStepPx? `${total} (kont: ${totalCont.toFixed(1)})` : '–'); = (auto.ringStepPx? total : '–'); biathlonHitsEl.textContent = (auto.ringStepPx? `${hits}/${shots.length}` : '–');
+      totalScoreEl.textContent = (auto.ringStepPx? total : '–');
+      biathlonHitsEl.textContent = (auto.ringStepPx? `${hits}/${shots.length}` : '–');
+
+      draw();
     }
 
     // ---------- Lagring ----------
@@ -334,14 +340,25 @@
       const up = await supabase.storage.from('targets').upload(path, blob, {contentType:'image/jpeg', upsert:false});
       if(up.error){ alert('Feil ved opplasting: '+up.error.message); return; }
       const publicUrl = supabase.storage.from('targets').getPublicUrl(up.data.path).data.publicUrl;
-      const payload = { name, image_url: publicUrl, rotation, calib: { pxToMM, ringStepPx:auto.ringStepPx }, center: auto.center, shots: auto.shots, rings: auto.rings };
+      const payload = { name, image_url: publicUrl, rotation, calib: { pxToMM, ringStepPx:auto.ringStepPx, ringStepMM:auto.ringStepMM }, center: auto.center, shots: auto.shots, rings: auto.rings };
       const ins = await supabase.from('sessions').insert({ name, image_url: publicUrl, payload }).select().single();
       if(ins.error){ alert('Feil ved lagring: '+ins.error.message); return; }
       alert('Lagret! Session id: '+ins.data.id);
     }
 
+    // ---------- OCR: les tallene på blinken ----------
+    async function readRingNumbers(canvas){
+      try{
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng', { tessedit_char_whitelist: '0123456789' });
+        const digits = (text.match(/[0-9]/g) || []).map(d=>+d);
+        if(digits.length){ autoInfo.textContent += ` | OCR tall: ${digits.slice(0,12).join(' ')}`; }
+      }catch(e){ console.warn('OCR feilet', e); }
+    }
+
     // ---------- PWA install ----------
-    let deferredPrompt; const installBtn = document.getElementById('installBtn'); window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; installBtn.style.display='inline-flex'; }); installBtn.addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none'; });
+    let deferredPrompt; const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; installBtn.style.display='inline-flex'; });
+    installBtn.addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none'; });
 
     // ---------- Handlers ----------
     function loadFile(file){ const reader = new FileReader(); reader.onload = e => { img = new Image(); img.onload = () => { imgLoaded = true; rotation=0; scale=Math.min(cvs.width/img.width, cvs.height/img.height); offset.x=(cvs.width-img.width*scale)/2; offset.y=(cvs.height-img.height*scale)/2; auto={ center:null, ringStepPx:null, rings:[], shots:[], ringStepMM:null }; updateZoomInfo(); draw(); }; img.src = e.target.result; }; reader.readAsDataURL(file); }
@@ -372,20 +389,6 @@
 
     // init
     draw();
-  // ---------- OCR: les tallene på blinken ----------
-    async function readRingNumbers(canvas){
-      try{
-        // Ta en ringformet båndmaske utenfor svart skive for å fange tallene
-        const band = document.createElement('canvas');
-        band.width = canvas.width; band.height = canvas.height; const bctx = band.getContext('2d');
-        bctx.drawImage(canvas, 0, 0);
-        // (enkel beskjæring: ta ytterkant 20% – 45% av radius)
-        // Vi lar Tesseract gjøre jobben med tallene, whitelist=0-9
-        const { data: { text } } = await Tesseract.recognize(band, 'eng', { tessedit_char_whitelist: '0123456789' });
-        const digits = (text.match(/[0-9]/g) || []).map(d=>+d);
-        if(digits.length){ autoInfo.textContent += ` | OCR: fant tall ${digits.slice(0,12).join(' ')}`; }
-      }catch(e){ console.warn('OCR feilet', e); }
-    }
   </script>
 </body>
 </html>
