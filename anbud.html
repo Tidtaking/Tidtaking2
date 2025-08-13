@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="no">
 <head>
 <meta charset="UTF-8" />
@@ -129,98 +129,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
-  // ======== YTELSE: HJELPERE / INDEKSER / CENTROID-CACHE ========
-// Sett-operasjoner
-const unionSets = (...sets) => { const out = new Set(); for (const s of sets) if (s) for (const v of s) out.add(v); return out; };
-const intersectSets = (a, b) => { if (!a || !b) return new Set(); const out = new Set(); const [small, large] = a.size < b.size ? [a, b] : [b, a]; for (const v of small) if (large.has(v)) out.add(v); return out; };
-
-// Bygg indekser for ett datasett (postnr->info med avis/frekvenser)
-function buildIndexes(mapData){
-  const all = new Set();
-  const byAvis = new Map();
-  const byDag  = new Map([['1',new Set()], ['2',new Set()], ['3',new Set()], ['4',new Set()], ['5',new Set()], ['6',new Set()], ['7',new Set()]]);
-  Object.entries(mapData).forEach(([p, info])=>{
-    all.add(p);
-    const avisMap = info?.avis;
-    if (!avisMap) return;
-    for (const [avisId, avisData] of avisMap.entries()){
-      const id = String(avisId).toLowerCase();
-      if (!byAvis.has(id)) byAvis.set(id, new Set());
-      byAvis.get(id).add(p);
-      if (avisData?.frekvenser) {
-        for (const f of avisData.frekvenser) {
-          const dag = String(f);
-          if (byDag.has(dag)) byDag.get(dag).add(p);
-        }
-      }
-    }
-  });
-  return { all, byAvis, byDag };
-}
-
-// Feature-map pr filter: postnr -> feature
-function mapFromFeatures(features){
-  const m = new Map();
-  for (const f of features) {
-    const p = f.properties.postnummer.trim().padStart(4,'0');
-    m.set(p, f);
-  }
-  return m;
-}
-
-// Løs opp avis-søkestrenger til avisId (støtter id og navn ved navnesøk)
-function resolveAvisTokens(tokens, kanSokeNavn, avisNavnMap){
-  const ids = new Set();
-  const entries = Object.entries(avisNavnMap || {}); // [id, navn]
-  for (const tok of tokens) {
-    const q = tok.toLowerCase();
-    if (avisNavnMap[q]) { ids.add(q); continue; } // eksakt id
-    if (kanSokeNavn) for (const [id, navn] of entries) if ((navn || '').toLowerCase().includes(q)) ids.add(id.toLowerCase());
-  }
-  return ids;
-}
-
-// Centroid i EPSG:3035 -> WGS84 (+ cache i properties)
-function centroid3035toWGS84(geom){
-  function ringCentroid(ring){
-    let A=0, Cx=0, Cy=0;
-    for (let i=0, j=ring.length-1; i<ring.length; j=i++){
-      const [x1,y1]=ring[j], [x2,y2]=ring[i];
-      const cross = x1*y2 - x2*y1;
-      A += cross; Cx += (x1+x2)*cross; Cy += (y1+y2)*cross;
-    }
-    A *= 0.5; if (!A) return ring[0];
-    return [Cx/(6*A), Cy/(6*A)];
-  }
-  let c;
-  if (geom.type==='Polygon') c = ringCentroid(geom.coordinates[0]);
-  else if (geom.type==='MultiPolygon') {
-    let best = null, bestArea = -Infinity;
-    for (const poly of geom.coordinates){
-      const ring = poly[0];
-      let area = 0, A=0, Cx=0, Cy=0;
-      for (let i=0, j=ring.length-1; i<ring.length; j=i++){
-        const [x1,y1]=ring[j], [x2,y2]=ring[i];
-        const cross = x1*y2 - x2*y1;
-        area += cross; A += cross; Cx += (x1+x2)*cross; Cy += (y1+y2)*cross;
-      }
-      area = Math.abs(area/2); A *= 0.5; if (!A) continue;
-      const cent = [Cx/(6*A), Cy/(6*A)];
-      if (area > bestArea){ bestArea = area; best = cent; }
-    }
-    c = best;
-  } else return [0,0];
-  const [lon,lat] = proj4('EPSG:3035','WGS84', c);
-  return [lat,lon];
-}
-function ensureCentroid(f){
-  if (!f.properties._centroid) f.properties._centroid = centroid3035toWGS84(f.geometry);
-  return f.properties._centroid;
-}
-
-// Debounce
-const debounce = (fn, ms=200) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
-
   // ----- INIT -----
   const searchBtn = document.getElementById('searchBtn');
   const exportBtn = document.getElementById('exportBtn');
@@ -241,9 +149,9 @@ const debounce = (fn, ms=200) => { let t; return (...a)=>{ clearTimeout(t); t=se
   async function lesCSVRows(url){
     try {
       const res = await fetch(url);
-      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+      if(!res.ok) throw new Error(${url}: HTTP ${res.status});
       const text = await res.text();
-return Papa.parse(text, {header:true, skipEmptyLines:true, dynamicTyping:true}).data;
+      return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
     } catch(e) {
       console.warn('Kunne ikke lese', url, e);
       return [];
@@ -253,7 +161,7 @@ return Papa.parse(text, {header:true, skipEmptyLines:true, dynamicTyping:true}).
 async function lesAvisnavn(url) {
   try {
     const res = await fetch(url);
-    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+    if(!res.ok) throw new Error(${url}: HTTP ${res.status});
     const text = await res.text();
     const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
     const map = {};
@@ -282,7 +190,7 @@ async function lesAvisnavn(url) {
       const pRaw = keyMap['postnummer'] ?? '';
       const p = pRaw.toString().padStart(4,'0');
       if(!p) {
-        console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
+        console.warn([${label}] Rad ${i} har ugyldig postnummer, r);
         return;
       }
 
@@ -333,7 +241,6 @@ async function lesAvisnavn(url) {
   let heatLayer = null;
   let showingHeatmap = false;
   let lastMatches = [];
-  let indexByFilter, featMapByFilter; // fylles når data er lastet
 
   const filterColors = {
     Anbud: '#ff3333',
@@ -357,11 +264,11 @@ function enrich(arr,mapData){
     f.properties.avisMap = info.avis;  // <-- Legger til avisMap her
     if(kanSokeNavn){
       f.properties.avis = Array.from(info.avis.entries())
-                              .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant.count}`)
+                              .map(([avisId,ant]) => ${avisNavnMap[avisId] || avisId}: ${ant.count})
                               .join(', ');
     } else {
       f.properties.avis = Array.from(info.avis.entries())
-                              .map(([avisId,ant]) => `${avisId}: ${ant.count}`)
+                              .map(([avisId,ant]) => ${avisId}: ${ant.count})
                               .join(', ');
     }
   });
@@ -375,12 +282,12 @@ function enrich(arr,mapData){
     enrich(fUtenfor,dUtenfor);
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
-l.setPopupContent(`
+l.setPopupContent(
   <strong>Postnummer: ${p.postnummer}</strong><br>
   Totalt antall: ${p.antall}<br>
   Detaljer pr avis: ${p.avis || 'Ingen'}<br>
   Frekvensdager: ${formatFrekvenser(new Set([].concat(...Array.from(p.avisMap?.values() || []).map(a => Array.from(a.frekvenser)))))} 
-`);
+);
     }));
   }
 
@@ -390,8 +297,8 @@ l.setPopupContent(`
       if(!mapData) return;
       const postnummerer = Object.keys(mapData);
       const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
-      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
+      document.getElementById('postCount'+k).innerHTML = <span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre;
+      document.getElementById('sumCount'+k).innerHTML = <span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall;
     });
   }
 
@@ -505,31 +412,6 @@ l.setPopupContent(`
 
     enrichAll();
     oppdaterFilterTellinger();
-// >>> SETT INN INDEKS-KODEN HER <<<
-  const idxC        = buildIndexes(dC);
-  const idxD        = buildIndexes(dD);
-  const idxInnenfor = buildIndexes(dInnenfor);
-  const idxUtenfor  = buildIndexes(dUtenfor);
-
-  indexByFilter = {
-    Anbud:    idxC,
-    Brukt:    idxD,
-    Innenfor: idxInnenfor,
-    Utenfor:  idxUtenfor
-  };
-
-  const featMapC        = mapFromFeatures(fC);
-  const featMapD        = mapFromFeatures(fD);
-  const featMapInnenfor = mapFromFeatures(fInnenfor);
-  const featMapUtenfor  = mapFromFeatures(fUtenfor);
-
-  featMapByFilter = {
-    Anbud:    featMapC,
-    Brukt:    featMapD,
-    Innenfor: featMapInnenfor,
-    Utenfor:  featMapUtenfor
-  };
-  // <<< SLUTT INDEKS-KODE >>>
 
     layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
     layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
@@ -538,11 +420,11 @@ l.setPopupContent(`
 
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
-      l.bindPopup(`
+      l.bindPopup(
         <strong>Postnummer: ${p.postnummer}</strong><br>
         Totalt antall: ${p.antall}<br>
         Detaljer pr avis: ${p.avis || 'Ingen'}
-      `);
+      );
     }));
 
     function oppdaterLag(){
@@ -558,15 +440,12 @@ l.setPopupContent(`
     oppdaterLag();
 
     searchBtn.addEventListener('click', searchMap);
-const debouncedSearch = debounce(searchMap, 200);
-document.getElementById('searchInput').addEventListener('keyup', e=>{
-  if (e.key==='Enter') searchMap(); else debouncedSearch();
-});
+    document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
 
     exportBtn.addEventListener('click', () => {
       if(!lastMatches.length) return;
-const csv = Papa.unparse(lastMatches, { delimiter: ';' });
-const blob = new Blob(['\uFEFF', csv], {type:'text/csv;charset=utf-8;'});
+      const csv = Papa.unparse(lastMatches);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = 'sokeresultater.csv';
@@ -622,57 +501,36 @@ const blob = new Blob(['\uFEFF', csv], {type:'text/csv;charset=utf-8;'});
     heatmapBtn.disabled = true;
   }
 
-const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
+  const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
+  const matchedPostnr = new Set();
 
-// Raskt søk via indekser
-let matchedPostnr = new Set();
-if (postnummerSok) {
-  const finnes = (indexByFilter.Anbud.all.has(postnummerSok)
-    || indexByFilter.Brukt.all.has(postnummerSok)
-    || indexByFilter.Innenfor.all.has(postnummerSok)
-    || indexByFilter.Utenfor.all.has(postnummerSok));
-  if (finnes) matchedPostnr.add(postnummerSok);
-} else {
-  const matchedAvisIds = resolveAvisTokens(avisSok, kanSokeNavn, avisNavnMap);
-  ['Anbud','Brukt','Innenfor','Utenfor'].forEach(filt => {
-    const idx = indexByFilter[filt];
-    if (!idx) return;
-    let cand = new Set(idx.all);
-    if (avisSok.length > 0) {
-      let unionAvis = new Set();
-      for (const id of matchedAvisIds) {
-        const s = idx.byAvis.get(id);
-        if (s) for (const p of s) unionAvis.add(p);
+  Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+    Object.entries(mapData).forEach(([pRaw, info]) => {
+      const p = pRaw.padStart(4, '0');
+      if (postnummerSok) {
+        if (p === postnummerSok) {
+          matchedPostnr.add(p);
+        }
+      } else {
+        const avisMatch = avisMatcher(info.avis, avisSok, kanSokeNavn, avisNavnMap);
+        const frekMatch = frekvensMatcher(info.avis, frekvensSok);
+        if (avisMatch && frekMatch) {
+          matchedPostnr.add(p);
+        }
       }
-      cand = new Set([...cand].filter(p => unionAvis.has(p)));
-    }
-    if (frekvensSok.size > 0) {
-      let unionDag = new Set();
-      for (const d of frekvensSok) {
-        const s = idx.byDag.get(String(d));
-        if (s) for (const p of s) unionDag.add(p);
-      }
-      cand = new Set([...cand].filter(p => unionDag.has(p)));
-    }
-    for (const p of cand) matchedPostnr.add(p); // OR mellom filtrene
+    });
   });
-}
 
-// Bygg features direkte fra feature-maps (slipper å skanne store arrays)
-const matches = [];
-for (const p of matchedPostnr) {
-  const mC = featMapByFilter.Anbud.get(p);    if (mC) matches.push(mC);
-  const mD = featMapByFilter.Brukt.get(p);    if (mD) matches.push(mD);
-  const mI = featMapByFilter.Innenfor.get(p); if (mI) matches.push(mI);
-  const mU = featMapByFilter.Utenfor.get(p);  if (mU) matches.push(mU);
-}
-
+  const allFeatures = [...fC, ...fD, ...fInnenfor, ...fUtenfor];
+  const matches = allFeatures.filter(f =>
+    matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0'))
+  );
 
   if (!matches.length) {
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
-    alert(`Ingen treff for "${qRawInput}"`);
+    alert(Ingen treff for "${qRawInput}");
     document.getElementById('search-timer').innerText = '';
     return;
   }
@@ -726,32 +584,32 @@ for (const p of matchedPostnr) {
 
     totalSum += sumCount;
     const color = filterColors[filterKey] || '#000';
-    html += `<tr>
+    html += <tr>
       <td>${filterKeys[filterKey]}</td>
       <td><span class="color-box" style="background:${color};"></span></td>
       <td>${keys.length.toLocaleString()}</td>
       <td>${sumCount.toLocaleString()}</td>
       <td>${formatFrekvenser(samletFrekvenser)}</td>
-    </tr>`;
+    </tr>;
 
     // Rad for sum alle dager (duplikater)
-    html += `<tr style="font-size: 12px; color: #444;">
+    html += <tr style="font-size: 12px; color: #444;">
       <td colspan="3" style="text-align:right; font-style: italic;">Sum alle dager (duplikater):</td>
       <td>${sumAlleDager.toLocaleString()}</td>
       <td></td>
-    </tr>`;
+    </tr>;
   });
 
-  html += `<tr style="font-weight:bold; background:#eef;">
+  html += <tr style="font-weight:bold; background:#eef;">
     <td colspan="3">Totalt abonnenter</td>
     <td>${totalSum.toLocaleString()}</td>
     <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
-  </tr>`;
+  </tr>;
 
   if (samletAviserTotal.size > 0) {
-    html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
+    html += <tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
       <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
-    </tr>`;
+    </tr>;
   }
 
   html += '</tbody></table>';
@@ -847,11 +705,11 @@ for (const p of matchedPostnr) {
 
   searchLayer.eachLayer(l => {
     const p = l.feature.properties;
-    l.bindPopup(`
+    l.bindPopup(
       <strong>Postnummer: ${p.postnummer}</strong><br>
       Totalt antall: ${p.antall}<br>
       Detaljer pr avis: ${p.avis || 'Ingen'}
-    `);
+    );
     l.openPopup();
   });
 
@@ -859,7 +717,7 @@ for (const p of matchedPostnr) {
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
-  document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
+  document.getElementById('search-timer').innerText = Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder;
 }
 
 
@@ -888,7 +746,7 @@ function searchExactDayFrequency(antallDager) {
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
-    alert(`Ingen treff for "${antallDager} dag frekvens"`);
+    alert(Ingen treff for "${antallDager} dag frekvens");
     document.getElementById('search-timer').innerText = '';
     return;
   }
@@ -936,7 +794,7 @@ function searchExactDayFrequency(antallDager) {
   let totalPerFilter = { Innenfor: 0, Utenfor: 0 };
   let samletAviser = Object.keys(aggregert).sort();
 
-  let html = `<table>
+  let html = <table>
     <thead>
       <tr>
         <th>Avis</th>
@@ -946,7 +804,7 @@ function searchExactDayFrequency(antallDager) {
         <th>Frekvensdager</th>
       </tr>
     </thead>
-    <tbody>`;
+    <tbody>;
 
   lastMatches = [];
 
@@ -962,32 +820,32 @@ function searchExactDayFrequency(antallDager) {
 
     const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
 
-    html += `<tr>
+    html += <tr>
       <td>${avis}</td>
       <td>${innenforSum ? innenforSum.toLocaleString() : ''}</td>
       <td>${utenforSum ? utenforSum.toLocaleString() : ''}</td>
       <td>${sum.toLocaleString()}</td>
       <td>${frekvensTekst}</td>
-    </tr>`;
+    </tr>;
 
     if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: frekvensTekst });
     if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: frekvensTekst });
   });
 
   const grandTotal = totalPerFilter.Innenfor + totalPerFilter.Utenfor;
-  html += `<tr style="font-weight:bold; background:#eef;">
+  html += <tr style="font-weight:bold; background:#eef;">
     <td>Totalt abonnenter</td>
     <td>${totalPerFilter.Innenfor.toLocaleString()}</td>
     <td>${totalPerFilter.Utenfor.toLocaleString()}</td>
     <td>${grandTotal.toLocaleString()}</td>
     <td></td>
-  </tr>`;
+  </tr>;
 
-  html += `</tbody></table>`;
+  html += </tbody></table>;
 
-html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
+html += <p style="font-style: italic; font-size: 12px; margin-top: 8px;">
   <strong>Antall aviser som matcher søket: ${samletAviser.length}.</strong> Aviser: ${samletAviser.join(', ')}
-</p>`;
+</p>;
 
 
   document.getElementById('search-summary').innerHTML = html;
@@ -1015,18 +873,18 @@ html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
 
   searchLayer.eachLayer(l => {
     const p = l.feature.properties;
-    l.bindPopup(`
+    l.bindPopup(
       <strong>Postnummer: ${p.postnummer}</strong><br>
       Totalt antall: ${p.antall}<br>
       Detaljer pr avis: ${p.avis || 'Ingen'}
-    `);
+    );
   });
 
   map.fitBounds(searchLayer.getBounds().pad(0.05));
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
-  document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
+  document.getElementById('search-timer').innerText = Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder;
 }
 
 
@@ -1047,3 +905,5 @@ html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
 </script>
 </body>
 </html>
+
+
