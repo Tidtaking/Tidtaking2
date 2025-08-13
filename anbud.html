@@ -129,6 +129,98 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
+  // ======== YTELSE: HJELPERE / INDEKSER / CENTROID-CACHE ========
+// Sett-operasjoner
+const unionSets = (...sets) => { const out = new Set(); for (const s of sets) if (s) for (const v of s) out.add(v); return out; };
+const intersectSets = (a, b) => { if (!a || !b) return new Set(); const out = new Set(); const [small, large] = a.size < b.size ? [a, b] : [b, a]; for (const v of small) if (large.has(v)) out.add(v); return out; };
+
+// Bygg indekser for ett datasett (postnr->info med avis/frekvenser)
+function buildIndexes(mapData){
+  const all = new Set();
+  const byAvis = new Map();
+  const byDag  = new Map([['1',new Set()], ['2',new Set()], ['3',new Set()], ['4',new Set()], ['5',new Set()], ['6',new Set()], ['7',new Set()]]);
+  Object.entries(mapData).forEach(([p, info])=>{
+    all.add(p);
+    const avisMap = info?.avis;
+    if (!avisMap) return;
+    for (const [avisId, avisData] of avisMap.entries()){
+      const id = String(avisId).toLowerCase();
+      if (!byAvis.has(id)) byAvis.set(id, new Set());
+      byAvis.get(id).add(p);
+      if (avisData?.frekvenser) {
+        for (const f of avisData.frekvenser) {
+          const dag = String(f);
+          if (byDag.has(dag)) byDag.get(dag).add(p);
+        }
+      }
+    }
+  });
+  return { all, byAvis, byDag };
+}
+
+// Feature-map pr filter: postnr -> feature
+function mapFromFeatures(features){
+  const m = new Map();
+  for (const f of features) {
+    const p = f.properties.postnummer.trim().padStart(4,'0');
+    m.set(p, f);
+  }
+  return m;
+}
+
+// Løs opp avis-søkestrenger til avisId (støtter id og navn ved navnesøk)
+function resolveAvisTokens(tokens, kanSokeNavn, avisNavnMap){
+  const ids = new Set();
+  const entries = Object.entries(avisNavnMap || {}); // [id, navn]
+  for (const tok of tokens) {
+    const q = tok.toLowerCase();
+    if (avisNavnMap[q]) { ids.add(q); continue; } // eksakt id
+    if (kanSokeNavn) for (const [id, navn] of entries) if ((navn || '').toLowerCase().includes(q)) ids.add(id.toLowerCase());
+  }
+  return ids;
+}
+
+// Centroid i EPSG:3035 -> WGS84 (+ cache i properties)
+function centroid3035toWGS84(geom){
+  function ringCentroid(ring){
+    let A=0, Cx=0, Cy=0;
+    for (let i=0, j=ring.length-1; i<ring.length; j=i++){
+      const [x1,y1]=ring[j], [x2,y2]=ring[i];
+      const cross = x1*y2 - x2*y1;
+      A += cross; Cx += (x1+x2)*cross; Cy += (y1+y2)*cross;
+    }
+    A *= 0.5; if (!A) return ring[0];
+    return [Cx/(6*A), Cy/(6*A)];
+  }
+  let c;
+  if (geom.type==='Polygon') c = ringCentroid(geom.coordinates[0]);
+  else if (geom.type==='MultiPolygon') {
+    let best = null, bestArea = -Infinity;
+    for (const poly of geom.coordinates){
+      const ring = poly[0];
+      let area = 0, A=0, Cx=0, Cy=0;
+      for (let i=0, j=ring.length-1; i<ring.length; j=i++){
+        const [x1,y1]=ring[j], [x2,y2]=ring[i];
+        const cross = x1*y2 - x2*y1;
+        area += cross; A += cross; Cx += (x1+x2)*cross; Cy += (y1+y2)*cross;
+      }
+      area = Math.abs(area/2); A *= 0.5; if (!A) continue;
+      const cent = [Cx/(6*A), Cy/(6*A)];
+      if (area > bestArea){ bestArea = area; best = cent; }
+    }
+    c = best;
+  } else return [0,0];
+  const [lon,lat] = proj4('EPSG:3035','WGS84', c);
+  return [lat,lon];
+}
+function ensureCentroid(f){
+  if (!f.properties._centroid) f.properties._centroid = centroid3035toWGS84(f.geometry);
+  return f.properties._centroid;
+}
+
+// Debounce
+const debounce = (fn, ms=200) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+
   // ----- INIT -----
   const searchBtn = document.getElementById('searchBtn');
   const exportBtn = document.getElementById('exportBtn');
@@ -151,7 +243,7 @@
       const res = await fetch(url);
       if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
       const text = await res.text();
-      return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
+return Papa.parse(text, {header:true, skipEmptyLines:true, dynamicTyping:true}).data;
     } catch(e) {
       console.warn('Kunne ikke lese', url, e);
       return [];
@@ -241,6 +333,7 @@ async function lesAvisnavn(url) {
   let heatLayer = null;
   let showingHeatmap = false;
   let lastMatches = [];
+  let indexByFilter, featMapByFilter; // fylles når data er lastet
 
   const filterColors = {
     Anbud: '#ff3333',
@@ -412,6 +505,31 @@ l.setPopupContent(`
 
     enrichAll();
     oppdaterFilterTellinger();
+// >>> SETT INN INDEKS-KODEN HER <<<
+  const idxC        = buildIndexes(dC);
+  const idxD        = buildIndexes(dD);
+  const idxInnenfor = buildIndexes(dInnenfor);
+  const idxUtenfor  = buildIndexes(dUtenfor);
+
+  indexByFilter = {
+    Anbud:    idxC,
+    Brukt:    idxD,
+    Innenfor: idxInnenfor,
+    Utenfor:  idxUtenfor
+  };
+
+  const featMapC        = mapFromFeatures(fC);
+  const featMapD        = mapFromFeatures(fD);
+  const featMapInnenfor = mapFromFeatures(fInnenfor);
+  const featMapUtenfor  = mapFromFeatures(fUtenfor);
+
+  featMapByFilter = {
+    Anbud:    featMapC,
+    Brukt:    featMapD,
+    Innenfor: featMapInnenfor,
+    Utenfor:  featMapUtenfor
+  };
+  // <<< SLUTT INDEKS-KODE >>>
 
     layers.Anbud    = L.geoJSON(fC,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Anbud,fillOpacity:0.5,weight:1})});
     layers.Brukt    = L.geoJSON(fD,{coordsToLatLng:coords3035tilLatLng,style:()=>({color:filterColors.Brukt,fillOpacity:0.5,weight:1})});
