@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="no">
 <head>
 <meta charset="UTF-8" />
@@ -149,7 +149,7 @@
   async function lesCSVRows(url){
     try {
       const res = await fetch(url);
-      if(!res.ok) throw new Error(${url}: HTTP ${res.status});
+      if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
       const text = await res.text();
       return Papa.parse(text, {header:true, skipEmptyLines:true, delimiter: ','}).data;
     } catch(e) {
@@ -161,7 +161,7 @@
 async function lesAvisnavn(url) {
   try {
     const res = await fetch(url);
-    if(!res.ok) throw new Error(${url}: HTTP ${res.status});
+    if(!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
     const text = await res.text();
     const data = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
     const map = {};
@@ -190,7 +190,7 @@ async function lesAvisnavn(url) {
       const pRaw = keyMap['postnummer'] ?? '';
       const p = pRaw.toString().padStart(4,'0');
       if(!p) {
-        console.warn([${label}] Rad ${i} har ugyldig postnummer, r);
+        console.warn(`[${label}] Rad ${i} har ugyldig postnummer`, r);
         return;
       }
 
@@ -264,11 +264,11 @@ function enrich(arr,mapData){
     f.properties.avisMap = info.avis;  // <-- Legger til avisMap her
     if(kanSokeNavn){
       f.properties.avis = Array.from(info.avis.entries())
-                              .map(([avisId,ant]) => ${avisNavnMap[avisId] || avisId}: ${ant.count})
+                              .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant.count}`)
                               .join(', ');
     } else {
       f.properties.avis = Array.from(info.avis.entries())
-                              .map(([avisId,ant]) => ${avisId}: ${ant.count})
+                              .map(([avisId,ant]) => `${avisId}: ${ant.count}`)
                               .join(', ');
     }
   });
@@ -282,12 +282,12 @@ function enrich(arr,mapData){
     enrich(fUtenfor,dUtenfor);
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
-l.setPopupContent(
+l.setPopupContent(`
   <strong>Postnummer: ${p.postnummer}</strong><br>
   Totalt antall: ${p.antall}<br>
   Detaljer pr avis: ${p.avis || 'Ingen'}<br>
   Frekvensdager: ${formatFrekvenser(new Set([].concat(...Array.from(p.avisMap?.values() || []).map(a => Array.from(a.frekvenser)))))} 
-);
+`);
     }));
   }
 
@@ -297,8 +297,8 @@ l.setPopupContent(
       if(!mapData) return;
       const postnummerer = Object.keys(mapData);
       const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
-      document.getElementById('postCount'+k).innerHTML = <span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre;
-      document.getElementById('sumCount'+k).innerHTML = <span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall;
+      document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
+      document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
     });
   }
 
@@ -420,11 +420,11 @@ l.setPopupContent(
 
     Object.values(layers).forEach(layer => layer.eachLayer(l=>{
       const p = l.feature.properties;
-      l.bindPopup(
+      l.bindPopup(`
         <strong>Postnummer: ${p.postnummer}</strong><br>
         Totalt antall: ${p.antall}<br>
         Detaljer pr avis: ${p.avis || 'Ingen'}
-      );
+      `);
     }));
 
     function oppdaterLag(){
@@ -530,7 +530,7 @@ l.setPopupContent(
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
-    alert(Ingen treff for "${qRawInput}");
+    alert(`Ingen treff for "${qRawInput}"`);
     document.getElementById('search-timer').innerText = '';
     return;
   }
@@ -584,32 +584,32 @@ l.setPopupContent(
 
     totalSum += sumCount;
     const color = filterColors[filterKey] || '#000';
-    html += <tr>
+    html += `<tr>
       <td>${filterKeys[filterKey]}</td>
       <td><span class="color-box" style="background:${color};"></span></td>
       <td>${keys.length.toLocaleString()}</td>
       <td>${sumCount.toLocaleString()}</td>
       <td>${formatFrekvenser(samletFrekvenser)}</td>
-    </tr>;
+    </tr>`;
 
     // Rad for sum alle dager (duplikater)
-    html += <tr style="font-size: 12px; color: #444;">
+    html += `<tr style="font-size: 12px; color: #444;">
       <td colspan="3" style="text-align:right; font-style: italic;">Sum alle dager (duplikater):</td>
       <td>${sumAlleDager.toLocaleString()}</td>
       <td></td>
-    </tr>;
+    </tr>`;
   });
 
-  html += <tr style="font-weight:bold; background:#eef;">
+  html += `<tr style="font-weight:bold; background:#eef;">
     <td colspan="3">Totalt abonnenter</td>
     <td>${totalSum.toLocaleString()}</td>
     <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
-  </tr>;
+  </tr>`;
 
   if (samletAviserTotal.size > 0) {
-    html += <tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
+    html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
       <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
-    </tr>;
+    </tr>`;
   }
 
   html += '</tbody></table>';
@@ -705,11 +705,11 @@ l.setPopupContent(
 
   searchLayer.eachLayer(l => {
     const p = l.feature.properties;
-    l.bindPopup(
+    l.bindPopup(`
       <strong>Postnummer: ${p.postnummer}</strong><br>
       Totalt antall: ${p.antall}<br>
       Detaljer pr avis: ${p.avis || 'Ingen'}
-    );
+    `);
     l.openPopup();
   });
 
@@ -717,7 +717,7 @@ l.setPopupContent(
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
-  document.getElementById('search-timer').innerText = Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder;
+  document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
 }
 
 
@@ -746,7 +746,7 @@ function searchExactDayFrequency(antallDager) {
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
-    alert(Ingen treff for "${antallDager} dag frekvens");
+    alert(`Ingen treff for "${antallDager} dag frekvens"`);
     document.getElementById('search-timer').innerText = '';
     return;
   }
@@ -794,7 +794,7 @@ function searchExactDayFrequency(antallDager) {
   let totalPerFilter = { Innenfor: 0, Utenfor: 0 };
   let samletAviser = Object.keys(aggregert).sort();
 
-  let html = <table>
+  let html = `<table>
     <thead>
       <tr>
         <th>Avis</th>
@@ -804,7 +804,7 @@ function searchExactDayFrequency(antallDager) {
         <th>Frekvensdager</th>
       </tr>
     </thead>
-    <tbody>;
+    <tbody>`;
 
   lastMatches = [];
 
@@ -820,32 +820,32 @@ function searchExactDayFrequency(antallDager) {
 
     const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
 
-    html += <tr>
+    html += `<tr>
       <td>${avis}</td>
       <td>${innenforSum ? innenforSum.toLocaleString() : ''}</td>
       <td>${utenforSum ? utenforSum.toLocaleString() : ''}</td>
       <td>${sum.toLocaleString()}</td>
       <td>${frekvensTekst}</td>
-    </tr>;
+    </tr>`;
 
     if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: frekvensTekst });
     if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: frekvensTekst });
   });
 
   const grandTotal = totalPerFilter.Innenfor + totalPerFilter.Utenfor;
-  html += <tr style="font-weight:bold; background:#eef;">
+  html += `<tr style="font-weight:bold; background:#eef;">
     <td>Totalt abonnenter</td>
     <td>${totalPerFilter.Innenfor.toLocaleString()}</td>
     <td>${totalPerFilter.Utenfor.toLocaleString()}</td>
     <td>${grandTotal.toLocaleString()}</td>
     <td></td>
-  </tr>;
+  </tr>`;
 
-  html += </tbody></table>;
+  html += `</tbody></table>`;
 
-html += <p style="font-style: italic; font-size: 12px; margin-top: 8px;">
+html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
   <strong>Antall aviser som matcher søket: ${samletAviser.length}.</strong> Aviser: ${samletAviser.join(', ')}
-</p>;
+</p>`;
 
 
   document.getElementById('search-summary').innerHTML = html;
@@ -873,18 +873,18 @@ html += <p style="font-style: italic; font-size: 12px; margin-top: 8px;">
 
   searchLayer.eachLayer(l => {
     const p = l.feature.properties;
-    l.bindPopup(
+    l.bindPopup(`
       <strong>Postnummer: ${p.postnummer}</strong><br>
       Totalt antall: ${p.antall}<br>
       Detaljer pr avis: ${p.avis || 'Ingen'}
-    );
+    `);
   });
 
   map.fitBounds(searchLayer.getBounds().pad(0.05));
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
-  document.getElementById('search-timer').innerText = Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder;
+  document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
 }
 
 
@@ -905,5 +905,3 @@ html += <p style="font-style: italic; font-size: 12px; margin-top: 8px;">
 </script>
 </body>
 </html>
-
-
