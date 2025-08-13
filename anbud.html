@@ -558,12 +558,15 @@ l.setPopupContent(`
     oppdaterLag();
 
     searchBtn.addEventListener('click', searchMap);
-    document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && searchMap());
+const debouncedSearch = debounce(searchMap, 200);
+document.getElementById('searchInput').addEventListener('keyup', e=>{
+  if (e.key==='Enter') searchMap(); else debouncedSearch();
+});
 
     exportBtn.addEventListener('click', () => {
       if(!lastMatches.length) return;
-      const csv = Papa.unparse(lastMatches);
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+const csv = Papa.unparse(lastMatches, { delimiter: ';' });
+const blob = new Blob(['\uFEFF', csv], {type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = 'sokeresultater.csv';
@@ -619,30 +622,51 @@ l.setPopupContent(`
     heatmapBtn.disabled = true;
   }
 
-  const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
-  const matchedPostnr = new Set();
+const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
 
-  Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
-    Object.entries(mapData).forEach(([pRaw, info]) => {
-      const p = pRaw.padStart(4, '0');
-      if (postnummerSok) {
-        if (p === postnummerSok) {
-          matchedPostnr.add(p);
-        }
-      } else {
-        const avisMatch = avisMatcher(info.avis, avisSok, kanSokeNavn, avisNavnMap);
-        const frekMatch = frekvensMatcher(info.avis, frekvensSok);
-        if (avisMatch && frekMatch) {
-          matchedPostnr.add(p);
-        }
+// Raskt søk via indekser
+let matchedPostnr = new Set();
+if (postnummerSok) {
+  const finnes = (indexByFilter.Anbud.all.has(postnummerSok)
+    || indexByFilter.Brukt.all.has(postnummerSok)
+    || indexByFilter.Innenfor.all.has(postnummerSok)
+    || indexByFilter.Utenfor.all.has(postnummerSok));
+  if (finnes) matchedPostnr.add(postnummerSok);
+} else {
+  const matchedAvisIds = resolveAvisTokens(avisSok, kanSokeNavn, avisNavnMap);
+  ['Anbud','Brukt','Innenfor','Utenfor'].forEach(filt => {
+    const idx = indexByFilter[filt];
+    if (!idx) return;
+    let cand = new Set(idx.all);
+    if (avisSok.length > 0) {
+      let unionAvis = new Set();
+      for (const id of matchedAvisIds) {
+        const s = idx.byAvis.get(id);
+        if (s) for (const p of s) unionAvis.add(p);
       }
-    });
+      cand = new Set([...cand].filter(p => unionAvis.has(p)));
+    }
+    if (frekvensSok.size > 0) {
+      let unionDag = new Set();
+      for (const d of frekvensSok) {
+        const s = idx.byDag.get(String(d));
+        if (s) for (const p of s) unionDag.add(p);
+      }
+      cand = new Set([...cand].filter(p => unionDag.has(p)));
+    }
+    for (const p of cand) matchedPostnr.add(p); // OR mellom filtrene
   });
+}
 
-  const allFeatures = [...fC, ...fD, ...fInnenfor, ...fUtenfor];
-  const matches = allFeatures.filter(f =>
-    matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0'))
-  );
+// Bygg features direkte fra feature-maps (slipper å skanne store arrays)
+const matches = [];
+for (const p of matchedPostnr) {
+  const mC = featMapByFilter.Anbud.get(p);    if (mC) matches.push(mC);
+  const mD = featMapByFilter.Brukt.get(p);    if (mD) matches.push(mD);
+  const mI = featMapByFilter.Innenfor.get(p); if (mI) matches.push(mI);
+  const mU = featMapByFilter.Utenfor.get(p);  if (mU) matches.push(mU);
+}
+
 
   if (!matches.length) {
     document.getElementById('search-summary').innerHTML = '';
