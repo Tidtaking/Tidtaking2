@@ -1,4 +1,3 @@
-<!doctype html>
 <html lang="no">
 <head>
   <meta charset="utf-8" />
@@ -376,7 +375,24 @@
       $('#btn-delete').onclick=()=>{ state.events=state.events.filter(x=>x.id!==model.id); closeDialog(); render(); };
       $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
 
-      $('#btn-fetch-eqt').onclick=async()=>{ const url=$('#f-eqt').value.trim(); if(!url) return alert('Lim inn en EQTiming‑lenke først.'); try{ const res=await fetch(url,{mode:'cors'}); const text=await res.text(); const m=text.match(/<title>([^<]+)<\\/title>/i); if(m){ $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/,'').trim(); } alert('Prøvde å lese tittel. Om den ikke endres, er det CORS.'); }catch(e){ alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.'); } };
+$('#btn-fetch-eqt').onclick = async () => {
+  const url = $('#f-eqt').value.trim();
+  if (!url) return alert('Lim inn en EQTiming‑lenke først.');
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    const text = await res.text();
+
+    // RIKTIG: escape slash med ÉN backslash
+    const m = text.match(/<title>([^<]+)<\/title>/i);
+
+    if (m) {
+      $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/, '').trim();
+    }
+    alert('Prøvde å lese tittel. Om den ikke endres, er det CORS.');
+  } catch (e) {
+    alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.');
+  }
+};
 
       $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex'); }
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
