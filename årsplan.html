@@ -1,0 +1,775 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Calendar as CalendarIcon, Plus, Upload, Download, Printer, Filter, Trash2, Save, Copy, ChevronLeft, ChevronRight, X } from "lucide-react";
+import dayjs from "dayjs";
+import isoWeek from "dayjs/plugin/isoWeek";
+import weekday from "dayjs/plugin/weekday";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+
+// Tailwind is available by default in the playground
+// shadcn/ui components – if not present in your runtime, the fallbacks below ensure it still renders
+let Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Tabs, TabsList, TabsTrigger, TabsContent, Checkbox, Switch;
+try {
+  // @ts-ignore - shadcn components are available in ChatGPT's environment
+  ({ Button } = require("@/components/ui/button"));
+  ({ Card, CardContent, CardHeader, CardTitle } = require("@/components/ui/card"));
+  ({ Input } = require("@/components/ui/input"));
+  ({ Label } = require("@/components/ui/label"));
+  ({ Select, SelectContent, SelectItem, SelectTrigger, SelectValue } = require("@/components/ui/select"));
+  ({ Textarea } = require("@/components/ui/textarea"));
+  ({ Badge } = require("@/components/ui/badge"));
+  ({ Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } = require("@/components/ui/dialog"));
+  ({ Tabs, TabsList, TabsTrigger, TabsContent } = require("@/components/ui/tabs"));
+  ({ Checkbox } = require("@/components/ui/checkbox"));
+  ({ Switch } = require("@/components/ui/switch"));
+} catch (e) {
+  // Fallback minimal components using plain HTML + Tailwind
+  Button = ({ className = "", children, ...props }) => (
+    <button className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 shadow-sm border bg-white hover:bg-gray-50 ${className}`} {...props}>{children}</button>
+  );
+  Card = ({ className = "", children }) => (
+    <div className={`rounded-2xl border bg-white shadow-sm ${className}`}>{children}</div>
+  );
+  CardHeader = ({ children, className = "" }) => <div className={`p-4 border-b ${className}`}>{children}</div>;
+  CardTitle = ({ children, className = "" }) => <h3 className={`text-xl font-semibold ${className}`}>{children}</h3>;
+  CardContent = ({ children, className = "" }) => <div className={`p-4 ${className}`}>{children}</div>;
+  Input = (props) => <input className="w-full rounded-xl border px-3 py-2" {...props} />;
+  Label = ({ children, className = "" }) => <label className={`text-sm font-medium ${className}`}>{children}</label>;
+  Select = ({ value, onValueChange, children }) => <select className="w-full rounded-xl border px-3 py-2" value={value} onChange={(e) => onValueChange?.(e.target.value)}>{children}</select>;
+  SelectContent = ({ children }) => <>{children}</>;
+  SelectItem = ({ value, children }) => <option value={value}>{children}</option>;
+  SelectTrigger = ({ children }) => <>{children}</>;
+  SelectValue = ({ placeholder }) => <span className="text-gray-500">{placeholder}</span>;
+  Textarea = (props) => <textarea className="w-full rounded-xl border px-3 py-2" {...props} />;
+  Badge = ({ className = "", children }) => <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${className}`}>{children}</span>;
+  const SimpleDialog = ({ open, onOpenChange, title, children, footer }) => open ? (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onMouseDown={(e)=>{ if(e.target===e.currentTarget) onOpenChange?.(false); }}>
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b p-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button onClick={() => onOpenChange?.(false)} className="rounded-full p-1 hover:bg-gray-100"><X className="h-5 w-5"/></button>
+        </div>
+        <div className="p-4">{children}</div>
+        {footer && <div className="border-t p-4">{footer}</div>}
+      </div>
+    </div>
+  ) : null;
+  Dialog = ({ open, onOpenChange, children }) => <SimpleDialog open={open} onOpenChange={onOpenChange} title="">{children}</SimpleDialog>;
+  DialogHeader = ({ children }) => <div className="hidden">{children}</div>;
+  DialogTitle = ({ children }) => <div className="hidden">{children}</div>;
+  DialogFooter = ({ children }) => <div className="flex justify-end gap-2">{children}</div>;
+  Tabs = ({ value, onValueChange, children }) => <div>{children}</div>;
+  TabsList = ({ children }) => <div className="mb-4 flex flex-wrap gap-2">{children}</div>;
+  TabsTrigger = ({ children, onClick }) => <Button onClick={onClick}>{children}</Button>;
+  TabsContent = ({ children }) => <div>{children}</div>;
+  Checkbox = ({ checked, onCheckedChange }) => <input type="checkbox" className="h-4 w-4" checked={!!checked} onChange={(e)=>onCheckedChange?.(e.target.checked)} />;
+  Switch = ({ checked, onCheckedChange }) => <input type="checkbox" className="h-5 w-10" checked={!!checked} onChange={(e)=>onCheckedChange?.(e.target.checked)} />;
+}
+
+dayjs.extend(isoWeek);
+dayjs.extend(weekday);
+dayjs.extend(localizedFormat);
+
+// Helpers
+const STORAGE_KEYS = {
+  EVENTS: "arsplanEvents:v1",
+  TEMPLATES: "oktBank:v1",
+  SETTINGS: "arsplanSettings:v1",
+};
+
+const DEFAULT_COLORS = {
+  Trening: "#2563eb", // blå
+  Skyting: "#0ea5e9", // cyan
+  Konkurranse: "#dc2626", // rød
+  Samling: "#a855f7", // lilla
+  Annet: "#6b7280", // grå
+  Restitusjon: "#16a34a", // grønn
+};
+
+const ALDERSGRUPPER = [
+  { id: "U12", label: "10–12 år" },
+  { id: "U14", label: "13–14 år" },
+  { id: "U16", label: "15–16 år" },
+  { id: "JR", label: "Junior (17–20)" },
+];
+
+const INTENSITETER = ["I1", "I2", "I3", "I4", "I5"];
+
+const KONK_TYPES = [
+  "Sprint",
+  "Normal",
+  "Jaktstart",
+  "Fellesstart",
+  "Stafett",
+  "Mix-stafett",
+  "KM",
+  "HL/NC",
+  "Kretsrenn",
+  "Lokalt renn",
+];
+
+const MODALITETER = ["Ski skøyting", "Ski klassisk", "Rulleski skøyting", "Rulleski klassisk", "Løp", "Sykkel", "Styrke", "Basistrening"];
+
+const SKYTE_TEMAER = [
+  "Grunnstilling liggende",
+  "Grunnstilling stående",
+  "Siktebilde & avtrekk",
+  "Pust & rytme",
+  "Avtrekkstid/trigger",
+  "Repetisjonsrytme",
+  "Magasinbytte",
+  "Stativarbeid",
+  "Overganger (inn/ut)",
+  "Vind/korrigering",
+];
+
+function uid() { return crypto?.randomUUID?.() || Math.random().toString(36).slice(2); }
+
+function loadLS(key, fallback) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
+}
+function saveLS(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+
+// Default øktbank (kan redigeres)
+const DEFAULT_TEMPLATES = [
+  {
+    id: uid(),
+    name: "U12 Lekpreget I2 (45–60 min) + grunnleggende skyting",
+    type: "Trening",
+    modality: "Løp",
+    intensity: "I2",
+    durationMin: 55,
+    shooting: { stilling: "Liggende", skudd: 30, tema: ["Grunnstilling liggende", "Siktebilde & avtrekk"] },
+    age: ["U12"],
+    notes: "Lekpreget løp i terreng. På standplass: 3×10 liggende, fokus ro og siktebilde."
+  },
+  {
+    id: uid(),
+    name: "U14 Rulleski I3 5×4 min + stående teknikk",
+    type: "Trening",
+    modality: "Rulleski skøyting",
+    intensity: "I3",
+    durationMin: 75,
+    shooting: { stilling: "Stående", skudd: 40, tema: ["Grunnstilling stående", "Avtrekkstid/trigger"] },
+    age: ["U14"],
+    notes: "Oppvarming 20 min, 5×4 min I3 m/2 min pause. Skyting mellom drag."
+  },
+  {
+    id: uid(),
+    name: "U16 VO2 I4 6×3 min + kombinert skyting",
+    type: "Trening",
+    modality: "Løp",
+    intensity: "I4",
+    durationMin: 80,
+    shooting: { stilling: "Kombinert", skudd: 50, tema: ["Repetisjonsrytme", "Overganger (inn/ut)"] },
+    age: ["U16"],
+    notes: "6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier)."
+  },
+  {
+    id: uid(),
+    name: "JR Langtur I1–2 90–120 min + 60 skudd",
+    type: "Trening",
+    modality: "Ski skøyting",
+    intensity: "I2",
+    durationMin: 120,
+    shooting: { stilling: "Variert", skudd: 60, tema: ["Vind/korrigering", "Pust & rytme"] },
+    age: ["JR"],
+    notes: "Rolig langtur. 6×10 skudd teknikkøvelser."
+  },
+  {
+    id: uid(),
+    name: "Konkurranse – Sprint",
+    type: "Konkurranse",
+    modality: "Ski skøyting",
+    intensity: "I5",
+    durationMin: 45,
+    shooting: { stilling: "Konk", skudd: 10, tema: [] },
+    raceSubtype: "Sprint",
+    age: ["U12", "U14", "U16", "JR"],
+    notes: "Standard sprintoppsett."
+  },
+];
+
+// Components
+function ColorDot({ color }) { return <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />; }
+
+function MonthView({ year, month, events, onSelectDate }) {
+  const start = dayjs(`${year}-${String(month).padStart(2, "0")}-01`);
+  const firstDay = start.startOf("month");
+  const daysInMonth = start.daysInMonth();
+  const leading = (firstDay.day() + 6) % 7; // make Monday=0
+  const cells = [];
+  for (let i = 0; i < leading; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(dayjs(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`));
+  const trailing = (7 - (cells.length % 7)) % 7;
+  for (let i = 0; i < trailing; i++) cells.push(null);
+
+  const monthEvents = events.filter((e) => dayjs(e.date).month() + 1 === month && dayjs(e.date).year() === year);
+  const eventsByDay = monthEvents.reduce((acc, e) => {
+    const key = dayjs(e.date).format("YYYY-MM-DD");
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(e);
+    return acc;
+  }, {});
+
+  return (
+    <Card className="h-full">
+      <CardHeader className="flex items-center justify-between">
+        <CardTitle>{start.format("MMMM")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-7 gap-1 text-xs text-gray-500">
+          {"man tir ons tor fre lør søn".split(" ").map((w) => (
+            <div key={w} className="px-1 py-1 text-center font-medium uppercase">{w}</div>
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {cells.map((d, i) => {
+            const key = d ? d.format("YYYY-MM-DD") : `empty-${i}`;
+            const dayEvents = d ? eventsByDay[key] || [] : [];
+            return (
+              <div key={key} className={`min-h-[80px] rounded-xl border bg-white/70 p-1 ${d ? "hover:bg-blue-50 cursor-pointer" : "opacity-50"}`} onClick={() => d && onSelectDate?.(d)}>
+                <div className="flex items-center justify-between text-xs text-gray-600">
+                  <span className="font-medium">{d ? d.date() : ""}</span>
+                  <div className="flex gap-1">
+                    {dayEvents.slice(0, 4).map((e) => (
+                      <ColorDot key={e.id} color={DEFAULT_COLORS[e.type] || "#6b7280"} />
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {dayEvents.slice(0, 3).map((e) => (
+                    <div key={e.id} className="truncate text-xs">
+                      <span className="opacity-70">• </span>
+                      <span className="font-medium">{e.title || e.type}</span>
+                    </div>
+                  ))}
+                  {dayEvents.length > 3 && (
+                    <div className="text-[10px] text-gray-500">+{dayEvents.length - 3} flere…</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EventForm({ value, onChange }) {
+  const v = value;
+  const set = (patch) => onChange?.({ ...v, ...patch });
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-1">
+        <Label>Tittel</Label>
+        <Input value={v.title || ""} onChange={(e) => set({ title: e.target.value })} placeholder="F.eks. Basistrening + 30 skudd" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Type</Label>
+          <Select value={v.type} onValueChange={(val) => set({ type: val })}>
+            <SelectItem value="Trening">Trening</SelectItem>
+            <SelectItem value="Skyting">Skyting</SelectItem>
+            <SelectItem value="Konkurranse">Konkurranse</SelectItem>
+            <SelectItem value="Samling">Samling</SelectItem>
+            <SelectItem value="Restitusjon">Restitusjon</SelectItem>
+            <SelectItem value="Annet">Annet</SelectItem>
+          </Select>
+        </div>
+        <div>
+          <Label>Dato</Label>
+          <Input type="date" value={dayjs(v.date).format("YYYY-MM-DD")} onChange={(e) => set({ date: e.target.value })} />
+        </div>
+      </div>
+      {v.type === "Konkurranse" && (
+        <div>
+          <Label>Konkurransetype</Label>
+          <Select value={v.raceSubtype || ""} onValueChange={(val) => set({ raceSubtype: val })}>
+            {KONK_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Modalitet</Label>
+          <Select value={v.modality || ""} onValueChange={(val) => set({ modality: val })}>
+            {MODALITETER.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+          </Select>
+        </div>
+        <div>
+          <Label>Intensitet</Label>
+          <Select value={v.intensity || ""} onValueChange={(val) => set({ intensity: val })}>
+            {INTENSITETER.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Varighet (min)</Label>
+          <Input type="number" value={v.durationMin || 60} onChange={(e) => set({ durationMin: Number(e.target.value) || 0 })} />
+        </div>
+        <div>
+          <Label>Målgruppe</Label>
+          <div className="flex flex-wrap gap-2">
+            {ALDERSGRUPPER.map((g) => (
+              <label key={g.id} className="inline-flex items-center gap-2 rounded-xl border px-2 py-1">
+                <Checkbox checked={v.age?.includes(g.id)} onCheckedChange={(c) => {
+                  const setAge = new Set(v.age || []); c ? setAge.add(g.id) : setAge.delete(g.id);
+                  set({ age: Array.from(setAge) });
+                }} />
+                <span className="text-sm">{g.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label>Skytestilling</Label>
+          <Select value={v.shooting?.stilling || ""} onValueChange={(val) => set({ shooting: { ...(v.shooting||{}), stilling: val } })}>
+            <SelectItem value="Liggende">Liggende</SelectItem>
+            <SelectItem value="Stående">Stående</SelectItem>
+            <SelectItem value="Kombinert">Kombinert</SelectItem>
+            <SelectItem value="Variert">Variert</SelectItem>
+            <SelectItem value="Konk">Konk</SelectItem>
+          </Select>
+        </div>
+        <div>
+          <Label>Antall skudd</Label>
+          <Input type="number" value={v.shooting?.skudd || 0} onChange={(e) => set({ shooting: { ...(v.shooting||{}), skudd: Number(e.target.value) || 0 } })} />
+        </div>
+        <div>
+          <Label>Tema (skyting)</Label>
+          <Select value="" onValueChange={(val) => {
+            const tema = new Set(v.shooting?.tema || []); tema.add(val); set({ shooting: { ...(v.shooting||{}), tema: Array.from(tema) } });
+          }}>
+            <SelectItem value="">Velg tema…</SelectItem>
+            {SKYTE_TEMAER.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </Select>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {(v.shooting?.tema || []).map((t) => (
+              <Badge key={t} className="gap-1">{t}<button className="ml-1" onClick={() => {
+                const tema = (v.shooting?.tema || []).filter((x) => x !== t); set({ shooting: { ...(v.shooting||{}), tema } });
+              }}>×</button></Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-1">
+        <Label>Notater</Label>
+        <Textarea rows={4} value={v.notes || ""} onChange={(e) => set({ notes: e.target.value })} placeholder="Detaljer, fokusområder, oppmøtested, utstyr…" />
+      </div>
+    </div>
+  );
+}
+
+function YearCalendar({ year, events, onAdd, onEdit, onSelectDate }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 12 }).map((_, idx) => (
+        <MonthView key={idx} year={year} month={idx + 1} events={events} onSelectDate={(d) => {
+          onSelectDate?.(d);
+          onAdd?.({ date: d.format("YYYY-MM-DD") });
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function Toolbar({ year, setYear, onPrint, onExport, onImport, onReset }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-white/80 p-2">
+      <div className="flex items-center gap-2">
+        <Button onClick={() => setYear(year - 1)}><ChevronLeft className="h-4 w-4"/>Forrige</Button>
+        <div className="flex items-center gap-2 rounded-xl border px-3 py-2"><CalendarIcon className="h-4 w-4"/><span className="font-semibold text-lg">{year}</span></div>
+        <Button onClick={() => setYear(year + 1)}>Neste<ChevronRight className="h-4 w-4"/></Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button onClick={onPrint}><Printer className="h-4 w-4"/>Skriv ut</Button>
+        <Button onClick={onExport}><Download className="h-4 w-4"/>Eksporter</Button>
+        <label className="inline-flex items-center gap-2">
+          <Upload className="h-4 w-4"/>
+          <input type="file" accept="application/json" className="hidden" onChange={onImport} />
+          <span className="rounded-2xl border px-3 py-2">Importer</span>
+        </label>
+        <Button onClick={onReset} className="text-red-600"><Trash2 className="h-4 w-4"/>Nullstill</Button>
+      </div>
+    </div>
+  );
+}
+
+function OaktBank({ templates, onAddTemplate, onPlanFromTemplate, onDeleteTemplate, filter }) {
+  const [query, setQuery] = useState("");
+  const [ageFilter, setAgeFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const filtered = templates.filter((t) =>
+    (!query || t.name.toLowerCase().includes(query.toLowerCase())) &&
+    (!ageFilter || (t.age || []).includes(ageFilter)) &&
+    (!typeFilter || t.type === typeFilter)
+  );
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtre</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div>
+              <Label>Søk</Label>
+              <Input placeholder="Søk i øktbank…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+            <div>
+              <Label>Målgruppe</Label>
+              <Select value={ageFilter} onValueChange={setAgeFilter}>
+                <SelectItem value="">Alle</SelectItem>
+                {ALDERSGRUPPER.map((g) => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
+              </Select>
+            </div>
+            <div>
+              <Label>Type</Label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectItem value="">Alle</SelectItem>
+                <SelectItem value="Trening">Trening</SelectItem>
+                <SelectItem value="Konkurranse">Konkurranse</SelectItem>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((t) => (
+          <Card key={t.id}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2"><ColorDot color={DEFAULT_COLORS[t.type]}/>{t.name}</span>
+                <div className="flex items-center gap-2">
+                  {(t.age||[]).map((a) => <Badge key={a}>{ALDERSGRUPPER.find(g=>g.id===a)?.label||a}</Badge>)}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="font-medium">Modalitet:</span> {t.modality||"–"}</div>
+                <div><span className="font-medium">Intensitet:</span> {t.intensity||"–"}</div>
+                <div><span className="font-medium">Varighet:</span> {t.durationMin?`${t.durationMin} min`:"–"}</div>
+                <div><span className="font-medium">Skudd:</span> {t.shooting?.skudd||0}</div>
+              </div>
+              {t.shooting?.tema?.length ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {t.shooting.tema.map((x) => <Badge key={x}>{x}</Badge>)}
+                </div>
+              ) : null}
+              {t.notes && <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">{t.notes}</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button onClick={() => onPlanFromTemplate?.(t)}><Plus className="h-4 w-4"/>Planlegg denne</Button>
+                <Button onClick={() => onAddTemplate?.({ ...t, id: uid(), name: `${t.name} (kopi)` })}><Copy className="h-4 w-4"/>Dupliser</Button>
+                <Button className="text-red-600" onClick={() => onDeleteTemplate?.(t.id)}><Trash2 className="h-4 w-4"/>Slett</Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PDFReferanse() {
+  const [url, setUrl] = useState(null);
+  const onFile = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const objectUrl = URL.createObjectURL(f);
+    setUrl(objectUrl);
+  };
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Last opp PDF som referanse (årsplan, utviklingstrappa m.m.)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <label className="inline-flex items-center gap-2">
+          <Upload className="h-4 w-4"/>
+          <input type="file" accept="application/pdf" className="hidden" onChange={onFile} />
+          <span className="rounded-2xl border px-3 py-2">Velg PDF</span>
+        </label>
+        {url ? (
+          <div className="mt-4 h-[70vh] w-full overflow-hidden rounded-2xl border">
+            <embed src={url} type="application/pdf" className="h-full w-full" />
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-gray-600">Ingen PDF valgt ennå.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function ArsplanOktbankApp() {
+  const now = dayjs();
+  const [tab, setTab] = useState("arsplan");
+  const [year, setYear] = useState(now.year());
+  const [events, setEvents] = useState(() => loadLS(STORAGE_KEYS.EVENTS, []));
+  const [templates, setTemplates] = useState(() => loadLS(STORAGE_KEYS.TEMPLATES, DEFAULT_TEMPLATES));
+  const [editEvent, setEditEvent] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => { saveLS(STORAGE_KEYS.EVENTS, events); }, [events]);
+  useEffect(() => { saveLS(STORAGE_KEYS.TEMPLATES, templates); }, [templates]);
+
+  const eventsThisYear = useMemo(() => events.filter(e => dayjs(e.date).year() === year), [events, year]);
+
+  // Handlers
+  const openNewEvent = (partial) => {
+    const e = {
+      id: uid(),
+      title: "",
+      type: partial?.type || "Trening",
+      date: partial?.date || dayjs().format("YYYY-MM-DD"),
+      modality: "",
+      intensity: "",
+      durationMin: 60,
+      age: [],
+      shooting: { stilling: "", skudd: 0, tema: [] },
+      notes: "",
+    };
+    setEditEvent(e);
+    setDialogOpen(true);
+  };
+
+  const openEditEvent = (id) => {
+    const e = events.find((x) => x.id === id);
+    if (!e) return;
+    setEditEvent({ ...e });
+    setDialogOpen(true);
+  };
+
+  const saveEvent = () => {
+    setEvents((prev) => {
+      const exists = prev.some((x) => x.id === editEvent.id);
+      return exists ? prev.map((x) => (x.id === editEvent.id ? editEvent : x)) : [...prev, editEvent];
+    });
+    setDialogOpen(false);
+  };
+  const deleteEvent = (id) => setEvents((prev) => prev.filter((x) => x.id !== id));
+
+  const onPrint = () => window.print();
+  const onExport = () => {
+    const blob = new Blob([JSON.stringify({ events, templates }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `arsplan_${year}.json`; a.click(); URL.revokeObjectURL(url);
+  };
+  const onImport = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const text = await file.text();
+    try {
+      const data = JSON.parse(text);
+      if (data.events) setEvents(data.events);
+      if (data.templates) setTemplates(data.templates);
+      alert("Import fullført");
+    } catch {
+      alert("Kunne ikke lese filen (må være JSON).");
+    }
+  };
+  const onReset = () => {
+    if (confirm("Sikker på at du vil slette alt i denne nettleseren?")) {
+      setEvents([]); setTemplates(DEFAULT_TEMPLATES);
+    }
+  };
+
+  const planFromTemplate = (t) => {
+    // Åpne dialog med ferdig utfylt event basert på templaten
+    const e = {
+      id: uid(),
+      title: t.name,
+      type: t.type,
+      date: dayjs(`${year}-01-01`).format("YYYY-MM-DD"),
+      modality: t.modality,
+      intensity: t.intensity,
+      durationMin: t.durationMin,
+      age: t.age || [],
+      shooting: t.shooting || { stilling: "", skudd: 0, tema: [] },
+      raceSubtype: t.raceSubtype,
+      notes: t.notes || "",
+    };
+    setEditEvent(e); setDialogOpen(true);
+  };
+
+  const addTemplate = (t) => setTemplates((prev) => [t, ...prev]);
+  const deleteTemplate = (id) => setTemplates((prev) => prev.filter((x) => x.id !== id));
+
+  const eventsList = useMemo(() => eventsThisYear.sort((a,b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf()), [eventsThisYear]);
+
+  const [listOpen, setListOpen] = useState(false);
+
+  return (
+    <div className="mx-auto max-w-[1400px] p-4">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-600 text-white"><CalendarIcon/></div>
+          <div>
+            <h1 className="text-2xl font-bold">Lørenskog Skiskyting – Årsplan & Øktbank</h1>
+            <p className="text-sm text-gray-600">Én side for å se og endre årsplanen (hele kalenderåret), øktbank og konkurranser.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => openNewEvent({ date: dayjs().format("YYYY-MM-DD") })}><Plus className="h-4 w-4"/>Ny hendelse</Button>
+        </div>
+      </header>
+
+      <Toolbar year={year} setYear={setYear} onPrint={onPrint} onExport={onExport} onImport={onImport} onReset={onReset} />
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-4">
+        <div className="lg:col-span-3">
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList>
+              <TabsTrigger onClick={() => setTab("arsplan")}>Årsplan</TabsTrigger>
+              <TabsTrigger onClick={() => setTab("oktbank")}>Øktbank</TabsTrigger>
+              <TabsTrigger onClick={() => setTab("pdf")}>PDF-referanse</TabsTrigger>
+            </TabsList>
+            {tab === "arsplan" && (
+              <TabsContent>
+                <YearCalendar year={year} events={events} onAdd={openNewEvent} onEdit={openEditEvent} />
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">Hendelser {year}
+                      <Button onClick={() => setListOpen(!listOpen)}><Filter className="h-4 w-4"/>Vis/skjul liste</Button>
+                    </CardTitle>
+                  </CardHeader>
+                  {listOpen && (
+                    <CardContent>
+                      <div className="max-h-[300px] overflow-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-gray-500">
+                              <th className="py-1">Dato</th>
+                              <th>Tittel</th>
+                              <th>Type</th>
+                              <th>Modalitet</th>
+                              <th>Int</th>
+                              <th>Skudd</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {eventsList.map((e) => (
+                              <tr key={e.id} className="border-t">
+                                <td className="py-1 whitespace-nowrap">{dayjs(e.date).format("DD.MM.YYYY")}</td>
+                                <td className="max-w-[280px] truncate">{e.title || <span className="opacity-50">(uten tittel)</span>}</td>
+                                <td><Badge className="gap-1"><ColorDot color={DEFAULT_COLORS[e.type]}/>{e.type}{e.raceSubtype?` · ${e.raceSubtype}`:""}</Badge></td>
+                                <td>{e.modality||"–"}</td>
+                                <td>{e.intensity||"–"}</td>
+                                <td>{e.shooting?.skudd||0}</td>
+                                <td className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button onClick={() => { setEditEvent({ ...e }); setDialogOpen(true); }}><Save className="h-4 w-4"/>Rediger</Button>
+                                    <Button className="text-red-600" onClick={() => deleteEvent(e.id)}><Trash2 className="h-4 w-4"/>Slett</Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              </TabsContent>
+            )}
+            {tab === "oktbank" && (
+              <TabsContent>
+                <OaktBank templates={templates} onAddTemplate={addTemplate} onPlanFromTemplate={planFromTemplate} onDeleteTemplate={deleteTemplate} />
+              </TabsContent>
+            )}
+            {tab === "pdf" && (
+              <TabsContent>
+                <PDFReferanse />
+              </TabsContent>
+            )}
+          </Tabs>
+        </div>
+        {/* Sidepanel */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fargekode</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 text-sm">
+              {Object.entries(DEFAULT_COLORS).map(([k, c]) => (
+                <div key={k} className="flex items-center justify-between">
+                  <span className="flex items-center gap-2"><ColorDot color={c}/>{k}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Utviklingstrapp (anbefalt målgruppe)</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-700">
+              <ul className="list-disc space-y-1 pl-5">
+                <li><span className="font-medium">U12 (10–12):</span> Variasjon og lek, korte økter, enkel skyting liggende.</li>
+                <li><span className="font-medium">U14 (13–14):</span> Mer organisert trening, enkel fart/tempo, introdusere stående.</li>
+                <li><span className="font-medium">U16 (15–16):</span> Systematikk og progresjon, mer spesifikk intensitetsstyring, kombinert skyting.</li>
+                <li><span className="font-medium">JR (17–20):</span> Individuell tilpasning, helhetlig belastningsstyring, konkurransespesifikk trening.</li>
+              </ul>
+              <p className="mt-2 text-xs text-gray-500">Bruk dette som filter i øktbanken, og merk økter med passende målgruppe.</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Hurtigverktøy</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Button onClick={() => openNewEvent({ type: "Trening" })}><Plus className="h-4 w-4"/>Ny trening</Button>
+              <Button onClick={() => openNewEvent({ type: "Skyting" })}><Plus className="h-4 w-4"/>Ny skyteøkt</Button>
+              <Button onClick={() => openNewEvent({ type: "Konkurranse" })}><Plus className="h-4 w-4"/>Ny konkurranse</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tips</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-700">
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Du kan eksportere/importere plan og øktbank som JSON for å dele med trenerteamet.</li>
+                <li>Bruk <span className="font-medium">Intensitet</span> og <span className="font-medium">Skudd</span> for å styre totalbelastning per uke.</li>
+                <li>Legg inn <span className="font-medium">Restitusjon</span> etter større konkurranser og samlinger.</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Dialog for ny/rediger hendelse */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{events.some((x) => x.id === editEvent?.id) ? "Rediger hendelse" : "Ny hendelse"}</DialogTitle>
+          </DialogHeader>
+          {editEvent && <EventForm value={editEvent} onChange={setEditEvent} />}
+          <DialogFooter>
+            {editEvent && events.some((x) => x.id === editEvent.id) && (
+              <Button className="text-red-600 mr-auto" onClick={() => { deleteEvent(editEvent.id); setDialogOpen(false); }}><Trash2 className="h-4 w-4"/>Slett</Button>
+            )}
+            <Button onClick={() => setDialogOpen(false)}>Avbryt</Button>
+            <Button onClick={saveEvent}><Save className="h-4 w-4"/>Lagre</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <style>{`
+        @media print {
+          header, .no-print, .shadcn-tabs-list, .rounded-2xl.border.bg-white\/80.p-2 { display: none !important; }
+          body { background: white; }
+        }
+      `}</style>
+    </div>
+  );
+}
