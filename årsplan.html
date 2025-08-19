@@ -1,775 +1,763 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar as CalendarIcon, Plus, Upload, Download, Printer, Filter, Trash2, Save, Copy, ChevronLeft, ChevronRight, X } from "lucide-react";
-import dayjs from "dayjs";
-import isoWeek from "dayjs/plugin/isoWeek";
-import weekday from "dayjs/plugin/weekday";
-import localizedFormat from "dayjs/plugin/localizedFormat";
-
-// Tailwind is available by default in the playground
-// shadcn/ui components – if not present in your runtime, the fallbacks below ensure it still renders
-let Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Tabs, TabsList, TabsTrigger, TabsContent, Checkbox, Switch;
-try {
-  // @ts-ignore - shadcn components are available in ChatGPT's environment
-  ({ Button } = require("@/components/ui/button"));
-  ({ Card, CardContent, CardHeader, CardTitle } = require("@/components/ui/card"));
-  ({ Input } = require("@/components/ui/input"));
-  ({ Label } = require("@/components/ui/label"));
-  ({ Select, SelectContent, SelectItem, SelectTrigger, SelectValue } = require("@/components/ui/select"));
-  ({ Textarea } = require("@/components/ui/textarea"));
-  ({ Badge } = require("@/components/ui/badge"));
-  ({ Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } = require("@/components/ui/dialog"));
-  ({ Tabs, TabsList, TabsTrigger, TabsContent } = require("@/components/ui/tabs"));
-  ({ Checkbox } = require("@/components/ui/checkbox"));
-  ({ Switch } = require("@/components/ui/switch"));
-} catch (e) {
-  // Fallback minimal components using plain HTML + Tailwind
-  Button = ({ className = "", children, ...props }) => (
-    <button className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 shadow-sm border bg-white hover:bg-gray-50 ${className}`} {...props}>{children}</button>
-  );
-  Card = ({ className = "", children }) => (
-    <div className={`rounded-2xl border bg-white shadow-sm ${className}`}>{children}</div>
-  );
-  CardHeader = ({ children, className = "" }) => <div className={`p-4 border-b ${className}`}>{children}</div>;
-  CardTitle = ({ children, className = "" }) => <h3 className={`text-xl font-semibold ${className}`}>{children}</h3>;
-  CardContent = ({ children, className = "" }) => <div className={`p-4 ${className}`}>{children}</div>;
-  Input = (props) => <input className="w-full rounded-xl border px-3 py-2" {...props} />;
-  Label = ({ children, className = "" }) => <label className={`text-sm font-medium ${className}`}>{children}</label>;
-  Select = ({ value, onValueChange, children }) => <select className="w-full rounded-xl border px-3 py-2" value={value} onChange={(e) => onValueChange?.(e.target.value)}>{children}</select>;
-  SelectContent = ({ children }) => <>{children}</>;
-  SelectItem = ({ value, children }) => <option value={value}>{children}</option>;
-  SelectTrigger = ({ children }) => <>{children}</>;
-  SelectValue = ({ placeholder }) => <span className="text-gray-500">{placeholder}</span>;
-  Textarea = (props) => <textarea className="w-full rounded-xl border px-3 py-2" {...props} />;
-  Badge = ({ className = "", children }) => <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium border ${className}`}>{children}</span>;
-  const SimpleDialog = ({ open, onOpenChange, title, children, footer }) => open ? (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onMouseDown={(e)=>{ if(e.target===e.currentTarget) onOpenChange?.(false); }}>
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button onClick={() => onOpenChange?.(false)} className="rounded-full p-1 hover:bg-gray-100"><X className="h-5 w-5"/></button>
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lørenskog Skiskyting · Årsplan & Øktbank</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;--card:#ffffff;--ink:#0f172a;--muted:#6b7280;--line:#e5e7eb;--brand:#1d4ed8;--brand-2:#0ea5e9;--accent:#22c55e;--danger:#dc2626;--warning:#f59e0b;
+      --radius:14px;--shadow:0 6px 16px rgba(2,6,23,.06);--shadow-2:0 12px 28px rgba(2,6,23,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,Ubuntu,sans-serif;background:var(--bg);color:var(--ink)}
+    .container{max-width:1260px;margin:0 auto;padding:16px}
+    header.app{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .logo-wrap{display:flex;gap:14px;align-items:center}
+    .logo{width:64px;height:64px;border-radius:16px;overflow:hidden;background:#0b3b8a;box-shadow:var(--shadow)}
+    .logo svg{display:block;width:100%;height:100%}
+    .title h1{margin:0;font-size:22px;letter-spacing:.2px}
+    .title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    button, .btn{background:#fff;border:1px solid var(--line);padding:8px 12px;border-radius:10px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;box-shadow:var(--shadow);font-weight:600}
+    button:hover,.btn:hover{background:#f9fafb}
+    .btn.brand{background:var(--brand);border-color:var(--brand);color:#fff}
+    .btn.danger{background:#fff;color:var(--danger);border-color:#f3d0d0}
+    .btn.ghost{background:transparent;border-color:transparent;box-shadow:none}
+    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff}
+    .layout{display:grid;grid-template-columns:3fr 1fr;gap:16px}
+    @media (max-width:1000px){.layout{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card h3{margin:0;font-size:16px}
+    .card .head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+    .card .body{padding:14px 16px}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font-weight:600}
+    .tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+    .grid-12{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    @media (min-width:1100px){.grid-12{grid-template-columns:repeat(4,1fr)}}
+    @media (min-width:1300px){.grid-12{grid-template-columns:repeat(6,1fr)}}
+    .month{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+    .month .mhead{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line);background:#f8fafc}
+    .month .week{display:grid;grid-template-columns:repeat(7,1fr)}
+    .dow{padding:6px 6px;text-align:center;color:#64748b;font-size:11px;background:#f9fafb;border-bottom:1px solid var(--line)}
+    .day{min-height:86px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;position:relative}
+    .day:last-child{border-right:none}
+    .day .dnum{font-size:12px;color:#334155;font-weight:700}
+    .badges{position:absolute;top:6px;right:6px;display:flex;gap:3px}
+    .badge{height:8px;width:8px;border-radius:50%}
+    .event{margin-top:2px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .muted{color:var(--muted)}
+    .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .legend .row{display:flex;align-items:center;gap:8px;font-size:12px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .list{max-height:320px;overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 6px;border-bottom:1px solid var(--line);font-size:13px}
+    th{text-align:left;color:#475569;font-weight:700}
+    .right{display:flex;justify-content:flex-end;gap:8px}
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,.5);display:none;place-items:center;padding:16px;z-index:50}
+    .overlay.show{display:grid}
+    .modal{background:#fff;border-radius:16px;max-width:920px;width:100%;box-shadow:var(--shadow-2);border:1px solid var(--line)}
+    .modal .mhead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .modal .mbody{padding:14px 16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    @media (max-width:860px){.row,.row3,.row4{grid-template-columns:1fr}}
+    label{font-size:12px;color:#475569;font-weight:700}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:var(--shadow-2, 0 0 0 rgba(0,0,0,0));font-size:14px}
+    textarea{min-height:80px}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff;display:inline-flex;gap:6px;align-items:center}
+    .chip .x{cursor:pointer;color:#64748b}
+    .wkcode{display:inline-flex;align-items:center;gap:6px;border:1px dashed #cbd5e1;border-radius:999px;padding:2px 8px;font-size:11px}
+    .wkgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    @media (max-width:900px){.wkgrid{grid-template-columns:repeat(2,1fr)}}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:2px 6px}
+    .small{font-size:12px}
+    .success{color:var(--accent)}
+    .warn{color:var(--warning)}
+    .eq{display:inline-flex;align-items:center;gap:6px}
+    .eq b{background:#0f766e;color:#fff;border-radius:6px;padding:2px 6px;font-size:11px}
+    .sticky-top{position:sticky;top:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="app">
+      <div class="logo-wrap">
+        <div class="logo" title="Lørenskog Skiskyting">
+          <!-- Enkel inline-logo (kan byttes med PNG via Innstillinger) -->
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0" stop-color="#0ea5e9"/>
+                <stop offset="1" stop-color="#1d4ed8"/>
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width="100" height="100" rx="18" fill="url(#g1)"/>
+            <circle cx="32" cy="38" r="10" fill="#fff"/>
+            <rect x="50" y="33" width="40" height="6" rx="3" fill="#fff"/>
+            <rect x="38" y="58" width="50" height="6" rx="3" fill="#ffcc00"/>
+          </svg>
         </div>
-        <div className="p-4">{children}</div>
-        {footer && <div className="border-t p-4">{footer}</div>}
+        <div class="title">
+          <h1>Lørenskog Skiskyting – Årsplan & Øktbank</h1>
+          <p>Planlegg et helt kalenderår, øktbank, ukekoder, CSV/ICS og EQTiming-sjekk. Alt lagres i denne nettleseren.</p>
+        </div>
       </div>
-    </div>
-  ) : null;
-  Dialog = ({ open, onOpenChange, children }) => <SimpleDialog open={open} onOpenChange={onOpenChange} title="">{children}</SimpleDialog>;
-  DialogHeader = ({ children }) => <div className="hidden">{children}</div>;
-  DialogTitle = ({ children }) => <div className="hidden">{children}</div>;
-  DialogFooter = ({ children }) => <div className="flex justify-end gap-2">{children}</div>;
-  Tabs = ({ value, onValueChange, children }) => <div>{children}</div>;
-  TabsList = ({ children }) => <div className="mb-4 flex flex-wrap gap-2">{children}</div>;
-  TabsTrigger = ({ children, onClick }) => <Button onClick={onClick}>{children}</Button>;
-  TabsContent = ({ children }) => <div>{children}</div>;
-  Checkbox = ({ checked, onCheckedChange }) => <input type="checkbox" className="h-4 w-4" checked={!!checked} onChange={(e)=>onCheckedChange?.(e.target.checked)} />;
-  Switch = ({ checked, onCheckedChange }) => <input type="checkbox" className="h-5 w-10" checked={!!checked} onChange={(e)=>onCheckedChange?.(e.target.checked)} />;
-}
+      <div class="toolbar">
+        <button id="prevYear">← Forrige</button>
+        <span class="pill"><span>År:</span> <input id="yearInput" type="number" style="width:92px"/></span>
+        <button id="nextYear">Neste →</button>
+        <button class="btn brand" id="newEvent">+ Ny hendelse</button>
+        <label class="btn" title="Importer JSON"><input id="importJson" type="file" accept="application/json" hidden/>↥ Importer</label>
+        <button id="exportJson" class="btn">↧ Eksporter</button>
+        <label class="btn" title="Importer CSV (dato;type;...)" ><input id="importCsv" type="file" accept="text/csv" hidden/>CSV</label>
+        <label class="btn" title="Importer ICS (iCalendar)"><input id="importIcs" type="file" accept="text/calendar,.ics" hidden/>ICS</label>
+        <button id="printBtn" class="btn">🖨️ Skriv ut</button>
+      </div>
+    </header>
 
-dayjs.extend(isoWeek);
-dayjs.extend(weekday);
-dayjs.extend(localizedFormat);
+    <div class="layout">
+      <main>
+        <div class="card">
+          <div class="head">
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-tab="plan">Årsplan</button>
+              <button class="tab" data-tab="bank">Øktbank</button>
+              <button class="tab" data-tab="uker">Ukekoder</button>
+              <button class="tab" data-tab="roller">Roller</button>
+              <button class="tab" data-tab="pdf">PDF‑referanse</button>
+              <button class="tab" data-tab="import">Import/EQTiming</button>
+            </div>
+          </div>
+          <div class="body">
+            <!-- Årsplan -->
+            <section id="tab-plan">
+              <div class="grid-12" id="months"></div>
+              <div class="card" style="margin-top:12px">
+                <div class="head"><h3>Hendelser <span id="yearLabel"></span></h3><div class="small muted">Klikk på en dato i kalenderen for rask ny hendelse.</div></div>
+                <div class="body list">
+                  <table id="eventTable">
+                    <thead>
+                      <tr><th>Dato</th><th>Tittel</th><th>Type</th><th>Mod</th><th>Int</th><th>Skudd</th><th>EQ</th><th></th></tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
 
-// Helpers
-const STORAGE_KEYS = {
-  EVENTS: "arsplanEvents:v1",
-  TEMPLATES: "oktBank:v1",
-  SETTINGS: "arsplanSettings:v1",
-};
-
-const DEFAULT_COLORS = {
-  Trening: "#2563eb", // blå
-  Skyting: "#0ea5e9", // cyan
-  Konkurranse: "#dc2626", // rød
-  Samling: "#a855f7", // lilla
-  Annet: "#6b7280", // grå
-  Restitusjon: "#16a34a", // grønn
-};
-
-const ALDERSGRUPPER = [
-  { id: "U12", label: "10–12 år" },
-  { id: "U14", label: "13–14 år" },
-  { id: "U16", label: "15–16 år" },
-  { id: "JR", label: "Junior (17–20)" },
-];
-
-const INTENSITETER = ["I1", "I2", "I3", "I4", "I5"];
-
-const KONK_TYPES = [
-  "Sprint",
-  "Normal",
-  "Jaktstart",
-  "Fellesstart",
-  "Stafett",
-  "Mix-stafett",
-  "KM",
-  "HL/NC",
-  "Kretsrenn",
-  "Lokalt renn",
-];
-
-const MODALITETER = ["Ski skøyting", "Ski klassisk", "Rulleski skøyting", "Rulleski klassisk", "Løp", "Sykkel", "Styrke", "Basistrening"];
-
-const SKYTE_TEMAER = [
-  "Grunnstilling liggende",
-  "Grunnstilling stående",
-  "Siktebilde & avtrekk",
-  "Pust & rytme",
-  "Avtrekkstid/trigger",
-  "Repetisjonsrytme",
-  "Magasinbytte",
-  "Stativarbeid",
-  "Overganger (inn/ut)",
-  "Vind/korrigering",
-];
-
-function uid() { return crypto?.randomUUID?.() || Math.random().toString(36).slice(2); }
-
-function loadLS(key, fallback) {
-  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
-}
-function saveLS(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
-
-// Default øktbank (kan redigeres)
-const DEFAULT_TEMPLATES = [
-  {
-    id: uid(),
-    name: "U12 Lekpreget I2 (45–60 min) + grunnleggende skyting",
-    type: "Trening",
-    modality: "Løp",
-    intensity: "I2",
-    durationMin: 55,
-    shooting: { stilling: "Liggende", skudd: 30, tema: ["Grunnstilling liggende", "Siktebilde & avtrekk"] },
-    age: ["U12"],
-    notes: "Lekpreget løp i terreng. På standplass: 3×10 liggende, fokus ro og siktebilde."
-  },
-  {
-    id: uid(),
-    name: "U14 Rulleski I3 5×4 min + stående teknikk",
-    type: "Trening",
-    modality: "Rulleski skøyting",
-    intensity: "I3",
-    durationMin: 75,
-    shooting: { stilling: "Stående", skudd: 40, tema: ["Grunnstilling stående", "Avtrekkstid/trigger"] },
-    age: ["U14"],
-    notes: "Oppvarming 20 min, 5×4 min I3 m/2 min pause. Skyting mellom drag."
-  },
-  {
-    id: uid(),
-    name: "U16 VO2 I4 6×3 min + kombinert skyting",
-    type: "Trening",
-    modality: "Løp",
-    intensity: "I4",
-    durationMin: 80,
-    shooting: { stilling: "Kombinert", skudd: 50, tema: ["Repetisjonsrytme", "Overganger (inn/ut)"] },
-    age: ["U16"],
-    notes: "6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier)."
-  },
-  {
-    id: uid(),
-    name: "JR Langtur I1–2 90–120 min + 60 skudd",
-    type: "Trening",
-    modality: "Ski skøyting",
-    intensity: "I2",
-    durationMin: 120,
-    shooting: { stilling: "Variert", skudd: 60, tema: ["Vind/korrigering", "Pust & rytme"] },
-    age: ["JR"],
-    notes: "Rolig langtur. 6×10 skudd teknikkøvelser."
-  },
-  {
-    id: uid(),
-    name: "Konkurranse – Sprint",
-    type: "Konkurranse",
-    modality: "Ski skøyting",
-    intensity: "I5",
-    durationMin: 45,
-    shooting: { stilling: "Konk", skudd: 10, tema: [] },
-    raceSubtype: "Sprint",
-    age: ["U12", "U14", "U16", "JR"],
-    notes: "Standard sprintoppsett."
-  },
-];
-
-// Components
-function ColorDot({ color }) { return <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />; }
-
-function MonthView({ year, month, events, onSelectDate }) {
-  const start = dayjs(`${year}-${String(month).padStart(2, "0")}-01`);
-  const firstDay = start.startOf("month");
-  const daysInMonth = start.daysInMonth();
-  const leading = (firstDay.day() + 6) % 7; // make Monday=0
-  const cells = [];
-  for (let i = 0; i < leading; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(dayjs(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`));
-  const trailing = (7 - (cells.length % 7)) % 7;
-  for (let i = 0; i < trailing; i++) cells.push(null);
-
-  const monthEvents = events.filter((e) => dayjs(e.date).month() + 1 === month && dayjs(e.date).year() === year);
-  const eventsByDay = monthEvents.reduce((acc, e) => {
-    const key = dayjs(e.date).format("YYYY-MM-DD");
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(e);
-    return acc;
-  }, {});
-
-  return (
-    <Card className="h-full">
-      <CardHeader className="flex items-center justify-between">
-        <CardTitle>{start.format("MMMM")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-7 gap-1 text-xs text-gray-500">
-          {"man tir ons tor fre lør søn".split(" ").map((w) => (
-            <div key={w} className="px-1 py-1 text-center font-medium uppercase">{w}</div>
-          ))}
-        </div>
-        <div className="mt-1 grid grid-cols-7 gap-1">
-          {cells.map((d, i) => {
-            const key = d ? d.format("YYYY-MM-DD") : `empty-${i}`;
-            const dayEvents = d ? eventsByDay[key] || [] : [];
-            return (
-              <div key={key} className={`min-h-[80px] rounded-xl border bg-white/70 p-1 ${d ? "hover:bg-blue-50 cursor-pointer" : "opacity-50"}`} onClick={() => d && onSelectDate?.(d)}>
-                <div className="flex items-center justify-between text-xs text-gray-600">
-                  <span className="font-medium">{d ? d.date() : ""}</span>
-                  <div className="flex gap-1">
-                    {dayEvents.slice(0, 4).map((e) => (
-                      <ColorDot key={e.id} color={DEFAULT_COLORS[e.type] || "#6b7280"} />
-                    ))}
+            <!-- Øktbank -->
+            <section id="tab-bank" hidden>
+              <div class="row">
+                <div>
+                  <label>Søk</label>
+                  <input id="bankQuery" placeholder="Søk i øktbank…"/>
+                </div>
+                <div class="row">
+                  <div>
+                    <label>Målgruppe</label>
+                    <select id="bankAge">
+                      <option value="">Alle</option>
+                      <option value="U12">10–12</option>
+                      <option value="U14">13–14</option>
+                      <option value="U16">15–16</option>
+                      <option value="JR">Junior</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Type</label>
+                    <select id="bankType">
+                      <option value="">Alle</option>
+                      <option>Trening</option>
+                      <option>Skyting</option>
+                      <option>Konkurranse</option>
+                    </select>
                   </div>
                 </div>
-                <div className="mt-1 flex flex-col gap-0.5">
-                  {dayEvents.slice(0, 3).map((e) => (
-                    <div key={e.id} className="truncate text-xs">
-                      <span className="opacity-70">• </span>
-                      <span className="font-medium">{e.title || e.type}</span>
+              </div>
+              <div id="bankList" style="margin-top:12px"></div>
+            </section>
+
+            <!-- Ukekoder -->
+            <section id="tab-uker" hidden>
+              <div class="row">
+                <div>
+                  <h3 style="margin-bottom:6px">Velg ukekoder</h3>
+                  <p class="small muted">Kode per uke hjelper periodisering og belastningsstyring. Vises i kalenderen.</p>
+                </div>
+                <div class="card">
+                  <div class="head"><h3>Forklaring</h3></div>
+                  <div class="body small">
+                    <div class="legend">
+                      <div class="row"><span class="wkcode">BAS</span> Grunn/base</div>
+                      <div class="row"><span class="wkcode">OPP</span> Oppbygging</div>
+                      <div class="row"><span class="wkcode">KONK</span> Konkurranse</div>
+                      <div class="row"><span class="wkcode">RES</span> Restitusjon</div>
+                      <div class="row"><span class="wkcode">EKS</span> Tester/eksamen</div>
                     </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <div className="text-[10px] text-gray-500">+{dayEvents.length - 3} flere…</div>
-                  )}
+                  </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+              <div id="wkGrid" class="wkgrid" style="margin-top:12px"></div>
+            </section>
 
-function EventForm({ value, onChange }) {
-  const v = value;
-  const set = (patch) => onChange?.({ ...v, ...patch });
-  return (
-    <div className="grid grid-cols-1 gap-3">
-      <div className="grid grid-cols-1 gap-1">
-        <Label>Tittel</Label>
-        <Input value={v.title || ""} onChange={(e) => set({ title: e.target.value })} placeholder="F.eks. Basistrening + 30 skudd" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Type</Label>
-          <Select value={v.type} onValueChange={(val) => set({ type: val })}>
-            <SelectItem value="Trening">Trening</SelectItem>
-            <SelectItem value="Skyting">Skyting</SelectItem>
-            <SelectItem value="Konkurranse">Konkurranse</SelectItem>
-            <SelectItem value="Samling">Samling</SelectItem>
-            <SelectItem value="Restitusjon">Restitusjon</SelectItem>
-            <SelectItem value="Annet">Annet</SelectItem>
-          </Select>
-        </div>
-        <div>
-          <Label>Dato</Label>
-          <Input type="date" value={dayjs(v.date).format("YYYY-MM-DD")} onChange={(e) => set({ date: e.target.value })} />
-        </div>
-      </div>
-      {v.type === "Konkurranse" && (
-        <div>
-          <Label>Konkurransetype</Label>
-          <Select value={v.raceSubtype || ""} onValueChange={(val) => set({ raceSubtype: val })}>
-            {KONK_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-          </Select>
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Modalitet</Label>
-          <Select value={v.modality || ""} onValueChange={(val) => set({ modality: val })}>
-            {MODALITETER.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-          </Select>
-        </div>
-        <div>
-          <Label>Intensitet</Label>
-          <Select value={v.intensity || ""} onValueChange={(val) => set({ intensity: val })}>
-            {INTENSITETER.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Varighet (min)</Label>
-          <Input type="number" value={v.durationMin || 60} onChange={(e) => set({ durationMin: Number(e.target.value) || 0 })} />
-        </div>
-        <div>
-          <Label>Målgruppe</Label>
-          <div className="flex flex-wrap gap-2">
-            {ALDERSGRUPPER.map((g) => (
-              <label key={g.id} className="inline-flex items-center gap-2 rounded-xl border px-2 py-1">
-                <Checkbox checked={v.age?.includes(g.id)} onCheckedChange={(c) => {
-                  const setAge = new Set(v.age || []); c ? setAge.add(g.id) : setAge.delete(g.id);
-                  set({ age: Array.from(setAge) });
-                }} />
-                <span className="text-sm">{g.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label>Skytestilling</Label>
-          <Select value={v.shooting?.stilling || ""} onValueChange={(val) => set({ shooting: { ...(v.shooting||{}), stilling: val } })}>
-            <SelectItem value="Liggende">Liggende</SelectItem>
-            <SelectItem value="Stående">Stående</SelectItem>
-            <SelectItem value="Kombinert">Kombinert</SelectItem>
-            <SelectItem value="Variert">Variert</SelectItem>
-            <SelectItem value="Konk">Konk</SelectItem>
-          </Select>
-        </div>
-        <div>
-          <Label>Antall skudd</Label>
-          <Input type="number" value={v.shooting?.skudd || 0} onChange={(e) => set({ shooting: { ...(v.shooting||{}), skudd: Number(e.target.value) || 0 } })} />
-        </div>
-        <div>
-          <Label>Tema (skyting)</Label>
-          <Select value="" onValueChange={(val) => {
-            const tema = new Set(v.shooting?.tema || []); tema.add(val); set({ shooting: { ...(v.shooting||{}), tema: Array.from(tema) } });
-          }}>
-            <SelectItem value="">Velg tema…</SelectItem>
-            {SKYTE_TEMAER.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-          </Select>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {(v.shooting?.tema || []).map((t) => (
-              <Badge key={t} className="gap-1">{t}<button className="ml-1" onClick={() => {
-                const tema = (v.shooting?.tema || []).filter((x) => x !== t); set({ shooting: { ...(v.shooting||{}), tema } });
-              }}>×</button></Badge>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-1">
-        <Label>Notater</Label>
-        <Textarea rows={4} value={v.notes || ""} onChange={(e) => set({ notes: e.target.value })} placeholder="Detaljer, fokusområder, oppmøtested, utstyr…" />
-      </div>
-    </div>
-  );
-}
-
-function YearCalendar({ year, events, onAdd, onEdit, onSelectDate }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 12 }).map((_, idx) => (
-        <MonthView key={idx} year={year} month={idx + 1} events={events} onSelectDate={(d) => {
-          onSelectDate?.(d);
-          onAdd?.({ date: d.format("YYYY-MM-DD") });
-        }} />
-      ))}
-    </div>
-  );
-}
-
-function Toolbar({ year, setYear, onPrint, onExport, onImport, onReset }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-white/80 p-2">
-      <div className="flex items-center gap-2">
-        <Button onClick={() => setYear(year - 1)}><ChevronLeft className="h-4 w-4"/>Forrige</Button>
-        <div className="flex items-center gap-2 rounded-xl border px-3 py-2"><CalendarIcon className="h-4 w-4"/><span className="font-semibold text-lg">{year}</span></div>
-        <Button onClick={() => setYear(year + 1)}>Neste<ChevronRight className="h-4 w-4"/></Button>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button onClick={onPrint}><Printer className="h-4 w-4"/>Skriv ut</Button>
-        <Button onClick={onExport}><Download className="h-4 w-4"/>Eksporter</Button>
-        <label className="inline-flex items-center gap-2">
-          <Upload className="h-4 w-4"/>
-          <input type="file" accept="application/json" className="hidden" onChange={onImport} />
-          <span className="rounded-2xl border px-3 py-2">Importer</span>
-        </label>
-        <Button onClick={onReset} className="text-red-600"><Trash2 className="h-4 w-4"/>Nullstill</Button>
-      </div>
-    </div>
-  );
-}
-
-function OaktBank({ templates, onAddTemplate, onPlanFromTemplate, onDeleteTemplate, filter }) {
-  const [query, setQuery] = useState("");
-  const [ageFilter, setAgeFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const filtered = templates.filter((t) =>
-    (!query || t.name.toLowerCase().includes(query.toLowerCase())) &&
-    (!ageFilter || (t.age || []).includes(ageFilter)) &&
-    (!typeFilter || t.type === typeFilter)
-  );
-  return (
-    <div className="grid grid-cols-1 gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtre</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div>
-              <Label>Søk</Label>
-              <Input placeholder="Søk i øktbank…" value={query} onChange={(e) => setQuery(e.target.value)} />
-            </div>
-            <div>
-              <Label>Målgruppe</Label>
-              <Select value={ageFilter} onValueChange={setAgeFilter}>
-                <SelectItem value="">Alle</SelectItem>
-                {ALDERSGRUPPER.map((g) => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}
-              </Select>
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectItem value="">Alle</SelectItem>
-                <SelectItem value="Trening">Trening</SelectItem>
-                <SelectItem value="Konkurranse">Konkurranse</SelectItem>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((t) => (
-          <Card key={t.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2"><ColorDot color={DEFAULT_COLORS[t.type]}/>{t.name}</span>
-                <div className="flex items-center gap-2">
-                  {(t.age||[]).map((a) => <Badge key={a}>{ALDERSGRUPPER.find(g=>g.id===a)?.label||a}</Badge>)}
+            <!-- Roller -->
+            <section id="tab-roller" hidden>
+              <div class="row">
+                <div class="card">
+                  <div class="head"><h3>Personer</h3><button class="btn" id="addPerson">+ Legg til</button></div>
+                  <div class="body list">
+                    <table id="peopleTable"><thead><tr><th>Navn</th><th>Roller</th><th>Kontakt</th><th></th></tr></thead><tbody></tbody></table>
+                  </div>
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="font-medium">Modalitet:</span> {t.modality||"–"}</div>
-                <div><span className="font-medium">Intensitet:</span> {t.intensity||"–"}</div>
-                <div><span className="font-medium">Varighet:</span> {t.durationMin?`${t.durationMin} min`:"–"}</div>
-                <div><span className="font-medium">Skudd:</span> {t.shooting?.skudd||0}</div>
-              </div>
-              {t.shooting?.tema?.length ? (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {t.shooting.tema.map((x) => <Badge key={x}>{x}</Badge>)}
+                <div class="card">
+                  <div class="head"><h3>Standardroller</h3></div>
+                  <div class="body small">
+                    <div class="chips" id="roleChips"></div>
+                    <p class="muted small" style="margin-top:8px">Roller kan tildeles per hendelse i skjemaet (f.eks. Trener, Lagleder, Standplass, Smøring, Transport, Tidtakning, Førstehjelp).</p>
+                  </div>
                 </div>
-              ) : null}
-              {t.notes && <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">{t.notes}</p>}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button onClick={() => onPlanFromTemplate?.(t)}><Plus className="h-4 w-4"/>Planlegg denne</Button>
-                <Button onClick={() => onAddTemplate?.({ ...t, id: uid(), name: `${t.name} (kopi)` })}><Copy className="h-4 w-4"/>Dupliser</Button>
-                <Button className="text-red-600" onClick={() => onDeleteTemplate?.(t.id)}><Trash2 className="h-4 w-4"/>Slett</Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
+            </section>
 
-function PDFReferanse() {
-  const [url, setUrl] = useState(null);
-  const onFile = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const objectUrl = URL.createObjectURL(f);
-    setUrl(objectUrl);
-  };
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Last opp PDF som referanse (årsplan, utviklingstrappa m.m.)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <label className="inline-flex items-center gap-2">
-          <Upload className="h-4 w-4"/>
-          <input type="file" accept="application/pdf" className="hidden" onChange={onFile} />
-          <span className="rounded-2xl border px-3 py-2">Velg PDF</span>
-        </label>
-        {url ? (
-          <div className="mt-4 h-[70vh] w-full overflow-hidden rounded-2xl border">
-            <embed src={url} type="application/pdf" className="h-full w-full" />
+            <!-- PDF referanse -->
+            <section id="tab-pdf" hidden>
+              <div class="row">
+                <div class="card">
+                  <div class="head"><h3>Last opp PDF (årsplan, Utviklingstrappa, skyte-notater)</h3></div>
+                  <div class="body">
+                    <label class="btn">↥ Velg PDF <input id="pdfInput" hidden type="file" accept="application/pdf"/></label>
+                    <div id="pdfViewer" style="margin-top:12px;height:70vh;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:none">
+                      <embed id="pdfEmbed" type="application/pdf" style="width:100%;height:100%" />
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="head"><h3>Utviklingstrapp – kortversjon</h3></div>
+                  <div class="body small">
+                    <ul>
+                      <li><b>U12 (10–12):</b> Variasjon/lek, korte økter, enkel skyting liggende.</li>
+                      <li><b>U14 (13–14):</b> Mer organisert, enkel fart/tempo, introduser stående.</li>
+                      <li><b>U16 (15–16):</b> Systematikk/progresjon, intensitetsstyring, kombinert skyting.</li>
+                      <li><b>JR (17–20):</b> Individtilpasning, helhetlig belastning, konkurransespesifikt.</li>
+                    </ul>
+                    <p class="muted">Bruk som filter i øktbank og for merking av økter.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Import/EQTiming -->
+            <section id="tab-import" hidden>
+              <div class="card">
+                <div class="head"><h3>CSV/ICS-import</h3></div>
+                <div class="body small">
+                  <p><b>CSV</b> forventer kolonner (semikolon eller komma): <span class="kbd">date</span>, <span class="kbd">title</span>, <span class="kbd">type</span>, <span class="kbd">modality</span>, <span class="kbd">intensity</span>, <span class="kbd">duration</span>, <span class="kbd">shots</span>, <span class="kbd">age</span>, <span class="kbd">notes</span>, <span class="kbd">raceSubtype</span></p>
+                  <p><b>ICS</b> (iCalendar) støttes for grunnleggende felt (<span class="kbd">DTSTART</span>, <span class="kbd">SUMMARY</span>, <span class="kbd">DESCRIPTION</span>).</p>
+                  <div class="chips">
+                    <label class="btn">Importer CSV <input id="csv2" type="file" accept="text/csv" hidden/></label>
+                    <label class="btn">Importer ICS <input id="ics2" type="file" accept="text/calendar,.ics" hidden/></label>
+                    <button id="downloadCsv" class="btn">Last ned CSV‑mal</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:12px">
+                <div class="head"><h3>EQTiming‑sjekk (valgfritt)</h3></div>
+                <div class="body small">
+                  <p>Lim inn URL til et EQTiming‑arrangement (påmelding eller live). Lenkes til hendelsen – og vi forsøker å hente navn/tittel hvis mulig.<br/><span class="muted">NB: Direkte automatisk import kan kreve API‑tilgang/CORS. Uansett lagres lenken på hendelsen.</span></p>
+                  <div class="row">
+                    <div>
+                      <label>EQTiming‑URL</label>
+                      <input id="eqUrl" placeholder="https://signup.eqtiming.com/... eller https://live.eqtiming.com/..." />
+                    </div>
+                    <div>
+                      <label>Hendelse</label>
+                      <select id="eqEventSelect"></select>
+                    </div>
+                  </div>
+                  <div class="chips" style="margin-top:8px">
+                    <button class="btn" id="eqAttach">Knytt til hendelse</button>
+                    <button class="btn" id="eqTry">Forsøk å hente tittel</button>
+                    <span id="eqStatus" class="small"></span>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        ) : (
-          <p className="mt-2 text-sm text-gray-600">Ingen PDF valgt ennå.</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+        </div>
+      </main>
 
-export default function ArsplanOktbankApp() {
-  const now = dayjs();
-  const [tab, setTab] = useState("arsplan");
-  const [year, setYear] = useState(now.year());
-  const [events, setEvents] = useState(() => loadLS(STORAGE_KEYS.EVENTS, []));
-  const [templates, setTemplates] = useState(() => loadLS(STORAGE_KEYS.TEMPLATES, DEFAULT_TEMPLATES));
-  const [editEvent, setEditEvent] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+      <aside class="sticky-top">
+        <div class="card">
+          <div class="head"><h3>Fargekode</h3></div>
+          <div class="body legend">
+            <div class="row"><span class="dot" style="background:#2563eb"></span>Trening</div>
+            <div class="row"><span class="dot" style="background:#0ea5e9"></span>Skyting</div>
+            <div class="row"><span class="dot" style="background:#dc2626"></span>Konkurranse</div>
+            <div class="row"><span class="dot" style="background:#a855f7"></span>Samling</div>
+            <div class="row"><span class="dot" style="background:#16a34a"></span>Restitusjon</div>
+            <div class="row"><span class="dot" style="background:#6b7280"></span>Annet</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="head"><h3>Tips</h3></div>
+          <div class="body small">
+            <ul>
+              <li>Bruk ukekoder for å styre total belastning.</li>
+              <li>Økter kan dupliseres og dras over i nye datoer via «Kopier» i tabellen.</li>
+              <li>Eksporter JSON for deling i trenerteamet.</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
 
-  useEffect(() => { saveLS(STORAGE_KEYS.EVENTS, events); }, [events]);
-  useEffect(() => { saveLS(STORAGE_KEYS.TEMPLATES, templates); }, [templates]);
-
-  const eventsThisYear = useMemo(() => events.filter(e => dayjs(e.date).year() === year), [events, year]);
-
-  // Handlers
-  const openNewEvent = (partial) => {
-    const e = {
-      id: uid(),
-      title: "",
-      type: partial?.type || "Trening",
-      date: partial?.date || dayjs().format("YYYY-MM-DD"),
-      modality: "",
-      intensity: "",
-      durationMin: 60,
-      age: [],
-      shooting: { stilling: "", skudd: 0, tema: [] },
-      notes: "",
-    };
-    setEditEvent(e);
-    setDialogOpen(true);
-  };
-
-  const openEditEvent = (id) => {
-    const e = events.find((x) => x.id === id);
-    if (!e) return;
-    setEditEvent({ ...e });
-    setDialogOpen(true);
-  };
-
-  const saveEvent = () => {
-    setEvents((prev) => {
-      const exists = prev.some((x) => x.id === editEvent.id);
-      return exists ? prev.map((x) => (x.id === editEvent.id ? editEvent : x)) : [...prev, editEvent];
-    });
-    setDialogOpen(false);
-  };
-  const deleteEvent = (id) => setEvents((prev) => prev.filter((x) => x.id !== id));
-
-  const onPrint = () => window.print();
-  const onExport = () => {
-    const blob = new Blob([JSON.stringify({ events, templates }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `arsplan_${year}.json`; a.click(); URL.revokeObjectURL(url);
-  };
-  const onImport = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    const text = await file.text();
-    try {
-      const data = JSON.parse(text);
-      if (data.events) setEvents(data.events);
-      if (data.templates) setTemplates(data.templates);
-      alert("Import fullført");
-    } catch {
-      alert("Kunne ikke lese filen (må være JSON).");
-    }
-  };
-  const onReset = () => {
-    if (confirm("Sikker på at du vil slette alt i denne nettleseren?")) {
-      setEvents([]); setTemplates(DEFAULT_TEMPLATES);
-    }
-  };
-
-  const planFromTemplate = (t) => {
-    // Åpne dialog med ferdig utfylt event basert på templaten
-    const e = {
-      id: uid(),
-      title: t.name,
-      type: t.type,
-      date: dayjs(`${year}-01-01`).format("YYYY-MM-DD"),
-      modality: t.modality,
-      intensity: t.intensity,
-      durationMin: t.durationMin,
-      age: t.age || [],
-      shooting: t.shooting || { stilling: "", skudd: 0, tema: [] },
-      raceSubtype: t.raceSubtype,
-      notes: t.notes || "",
-    };
-    setEditEvent(e); setDialogOpen(true);
-  };
-
-  const addTemplate = (t) => setTemplates((prev) => [t, ...prev]);
-  const deleteTemplate = (id) => setTemplates((prev) => prev.filter((x) => x.id !== id));
-
-  const eventsList = useMemo(() => eventsThisYear.sort((a,b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf()), [eventsThisYear]);
-
-  const [listOpen, setListOpen] = useState(false);
-
-  return (
-    <div className="mx-auto max-w-[1400px] p-4">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-600 text-white"><CalendarIcon/></div>
+  <!-- Modal: Event -->
+  <div class="overlay" id="eventOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="mhead">
+        <h3 id="eventTitle">Ny hendelse</h3>
+        <button class="btn" onclick="UI.closeEvent()">Lukk</button>
+      </div>
+      <div class="mbody">
+        <div class="row3">
+          <div><label>Tittel</label><input id="f_title" placeholder="Basistrening + 30 skudd"/></div>
+          <div><label>Type</label>
+            <select id="f_type">
+              <option>Trening</option><option>Skyting</option><option>Konkurranse</option><option>Samling</option><option>Restitusjon</option><option>Annet</option>
+            </select>
+          </div>
+          <div><label>Dato</label><input id="f_date" type="date"/></div>
+        </div>
+        <div class="row3" style="margin-top:8px">
+          <div><label>Modalitet</label>
+            <select id="f_mod"><option></option><option>Ski skøyting</option><option>Ski klassisk</option><option>Rulleski skøyting</option><option>Rulleski klassisk</option><option>Løp</option><option>Sykkel</option><option>Styrke</option><option>Basistrening</option></select>
+          </div>
+          <div><label>Intensitet</label>
+            <select id="f_int"><option></option><option>I1</option><option>I2</option><option>I3</option><option>I4</option><option>I5</option></select>
+          </div>
+          <div><label>Varighet (min)</label><input id="f_dur" type="number" min="0" value="60"/></div>
+        </div>
+        <div class="row3" style="margin-top:8px">
+          <div><label>Skytestilling</label>
+            <select id="f_stand"><option></option><option>Liggende</option><option>Stående</option><option>Kombinert</option><option>Variert</option><option>Konk</option></select>
+          </div>
+          <div><label>Antall skudd</label><input id="f_shots" type="number" min="0" value="0"/></div>
+          <div><label>Konkurransetype</label>
+            <select id="f_race"><option></option><option>Sprint</option><option>Normal</option><option>Jaktstart</option><option>Fellesstart</option><option>Stafett</option><option>Mix-stafett</option><option>KM</option><option>HL/NC</option><option>Kretsrenn</option><option>Lokalt renn</option></select>
+          </div>
+        </div>
+        <div class="row3" style="margin-top:8px">
           <div>
-            <h1 className="text-2xl font-bold">Lørenskog Skiskyting – Årsplan & Øktbank</h1>
-            <p className="text-sm text-gray-600">Én side for å se og endre årsplanen (hele kalenderåret), øktbank og konkurranser.</p>
+            <label>Målgruppe</label>
+            <div class="chips" id="ageChips"></div>
+          </div>
+          
+          <div>
+            <label>EQTiming‑lenke</label>
+            <input id="f_eq" placeholder="https://..."/>
+          </div>
+          <div>
+            <label>Ukekode</label>
+            <select id="f_wk"><option></option><option>BAS</option><option>OPP</option><option>KONK</option><option>RES</option><option>EKS</option></select>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => openNewEvent({ date: dayjs().format("YYYY-MM-DD") })}><Plus className="h-4 w-4"/>Ny hendelse</Button>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <label>Notater</label>
+            <textarea id="f_notes" placeholder="Fokusområder, oppmøtested, utstyr…"></textarea>
+          </div>
+          <div>
+            <label>Rolleliste (tildel personer)</label>
+            <div id="roleAssign"></div>
+          </div>
         </div>
-      </header>
-
-      <Toolbar year={year} setYear={setYear} onPrint={onPrint} onExport={onExport} onImport={onImport} onReset={onReset} />
-
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="lg:col-span-3">
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList>
-              <TabsTrigger onClick={() => setTab("arsplan")}>Årsplan</TabsTrigger>
-              <TabsTrigger onClick={() => setTab("oktbank")}>Øktbank</TabsTrigger>
-              <TabsTrigger onClick={() => setTab("pdf")}>PDF-referanse</TabsTrigger>
-            </TabsList>
-            {tab === "arsplan" && (
-              <TabsContent>
-                <YearCalendar year={year} events={events} onAdd={openNewEvent} onEdit={openEditEvent} />
-                <Card className="mt-4">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">Hendelser {year}
-                      <Button onClick={() => setListOpen(!listOpen)}><Filter className="h-4 w-4"/>Vis/skjul liste</Button>
-                    </CardTitle>
-                  </CardHeader>
-                  {listOpen && (
-                    <CardContent>
-                      <div className="max-h-[300px] overflow-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-left text-gray-500">
-                              <th className="py-1">Dato</th>
-                              <th>Tittel</th>
-                              <th>Type</th>
-                              <th>Modalitet</th>
-                              <th>Int</th>
-                              <th>Skudd</th>
-                              <th></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {eventsList.map((e) => (
-                              <tr key={e.id} className="border-t">
-                                <td className="py-1 whitespace-nowrap">{dayjs(e.date).format("DD.MM.YYYY")}</td>
-                                <td className="max-w-[280px] truncate">{e.title || <span className="opacity-50">(uten tittel)</span>}</td>
-                                <td><Badge className="gap-1"><ColorDot color={DEFAULT_COLORS[e.type]}/>{e.type}{e.raceSubtype?` · ${e.raceSubtype}`:""}</Badge></td>
-                                <td>{e.modality||"–"}</td>
-                                <td>{e.intensity||"–"}</td>
-                                <td>{e.shooting?.skudd||0}</td>
-                                <td className="text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <Button onClick={() => { setEditEvent({ ...e }); setDialogOpen(true); }}><Save className="h-4 w-4"/>Rediger</Button>
-                                    <Button className="text-red-600" onClick={() => deleteEvent(e.id)}><Trash2 className="h-4 w-4"/>Slett</Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              </TabsContent>
-            )}
-            {tab === "oktbank" && (
-              <TabsContent>
-                <OaktBank templates={templates} onAddTemplate={addTemplate} onPlanFromTemplate={planFromTemplate} onDeleteTemplate={deleteTemplate} />
-              </TabsContent>
-            )}
-            {tab === "pdf" && (
-              <TabsContent>
-                <PDFReferanse />
-              </TabsContent>
-            )}
-          </Tabs>
-        </div>
-        {/* Sidepanel */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fargekode</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 text-sm">
-              {Object.entries(DEFAULT_COLORS).map(([k, c]) => (
-                <div key={k} className="flex items-center justify-between">
-                  <span className="flex items-center gap-2"><ColorDot color={c}/>{k}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Utviklingstrapp (anbefalt målgruppe)</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-700">
-              <ul className="list-disc space-y-1 pl-5">
-                <li><span className="font-medium">U12 (10–12):</span> Variasjon og lek, korte økter, enkel skyting liggende.</li>
-                <li><span className="font-medium">U14 (13–14):</span> Mer organisert trening, enkel fart/tempo, introdusere stående.</li>
-                <li><span className="font-medium">U16 (15–16):</span> Systematikk og progresjon, mer spesifikk intensitetsstyring, kombinert skyting.</li>
-                <li><span className="font-medium">JR (17–20):</span> Individuell tilpasning, helhetlig belastningsstyring, konkurransespesifikk trening.</li>
-              </ul>
-              <p className="mt-2 text-xs text-gray-500">Bruk dette som filter i øktbanken, og merk økter med passende målgruppe.</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Hurtigverktøy</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <Button onClick={() => openNewEvent({ type: "Trening" })}><Plus className="h-4 w-4"/>Ny trening</Button>
-              <Button onClick={() => openNewEvent({ type: "Skyting" })}><Plus className="h-4 w-4"/>Ny skyteøkt</Button>
-              <Button onClick={() => openNewEvent({ type: "Konkurranse" })}><Plus className="h-4 w-4"/>Ny konkurranse</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Tips</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-700">
-              <ul className="list-disc space-y-1 pl-5">
-                <li>Du kan eksportere/importere plan og øktbank som JSON for å dele med trenerteamet.</li>
-                <li>Bruk <span className="font-medium">Intensitet</span> og <span className="font-medium">Skudd</span> for å styre totalbelastning per uke.</li>
-                <li>Legg inn <span className="font-medium">Restitusjon</span> etter større konkurranser og samlinger.</li>
-              </ul>
-            </CardContent>
-          </Card>
+        <div class="right" style="margin-top:10px">
+          <button class="btn danger" id="f_delete" style="display:none">Slett</button>
+          <button class="btn" id="f_copy">Kopier</button>
+          <button class="btn brand" id="f_save">Lagre</button>
         </div>
       </div>
-
-      {/* Dialog for ny/rediger hendelse */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{events.some((x) => x.id === editEvent?.id) ? "Rediger hendelse" : "Ny hendelse"}</DialogTitle>
-          </DialogHeader>
-          {editEvent && <EventForm value={editEvent} onChange={setEditEvent} />}
-          <DialogFooter>
-            {editEvent && events.some((x) => x.id === editEvent.id) && (
-              <Button className="text-red-600 mr-auto" onClick={() => { deleteEvent(editEvent.id); setDialogOpen(false); }}><Trash2 className="h-4 w-4"/>Slett</Button>
-            )}
-            <Button onClick={() => setDialogOpen(false)}>Avbryt</Button>
-            <Button onClick={saveEvent}><Save className="h-4 w-4"/>Lagre</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <style>{`
-        @media print {
-          header, .no-print, .shadcn-tabs-list, .rounded-2xl.border.bg-white\/80.p-2 { display: none !important; }
-          body { background: white; }
-        }
-      `}</style>
     </div>
-  );
-}
+  </div>
+
+  <!-- Modal: Person -->
+  <div class="overlay" id="personOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="mhead"><h3>Ny person</h3><button class="btn" onclick="UI.closePerson()">Lukk</button></div>
+      <div class="mbody">
+        <div class="row">
+          <div><label>Navn</label><input id="p_name"/></div>
+          <div><label>Kontakt (valgfritt)</label><input id="p_contact" placeholder="e‑post, mobil…"/></div>
+        </div>
+        <div style="margin-top:8px"><label>Roller</label><div id="p_roles" class="chips"></div></div>
+        <div class="right" style="margin-top:10px"><button class="btn brand" id="p_save">Lagre</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ------------------ Data & Storage ------------------
+  const LS = {
+    events: 'lss:events:v2',
+    templates: 'lss:templates:v2',
+    settings: 'lss:settings:v1',
+    weekcodes: 'lss:weekcodes:v1',
+    people: 'lss:people:v1',
+    roles: 'lss:roles:v1'
+  };
+  const COLORS = {Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Restitusjon:'#16a34a', Annet:'#6b7280'};
+  const AGES = [{id:'U12',label:'10–12'},{id:'U14',label:'13–14'},{id:'U16',label:'15–16'},{id:'JR',label:'Junior'}];
+  const DEFAULT_ROLES = ['Trener','Assistenttrener','Lagleder','Standplass','Smøring','Transport','Tidtakning','Førstehjelp'];
+  const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
+  const uid = () => (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
+  const j = (x, f=[]) => {try{const v=JSON.parse(localStorage.getItem(x)||'null');return v??f}catch{ return f}};
+  const s = (k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+  let state = {
+    year: new Date().getFullYear(),
+    events: j(LS.events, []),
+    templates: j(LS.templates, []),
+    weekcodes: j(LS.weekcodes, {}),
+    people: j(LS.people, []),
+    roles: j(LS.roles, DEFAULT_ROLES)
+  };
+  if(state.templates.length===0){
+    state.templates = getDefaultTemplates();
+    s(LS.templates, state.templates);
+  }
+
+  // ------------------ UI Helpers ------------------
+  const $ = (sel,root=document)=>root.querySelector(sel);
+  const $$ = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
+  function fmtDate(d){const dt=new Date(d);return dt.toLocaleDateString('no-NO',{day:'2-digit',month:'2-digit',year:'numeric'});}  
+  function ymd(d){const dt=new Date(d);return dt.toISOString().slice(0,10);}  
+  function weekNumber(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dayNum=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-dayNum);const yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date - yearStart) / 86400000) + 1)/7)}
+  function parseCsv(text){
+    const sep = text.includes(';') && (!text.includes(',') || text.split(';').length>text.split(',').length) ? ';' : ',';
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const headers = lines.shift().split(sep).map(h=>h.trim().toLowerCase());
+    const out = [];
+    for(const line of lines){
+      const cols = line.split(sep).map(c=>c.trim());
+      const obj = {};
+      headers.forEach((h,i)=>obj[h]=cols[i]||'');
+      const e = csvToEvent(obj);
+      if(e) out.push(e);
+    }
+    return out;
+  }
+  function csvToEvent(o){
+    if(!o.date) return null;
+    const e = {
+      id: uid(),
+      date: o.date,
+      title: o.title||'',
+      type: o.type||'Trening',
+      modality: o.modality||'',
+      intensity: o.intensity||'',
+      durationMin: Number(o.duration||o.durationmin||60)||60,
+      age: (o.age||'').split('|').filter(Boolean),
+      shooting: { stilling: o.stilling||'', skudd: Number(o.shots||o.skudd||0)||0, tema: (o.tema||'').split('|').filter(Boolean) },
+      raceSubtype: o.racesubtype||'',
+      notes: o.notes||'',
+      eq: o.eq||''
+    };
+    return e;
+  }
+  function download(filename, text){
+    const blob = new Blob([text],{type:'text/plain'});const url = URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+  }
+  function parseICS(text){
+    const lines = text.split(/\r?\n/);
+    const events=[]; let cur=null;
+    for(let ln of lines){
+      if(ln.startsWith('BEGIN:VEVENT')){cur={}} else if(ln.startsWith('END:VEVENT')){if(cur&&cur.DTSTART){events.push(cur)} cur=null}
+      else if(cur){
+        const idx=ln.indexOf(':'); if(idx>0){ const key=ln.slice(0,idx).split(';')[0]; const val=ln.slice(idx+1); cur[key]=val; }
+      }
+    }
+    return events.map(v=>({
+      id: uid(),
+      date: icsDate(v.DTSTART),
+      title: (v.SUMMARY||'').replace(/\\,/g,','),
+      type: 'Trening',
+      modality: '', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:(v.DESCRIPTION||'').replace(/\\n/g,'\n')
+    }));
+  }
+  function icsDate(s){ // supports YYYYMMDD or with time
+    if(!s) return ymd(new Date());
+    const d = s.includes('T') ? new Date(s) : new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8));
+    return ymd(d);
+  }
+
+  // ------------------ Calendar ------------------
+  function renderMonths(){
+    const wrap = $('#months'); wrap.innerHTML='';
+    for(let m=0;m<12;m++){
+      const month = new Date(state.year, m, 1);
+      const daysInMonth = new Date(state.year, m+1, 0).getDate();
+      const firstDay = new Date(state.year, m, 1).getDay() || 7; // Mon=1..Sun=7
+      const grid=[]; for(let i=1;i<firstDay;i++) grid.push(null); for(let d=1; d<=daysInMonth; d++) grid.push(new Date(state.year,m,d)); while(grid.length%7!==0) grid.push(null);
+      const card = document.createElement('div'); card.className='month';
+      const head = document.createElement('div'); head.className='mhead'; head.innerHTML = `<strong>${month.toLocaleString('no-NO',{month:'long'})}</strong><span class="small muted">Uke‑kode: ${weekBadgeForMonth(m+1)}</span>`; card.appendChild(head);
+      const dow = document.createElement('div'); dow.className='week'; 'man,tir,ons,tors,fre,lør,søn'.split(',').forEach(w=>{const x=document.createElement('div');x.className='dow';x.textContent=w;dow.appendChild(x)}); card.appendChild(dow);
+      const gridEl = document.createElement('div'); gridEl.className='week';
+      grid.forEach((d)=>{
+        const cell = document.createElement('div'); cell.className='day';
+        if(d){
+          const key = ymd(d);
+          cell.addEventListener('click',()=>UI.openEvent({date:key}));
+          const dnum = document.createElement('div'); dnum.className='dnum'; dnum.textContent=d.getDate(); cell.appendChild(dnum);
+          const badges = document.createElement('div'); badges.className='badges'; cell.appendChild(badges);
+          const es = state.events.filter(e=>e.date===key);
+          es.slice(0,4).forEach(e=>{const b=document.createElement('span'); b.className='badge'; b.style.background=COLORS[e.type]||'#6b7280'; badges.appendChild(b)});
+          es.slice(0,3).forEach(e=>{const t=document.createElement('div'); t.className='event'; t.textContent = (e.title||e.type); cell.appendChild(t)});
+          if(es.length>3){const more=document.createElement('div');more.className='event muted';more.textContent='+'+(es.length-3)+' flere…'; cell.appendChild(more)}
+        } else { cell.style.background='#fafafa' }
+        gridEl.appendChild(cell);
+      });
+      card.appendChild(gridEl);
+      wrap.appendChild(card);
+    }
+  }
+  function weekBadgeForMonth(month){
+    // Show most common wk code across weeks in this month
+    const weeks = new Set();
+    for(let d=1; d<=31; d++){
+      const dt = new Date(state.year, month-1, d);
+      if(dt.getMonth()!==month-1) break;
+      weeks.add(weekNumber(dt));
+    }
+    const counts={};
+    weeks.forEach(w=>{const code=state.weekcodes[w]||''; if(!code) return; counts[code]=(counts[code]||0)+1});
+    const best = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    return best ? `<span class="wkcode">${best[0]}</span>` : '<span class="muted small">–</span>';
+  }
+
+  function renderEventTable(){
+    const tbody = $('#eventTable tbody'); tbody.innerHTML='';
+    const rows = state.events.filter(e=>new Date(e.date).getFullYear()===state.year).sort((a,b)=>a.date.localeCompare(b.date));
+    for(const e of rows){
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${fmtDate(e.date)}</td>
+        <td>${e.title||'<span class="muted">(uten tittel)</span>'}</td>
+        <td><span class="pill" style="border-color:#e5e7eb"><span style="width:10px;height:10px;border-radius:50%;background:${COLORS[e.type]||'#999'}"></span>${e.type}${e.raceSubtype?(' · '+e.raceSubtype):''}</span></td>
+        <td>${e.modality||''}</td>
+        <td>${e.intensity||''}</td>
+        <td>${(e.shooting&&e.shooting.skudd)||0}</td>
+        <td>${e.eq?'<span class="eq"><b>EQ</b> <a href="'+e.eq+'" target="_blank">Åpne</a></span>':'—'}</td>
+        <td class="right">
+          <button class="btn" data-act="edit">Rediger</button>
+          <button class="btn" data-act="dup">Kopier</button>
+          <button class="btn danger" data-act="del">Slett</button>
+        </td>`;
+      tr.querySelector('[data-act="edit"]').onclick=()=>UI.openEvent(e);
+      tr.querySelector('[data-act="dup"]').onclick=()=>UI.openEvent({...e, id:uid(), date:e.date});
+      tr.querySelector('[data-act="del"]').onclick=()=>{ if(confirm('Slette hendelse?')){ state.events = state.events.filter(x=>x.id!==e.id); saveAndRender(); } };
+      tbody.appendChild(tr);
+    }
+    $('#yearLabel').textContent = state.year;
+    // Update EQ select
+    const sel = $('#eqEventSelect'); sel.innerHTML='';
+    rows.forEach(e=>{const o=document.createElement('option'); o.value=e.id; o.textContent=`${fmtDate(e.date)} – ${e.title||e.type}`; sel.appendChild(o)});
+  }
+
+  // ------------------ Event Modal ------------------
+  const UI = {
+    openEvent(partial){
+      const isExisting = partial && partial.id && state.events.find(e=>e.id===partial.id);
+      const e = isExisting ? {...partial} : ({ id: uid(), title:'', type: partial.type||'Trening', date: partial.date||ymd(new Date()), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, raceSubtype:'', notes:'', eq:'', roles:{} });
+      UI._cur = e;
+      $('#eventTitle').textContent = isExisting? 'Rediger hendelse' : 'Ny hendelse';
+      $('#f_title').value = e.title||''; $('#f_type').value=e.type; $('#f_date').value=e.date; $('#f_mod').value=e.modality||''; $('#f_int').value=e.intensity||''; $('#f_dur').value=e.durationMin||60; $('#f_stand').value=e.shooting?.stilling||''; $('#f_shots').value=e.shooting?.skudd||0; $('#f_race').value=e.raceSubtype||''; $('#f_notes').value=e.notes||''; $('#f_eq').value=e.eq||'';
+      // Ages
+      const ageHost = $('#ageChips'); ageHost.innerHTML='';
+      AGES.forEach(g=>{
+        const chip=document.createElement('span'); chip.className='chip'; chip.innerHTML=`${g.label} <span class="x">×</span>`; chip.style.background=e.age.includes(g.id)?'#e0f2fe':'#fff';
+        chip.onclick=()=>{ const set=new Set(e.age); set.has(g.id)?set.delete(g.id):set.add(g.id); e.age=Array.from(set); UI.openEvent(e) };
+        ageHost.appendChild(chip);
+      });
+      // Roles assign
+      const assign = $('#roleAssign'); assign.innerHTML='';
+      (state.roles||[]).forEach(r=>{
+        const wrap=document.createElement('div'); wrap.style.marginBottom='6px';
+        const lab=document.createElement('label'); lab.textContent=r; assign.appendChild(lab);
+        const sel=document.createElement('select'); sel.innerHTML='<option></option>' + state.people.map(p=>`<option ${e.roles[r]===p.id?'selected':''} value="${p.id}">${p.name}</option>`).join('');
+        sel.onchange=()=>{ e.roles[r] = sel.value; };
+        wrap.appendChild(sel); assign.appendChild(wrap);
+      });
+      // Week code
+      const wk = weekNumber(new Date(e.date)); $('#f_wk').value = e.wk || state.weekcodes[wk] || '';
+      $('#f_wk').onchange=()=>{ e.wk = $('#f_wk').value };
+      // Buttons
+      $('#f_delete').style.display = isExisting? 'inline-flex':'none';
+      $('#f_delete').onclick=()=>{ if(confirm('Slette hendelse?')){ state.events = state.events.filter(x=>x.id!==e.id); UI.closeEvent(); saveAndRender(); } };
+      $('#f_copy').onclick=()=>{ const copy={...e, id:uid(), title:(e.title?(e.title+' (kopi)'):'')}; UI.openEvent(copy); };
+      $('#f_save').onclick=()=>{
+        e.title=$('#f_title').value.trim(); e.type=$('#f_type').value; e.date=$('#f_date').value; e.modality=$('#f_mod').value; e.intensity=$('#f_int').value; e.durationMin=Number($('#f_dur').value)||0; e.shooting={stilling:$('#f_stand').value, skudd:Number($('#f_shots').value)||0, tema:(e.shooting?.tema||[])}; e.raceSubtype=$('#f_race').value; e.notes=$('#f_notes').value; e.eq=$('#f_eq').value.trim();
+        const exists = state.events.find(x=>x.id===e.id);
+        if(exists) state.events = state.events.map(x=>x.id===e.id?e:x); else state.events.push(e);
+        UI.closeEvent(); saveAndRender();
+      };
+      $('#eventOverlay').classList.add('show');
+    },
+    closeEvent(){ $('#eventOverlay').classList.remove('show'); },
+    openPerson(){ $('#personOverlay').classList.add('show'); $('#p_name').value=''; $('#p_contact').value=''; renderRolePills($('#p_roles'), state.roles, new Set(), (set)=>{}); $('#p_save').onclick=()=>{ const name=$('#p_name').value.trim(); if(!name) return; const person={id:uid(), name, contact:$('#p_contact').value.trim(), roles:[]} ; state.people.push(person); saveAndRender(); UI.closePerson(); } },
+    closePerson(){ $('#personOverlay').classList.remove('show'); }
+  };
+
+  // ------------------ Øktbank ------------------
+  function renderBank(){
+    const q = ($('#bankQuery').value||'').toLowerCase();
+    const age = $('#bankAge').value; const type = $('#bankType').value;
+    const list = $('#bankList'); list.innerHTML='';
+    const items = state.templates.filter(t=>(!q || t.name.toLowerCase().includes(q)) && (!age || (t.age||[]).includes(age)) && (!type || t.type===type));
+    items.forEach(t=>{
+      const c=document.createElement('div'); c.className='card';
+      c.innerHTML = `<div class="head"><h3>${t.name}</h3><span class="pill"><span style="width:10px;height:10px;border-radius:50%;background:${COLORS[t.type]}"></span>${t.type}</span></div>
+        <div class="body small">
+          <div class="row4">
+            <div><b>Mod:</b> ${t.modality||'–'}</div>
+            <div><b>Int:</b> ${t.intensity||'–'}</div>
+            <div><b>Varighet:</b> ${t.durationMin? t.durationMin+' min':'–'}</div>
+            <div><b>Skudd:</b> ${t.shooting?.skudd||0}</div>
+          </div>
+          ${(t.shooting?.tema||[]).length? `<div class="chips" style="margin-top:6px">${t.shooting.tema.map(x=>`<span class='chip'>${x}</span>`).join('')}</div>`:''}
+          ${t.notes? `<p style="margin-top:6px;white-space:pre-wrap">${t.notes}</p>`:''}
+          <div class="chips" style="margin-top:8px">
+            ${(t.age||[]).map(a=>`<span class='pill'>${AGES.find(g=>g.id===a)?.label||a}</span>`).join('')}
+          </div>
+          <div class="right" style="margin-top:8px">
+            <button class="btn brand">Planlegg denne</button>
+            <button class="btn">Dupliser</button>
+            <button class="btn danger">Slett</button>
+          </div>
+        </div>`;
+      const [btnPlan,btnDup,btnDel] = $$('.btn', c).slice(-3);
+      btnPlan.onclick=()=>{
+        const e={ id:uid(), title:t.name, type:t.type, date: ymd(new Date(state.year,0,1)), modality:t.modality, intensity:t.intensity, durationMin:t.durationMin, age:(t.age||[]), shooting: t.shooting || {stilling:'',skudd:0,tema:[]}, raceSubtype:t.raceSubtype||'', notes:t.notes||'' };
+        UI.openEvent(e);
+      };
+      btnDup.onclick=()=>{ const copy={...t, id:uid(), name:t.name+' (kopi)'}; state.templates.unshift(copy); saveAndRender(); };
+      btnDel.onclick=()=>{ if(confirm('Slette mal?')){ state.templates = state.templates.filter(x=>x.id!==t.id); saveAndRender(); } };
+      list.appendChild(c);
+    });
+  }
+
+  function getDefaultTemplates(){
+    const T = [];
+    const add=(o)=>T.push({id:uid(),...o});
+    add({name:'U12 Lekpreget I2 (45–60) + 30 skudd ligg',type:'Trening',modality:'Løp',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12'],notes:'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'});
+    add({name:'U14 Rulleski I3 5×4 min + stående',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:40,tema:['Grunnstilling stående','Avtrekkstid/trigger']},age:['U14'],notes:'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'});
+    add({name:'U16 VO2 I4 6×3 min + kombinert',type:'Trening',modality:'Løp',intensity:'I4',durationMin:80,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'});
+    add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'Rolig langtur. 6×10 teknikkserier.'});
+    add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde & avtrekk','Pust & rytme']},age:['U12','U14','U16','JR']});
+    add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR']});
+    add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR']});
+    add({name:'Basistrening + styrke (sirkel)',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Liggende',skudd:20,tema:['Grunnstilling liggende']},age:['U12','U14']});
+    add({name:'Overgangsøkt ski↔standplass',type:'Skyting',modality:'Ski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Kombinert',skudd:60,tema:['Overganger (inn/ut)','Repetisjonsrytme']},age:['U16','JR']});
+    add({name:'Samling – helg',type:'Samling',modality:'Variert',intensity:'I2',durationMin:180,shooting:{stilling:'Variert',skudd:120,tema:['Magasinbytte','Stativarbeid']},age:['U14','U16','JR']});
+    add({name:'Restitusjon + bevegelighet',type:'Restitusjon',modality:'Basistrening',intensity:'I1',durationMin:40,shooting:{stilling:'',skudd:0,tema:[]},age:['U12','U14','U16','JR']});
+    add({name:'Styrke helkropp',type:'Trening',modality:'Styrke',intensity:'I3',durationMin:60,shooting:{stilling:'',skudd:0,tema:[]},age:['U16','JR']});
+    add({name:'Skyting presisjon 5×5 L/S',type:'Skyting',modality:'',intensity:'I1',durationMin:60,shooting:{stilling:'Variert',skudd:50,tema:['Siktebilde & avtrekk','Avtrekkstid/trigger']},age:['U14','U16','JR']});
+    return T;
+  }
+
+  // ------------------ Weekcodes ------------------
+  function renderWeekcodes(){
+    const host = $('#wkGrid'); host.innerHTML='';
+    // Compute ISO week count (52/53)
+    const lastDay = new Date(state.year, 11, 31);
+    const weeks = weekNumber(lastDay)===1?52:weekNumber(lastDay);
+    for(let w=1; w<=weeks; w++){
+      const card=document.createElement('div'); card.className='card';
+      card.innerHTML = `<div class="head"><h3>Uke ${w}</h3></div><div class="body">`+
+        `<select data-w="${w}"><option></option>${WEEKCODES.map(c=>`<option ${state.weekcodes[w]===c?'selected':''}>${c}</option>`).join('')}</select>`+
+        `</div>`;
+      $('select',card).onchange=(e)=>{ state.weekcodes[w]=e.target.value||undefined; saveAndRender(); };
+      host.appendChild(card);
+    }
+  }
+
+  // ------------------ People & Roles ------------------
+  function renderRolePills(host, roles, selectedSet, onChange){
+    host.innerHTML='';
+    roles.forEach(r=>{
+      const el=document.createElement('span'); el.className='chip'; el.textContent=r; el.onclick=()=>{ if(selectedSet.has(r)) selectedSet.delete(r); else selectedSet.add(r); onChange(selectedSet); renderRolePills(host, roles, selectedSet, onChange); };
+      if(selectedSet.has(r)) el.style.background='#e0f2fe'; host.appendChild(el);
+    });
+  }
+  function renderRoles(){
+    // Role chips config
+    const rc = $('#roleChips'); rc.innerHTML='';
+    state.roles.forEach((r,i)=>{
+      const el=document.createElement('span'); el.className='chip'; el.innerHTML = `${r} <span class='x' title='Fjern'>×</span>`;
+      $('.x', el).onclick=()=>{ if(confirm('Fjerne rolle?')){ state.roles.splice(i,1); saveAndRender(); }};
+      rc.appendChild(el);
+    });
+    const addBtn=document.createElement('button'); addBtn.className='btn'; addBtn.textContent='+ Ny rolle'; addBtn.onclick=()=>{ const name=prompt('Rollenavn:'); if(name){ state.roles.push(name.trim()); saveAndRender(); } }; rc.appendChild(addBtn);
+
+    // People table
+    const tbody = $('#peopleTable tbody'); tbody.innerHTML='';
+    state.people.forEach(p=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${p.name}</td><td>${(p.roles||[]).join(', ')||'—'}</td><td>${p.contact||''}</td><td class='right'><button class='btn' data-edit>Rediger</button><button class='btn danger' data-del>Slett</button></td>`;
+      tr.querySelector('[data-edit]').onclick=()=>{
+        $('#personOverlay').classList.add('show'); $('#p_name').value=p.name; $('#p_contact').value=p.contact||'';
+        const set = new Set(p.roles||[]);
+        renderRolePills($('#p_roles'), state.roles, set, (sset)=>{});
+        $('#p_save').onclick=()=>{ p.name=$('#p_name').value.trim(); p.contact=$('#p_contact').value.trim(); p.roles=Array.from(set); saveAndRender(); UI.closePerson(); };
+      };
+      tr.querySelector('[data-del]').onclick=()=>{ if(confirm('Slette person?')){ state.people = state.people.filter(x=>x.id!==p.id); saveAndRender(); } };
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ------------------ Import/EQTiming ------------------
+  async function tryFetchEqTitle(url){
+    try{
+      // Minimal heuristikk: hent HTML‑tittel (CORS kan stoppe dette i fil://). Bruk gjennom egen server/proxy ved behov.
+      const res = await fetch(url, {mode:'cors'});
+      const html = await res.text();
+      const m = html.match(/<title>(.*?)<\/title>/i); return m? m[1].replace(/\s+/g,' ').trim() : '';
+    }catch(e){ return ''; }
+  }
+
+  // ------------------ Save & Render ------------------
+  function saveAndRender(){ s(LS.events, state.events); s(LS.templates, state.templates); s(LS.weekcodes, state.weekcodes); s(LS.people, state.people); s(LS.roles, state.roles); renderMonths(); renderEventTable(); renderBank(); renderWeekcodes(); renderRoles(); }
+
+  // ------------------ Boot ------------------
+  function boot(){
+    // Year controls
+    $('#yearInput').value=state.year; $('#prevYear').onclick=()=>{state.year--; $('#yearInput').value=state.year; saveAndRender();}; $('#nextYear').onclick=()=>{state.year++; $('#yearInput').value=state.year; saveAndRender();}; $('#yearInput').onchange=(e)=>{ state.year = Number(e.target.value)||new Date().getFullYear(); saveAndRender(); };
+    // Tabs
+    $$('.tab').forEach(b=>b.onclick=()=>{ $$('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); ['plan','bank','uker','roller','pdf','import'].forEach(id=>$('#tab-'+id).hidden=true); $('#tab-'+b.dataset.tab).hidden=false; });
+    // New event
+    $('#newEvent').onclick=()=>UI.openEvent({date: ymd(new Date())});
+    // Export
+    $('#exportJson').onclick=()=>download(`arsplan_${state.year}.json`, JSON.stringify({events:state.events, templates:state.templates, weekcodes:state.weekcodes, people:state.people, roles:state.roles}, null, 2));
+    // Import JSON
+    $('#importJson').onchange=async (e)=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); try{ const data=JSON.parse(t); ['events','templates','weekcodes','people','roles'].forEach(k=>{ if(data[k]) state[k]=data[k]}); saveAndRender(); alert('Import fullført'); }catch{ alert('Kunne ikke lese JSON'); } e.target.value=''; };
+    // CSV import (toolbar)
+    $('#importCsv').onchange=async (e)=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); const items=parseCsv(t); state.events.push(...items); saveAndRender(); alert('Importert '+items.length+' rader'); e.target.value=''; };
+    // ICS import (toolbar)
+    $('#importIcs').onchange=async (e)=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); const items=parseICS(t); state.events.push(...items); saveAndRender(); alert('Importert '+items.length+' hendelser'); e.target.value=''; };
+    // Bank filters
+    $('#bankQuery').oninput=renderBank; $('#bankAge').onchange=renderBank; $('#bankType').onchange=renderBank;
+    // Print
+    $('#printBtn').onclick=()=>window.print();
+    // PDF
+    $('#pdfInput').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdfEmbed').src=url; $('#pdfViewer').style.display='block'; };
+    // Import tab controls
+    $('#csv2').onchange=(e)=>$('#importCsv').onchange(e);
+    $('#ics2').onchange=(e)=>$('#importIcs').onchange(e);
+    $('#downloadCsv').onclick=()=>{
+      const head='date;title;type;modality;intensity;duration;shots;age;notes;raceSubtype\n';
+      const sample=`${state.year}-01-10;Basistrening + 30 skudd;Trening;Løp
