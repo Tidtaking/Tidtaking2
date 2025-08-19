@@ -578,28 +578,19 @@
       });
     }
 
-    // ---------- ICS Export ----------
-    function exportICS(){
-      const pad = (n)=> String(n).padStart(2,'0');
-      const fmt = (d)=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
-      const lines = [ 'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO' ];
-      state.events.forEach(e=>{
-        const start = new Date(e.date+'T17:00:00');
-        const end = new Date(start.getTime() + ((e.durationMin||60)*60000));
-        lines.push('BEGIN:VEVENT');
-        lines.push('UID:'+e.id);
-        lines.push('DTSTAMP:'+fmt(new Date()));
-        lines.push('DTSTART:'+fmt(start));
-        lines.push('DTEND:'+fmt(end));
-        const title = e.title || (e.type + (e.raceSubtype? (' – '+e.raceSubtype):''));
-        lines.push('SUMMARY:'+title.replace(/,/g,'\\,'));
-        lines.push('DESCRIPTION:'+ (e.notes||'') .replace(/[\\n,]/g,m=> (m==='\\n'?'\\\\n':'\\\\,')) );
-        lines.push('END:VEVENT');
-      });
-      lines.push('END:VCALENDAR');
-      const blob = new Blob([lines.join('\\n')], {type:'text/calendar'});
-      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
-    }
+// ICS‑eksport (fikset regex)
+function exportICS(events){
+let lines = ["BEGIN:VCALENDAR","VERSION:2.0"];
+events.forEach(e=>{
+lines.push("BEGIN:VEVENT");
+const title = e.name||"Hendelse";
+lines.push("SUMMARY:"+title.replace(/,/g,'\\,'));
+lines.push("DESCRIPTION:"+(e.notes||'').replace(/\n/g,'\\n').replace(/,/g,'\\,'));
+lines.push("END:VEVENT");
+});
+lines.push("END:VCALENDAR");
+return lines.join("\n");
+}
 
     // ---------- NSSF terminliste (direkte/fallback) ----------
     async function fetchNSSF(url){
