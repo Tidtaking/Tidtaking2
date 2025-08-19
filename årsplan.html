@@ -395,11 +395,45 @@
     function exportICS(){ const pad=n=>String(n).padStart(2,'0'); const fmt=d=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`; const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO']; state.events.forEach(e=>{ const start=new Date(e.date+'T17:00:00'); const end=new Date(start.getTime()+((e.durationMin||60)*60000)); lines.push('BEGIN:VEVENT'); lines.push('UID:'+e.id); lines.push('DTSTAMP:'+fmt(new Date())); lines.push('DTSTART:'+fmt(start)); lines.push('DTEND:'+fmt(end)); const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+title.replace(/,/g,'\\,')); lines.push('DESCRIPTION:'+(e.notes||'').replace(/\n/g,'\\n').replace(/,/g,'\\,')); lines.push('END:VEVENT'); }); lines.push('END:VCALENDAR'); const blob=new Blob([lines.join('\n')],{type:'text/calendar'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url); }
 
     // ------- NSSF (direkte/fallback) -------
-    async function fetchNSSF(url){ const res=await fetch(url,{mode:'cors'}); return await res.text(); }
-    function parseNSSF(html){ const tmp=document.createElement('div'); tmp.innerHTML=html; let rows=[]; tmp.querySelectorAll('table tr').forEach(tr=>{ const tds=tr.querySelectorAll('td'); if(tds.length>=2){ const dato=(tds[0].textContent||'').trim(); const tittel=(tds[1].textContent||'').trim(); const link=(tds[1].querySelector('a')||{}).href||''; if(/\d{2}\.\d{2}\.\d{4}/.test(dato)&&tittel){ rows.push({dato,tittel,link}); } } }); if(rows.length===0){ tmp.querySelectorAll('*').forEach(el=>{ const txt=(el.textContent||'').trim(); const m=txt.match(/(\d{2}\.\d{2}\.\d{4}).{0,10}([\p{L}0-9].{3,100})/u); if(m && el.querySelector && el.querySelector('a')) rows.push({dato:m[1], tittel:el.querySelector('a').textContent.trim(), link:el.querySelector('a').href}); }); } return rows; }
-    async function importNSSFFromURL(){ const url=$('#nssf-url').value.trim(); if(!url) return alert('Skriv inn URL først.'); try{ const html=await fetchNSSF(url); const rows=parseNSSF(html); if(rows.length===0) return alert('Fant ingen rader (kan være CORS). Prøv å lime inn HTML i feltet under.'); addNSSFEvents(rows); }catch(e){ alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML‑kilde i feltet og bruk «Importer fra limt HTML».'); } }
-    function addNSSFEvents(rows){ const events=rows.map(r=>({ id:uid(), title:r.tittel, type:'Konkurranse', date:dayjs(r.dato.split('.').reverse().join('-')).format('YYYY-MM-DD'), modality:'Ski skøyting', intensity:'I5', durationMin:60, shooting:{stilling:'Konk', skudd:(r.tittel.toLowerCase().includes('sprint')?10:20), tema:[]}, raceSubtype:(function(){ for(const k of KONK){ if((r.tittel||'').toLowerCase().includes(k.toLowerCase())) return k; } return ''; })(), age:['U12','U14','U16','JR'], notes:'Importert fra skiskyting.no', roles:{}, eqtiming:r.link||'' })); state.events.push(...events); render(); alert(`Importert ${events.length} konkurranser.`); }
-    function importNSSFFromHTML(){ const html=$('#nssf-html').value.trim(); if(!html) return alert('Lim inn HTML først.'); const rows=parseNSSF(html); if(rows.length===0) return alert('Fant ingen rader i teksten.'); addNSSFEvents(rows); }
+    function parseNSSF(html){
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+
+  const rows = [];
+
+  // 1) Vanlig tabell-parsing (primært tilfelle på skiskyting.no)
+  tmp.querySelectorAll('table tr').forEach(tr=>{
+    const tds = tr.querySelectorAll('td');
+    if(tds.length >= 2){
+      const dato   = (tds[0].textContent || '').trim();
+      const tittel = (tds[1].textContent || '').trim();
+      const linkEl = tds[1].querySelector('a');
+      const link   = linkEl ? linkEl.href : '';
+      if(/\d{2}\.\d{2}\.\d{4}/.test(dato) && tittel){
+        rows.push({ dato, tittel, link });
+      }
+    }
+  });
+
+  // 2) Fallback: grov matching dersom innholdet ikke har en tydelig tabell
+  if(rows.length === 0){
+    tmp.querySelectorAll('*').forEach(el=>{
+      const txt = (el.textContent || '').trim();
+      // Matcher dato + litt tekst etterpå, uten \p{L}/u-flagget.
+      const m = txt.match(/(\d{2}\.\d{2}\.\d{4}).{0,10}([A-Za-zÆØÅæøå0-9].{3,100})/);
+      if(m){
+        const linkEl = el.querySelector && el.querySelector('a');
+        const tittel = linkEl ? linkEl.textContent.trim() : (m[2] || '').trim();
+        const link   = linkEl ? linkEl.href : '';
+        if(tittel){
+          rows.push({ dato: m[1], tittel, link });
+        }
+      }
+    });
+  }
+
+  return rows;
+}
 
     // ------- Logo fallback + bytte -------
     function fallbackLogo(){ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 120 60'); svg.className='h-14 w-20 rounded-xl bg-white p-1'; svg.innerHTML='<rect width="100%" height="100%" fill="white"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="18" fill="#18469a" font-family="Inter, Arial, sans-serif">LSK</text>'; return svg; }
