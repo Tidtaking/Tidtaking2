@@ -12,17 +12,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Lørenskog fargepalett (tilpasset): */
-    :root{
-      --brand:#18469a;        /* klubb-blå */
-      --brand-2:#dbe723;      /* lime/gul kant */
-      --brand-red:#d21111;    /* rød topp */
-      --ink:#0f172a;
-    }
+    <style>
+    /* LSK palette */
+    :root { --brand:#18469a; --brand2:#dbe723; --brand-red:#d21111; --brand-blue:#18469a; }
     html,body{height:100%;}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif; color:var(--ink);}
-    .brand-ring{box-shadow:0 0 0 2px var(--brand-2) inset}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;}
     @media print { .no-print{display:none!important} body{background:white} }
   </style>
 </head>
@@ -32,10 +26,14 @@
     <header class="mb-4 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <!-- Logo -->
-        <picture class="h-14 w-20 overflow-hidden rounded-xl brand-ring bg-white">
-          <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiskyting" class="h-full w-full object-contain" onerror="this.replaceWith(fallbackLogo())"/>
-        </picture>
-        <div>
+       <picture class="h-14 w-14 rounded-2xl overflow-hidden ring-2 ring-[var(--brand2)]">
+  <img id="club-logo"
+       src="Logo LSK Klubb farger JPG.jpeg"
+       alt="Lørenskog Skiskyting"
+       class="h-full w-full object-contain bg-white"
+       onerror="this.replaceWith(fallbackLogo())">
+</picture>
+<div>
           <h1 class="text-2xl font-bold text-[color:var(--brand)]">Lørenskog Skiskyting</h1>
           <p class="text-sm text-slate-600">Årsplan (kalenderår) • Øktbank • Konkurranser • Ukekoder • Roller</p>
         </div>
@@ -658,16 +656,16 @@
       addNSSFEvents(rows);
     }
 
-    // ---------- Logo fallback + bytte ----------
-    function fallbackLogo(){
-      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-      svg.setAttribute('viewBox','0 0 120 120');
-      svg.setAttribute('class','h-14 w-20 rounded-xl p-2 brand-ring');
-      svg.innerHTML = `<rect x="0" y="0" width="120" height="120" rx="16" fill="white"/>`
-        + `<circle cx="60" cy="60" r="52" fill="var(--brand)" opacity="0.1"/>`
-        + `<circle cx="60" cy="60" r="42" fill="none" stroke="var(--brand-2)" stroke-width="6"/>`;
-      return svg;
-    }
+// Fallback-logo dersom bildefilen ikke lastes
+function fallbackLogo(){
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 64 64');
+  svg.className = 'h-full w-full object-contain bg-white';
+  svg.innerHTML = '<rect width="100%" height="100%" fill="white"/>' +
+                  '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="18" fill="#18469a" font-family="Inter, Arial, sans-serif">LSK</text>';
+  return svg;
+}
+
     (function initLogo(){
       const saved = lsGet(KEY.LOGO,null);
       if(saved){ $('#club-logo').src = saved; }
