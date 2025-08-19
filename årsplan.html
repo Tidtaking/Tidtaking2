@@ -3,914 +3,620 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lørenskog Skiskyting · Årsplan & Øktbank</title>
+  <title>Lørenskog Skiskyting – Årsplan & Øktbank</title>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root{
-      --bg:#f6f7fb;--card:#ffffff;--ink:#0f172a;--muted:#6b7280;--line:#e5e7eb;--brand:#1d4ed8;--brand-2:#0ea5e9;--accent:#22c55e;--danger:#dc2626;--warning:#f59e0b;
-      --radius:14px;--shadow:0 6px 16px rgba(2,6,23,.06);--shadow-2:0 12px 28px rgba(2,6,23,.08);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,Ubuntu,sans-serif;background:var(--bg);color:var(--ink)}
-    .container{max-width:1260px;margin:0 auto;padding:16px}
-    header.app{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .logo-wrap{display:flex;gap:14px;align-items:center}
-    .logo{width:64px;height:64px;border-radius:16px;overflow:hidden;background:#0b3b8a;box-shadow:var(--shadow)}
-    .logo svg{display:block;width:100%;height:100%}
-    .title h1{margin:0;font-size:22px;letter-spacing:.2px}
-    .title p{margin:4px 0 0;color:var(--muted);font-size:13px}
-    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    button, .btn{background:#fff;border:1px solid var(--line);padding:8px 12px;border-radius:10px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;box-shadow:var(--shadow);font-weight:600}
-    button:hover,.btn:hover{background:#f9fafb}
-    .btn.brand{background:var(--brand);border-color:var(--brand);color:#fff}
-    .btn.danger{background:#fff;color:var(--danger);border-color:#f3d0d0}
-    .btn.ghost{background:transparent;border-color:transparent;box-shadow:none}
-    .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff}
-    .layout{display:grid;grid-template-columns:3fr 1fr;gap:16px}
-    @media (max-width:1000px){.layout{grid-template-columns:1fr}}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .card h3{margin:0;font-size:16px}
-    .card .head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
-    .card .body{padding:14px 16px}
-    .tabs{display:flex;gap:6px;flex-wrap:wrap}
-    .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;font-weight:600}
-    .tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
-    .grid-12{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    @media (min-width:1100px){.grid-12{grid-template-columns:repeat(4,1fr)}}
-    @media (min-width:1300px){.grid-12{grid-template-columns:repeat(6,1fr)}}
-    .month{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
-    .month .mhead{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line);background:#f8fafc}
-    .month .week{display:grid;grid-template-columns:repeat(7,1fr)}
-    .dow{padding:6px 6px;text-align:center;color:#64748b;font-size:11px;background:#f9fafb;border-bottom:1px solid var(--line)}
-    .day{min-height:86px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;position:relative}
-    .day:last-child{border-right:none}
-    .day .dnum{font-size:12px;color:#334155;font-weight:700}
-    .badges{position:absolute;top:6px;right:6px;display:flex;gap:3px}
-    .badge{height:8px;width:8px;border-radius:50%}
-    .event{margin-top:2px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .muted{color:var(--muted)}
-    .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-    .legend .row{display:flex;align-items:center;gap:8px;font-size:12px}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .list{max-height:320px;overflow:auto}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:8px 6px;border-bottom:1px solid var(--line);font-size:13px}
-    th{text-align:left;color:#475569;font-weight:700}
-    .right{display:flex;justify-content:flex-end;gap:8px}
-    .overlay{position:fixed;inset:0;background:rgba(2,6,23,.5);display:none;place-items:center;padding:16px;z-index:50}
-    .overlay.show{display:grid}
-    .modal{background:#fff;border-radius:16px;max-width:920px;width:100%;box-shadow:var(--shadow-2);border:1px solid var(--line)}
-    .modal .mhead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-    .modal .mbody{padding:14px 16px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-    .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-    @media (max-width:860px){.row,.row3,.row4{grid-template-columns:1fr}}
-    label{font-size:12px;color:#475569;font-weight:700}
-    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:var(--shadow-2, 0 0 0 rgba(0,0,0,0));font-size:14px}
-    textarea{min-height:80px}
-    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-    .chip{border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;background:#fff;display:inline-flex;gap:6px;align-items:center}
-    .chip .x{cursor:pointer;color:#64748b}
-    .wkcode{display:inline-flex;align-items:center;gap:6px;border:1px dashed #cbd5e1;border-radius:999px;padding:2px 8px;font-size:11px}
-    .wkgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-    @media (max-width:900px){.wkgrid{grid-template-columns:repeat(2,1fr)}}
-    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:2px 6px}
-    .small{font-size:12px}
-    .success{color:var(--accent)}
-    .warn{color:var(--warning)}
-    .eq{display:inline-flex;align-items:center;gap:6px}
-    .eq b{background:#0f766e;color:#fff;border-radius:6px;padding:2px 6px;font-size:11px}
-    .sticky-top{position:sticky;top:12px}
+    :root { --brand:#1e40af; --brand2:#60a5fa; }
+    html,body{height:100%;}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;}
+    @media print { .no-print{display:none!important} body{background:white} }
   </style>
 </head>
-<body>
-  <div class="container">
-    <header class="app">
-      <div class="logo-wrap">
-        <div class="logo" title="Lørenskog Skiskyting">
-          <!-- Enkel inline-logo (kan byttes med PNG via Innstillinger) -->
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0" stop-color="#0ea5e9"/>
-                <stop offset="1" stop-color="#1d4ed8"/>
-              </linearGradient>
-            </defs>
-            <rect x="0" y="0" width="100" height="100" rx="18" fill="url(#g1)"/>
-            <circle cx="32" cy="38" r="10" fill="#fff"/>
-            <rect x="50" y="33" width="40" height="6" rx="3" fill="#fff"/>
-            <rect x="38" y="58" width="50" height="6" rx="3" fill="#ffcc00"/>
-          </svg>
-        </div>
-        <div class="title">
-          <h1>Lørenskog Skiskyting – Årsplan & Øktbank</h1>
-          <p>Planlegg et helt kalenderår, øktbank, ukekoder, CSV/ICS og EQTiming-sjekk. Alt lagres i denne nettleseren.</p>
+<body class="bg-slate-50 text-slate-900">
+  <div class="mx-auto max-w-[1400px] p-4">
+    <!-- Header -->
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Logo (enkel SVG, bytt gjerne til ekte PNG/SVG) -->
+        <svg viewBox="0 0 120 120" class="h-14 w-14 rounded-2xl bg-[var(--brand)] p-2 text-white">
+          <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#fff"/></linearGradient></defs>
+          <circle cx="60" cy="60" r="54" fill="url(#g)" opacity="0.2" />
+          <circle cx="60" cy="60" r="42" fill="none" stroke="white" stroke-width="6" />
+          <path d="M30 78 L52 50 L64 60 L90 32" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="92" cy="30" r="8" fill="white" />
+        </svg>
+        <div>
+          <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
+          <p class="text-sm text-slate-600">Årsplan (kalenderår) • Øktbank • Konkurranser • Ukekoder • Roller</p>
         </div>
       </div>
-      <div class="toolbar">
-        <button id="prevYear">← Forrige</button>
-        <span class="pill"><span>År:</span> <input id="yearInput" type="number" style="width:92px"/></span>
-        <button id="nextYear">Neste →</button>
-        <button class="btn brand" id="newEvent">+ Ny hendelse</button>
-        <label class="btn" title="Importer JSON"><input id="importJson" type="file" accept="application/json" hidden/>↥ Importer</label>
-        <button id="exportJson" class="btn">↧ Eksporter</button>
-        <label class="btn" title="Importer CSV (dato;type;...)" ><input id="importCsv" type="file" accept="text/csv" hidden/>CSV</label>
-        <label class="btn" title="Importer ICS (iCalendar)"><input id="importIcs" type="file" accept="text/calendar,.ics" hidden/>ICS</label>
-        <button id="printBtn" class="btn">🖨️ Skriv ut</button>
+      <div class="flex flex-wrap items-center gap-2 no-print">
+        <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50"><span>Ny hendelse</span></button>
+        <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Skriv ut</button>
+        <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Eksporter</button>
+        <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50 cursor-pointer">
+          <input id="file-import" type="file" accept="application/json" class="hidden" />Importer
+        </label>
       </div>
     </header>
 
-    <div class="layout">
-      <main>
-        <div class="card">
-          <div class="head">
-            <div class="tabs" role="tablist">
-              <button class="tab active" data-tab="plan">Årsplan</button>
-              <button class="tab" data-tab="bank">Øktbank</button>
-              <button class="tab" data-tab="uker">Ukekoder</button>
-              <button class="tab" data-tab="roller">Roller</button>
-              <button class="tab" data-tab="pdf">PDF‑referanse</button>
-              <button class="tab" data-tab="import">Import/EQTiming</button>
+    <!-- Toolbar year and tabs -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+      <div class="flex items-center gap-2">
+        <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
+        <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
+        <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
+      </div>
+      <nav class="flex gap-2">
+        <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
+        <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
+        <button data-tab="pdf" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">PDF‑referanse</button>
+        <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin/Import</button>
+      </nav>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <!-- Main -->
+      <main class="lg:col-span-3 space-y-4">
+        <!-- Calendar Tab -->
+        <section id="tab-calendar" class="tab-section">
+          <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="flex items-center justify-between border-b p-4">
+              <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
+              <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm no-print">Vis/skjul liste</button>
+            </div>
+            <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-slate-500"><th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th></tr>
+                </thead>
+                <tbody id="tbl-events"></tbody>
+              </table>
             </div>
           </div>
-          <div class="body">
-            <!-- Årsplan -->
-            <section id="tab-plan">
-              <div class="grid-12" id="months"></div>
-              <div class="card" style="margin-top:12px">
-                <div class="head"><h3>Hendelser <span id="yearLabel"></span></h3><div class="small muted">Klikk på en dato i kalenderen for rask ny hendelse.</div></div>
-                <div class="body list">
-                  <table id="eventTable">
-                    <thead>
-                      <tr><th>Dato</th><th>Tittel</th><th>Type</th><th>Mod</th><th>Int</th><th>Skudd</th><th>EQ</th><th></th></tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
+        </section>
 
-            <!-- Øktbank -->
-            <section id="tab-bank" hidden>
-              <div class="row">
-                <div>
-                  <label>Søk</label>
-                  <input id="bankQuery" placeholder="Søk i øktbank…"/>
-                </div>
-                <div class="row">
-                  <div>
-                    <label>Målgruppe</label>
-                    <select id="bankAge">
-                      <option value="">Alle</option>
-                      <option value="U12">10–12</option>
-                      <option value="U14">13–14</option>
-                      <option value="U16">15–16</option>
-                      <option value="JR">Junior</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label>Type</label>
-                    <select id="bankType">
-                      <option value="">Alle</option>
-                      <option>Trening</option>
-                      <option>Skyting</option>
-                      <option>Konkurranse</option>
-                    </select>
-                  </div>
-                </div>
+        <!-- Bank Tab -->
+        <section id="tab-bank" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
+            <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label class="text-sm font-medium">Søk</label>
+                <input id="q-bank" class="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Søk i øktbank…"/>
               </div>
-              <div id="bankList" style="margin-top:12px"></div>
-            </section>
-
-            <!-- Ukekoder -->
-            <section id="tab-uker" hidden>
-              <div class="row">
-                <div>
-                  <h3 style="margin-bottom:6px">Velg ukekoder</h3>
-                  <p class="small muted">Kode per uke hjelper periodisering og belastningsstyring. Vises i kalenderen.</p>
-                </div>
-                <div class="card">
-                  <div class="head"><h3>Forklaring</h3></div>
-                  <div class="body small">
-                    <div class="legend">
-                      <div class="row"><span class="wkcode">BAS</span> Grunn/base</div>
-                      <div class="row"><span class="wkcode">OPP</span> Oppbygging</div>
-                      <div class="row"><span class="wkcode">KONK</span> Konkurranse</div>
-                      <div class="row"><span class="wkcode">RES</span> Restitusjon</div>
-                      <div class="row"><span class="wkcode">EKS</span> Tester/eksamen</div>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <label class="text-sm font-medium">Målgruppe</label>
+                <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2">
+                  <option value="">Alle</option>
+                  <option value="U12">10–12 år</option>
+                  <option value="U14">13–14 år</option>
+                  <option value="U16">15–16 år</option>
+                  <option value="JR">Junior (17–20)</option>
+                </select>
               </div>
-              <div id="wkGrid" class="wkgrid" style="margin-top:12px"></div>
-            </section>
-
-            <!-- Roller -->
-            <section id="tab-roller" hidden>
-              <div class="row">
-                <div class="card">
-                  <div class="head"><h3>Personer</h3><button class="btn" id="addPerson">+ Legg til</button></div>
-                  <div class="body list">
-                    <table id="peopleTable"><thead><tr><th>Navn</th><th>Roller</th><th>Kontakt</th><th></th></tr></thead><tbody></tbody></table>
-                  </div>
-                </div>
-                <div class="card">
-                  <div class="head"><h3>Standardroller</h3></div>
-                  <div class="body small">
-                    <div class="chips" id="roleChips"></div>
-                    <p class="muted small" style="margin-top:8px">Roller kan tildeles per hendelse i skjemaet (f.eks. Trener, Lagleder, Standplass, Smøring, Transport, Tidtakning, Førstehjelp).</p>
-                  </div>
-                </div>
+              <div>
+                <label class="text-sm font-medium">Type</label>
+                <select id="f-type" class="mt-1 w-full rounded-xl border px-3 py-2">
+                  <option value="">Alle</option>
+                  <option>Trening</option>
+                  <option>Konkurranse</option>
+                  <option>Restitusjon</option>
+                </select>
               </div>
-            </section>
-
-            <!-- PDF referanse -->
-            <section id="tab-pdf" hidden>
-              <div class="row">
-                <div class="card">
-                  <div class="head"><h3>Last opp PDF (årsplan, Utviklingstrappa, skyte-notater)</h3></div>
-                  <div class="body">
-                    <label class="btn">↥ Velg PDF <input id="pdfInput" hidden type="file" accept="application/pdf"/></label>
-                    <div id="pdfViewer" style="margin-top:12px;height:70vh;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:none">
-                      <embed id="pdfEmbed" type="application/pdf" style="width:100%;height:100%" />
-                    </div>
-                  </div>
-                </div>
-                <div class="card">
-                  <div class="head"><h3>Utviklingstrapp – kortversjon</h3></div>
-                  <div class="body small">
-                    <ul>
-                      <li><b>U12 (10–12):</b> Variasjon/lek, korte økter, enkel skyting liggende.</li>
-                      <li><b>U14 (13–14):</b> Mer organisert, enkel fart/tempo, introduser stående.</li>
-                      <li><b>U16 (15–16):</b> Systematikk/progresjon, intensitetsstyring, kombinert skyting.</li>
-                      <li><b>JR (17–20):</b> Individtilpasning, helhetlig belastning, konkurransespesifikt.</li>
-                    </ul>
-                    <p class="muted">Bruk som filter i øktbank og for merking av økter.</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <!-- Import/EQTiming -->
-            <section id="tab-import" hidden>
-              <div class="card">
-                <div class="head"><h3>CSV/ICS-import</h3></div>
-                <div class="body small">
-                  <p><b>CSV</b> forventer kolonner (semikolon eller komma): <span class="kbd">date</span>, <span class="kbd">title</span>, <span class="kbd">type</span>, <span class="kbd">modality</span>, <span class="kbd">intensity</span>, <span class="kbd">duration</span>, <span class="kbd">shots</span>, <span class="kbd">age</span>, <span class="kbd">notes</span>, <span class="kbd">raceSubtype</span></p>
-                  <p><b>ICS</b> (iCalendar) støttes for grunnleggende felt (<span class="kbd">DTSTART</span>, <span class="kbd">SUMMARY</span>, <span class="kbd">DESCRIPTION</span>).</p>
-                  <div class="chips">
-                    <label class="btn">Importer CSV <input id="csv2" type="file" accept="text/csv" hidden/></label>
-                    <label class="btn">Importer ICS <input id="ics2" type="file" accept="text/calendar,.ics" hidden/></label>
-                    <button id="downloadCsv" class="btn">Last ned CSV‑mal</button>
-                  </div>
-                </div>
-              </div>
-              <div class="card" style="margin-top:12px">
-                <div class="head"><h3>EQTiming‑sjekk (valgfritt)</h3></div>
-                <div class="body small">
-                  <p>Lim inn URL til et EQTiming‑arrangement (påmelding eller live). Lenkes til hendelsen – og vi forsøker å hente navn/tittel hvis mulig.<br/><span class="muted">NB: Direkte automatisk import kan kreve API‑tilgang/CORS. Uansett lagres lenken på hendelsen.</span></p>
-                  <div class="row">
-                    <div>
-                      <label>EQTiming‑URL</label>
-                      <input id="eqUrl" placeholder="https://signup.eqtiming.com/... eller https://live.eqtiming.com/..." />
-                    </div>
-                    <div>
-                      <label>Hendelse</label>
-                      <select id="eqEventSelect"></select>
-                    </div>
-                  </div>
-                  <div class="chips" style="margin-top:8px">
-                    <button class="btn" id="eqAttach">Knytt til hendelse</button>
-                    <button class="btn" id="eqTry">Forsøk å hente tittel</button>
-                    <span id="eqStatus" class="small"></span>
-                  </div>
-                </div>
-              </div>
-            </section>
+            </div>
+            <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
           </div>
-        </div>
+        </section>
+
+        <!-- PDF Tab -->
+        <section id="tab-pdf" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="border-b p-4"><h3 class="text-lg font-semibold">PDF‑referanse</h3></div>
+            <div class="p-4">
+              <label class="inline-flex items-center gap-2 no-print">
+                <input id="file-pdf" type="file" accept="application/pdf" class="hidden"/>
+                <span class="rounded-2xl border bg-white px-3 py-2 shadow-sm cursor-pointer">Velg PDF</span>
+              </label>
+              <div id="pdf-embed" class="mt-4 h-[70vh] w-full overflow-hidden rounded-2xl border hidden">
+                <embed id="pdf-el" src="" type="application/pdf" class="h-full w-full" />
+              </div>
+              <p id="pdf-empty" class="mt-2 text-sm text-slate-600">Ingen PDF valgt ennå. Tips: Last opp «Utviklingstrapp_v01_2018-3.pdf» eller «Tanker skyteteknikk.pptx.pdf».</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Admin Tab -->
+        <section id="tab-admin" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin • Import • Verktøy</h3></div>
+            <div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium">CSV‑import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
+                  <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; balanse|avtrekk; U12|U14"></textarea>
+                  <div class="mt-2 flex gap-2">
+                    <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
+                    <button id="btn-csv-eg" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lim inn eksempel</button>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-sm font-medium">EQTiming‑sjekk (lim inn lenke pr. hendelse i skjemaet)</label>
+                  <p class="text-sm text-slate-600">Hent tittel/arrangement‑navn fra eqtiming.no direkte i hendelsesdialogen. Merk: CORS kan hindre auto‑henting i noen nettlesere.</p>
+                </div>
+              </div>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-medium">Ukekoder (BAS/OPP/KONK/RES/EKS)</label>
+                  <div class="mt-2 max-h-72 overflow-auto rounded-xl border">
+                    <table class="w-full text-sm">
+                      <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
+                      <tbody id="tbl-weeks"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-sm font-medium">Eksporter ICS (kalender)</label>
+                  <div class="mt-2 flex gap-2">
+                    <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <aside class="sticky-top">
-        <div class="card">
-          <div class="head"><h3>Fargekode</h3></div>
-          <div class="body legend">
-            <div class="row"><span class="dot" style="background:#2563eb"></span>Trening</div>
-            <div class="row"><span class="dot" style="background:#0ea5e9"></span>Skyting</div>
-            <div class="row"><span class="dot" style="background:#dc2626"></span>Konkurranse</div>
-            <div class="row"><span class="dot" style="background:#a855f7"></span>Samling</div>
-            <div class="row"><span class="dot" style="background:#16a34a"></span>Restitusjon</div>
-            <div class="row"><span class="dot" style="background:#6b7280"></span>Annet</div>
+      <!-- Sidepanel -->
+      <aside class="space-y-4">
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
+          <div id="legend" class="p-4 space-y-1 text-sm"></div>
+        </div>
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
+          <div class="p-4 text-sm text-slate-700 space-y-1">
+            <p><span class="font-medium">U12:</span> Variasjon/lek, korte økter, enkel liggende.</p>
+            <p><span class="font-medium">U14:</span> Mer organisert, fartstider, stående introduseres.</p>
+            <p><span class="font-medium">U16:</span> Systematisk progresjon, intensitetsstyring, kombinert.</p>
+            <p><span class="font-medium">JR:</span> Individtilpasning, helhetlig belastning, konk‑spesifikt.</p>
           </div>
         </div>
-        <div class="card" style="margin-top:12px">
-          <div class="head"><h3>Tips</h3></div>
-          <div class="body small">
-            <ul>
-              <li>Bruk ukekoder for å styre total belastning.</li>
-              <li>Økter kan dupliseres og dras over i nye datoer via «Kopier» i tabellen.</li>
-              <li>Eksporter JSON for deling i trenerteamet.</li>
-            </ul>
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Hurtigverktøy</h3></div>
+          <div class="p-4 flex flex-col gap-2 no-print">
+            <button id="quick-trening" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny trening</button>
+            <button id="quick-skyting" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny skyteøkt</button>
+            <button id="quick-konk" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny konkurranse</button>
           </div>
         </div>
       </aside>
     </div>
   </div>
 
-  <!-- Modal: Event -->
-  <div class="overlay" id="eventOverlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="mhead">
-        <h3 id="eventTitle">Ny hendelse</h3>
-        <button class="btn" onclick="UI.closeEvent()">Lukk</button>
+  <!-- Dialog -->
+  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-4">
+        <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
+        <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
       </div>
-      <div class="mbody">
-        <div class="row3">
-          <div><label>Tittel</label><input id="f_title" placeholder="Basistrening + 30 skudd"/></div>
-          <div><label>Type</label>
-            <select id="f_type">
-              <option>Trening</option><option>Skyting</option><option>Konkurranse</option><option>Samling</option><option>Restitusjon</option><option>Annet</option>
-            </select>
-          </div>
-          <div><label>Dato</label><input id="f_date" type="date"/></div>
-        </div>
-        <div class="row3" style="margin-top:8px">
-          <div><label>Modalitet</label>
-            <select id="f_mod"><option></option><option>Ski skøyting</option><option>Ski klassisk</option><option>Rulleski skøyting</option><option>Rulleski klassisk</option><option>Løp</option><option>Sykkel</option><option>Styrke</option><option>Basistrening</option></select>
-          </div>
-          <div><label>Intensitet</label>
-            <select id="f_int"><option></option><option>I1</option><option>I2</option><option>I3</option><option>I4</option><option>I5</option></select>
-          </div>
-          <div><label>Varighet (min)</label><input id="f_dur" type="number" min="0" value="60"/></div>
-        </div>
-        <div class="row3" style="margin-top:8px">
-          <div><label>Skytestilling</label>
-            <select id="f_stand"><option></option><option>Liggende</option><option>Stående</option><option>Kombinert</option><option>Variert</option><option>Konk</option></select>
-          </div>
-          <div><label>Antall skudd</label><input id="f_shots" type="number" min="0" value="0"/></div>
-          <div><label>Konkurransetype</label>
-            <select id="f_race"><option></option><option>Sprint</option><option>Normal</option><option>Jaktstart</option><option>Fellesstart</option><option>Stafett</option><option>Mix-stafett</option><option>KM</option><option>HL/NC</option><option>Kretsrenn</option><option>Lokalt renn</option></select>
-          </div>
-        </div>
-        <div class="row3" style="margin-top:8px">
-          <div>
-            <label>Målgruppe</label>
-            <div class="chips" id="ageChips"></div>
-          </div>
-          
-          <div>
-            <label>EQTiming‑lenke</label>
-            <input id="f_eq" placeholder="https://..."/>
-          </div>
-          <div>
-            <label>Ukekode</label>
-            <select id="f_wk"><option></option><option>BAS</option><option>OPP</option><option>KONK</option><option>RES</option><option>EKS</option></select>
-          </div>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <div>
-            <label>Notater</label>
-            <textarea id="f_notes" placeholder="Fokusområder, oppmøtested, utstyr…"></textarea>
-          </div>
-          <div>
-            <label>Rolleliste (tildel personer)</label>
-            <div id="roleAssign"></div>
-          </div>
-        </div>
-        <div class="right" style="margin-top:10px">
-          <button class="btn danger" id="f_delete" style="display:none">Slett</button>
-          <button class="btn" id="f_copy">Kopier</button>
-          <button class="btn brand" id="f_save">Lagre</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Person -->
-  <div class="overlay" id="personOverlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="mhead"><h3>Ny person</h3><button class="btn" onclick="UI.closePerson()">Lukk</button></div>
-      <div class="mbody">
-        <div class="row">
-          <div><label>Navn</label><input id="p_name"/></div>
-          <div><label>Kontakt (valgfritt)</label><input id="p_contact" placeholder="e‑post, mobil…"/></div>
-        </div>
-        <div style="margin-top:8px"><label>Roller</label><div id="p_roles" class="chips"></div></div>
-        <div class="right" style="margin-top:10px"><button class="btn brand" id="p_save">Lagre</button></div>
+      <div class="p-4 space-y-3" id="dlg-body"></div>
+      <div class="border-t p-4 flex justify-end gap-2">
+        <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
+        <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
+        <button id="btn-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
       </div>
     </div>
   </div>
 
   <script>
-  // ------------------ Data & Storage ------------------
-  const LS = {
-    events: 'lss:events:v2',
-    templates: 'lss:templates:v2',
-    settings: 'lss:settings:v1',
-    weekcodes: 'lss:weekcodes:v1',
-    people: 'lss:people:v1',
-    roles: 'lss:roles:v1'
-  };
-  const COLORS = {Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Restitusjon:'#16a34a', Annet:'#6b7280'};
-  const AGES = [{id:'U12',label:'10–12'},{id:'U14',label:'13–14'},{id:'U16',label:'15–16'},{id:'JR',label:'Junior'}];
-  const DEFAULT_ROLES = ['Trener','Assistenttrener','Lagleder','Standplass','Smøring','Transport','Tidtakning','Førstehjelp'];
-  const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
-  const uid = () => (crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2);
-  const j = (x, f=[]) => {try{const v=JSON.parse(localStorage.getItem(x)||'null');return v??f}catch{ return f}};
-  const s = (k,v)=>localStorage.setItem(k,JSON.stringify(v));
+    // Dayjs init
+    dayjs.extend(dayjs_plugin_isoWeek);
+    dayjs.extend(dayjs_plugin_weekday);
+    dayjs.extend(dayjs_plugin_localizedFormat);
 
-  let state = {
-    year: new Date().getFullYear(),
-    events: j(LS.events, []),
-    templates: j(LS.templates, []),
-    weekcodes: j(LS.weekcodes, {}),
-    people: j(LS.people, []),
-    roles: j(LS.roles, DEFAULT_ROLES)
-  };
-  if(state.templates.length===0){
-    state.templates = getDefaultTemplates();
-    s(LS.templates, state.templates);
-  }
+    const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
+    const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
+    const INTENS = ['I1','I2','I3','I4','I5'];
+    const KONK = ['Sprint','Normal','Jaktstart','Fellesstart','Stafett','Mix-stafett','KM','HL/NC','Kretsrenn','Lokalt renn'];
+    const ALDER = [ ['U12','10–12'], ['U14','13–14'], ['U16','15–16'], ['JR','17–20'] ];
+    const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
+    const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
 
-  // ------------------ UI Helpers ------------------
-  const $ = (sel,root=document)=>root.querySelector(sel);
-  const $$ = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
-  function fmtDate(d){const dt=new Date(d);return dt.toLocaleDateString('no-NO',{day:'2-digit',month:'2-digit',year:'numeric'});}  
-  function ymd(d){const dt=new Date(d);return dt.toISOString().slice(0,10);}  
-  function weekNumber(d){const date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dayNum=date.getUTCDay()||7;date.setUTCDate(date.getUTCDate()+4-dayNum);const yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));return Math.ceil((((date - yearStart) / 86400000) + 1)/7)}
-  function parseCsv(text){
-    const sep = text.includes(';') && (!text.includes(',') || text.split(';').length>text.split(',').length) ? ';' : ',';
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const headers = lines.shift().split(sep).map(h=>h.trim().toLowerCase());
-    const out = [];
-    for(const line of lines){
-      const cols = line.split(sep).map(c=>c.trim());
-      const obj = {};
-      headers.forEach((h,i)=>obj[h]=cols[i]||'');
-      const e = csvToEvent(obj);
-      if(e) out.push(e);
-    }
-    return out;
-  }
-  function csvToEvent(o){
-    if(!o.date) return null;
-    const e = {
-      id: uid(),
-      date: o.date,
-      title: o.title||'',
-      type: o.type||'Trening',
-      modality: o.modality||'',
-      intensity: o.intensity||'',
-      durationMin: Number(o.duration||o.durationmin||60)||60,
-      age: (o.age||'').split('|').filter(Boolean),
-      shooting: { stilling: o.stilling||'', skudd: Number(o.shots||o.skudd||0)||0, tema: (o.tema||'').split('|').filter(Boolean) },
-      raceSubtype: o.racesubtype||'',
-      notes: o.notes||'',
-      eq: o.eq||''
+    const KEY = {
+      EVENTS: 'lss:events:v1',
+      BANK: 'lss:bank:v1',
+      WEEKS: 'lss:weeks:v1',
+      YEAR: 'lss:year:v1'
     };
-    return e;
-  }
-  function download(filename, text){
-    const blob = new Blob([text],{type:'text/plain'});const url = URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
-  }
-  function parseICS(text){
-    const lines = text.split(/\r?\n/);
-    const events=[]; let cur=null;
-    for(let ln of lines){
-      if(ln.startsWith('BEGIN:VEVENT')){cur={}} else if(ln.startsWith('END:VEVENT')){if(cur&&cur.DTSTART){events.push(cur)} cur=null}
-      else if(cur){
-        const idx=ln.indexOf(':'); if(idx>0){ const key=ln.slice(0,idx).split(';')[0]; const val=ln.slice(idx+1); cur[key]=val; }
+
+    const $ = (q, el=document) => el.querySelector(q);
+    const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+    const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+    const lsGet = (k, d) => { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch{return d;} };
+    const lsSet = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} };
+
+    let state = {
+      year: lsGet(KEY.YEAR, dayjs().year()),
+      events: lsGet(KEY.EVENTS, []),
+      bank: lsGet(KEY.BANK, getDefaultTemplates()),
+      weeks: lsGet(KEY.WEEKS, getDefaultWeeks(lsGet(KEY.YEAR, dayjs().year())))
+    };
+
+    // ---------- Default Data ----------
+    function getDefaultWeeks(year){
+      // create all ISO weeks present in the year
+      const first = dayjs(year+'-01-01');
+      const last = dayjs(year+'-12-31');
+      const weeks = {};
+      let d = first.startOf('week');
+      while(d.isBefore(last.add(1,'day'))){
+        const wk = d.isoWeek();
+        if(!weeks[wk]) weeks[wk] = { code:'BAS', note:'' };
+        d = d.add(7,'day');
       }
+      return weeks;
     }
-    return events.map(v=>({
-      id: uid(),
-      date: icsDate(v.DTSTART),
-      title: (v.SUMMARY||'').replace(/\\,/g,','),
-      type: 'Trening',
-      modality: '', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:(v.DESCRIPTION||'').replace(/\\n/g,'\n')
-    }));
-  }
-  function icsDate(s){ // supports YYYYMMDD or with time
-    if(!s) return ymd(new Date());
-    const d = s.includes('T') ? new Date(s) : new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8));
-    return ymd(d);
-  }
 
-  // ------------------ Calendar ------------------
-  function renderMonths(){
-    const wrap = $('#months'); wrap.innerHTML='';
-    for(let m=0;m<12;m++){
-      const month = new Date(state.year, m, 1);
-      const daysInMonth = new Date(state.year, m+1, 0).getDate();
-      const firstDay = new Date(state.year, m, 1).getDay() || 7; // Mon=1..Sun=7
-      const grid=[]; for(let i=1;i<firstDay;i++) grid.push(null); for(let d=1; d<=daysInMonth; d++) grid.push(new Date(state.year,m,d)); while(grid.length%7!==0) grid.push(null);
-      const card = document.createElement('div'); card.className='month';
-      const head = document.createElement('div'); head.className='mhead'; head.innerHTML = `<strong>${month.toLocaleString('no-NO',{month:'long'})}</strong><span class="small muted">Uke‑kode: ${weekBadgeForMonth(m+1)}</span>`; card.appendChild(head);
-      const dow = document.createElement('div'); dow.className='week'; 'man,tir,ons,tors,fre,lør,søn'.split(',').forEach(w=>{const x=document.createElement('div');x.className='dow';x.textContent=w;dow.appendChild(x)}); card.appendChild(dow);
-      const gridEl = document.createElement('div'); gridEl.className='week';
-      grid.forEach((d)=>{
-        const cell = document.createElement('div'); cell.className='day';
-        if(d){
-          const key = ymd(d);
-          cell.addEventListener('click',()=>UI.openEvent({date:key}));
-          const dnum = document.createElement('div'); dnum.className='dnum'; dnum.textContent=d.getDate(); cell.appendChild(dnum);
-          const badges = document.createElement('div'); badges.className='badges'; cell.appendChild(badges);
-          const es = state.events.filter(e=>e.date===key);
-          es.slice(0,4).forEach(e=>{const b=document.createElement('span'); b.className='badge'; b.style.background=COLORS[e.type]||'#6b7280'; badges.appendChild(b)});
-          es.slice(0,3).forEach(e=>{const t=document.createElement('div'); t.className='event'; t.textContent = (e.title||e.type); cell.appendChild(t)});
-          if(es.length>3){const more=document.createElement('div');more.className='event muted';more.textContent='+'+(es.length-3)+' flere…'; cell.appendChild(more)}
-        } else { cell.style.background='#fafafa' }
-        gridEl.appendChild(cell);
+    function getDefaultTemplates(){
+      const T = [];
+      const add=(o)=>T.push({id:uid(),...o});
+      add({name:'U12 Lekpreget I2 (45–60) + 30 skudd ligg',type:'Trening',modality:'Løp',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12'],notes:'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'});
+      add({name:'U14 Rulleski I3 5×4 min + stående',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:40,tema:['Grunnstilling stående','Avtrekkstid/trigger']},age:['U14'],notes:'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'});
+      add({name:'U16 VO2 I4 6×3 min + kombinert',type:'Trening',modality:'Løp',intensity:'I4',durationMin:80,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'});
+      add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'Rolig langtur. 6×10 teknikkserier.'});
+      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde & avtrekk','Pust & rytme']},age:['U12','U14','U16','JR'],notes:'Fokus på balanse, fraskyv og tyngdeoverføring. Korte teknikkstasjoner på standplass.'});
+      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR'],notes:'Standard sprintoppsett.'});
+      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR'],notes:'Standard normaldistanse.'});
+      add({name:'Basistrening + styrke (sirkel)',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Sirkel: kjernestyrke, stabilitet, hofte/ankel. 8–10 stasjoner × 30–40 sek.'});
+      add({name:'Skyting – presisjon liggende 5×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:50,shooting:{stilling:'Liggende',skudd:25,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12','U14','U16'],notes:'Rolig bevegelse mellom serier. Fokus på avtrekkskontroll og etterhold.'});
+      add({name:'Skyting – presisjon stående 6×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:55,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Pust & rytme']},age:['U14','U16','JR'],notes:'Holdtid og nullpunkt. Minutters rolig bevegelse mellom serier.'});
+      add({name:'Komb – inn/ut + I3 drag 4×6 min',type:'Trening',modality:'Løp',intensity:'I3',durationMin:85,shooting:{stilling:'Kombinert',skudd:40,tema:['Overganger (inn/ut)','Repetisjonsrytme']},age:['U16','JR'],notes:'4×6 min I3. Skyting etter hvert drag (L/S annenhver). Fokus på inngang/utgang.'});
+      add({name:'Test – 3000 m + 2×5 skudd',type:'Trening',modality:'Løp',intensity:'I5',durationMin:60,shooting:{stilling:'Variert',skudd:10,tema:['Avtrekkstid/trigger']},age:['U16','JR'],notes:'Oppvarming 20 min, test 3000 m, deretter 2×5 skudd stå/ligg med puls.'});
+      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Rolig bevegelse i pratetempo. 10–15 min mobilitet.'});
+      // Stafettspesifikk
+      add({name:'Stafett – vekslinger + skyterutiner',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Repetisjonsrytme']},age:['U14','U16','JR'],notes:'Vekslinger, inn/ut, standplassdisiplin. 8×5 skudd (L/S).'});
+      // HL-forberedelse
+      add({name:'HL/NC forberedelse – sprintsim',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Overganger (inn/ut)','Avtrekkstid/trigger']},age:['U16','JR'],notes:'Prolog + en omgang jaktstart med handicaptid.'});
+      return T;
+    }
+
+    // ---------- Rendering ----------
+    function render(){
+      $('#year-label').textContent = state.year;
+      $('#event-year').textContent = state.year;
+      renderLegend();
+      renderCalendar();
+      renderList();
+      renderBank();
+      renderWeeks();
+      lsSet(KEY.YEAR, state.year);
+      lsSet(KEY.EVENTS, state.events);
+      lsSet(KEY.BANK, state.bank);
+      lsSet(KEY.WEEKS, state.weeks);
+    }
+
+    function renderLegend(){
+      const el = $('#legend'); el.innerHTML = '';
+      Object.entries(COLORS).forEach(([k,c])=>{
+        const row = document.createElement('div');
+        row.className='flex items-center justify-between';
+        row.innerHTML = `<span class="flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${c}"></span>${k}</span>`;
+        el.appendChild(row);
       });
-      card.appendChild(gridEl);
-      wrap.appendChild(card);
     }
-  }
-  function weekBadgeForMonth(month){
-    // Show most common wk code across weeks in this month
-    const weeks = new Set();
-    for(let d=1; d<=31; d++){
-      const dt = new Date(state.year, month-1, d);
-      if(dt.getMonth()!==month-1) break;
-      weeks.add(weekNumber(dt));
-    }
-    const counts={};
-    weeks.forEach(w=>{const code=state.weekcodes[w]||''; if(!code) return; counts[code]=(counts[code]||0)+1});
-    const best = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
-    return best ? `<span class="wkcode">${best[0]}</span>` : '<span class="muted small">–</span>';
-  }
 
-  function renderEventTable(){
-    const tbody = $('#eventTable tbody'); tbody.innerHTML='';
-    const rows = state.events.filter(e=>new Date(e.date).getFullYear()===state.year).sort((a,b)=>a.date.localeCompare(b.date));
-    for(const e of rows){
-      const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${fmtDate(e.date)}</td>
-        <td>${e.title||'<span class="muted">(uten tittel)</span>'}</td>
-        <td><span class="pill" style="border-color:#e5e7eb"><span style="width:10px;height:10px;border-radius:50%;background:${COLORS[e.type]||'#999'}"></span>${e.type}${e.raceSubtype?(' · '+e.raceSubtype):''}</span></td>
-        <td>${e.modality||''}</td>
-        <td>${e.intensity||''}</td>
-        <td>${(e.shooting&&e.shooting.skudd)||0}</td>
-        <td>${e.eq?'<span class="eq"><b>EQ</b> <a href="'+e.eq+'" target="_blank">Åpne</a></span>':'—'}</td>
-        <td class="right">
-          <button class="btn" data-act="edit">Rediger</button>
-          <button class="btn" data-act="dup">Kopier</button>
-          <button class="btn danger" data-act="del">Slett</button>
-        </td>`;
-      tr.querySelector('[data-act="edit"]').onclick=()=>UI.openEvent(e);
-      tr.querySelector('[data-act="dup"]').onclick=()=>UI.openEvent({...e, id:uid(), date:e.date});
-      tr.querySelector('[data-act="del"]').onclick=()=>{ if(confirm('Slette hendelse?')){ state.events = state.events.filter(x=>x.id!==e.id); saveAndRender(); } };
-      tbody.appendChild(tr);
+    function renderCalendar(){
+      const grid = $('#calendar-grid'); grid.innerHTML='';
+      for(let m=1;m<=12;m++) grid.appendChild(renderMonth(state.year,m));
     }
-    $('#yearLabel').textContent = state.year;
-    // Update EQ select
-    const sel = $('#eqEventSelect'); sel.innerHTML='';
-    rows.forEach(e=>{const o=document.createElement('option'); o.value=e.id; o.textContent=`${fmtDate(e.date)} – ${e.title||e.type}`; sel.appendChild(o)});
-  }
 
-  // ------------------ Event Modal ------------------
-  const UI = {
-    openEvent(partial){
-      const isExisting = partial && partial.id && state.events.find(e=>e.id===partial.id);
-      const e = isExisting ? {...partial} : ({ id: uid(), title:'', type: partial.type||'Trening', date: partial.date||ymd(new Date()), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, raceSubtype:'', notes:'', eq:'', roles:{} });
-      UI._cur = e;
-      $('#eventTitle').textContent = isExisting? 'Rediger hendelse' : 'Ny hendelse';
-      $('#f_title').value = e.title||''; $('#f_type').value=e.type; $('#f_date').value=e.date; $('#f_mod').value=e.modality||''; $('#f_int').value=e.intensity||''; $('#f_dur').value=e.durationMin||60; $('#f_stand').value=e.shooting?.stilling||''; $('#f_shots').value=e.shooting?.skudd||0; $('#f_race').value=e.raceSubtype||''; $('#f_notes').value=e.notes||''; $('#f_eq').value=e.eq||'';
-      // Ages
-      const ageHost = $('#ageChips'); ageHost.innerHTML='';
-      AGES.forEach(g=>{
-        const chip=document.createElement('span'); chip.className='chip'; chip.innerHTML=`${g.label} <span class="x">×</span>`; chip.style.background=e.age.includes(g.id)?'#e0f2fe':'#fff';
-        chip.onclick=()=>{ const set=new Set(e.age); set.has(g.id)?set.delete(g.id):set.add(g.id); e.age=Array.from(set); UI.openEvent(e) };
-        ageHost.appendChild(chip);
+    function renderMonth(year, month){
+      const wrap = document.createElement('div');
+      wrap.className = 'rounded-2xl border bg-white shadow-sm';
+      const header = document.createElement('div');
+      header.className = 'flex items-center justify-between border-b p-4';
+      header.innerHTML = `<h3 class="text-lg font-semibold">${dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM')}</h3>`;
+      const body = document.createElement('div');
+      body.className = 'p-2';
+
+      const daysHeader = document.createElement('div');
+      daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
+      'man tir ons tor fre lør søn'.split(' ').forEach(w=>{
+        const d=document.createElement('div'); d.className='px-1 py-1 text-center font-medium uppercase'; d.textContent=w; daysHeader.appendChild(d);
       });
-      // Roles assign
-      const assign = $('#roleAssign'); assign.innerHTML='';
-      (state.roles||[]).forEach(r=>{
-        const wrap=document.createElement('div'); wrap.style.marginBottom='6px';
-        const lab=document.createElement('label'); lab.textContent=r; assign.appendChild(lab);
-        const sel=document.createElement('select'); sel.innerHTML='<option></option>' + state.people.map(p=>`<option ${e.roles[r]===p.id?'selected':''} value="${p.id}">${p.name}</option>`).join('');
-        sel.onchange=()=>{ e.roles[r] = sel.value; };
-        wrap.appendChild(sel); assign.appendChild(wrap);
-      });
-      // Week code
-      const wk = weekNumber(new Date(e.date)); $('#f_wk').value = e.wk || state.weekcodes[wk] || '';
-      $('#f_wk').onchange=()=>{ e.wk = $('#f_wk').value };
-      // Buttons
-      $('#f_delete').style.display = isExisting? 'inline-flex':'none';
-      $('#f_delete').onclick=()=>{ if(confirm('Slette hendelse?')){ state.events = state.events.filter(x=>x.id!==e.id); UI.closeEvent(); saveAndRender(); } };
-      $('#f_copy').onclick=()=>{ const copy={...e, id:uid(), title:(e.title?(e.title+' (kopi)'):'')}; UI.openEvent(copy); };
-      $('#f_save').onclick=()=>{
-        e.title=$('#f_title').value.trim(); e.type=$('#f_type').value; e.date=$('#f_date').value; e.modality=$('#f_mod').value; e.intensity=$('#f_int').value; e.durationMin=Number($('#f_dur').value)||0; e.shooting={stilling:$('#f_stand').value, skudd:Number($('#f_shots').value)||0, tema:(e.shooting?.tema||[])}; e.raceSubtype=$('#f_race').value; e.notes=$('#f_notes').value; e.eq=$('#f_eq').value.trim();
-        const exists = state.events.find(x=>x.id===e.id);
-        if(exists) state.events = state.events.map(x=>x.id===e.id?e:x); else state.events.push(e);
-        UI.closeEvent(); saveAndRender();
-      };
-      $('#eventOverlay').classList.add('show');
-    },
-    closeEvent(){ $('#eventOverlay').classList.remove('show'); },
-    openPerson(){ $('#personOverlay').classList.add('show'); $('#p_name').value=''; $('#p_contact').value=''; renderRolePills($('#p_roles'), state.roles, new Set(), (set)=>{}); $('#p_save').onclick=()=>{ const name=$('#p_name').value.trim(); if(!name) return; const person={id:uid(), name, contact:$('#p_contact').value.trim(), roles:[]} ; state.people.push(person); saveAndRender(); UI.closePerson(); } },
-    closePerson(){ $('#personOverlay').classList.remove('show'); }
-  };
 
-  // ------------------ Øktbank ------------------
-  function renderBank(){
-    const q = ($('#bankQuery').value||'').toLowerCase();
-    const age = $('#bankAge').value; const type = $('#bankType').value;
-    const list = $('#bankList'); list.innerHTML='';
-    const items = state.templates.filter(t=>(!q || t.name.toLowerCase().includes(q)) && (!age || (t.age||[]).includes(age)) && (!type || t.type===type));
-    items.forEach(t=>{
-      const c=document.createElement('div'); c.className='card';
-      c.innerHTML = `<div class="head"><h3>${t.name}</h3><span class="pill"><span style="width:10px;height:10px;border-radius:50%;background:${COLORS[t.type]}"></span>${t.type}</span></div>
-        <div class="body small">
-          <div class="row4">
-            <div><b>Mod:</b> ${t.modality||'–'}</div>
-            <div><b>Int:</b> ${t.intensity||'–'}</div>
-            <div><b>Varighet:</b> ${t.durationMin? t.durationMin+' min':'–'}</div>
-            <div><b>Skudd:</b> ${t.shooting?.skudd||0}</div>
-          </div>
-          ${(t.shooting?.tema||[]).length? `<div class="chips" style="margin-top:6px">${t.shooting.tema.map(x=>`<span class='chip'>${x}</span>`).join('')}</div>`:''}
-          ${t.notes? `<p style="margin-top:6px;white-space:pre-wrap">${t.notes}</p>`:''}
-          <div class="chips" style="margin-top:8px">
-            ${(t.age||[]).map(a=>`<span class='pill'>${AGES.find(g=>g.id===a)?.label||a}</span>`).join('')}
-          </div>
-          <div class="right" style="margin-top:8px">
-            <button class="btn brand">Planlegg denne</button>
-            <button class="btn">Dupliser</button>
-            <button class="btn danger">Slett</button>
+      const cells = document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
+      const first = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
+      const leading = (first.day()+6)%7; // Mon=0
+      const days = first.daysInMonth();
+      for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
+      for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
+      const total = leading + days; const trail = (7 - (total % 7)) % 7; for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
+
+      body.appendChild(daysHeader); body.appendChild(cells);
+      wrap.appendChild(header); wrap.appendChild(body);
+      return wrap;
+    }
+
+    function emptyCell(){ const d=document.createElement('div'); d.className='min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
+
+    function dayCell(d){
+      const key = d.format('YYYY-MM-DD');
+      const evts = state.events.filter(e=> dayjs(e.date).isSame(d,'day'));
+      const box = document.createElement('div');
+      box.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
+      box.addEventListener('click', ()=> openDialog({date:key}));
+      const top = document.createElement('div'); top.className='flex items-center justify-between text-xs text-slate-600';
+      top.innerHTML = `<span class="font-medium">${d.date()}</span><span class="flex gap-1">${evts.slice(0,4).map(e=>`<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>`).join('')}</span>`;
+      const list = document.createElement('div'); list.className='mt-1 flex flex-col gap-0.5';
+      evts.slice(0,3).forEach(e=>{ const row=document.createElement('div'); row.className='truncate text-xs'; row.innerHTML=`<span class='opacity-70'>• </span><span class='font-medium'>${e.title||e.type}</span>`; list.appendChild(row); });
+      if(evts.length>3){ const more=document.createElement('div'); more.className='text-[10px] text-slate-500'; more.textContent=`+${evts.length-3} flere…`; list.appendChild(more); }
+      box.appendChild(top); box.appendChild(list);
+      return box;
+    }
+
+    function renderList(){
+      const tbody = $('#tbl-events'); tbody.innerHTML='';
+      const yearEvents = state.events.filter(e=> dayjs(e.date).year() === state.year).sort((a,b)=> dayjs(a.date)-dayjs(b.date));
+      yearEvents.forEach(e=>{
+        const tr=document.createElement('tr'); tr.className='border-t';
+        tr.innerHTML = `
+          <td class='py-1 whitespace-nowrap'>${dayjs(e.date).format('DD.MM.YYYY')}</td>
+          <td class='max-w-[280px] truncate'>${e.title||'<span class="opacity-50">(uten tittel)</span>'}</td>
+          <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]}'></span>${e.type}${e.raceSubtype?` · ${e.raceSubtype}`:''}</span></td>
+          <td>${e.modality||'–'}</td>
+          <td>${e.intensity||'–'}</td>
+          <td>${(e.shooting&&e.shooting.skudd)||0}</td>
+          <td class='text-right'><button class='rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Rediger</button></td>`;
+        tr.querySelector('button').addEventListener('click', ()=> openDialog({...e}));
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderBank(){
+      const q = ($('#q-bank').value||'').toLowerCase();
+      const age = $('#f-age').value; const type = $('#f-type').value;
+      const box = $('#bank-cards'); box.innerHTML='';
+      state.bank.filter(t=> (!q || t.name.toLowerCase().includes(q)) && (!age || (t.age||[]).includes(age)) && (!type || t.type===type))
+        .forEach(t=> box.appendChild(bankCard(t)) );
+    }
+
+    function bankCard(t){
+      const c = document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm';
+      c.innerHTML = `
+        <div class='border-b p-4 flex items-center justify-between'>
+          <h4 class='text-base font-semibold'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${t.name}</h4>
+          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${a}</span>`).join('')}</div>
+        </div>
+        <div class='p-4 text-sm space-y-1'>
+          <div><span class='font-medium'>Modalitet:</span> ${t.modality||'–'}</div>
+          <div><span class='font-medium'>Intensitet:</span> ${t.intensity||'–'}</div>
+          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? t.durationMin+' min':'–'}</div>
+          <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
+          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${x}</span>`).join('')}</div>`:''}
+          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${t.notes}</p>`:''}
+          <div class='pt-2 flex flex-wrap gap-2'>
+            <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
+            <button class='btn-dup rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
+            <button class='btn-del text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
           </div>
         </div>`;
-      const [btnPlan,btnDup,btnDel] = $$('.btn', c).slice(-3);
-      btnPlan.onclick=()=>{
-        const e={ id:uid(), title:t.name, type:t.type, date: ymd(new Date(state.year,0,1)), modality:t.modality, intensity:t.intensity, durationMin:t.durationMin, age:(t.age||[]), shooting: t.shooting || {stilling:'',skudd:0,tema:[]}, raceSubtype:t.raceSubtype||'', notes:t.notes||'' };
-        UI.openEvent(e);
-      };
-      btnDup.onclick=()=>{ const copy={...t, id:uid(), name:t.name+' (kopi)'}; state.templates.unshift(copy); saveAndRender(); };
-      btnDel.onclick=()=>{ if(confirm('Slette mal?')){ state.templates = state.templates.filter(x=>x.id!==t.id); saveAndRender(); } };
-      list.appendChild(c);
-    });
-  }
-
-  function getDefaultTemplates(){
-    const T = [];
-    const add=(o)=>T.push({id:uid(),...o});
-    add({name:'U12 Lekpreget I2 (45–60) + 30 skudd ligg',type:'Trening',modality:'Løp',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12'],notes:'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'});
-    add({name:'U14 Rulleski I3 5×4 min + stående',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:40,tema:['Grunnstilling stående','Avtrekkstid/trigger']},age:['U14'],notes:'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'});
-    add({name:'U16 VO2 I4 6×3 min + kombinert',type:'Trening',modality:'Løp',intensity:'I4',durationMin:80,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'});
-    add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'Rolig langtur. 6×10 teknikkserier.'});
-    add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde & avtrekk','Pust & rytme']},age:['U12','U14','U16','JR']});
-    add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR']});
-    add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR']});
-    add({name:'Basistrening + styrke (sirkel)',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Liggende',skudd:20,tema:['Grunnstilling liggende']},age:['U12','U14']});
-    add({name:'Overgangsøkt ski↔standplass',type:'Skyting',modality:'Ski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Kombinert',skudd:60,tema:['Overganger (inn/ut)','Repetisjonsrytme']},age:['U16','JR']});
-    add({name:'Samling – helg',type:'Samling',modality:'Variert',intensity:'I2',durationMin:180,shooting:{stilling:'Variert',skudd:120,tema:['Magasinbytte','Stativarbeid']},age:['U14','U16','JR']});
-    add({name:'Restitusjon + bevegelighet',type:'Restitusjon',modality:'Basistrening',intensity:'I1',durationMin:40,shooting:{stilling:'',skudd:0,tema:[]},age:['U12','U14','U16','JR']});
-    add({name:'Styrke helkropp',type:'Trening',modality:'Styrke',intensity:'I3',durationMin:60,shooting:{stilling:'',skudd:0,tema:[]},age:['U16','JR']});
-    add({name:'Skyting presisjon 5×5 L/S',type:'Skyting',modality:'',intensity:'I1',durationMin:60,shooting:{stilling:'Variert',skudd:50,tema:['Siktebilde & avtrekk','Avtrekkstid/trigger']},age:['U14','U16','JR']});
-    return T;
-  }
-
-  // ------------------ Weekcodes ------------------
-  function renderWeekcodes(){
-    const host = $('#wkGrid'); host.innerHTML='';
-    // Compute ISO week count (52/53)
-    const lastDay = new Date(state.year, 11, 31);
-    const weeks = weekNumber(lastDay)===1?52:weekNumber(lastDay);
-    for(let w=1; w<=weeks; w++){
-      const card=document.createElement('div'); card.className='card';
-      card.innerHTML = `<div class="head"><h3>Uke ${w}</h3></div><div class="body">`+
-        `<select data-w="${w}"><option></option>${WEEKCODES.map(c=>`<option ${state.weekcodes[w]===c?'selected':''}>${c}</option>`).join('')}</select>`+
-        `</div>`;
-      $('select',card).onchange=(e)=>{ state.weekcodes[w]=e.target.value||undefined; saveAndRender(); };
-      host.appendChild(card);
+      c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t)));
+      c.querySelector('.btn-dup').addEventListener('click', ()=> { state.bank.unshift({...t, id:uid(), name:t.name+' (kopi)'}); renderBank(); lsSet(KEY.BANK,state.bank); });
+      c.querySelector('.btn-del').addEventListener('click', ()=> { state.bank = state.bank.filter(x=>x.id!==t.id); renderBank(); lsSet(KEY.BANK,state.bank); });
+      return c;
     }
-  }
 
-  // ------------------ People & Roles ------------------
-  function renderRolePills(host, roles, selectedSet, onChange){
-    host.innerHTML='';
-    roles.forEach(r=>{
-      const el=document.createElement('span'); el.className='chip'; el.textContent=r; el.onclick=()=>{ if(selectedSet.has(r)) selectedSet.delete(r); else selectedSet.add(r); onChange(selectedSet); renderRolePills(host, roles, selectedSet, onChange); };
-      if(selectedSet.has(r)) el.style.background='#e0f2fe'; host.appendChild(el);
-    });
-  }
-  function renderRoles(){
-    // Role chips config
-    const rc = $('#roleChips'); rc.innerHTML='';
-    state.roles.forEach((r,i)=>{
-      const el=document.createElement('span'); el.className='chip'; el.innerHTML = `${r} <span class='x' title='Fjern'>×</span>`;
-      $('.x', el).onclick=()=>{ if(confirm('Fjerne rolle?')){ state.roles.splice(i,1); saveAndRender(); }};
-      rc.appendChild(el);
-    });
-    const addBtn=document.createElement('button'); addBtn.className='btn'; addBtn.textContent='+ Ny rolle'; addBtn.onclick=()=>{ const name=prompt('Rollenavn:'); if(name){ state.roles.push(name.trim()); saveAndRender(); } }; rc.appendChild(addBtn);
+    function fromTemplate(t){
+      return { id: uid(), title: t.name, type: t.type, date: dayjs(`${state.year}-01-01`).format('YYYY-MM-DD'), modality: t.modality, intensity: t.intensity, durationMin: t.durationMin, age: t.age||[], shooting: t.shooting||{stilling:'',skudd:0,tema:[]}, raceSubtype: t.raceSubtype, notes: t.notes||'', roles: {}, eqtiming:'' };
+    }
 
-    // People table
-    const tbody = $('#peopleTable tbody'); tbody.innerHTML='';
-    state.people.forEach(p=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${p.name}</td><td>${(p.roles||[]).join(', ')||'—'}</td><td>${p.contact||''}</td><td class='right'><button class='btn' data-edit>Rediger</button><button class='btn danger' data-del>Slett</button></td>`;
-      tr.querySelector('[data-edit]').onclick=()=>{
-        $('#personOverlay').classList.add('show'); $('#p_name').value=p.name; $('#p_contact').value=p.contact||'';
-        const set = new Set(p.roles||[]);
-        renderRolePills($('#p_roles'), state.roles, set, (sset)=>{});
-        $('#p_save').onclick=()=>{ p.name=$('#p_name').value.trim(); p.contact=$('#p_contact').value.trim(); p.roles=Array.from(set); saveAndRender(); UI.closePerson(); };
+    // ---------- Dialog ----------
+    function openDialog(data){
+      const isEdit = !!state.events.find(x=>x.id===data.id);
+      const model = Object.assign({ id: uid(), title:'', type:'Trening', date: dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, eqtiming:'' }, data);
+      const body = $('#dlg-body'); body.innerHTML='';
+      $('#dlg-title').textContent = isEdit? 'Rediger hendelse' : 'Ny hendelse';
+      $('#btn-delete').classList.toggle('hidden', !isEdit);
+
+      const field = (label, inputHTML) => `<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
+      body.innerHTML = `
+        ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
+        <div class='grid grid-cols-2 gap-3'>
+          ${field('Type', select('f-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
+          ${field('Dato', `<input id='f-date' type='date' class='mt-1 w-full rounded-xl border px-3 py-2' value='${dayjs(model.date).format('YYYY-MM-DD')}'/>`)}
+        </div>
+        <div class='grid grid-cols-2 gap-3'>
+          ${field('Modalitet', select('f-mod', MODALITETER, model.modality))}
+          ${field('Intensitet', select('f-int', INTENS, model.intensity))}
+        </div>
+        <div class='grid grid-cols-3 gap-3'>
+          ${field('Varighet (min)', `<input id='f-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
+          ${field('Skytestilling', select('f-still', ['Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
+          ${field('Skudd', `<input id='f-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Tema (skyting)</label>
+          <div class='mt-1 flex flex-wrap gap-1' id='tema-tags'></div>
+          <div class='mt-1 flex gap-2'>
+            <input id='f-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
+            <button id='add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
+          </div>
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Målgruppe</label>
+          <div class='mt-1 flex flex-wrap gap-2'>
+            ${ALDER.map(([id,txt])=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'><input data-age='${id}' type='checkbox' ${model.age.includes(id)?'checked':''}/> <span class='text-sm'>${txt}</span></label>`).join('')}
+          </div>
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Roller</label>
+          <div class='mt-1 grid grid-cols-2 gap-2'>
+            ${ROLES.map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
+          </div>
+        </div>
+        <div class='grid grid-cols-2 gap-3'>
+          ${field('EQTiming‑lenke', `<input id='f-eqt' class='mt-1 w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.eqtiming||'')}' placeholder='https://www.eqtiming.com/...'>`)}
+          <div class='flex items-end'><button id='btn-fetch-eqt' class='rounded-xl border bg-white px-3 py-2 shadow-sm w-full'>Hent tittel fra lenke</button></div>
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Notater</label>
+          <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${escapeHTML(model.notes||'')}</textarea>
+        </div>
+      `;
+
+      // Tema chips
+      function refreshTema(){
+        const holder = $('#tema-tags'); holder.innerHTML='';
+        (model.shooting.tema||[]).forEach((t,i)=>{
+          const b = document.createElement('span'); b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs'; b.textContent=t; const x=document.createElement('button'); x.textContent='×'; x.className='ml-1'; x.onclick=()=>{ model.shooting.tema.splice(i,1); refreshTema(); }; b.appendChild(x); holder.appendChild(b);
+        });
+      }
+      refreshTema();
+      $('#add-tema').onclick = ()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
+
+      // Handlers save/delete/cancel
+      $('#btn-save').onclick = ()=>{
+        model.title = $('#f-title').value.trim();
+        model.type = $('#f-type').value; model.date = $('#f-date').value; model.modality = $('#f-mod').value; model.intensity = $('#f-int').value;
+        model.durationMin = parseInt($('#f-dur').value)||60; model.shooting = { stilling: $('#f-still').value, skudd: parseInt($('#f-skudd').value)||0, tema: model.shooting.tema||[] };
+        model.notes = $('#f-notes').value; model.raceSubtype = model.type==='Konkurranse' ? (model.raceSubtype||'') : '';
+        model.age = ALDER.map(([id])=> id).filter(id=> $('[data-age="'+id+'"]').checked);
+        model.roles = {}; ROLES.forEach(r=> model.roles[r] = $('[data-role="'+r+'"]').value );
+        model.eqtiming = $('#f-eqt').value.trim();
+        const exists = state.events.findIndex(x=>x.id===model.id);
+        if(exists>=0) state.events[exists]=model; else state.events.push(model);
+        closeDialog(); render();
       };
-      tr.querySelector('[data-del]').onclick=()=>{ if(confirm('Slette person?')){ state.people = state.people.filter(x=>x.id!==p.id); saveAndRender(); } };
-      tbody.appendChild(tr);
-    });
-  }
+      $('#btn-delete').onclick = ()=>{ state.events = state.events.filter(x=>x.id!==model.id); closeDialog(); render(); };
+      $('#btn-cancel').onclick = closeDialog; $('#dlg-close').onclick = closeDialog;
 
-  // ------------------ Import/EQTiming ------------------
-  async function tryFetchEqTitle(url){
-    try{
-      // Minimal heuristikk: hent HTML‑tittel (CORS kan stoppe dette i fil://). Bruk gjennom egen server/proxy ved behov.
-      const res = await fetch(url, {mode:'cors'});
-      const html = await res.text();
-      const m = html.match(/<title>(.*?)<\/title>/i); return m? m[1].replace(/\s+/g,' ').trim() : '';
-    }catch(e){ return ''; }
-  }
+      // EQTiming fetch (best-effort; CORS may block)
+      $('#btn-fetch-eqt').onclick = async ()=>{
+        const url = $('#f-eqt').value.trim(); if(!url) return alert('Lim inn en EQTiming‑lenke først.');
+        try{
+          const res = await fetch(url, { mode:'cors' });
+          const text = await res.text();
+          const titleMatch = text.match(/<title>([^<]+)<\/title>/i);
+          if(titleMatch){ $('#f-title').value = decodeHTMLEntities(titleMatch[1]).replace(/\s+\|.*$/,'').trim(); }
+          alert('Forsøkte å lese tittel. Hvis ikke oppdatert, er det låst av CORS.');
+        }catch(e){ alert('Kunne ikke hente – sannsynligvis blokkert av CORS. Lagre lenken i feltet uansett.'); }
+      };
 
-  // ------------------ Save & Render ------------------
-  function saveAndRender(){ s(LS.events, state.events); s(LS.templates, state.templates); s(LS.weekcodes, state.weekcodes); s(LS.people, state.people); s(LS.roles, state.roles); renderMonths(); renderEventTable(); renderBank(); renderWeekcodes(); renderRoles(); }
+      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
+    }
+    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
-  // ------------------ Boot ------------------
-  function boot(){
-    // Year controls
-    $('#yearInput').value=state.year; $('#prevYear').onclick=()=>{state.year--; $('#yearInput').value=state.year; saveAndRender();}; $('#nextYear').onclick=()=>{state.year++; $('#yearInput').value=state.year; saveAndRender();}; $('#yearInput').onchange=(e)=>{ state.year = Number(e.target.value)||new Date().getFullYear(); saveAndRender(); };
-    // Tabs
-    $$('.tab').forEach(b=>b.onclick=()=>{ $$('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); ['plan','bank','uker','roller','pdf','import'].forEach(id=>$('#tab-'+id).hidden=true); $('#tab-'+b.dataset.tab).hidden=false; });
-    // New event
-    $('#newEvent').onclick=()=>UI.openEvent({date: ymd(new Date())});
-    // Export
-    $('#exportJson').onclick=()=>download(`arsplan_${state.year}.json`, JSON.stringify({events:state.events, templates:state.templates, weekcodes:state.weekcodes, people:state.people, roles:state.roles}, null, 2));
-    // Import JSON
-    $('#importJson').onchange=async (e)=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); try{ const data=JSON.parse(t); ['events','templates','weekcodes','people','roles'].forEach(k=>{ if(data[k]) state[k]=data[k]}); saveAndRender(); alert('Import fullført'); }catch{ alert('Kunne ikke lese JSON'); } e.target.value=''; };
-    // CSV import (toolbar)
-    $('#importCsv').onchange=async (e)=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); const items=parseCsv(t); state.events.push(...items); saveAndRender(); alert('Importert '+items.length+' rader'); e.target.value=''; };
-    // ICS import (toolbar)
-    $('#importIcs').onchange=async (e)=>{ const f=e.target.files[0]; if(!f) return; const t=await f.text(); const items=parseICS(t); state.events.push(...items); saveAndRender(); alert('Importert '+items.length+' hendelser'); e.target.value=''; };
+    function select(id, items, val){
+      return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`;
+    }
+
+    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+    function decodeHTMLEntities(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
+
+    // ---------- Weeks ----------
+    function renderWeeks(){
+      const tbody = $('#tbl-weeks'); tbody.innerHTML='';
+      // list iso weeks present in the selected year
+      const weeks = {};
+      let d = dayjs(state.year+'-01-01').startOf('week');
+      const end = dayjs(state.year+'-12-31');
+      while(d.isBefore(end.add(1,'day'))){ weeks[d.isoWeek()] = true; d = d.add(7,'day'); }
+      Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{
+        const tr=document.createElement('tr'); tr.className='border-t';
+        const code = (state.weeks[wk]&&state.weeks[wk].code)||'BAS'; const note=(state.weeks[wk]&&state.weeks[wk].note)||'';
+        tr.innerHTML = `<td class='p-2'>${wk}</td><td><select data-wk='${wk}' class='rounded-xl border px-2 py-1'>${WEEKCODES.map(c=>`<option ${c===code?'selected':''}>${c}</option>`).join('')}</select></td><td><input data-wkn='${wk}' class='w-full rounded-xl border px-2 py-1' value='${escapeHTML(note)}'/></td>`;
+        tbody.appendChild(tr);
+      });
+      $$('select[data-wk]').forEach(el=> el.onchange = (e)=>{ const wk=+el.getAttribute('data-wk'); state.weeks[wk] = state.weeks[wk]||{}; state.weeks[wk].code = el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); });
+      $$('input[data-wkn]').forEach(el=> el.oninput = (e)=>{ const wk=+el.getAttribute('data-wkn'); state.weeks[wk] = state.weeks[wk]||{}; state.weeks[wk].note = el.value; lsSet(KEY.WEEKS,state.weeks); });
+    }
+
+    // ---------- CSV Import ----------
+    function parseCSV(text){
+      const rows = text.split(/\r?\n/).map(r=>r.trim()).filter(Boolean);
+      return rows.map(line=>{
+        const parts = line.split(';').map(x=>x.trim());
+        const [dato,title,type,modality,intensity,duration,skudd,stilling,tema,age] = parts;
+        const dd = dato.includes('-')? dato : dato.split('.').reverse().join('-');
+        return {
+          id: uid(), title, type:type||'Trening', date: dayjs(dd).format('YYYY-MM-DD'), modality: modality||'', intensity:intensity||'', durationMin: parseInt(duration)||60,
+          age: (age||'').split('|').filter(Boolean),
+          shooting: { stilling: stilling||'', skudd: parseInt(skudd)||0, tema: (tema||'').split('|').filter(Boolean) },
+          notes: '', roles:{}, eqtiming:''
+        };
+      });
+    }
+
+    // ---------- ICS Export ----------
+    function exportICS(){
+      const pad = (n)=> String(n).padStart(2,'0');
+      const fmt = (d)=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+      const lines = [ 'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO' ];
+      state.events.forEach(e=>{
+        const start = new Date(e.date+'T17:00:00'); // standard 17:00
+        const end = new Date(start.getTime() + ((e.durationMin||60)*60000));
+        lines.push('BEGIN:VEVENT');
+        lines.push('UID:'+e.id);
+        lines.push('DTSTAMP:'+fmt(new Date()));
+        lines.push('DTSTART:'+fmt(start));
+        lines.push('DTEND:'+fmt(end));
+        const title = e.title || (e.type + (e.raceSubtype? (' – '+e.raceSubtype):''));
+        lines.push('SUMMARY:'+title.replace(/,/g,'\,'));
+        lines.push('DESCRIPTION:'+ (e.notes||'') .replace(/[\n,]/g,m=> (m==='\n'?'\\n':'\\,')) );
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      const blob = new Blob([lines.join('\n')], {type:'text/calendar'});
+      const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    // ---------- Events ----------
+    $('#btn-print').onclick = ()=> window.print();
+    $('#btn-export').onclick = ()=> { const blob = new Blob([JSON.stringify({ events:state.events, bank:state.bank, weeks:state.weeks, year:state.year }, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url); };
+    $('#file-import').onchange = async (e)=>{ const f=e.target.files[0]; if(!f) return; const text=await f.text(); try{ const data=JSON.parse(text); if(data.events) state.events=data.events; if(data.bank) state.bank=data.bank; if(data.weeks) state.weeks=data.weeks; if(data.year) state.year=data.year; render(); alert('Import fullført'); }catch{ alert('Kunne ikke lese filen (må være JSON).'); } };
+
+    $('#btn-new').onclick = ()=> openDialog({ date: dayjs(`${state.year}-01-01`).format('YYYY-MM-DD') });
+    $('#quick-trening').onclick = ()=> openDialog({ type:'Trening', date: dayjs().format('YYYY-MM-DD') });
+    $('#quick-skyting').onclick = ()=> openDialog({ type:'Skyting', date: dayjs().format('YYYY-MM-DD') });
+    $('#quick-konk').onclick = ()=> openDialog({ type:'Konkurranse', date: dayjs().format('YYYY-MM-DD') });
+
+    $('#year-prev').onclick = ()=> { state.year--; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); render(); };
+    $('#year-next').onclick = ()=> { state.year++; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); render(); };
+
+    $('#toggle-list').onclick = ()=> $('#event-list').classList.toggle('hidden');
+
     // Bank filters
-    $('#bankQuery').oninput=renderBank; $('#bankAge').onchange=renderBank; $('#bankType').onchange=renderBank;
-    // Print
-    $('#printBtn').onclick=()=>window.print();
-    // PDF
-    $('#pdfInput').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdfEmbed').src=url; $('#pdfViewer').style.display='block'; };
-    // Import tab controls
-    $('#csv2').onchange=(e)=>$('#importCsv').onchange(e);
-    $('#ics2').onchange=(e)=>$('#importIcs').onchange(e);
-    $('#downloadCsv').onclick=()=>{
-      const head='date;title;type;modality;intensity;duration;shots;age;notes;raceSubtype\n';
-      const sample=`${state.year}-01-10;Basistrening + 30 skudd;Trening;Løp
-      function getDefaultTemplates(){
-  const T = [];
-  const add = (o) => T.push({ id: uid(), ...o });
+    $('#q-bank').oninput = renderBank; $('#f-age').onchange = renderBank; $('#f-type').onchange = renderBank;
 
-  add({
-    name: 'U12 Lekpreget I2 (45–60) + 30 skudd ligg',
-    type: 'Trening',
-    modality: 'Løp',
-    intensity: 'I2',
-    durationMin: 55,
-    shooting: { stilling: 'Liggende', skudd: 30, tema: ['Grunnstilling liggende','Siktebilde & avtrekk'] },
-    age: ['U12'],
-    notes: 'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'
-  });
+    // CSV
+    $('#btn-csv-eg').onclick = ()=>{
+      $('#csv-text').value = `01.09.${state.year}; Basistrening + bevegelighet; Trening; Løp; I1; 45; 0; Variert; bevegelighet|balanse; U12|U14\n03.09.${state.year}; Komb – I3 drag 4×6 + skyting; Trening; Løp; I3; 85; 40; Kombinert; overganger (inn/ut)|repetisjonsrytme; U16|JR\n07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; U14|U16|JR`;
+    };
+    $('#btn-csv-import').onclick = ()=>{ const rows = parseCSV($('#csv-text').value); state.events.push(...rows); render(); alert(`Importert ${rows.length} hendelser.`); };
 
-  add({
-    name: 'U14 Rulleski I3 5×4 min + stående',
-    type: 'Trening',
-    modality: 'Rulleski skøyting',
-    intensity: 'I3',
-    durationMin: 75,
-    shooting: { stilling: 'Stående', skudd: 40, tema: ['Grunnstilling stående','Avtrekkstid/trigger'] },
-    age: ['U14'],
-    notes: 'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'
-  });
+    // ICS
+    $('#btn-ics').onclick = exportICS;
 
-  add({
-    name: 'U16 VO2 I4 6×3 min + kombinert',
-    type: 'Trening',
-    modality: 'Løp',
-    intensity: 'I4',
-    durationMin: 80,
-    shooting: { stilling: 'Kombinert', skudd: 50, tema: ['Repetisjonsrytme','Overganger (inn/ut)'] },
-    age: ['U16'],
-    notes: '6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'
-  });
+    // Tabs
+    $$('.tab-btn').forEach(b=> b.onclick = ()=> switchTab(b.getAttribute('data-tab')) );
+    function switchTab(id){ $$('.tab-section').forEach(s=> s.classList.add('hidden')); $('#tab-'+id).classList.remove('hidden'); }
 
-  add({
-    name: 'JR Langtur I1–2 120 + 60 skudd',
-    type: 'Trening',
-    modality: 'Ski skøyting',
-    intensity: 'I2',
-    durationMin: 120,
-    shooting: { stilling: 'Variert', skudd: 60, tema: ['Vind/korrigering','Pust & rytme'] },
-    age: ['JR'],
-    notes: 'Rolig langtur. 6×10 teknikkserier.'
-  });
+    // PDF upload local
+    $('#file-pdf').onchange = (e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
 
-  add({
-    name: 'Teknikk skøyting (alle) + 40 skudd',
-    type: 'Trening',
-    modality: 'Rulleski skøyting',
-    intensity: 'I2',
-    durationMin: 70,
-    shooting: { stilling: 'Variert', skudd: 40, tema: ['Siktebilde & avtrekk','Pust & rytme'] },
-    age: ['U12','U14','U16','JR'],
-    notes: 'Fokus på balanse, fraskyv og tyngdeoverføring. Korte teknikkstasjoner på standplass.'
-  });
-
-  add({
-    name: 'Konk – Sprint',
-    type: 'Konkurranse',
-    modality: 'Ski skøyting',
-    intensity: 'I5',
-    durationMin: 45,
-    shooting: { stilling: 'Konk', skudd: 10, tema: [] },
-    raceSubtype: 'Sprint',
-    age: ['U12','U14','U16','JR'],
-    notes: 'Standard sprintoppsett.'
-  });
-
-  add({
-    name: 'Konk – Normal',
-    type: 'Konkurranse',
-    modality: 'Ski skøyting',
-    intensity: 'I5',
-    durationMin: 60,
-    shooting: { stilling: 'Konk', skudd: 20, tema: [] },
-    raceSubtype: 'Normal',
-    age: ['U14','U16','JR'],
-    notes: 'Standard normaldistanse.'
-  });
-
-  add({
-    name: 'Basistrening + styrke (sirkel)',
-    type: 'Trening',
-    modality: 'Basistrening',
-    intensity: 'I2',
-    durationMin: 60,
-    shooting: { stilling: 'Variert', skudd: 0, tema: [] },
-    age: ['U12','U14','U16','JR'],
-    notes: 'Sirkel: kjernestyrke, stabilitet, hofte/ankel. 8–10 stasjoner × 30–40 sek.'
-  });
-
-  // Ekstra nyttige maler:
-  add({
-    name: 'Skyting – presisjon liggende 5×5',
-    type: 'Trening',
-    modality: 'Basistrening',
-    intensity: 'I1',
-    durationMin: 50,
-    shooting: { stilling: 'Liggende', skudd: 25, tema: ['Grunnstilling liggende','Siktebilde & avtrekk'] },
-    age: ['U12','U14','U16'],
-    notes: 'Rolig bevegelse mellom serier. Fokus på avtrekkskontroll og etterhold.'
-  });
-
-  add({
-    name: 'Skyting – presisjon stående 6×5',
-    type: 'Trening',
-    modality: 'Basistrening',
-    intensity: 'I1',
-    durationMin: 55,
-    shooting: { stilling: 'Stående', skudd: 30, tema: ['Grunnstilling stående','Pust & rytme'] },
-    age: ['U14','U16','JR'],
-    notes: 'Holdtid og nullpunkt. Minutters rolig bevegelse mellom serier.'
-  });
-
-  add({
-    name: 'Komb – inn/ut + I3 drag 4×6 min',
-    type: 'Trening',
-    modality: 'Løp',
-    intensity: 'I3',
-    durationMin: 85,
-    shooting: { stilling: 'Kombinert', skudd: 40, tema: ['Overganger (inn/ut)','Repetisjonsrytme'] },
-    age: ['U16','JR'],
-    notes: '4×6 min I3. Skyting etter hvert drag (L/S annenhver). Fokus på inngang/utgang.'
-  });
-
-  add({
-    name: 'Test – 3000 m + 2×5 skudd',
-    type: 'Trening',
-    modality: 'Løp',
-    intensity: 'I5',
-    durationMin: 60,
-    shooting: { stilling: 'Variert', skudd: 10, tema: ['Avtrekkstid/trigger'] },
-    age: ['U16','JR'],
-    notes: 'Oppvarming 20 min, test 3000 m, deretter 2×5 skudd stå/ligg med puls.'
-  });
-
-  add({
-    name: 'Restitusjon I1 (45) + bevegelighet',
-    type: 'Restitusjon',
-    modality: 'Løp',
-    intensity: 'I1',
-    durationMin: 45,
-    shooting: { stilling: 'Variert', skudd: 0, tema: [] },
-    age: ['U12','U14','U16','JR'],
-    notes: 'Rolig bevegelse i pratetempo. 10–15 min mobilitet etterpå.'
-  });
-
-  return T;
-}
-
+    // Init
+    render(); switchTab('calendar');
+  </script>
+</body>
+</html>
