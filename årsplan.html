@@ -281,8 +281,21 @@
     function render(){ $('#year-label').textContent=state.year; $('#event-year').textContent=state.year; renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks(); lsSet(KEY.YEAR,state.year); lsSet(KEY.EVENTS,state.events); lsSet(KEY.BANK,state.bank); lsSet(KEY.WEEKS,state.weeks); }
 
     function renderLegend(){ const el=$('#legend'); el.innerHTML=''; Object.entries(COLORS).forEach(([k,c])=>{ const row=document.createElement('div'); row.className='flex items-center justify-between'; row.innerHTML=`<span class="flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${c}"></span>${k}</span>`; el.appendChild(row); }); }
+function renderCalendar(){
+  const grid = $('#calendar-grid');
+  grid.innerHTML = '';
 
-    function renderCalendar(){ const grid=$('#calendar-grid'); grid.innerHTML=''; for(let m=1;m<=12;m++) grid.appendChild(renderMonth(state.year,m)); }
+  // Finn gjeldende måned (1–12)
+  const nowMonth = dayjs().month() + 1;
+
+  // Lag en liste med måneder: start fra nå, til desember, så januar–(nå-1)
+  const months = [];
+  for(let m = nowMonth; m <= 12; m++) months.push(m);
+  for(let m = 1; m < nowMonth; m++) months.push(m);
+
+  months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
+}
+
 
     function renderMonth(year,month){ const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm'; const header=document.createElement('div'); header.className='flex items-center justify-between border-b p-4'; header.innerHTML=`<h3 class="text-lg font-semibold">${dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM')}</h3>`; const body=document.createElement('div'); body.className='p-2'; const daysHeader=document.createElement('div'); daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1'; 'man tir ons tor fre lør søn'.split(' ').forEach(w=>{ const d=document.createElement('div'); d.className='px-1 py-1 text-center font-medium uppercase'; d.textContent=w; daysHeader.appendChild(d); }); const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1'; const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month'); const leading=(first.day()+6)%7; const days=first.daysInMonth(); for(let i=0;i<leading;i++) cells.appendChild(emptyCell()); for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`))); const total=leading+days; const trail=(7-(total%7))%7; for(let i=0;i<trail;i++) cells.appendChild(emptyCell()); body.appendChild(daysHeader); body.appendChild(cells); wrap.appendChild(header); wrap.appendChild(body); return wrap; }
 
