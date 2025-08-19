@@ -3,408 +3,553 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tanker om skyteteknikk – Komplett kompendium</title>
-  <meta name="description" content="Kompendium i skyteteknikk for skiskyting: grunnprinsipper, utviklingstrinn, arbeidsoppgaver, tester, sesongtanker og sikkerhet." />
+  <title>Lørenskog Skiskyting – Årsplan & Øktbank</title>
+  <!-- Prod-klar CSS uten runtime build -->
+<script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root{
-      --bg: #0b0c10;
-      --panel: #111218;
-      --muted: #c7c9d1;
-      --text: #eef0f6;
-      --accent: #4cc9f0;
-      --accent-2:#80ed99;
-      --warn:#ffb703;
-      --danger:#ef476f;
-      --ok:#06d6a0;
-      --border: rgba(255,255,255,.08);
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      color-scheme: dark;
-    }
-    *{box-sizing:border-box}
+    :root{ --brand:#18469a; --brand2:#dbe723; }
     html,body{height:100%}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background: radial-gradient(1200px 600px at 80% -10%, rgba(76,201,240,.15), transparent 60%),
-                  radial-gradient(900px 500px at -10% 20%, rgba(128,237,153,.12), transparent 65%),
-                  var(--bg);
-      color:var(--text);
-      line-height:1.6;
-    }
-
-    /* Layout */
-    header{
-      position:sticky; top:0; z-index:10;
-      backdrop-filter:saturate(1.2) blur(8px);
-      background: linear-gradient(to bottom, rgba(11,12,16,.9), rgba(11,12,16,.65));
-      border-bottom:1px solid var(--border);
-    }
-    .wrap{max-width:1200px; margin:auto; padding:0 20px}
-    .nav{
-      display:flex; align-items:center; gap:16px; padding:12px 0;
-    }
-    .brand{
-      display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);
-      font-weight:700; letter-spacing:.2px;
-    }
-    .brand .logo{
-      width:36px; height:36px; border-radius:10px;
-      background:
-        radial-gradient(12px 12px at 65% 35%, rgba(255,255,255,.2) 0 60%, transparent 61%),
-        conic-gradient(from 210deg at 30% 30%, var(--accent), var(--accent-2));
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.08), 0 8px 16px rgba(0,0,0,.35);
-      flex:0 0 auto;
-    }
-    .nav a{
-      color:var(--muted); text-decoration:none; font-weight:600; border:1px solid transparent;
-      padding:8px 10px; border-radius:10px;
-    }
-    .nav a:hover{color:var(--text); border-color:var(--border)}
-    .nav .spacer{flex:1}
-    .btn{
-      appearance:none; border:1px solid var(--border); background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.15));
-      color:var(--text); padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer;
-      box-shadow: var(--shadow);
-    }
-    .btn:hover{border-color:rgba(255,255,255,.2)}
-    .btn.accent{border-color:rgba(76,201,240,.35); box-shadow: 0 10px 24px rgba(76,201,240,.25)}
-    main{padding:32px 0 80px}
-    .grid{
-      display:grid; grid-template-columns: 280px 1fr; gap:24px;
-    }
-    @media (max-width: 980px){
-      .grid{grid-template-columns: 1fr}
-      aside{position:static; top:auto}
-    }
-    aside{
-      position:sticky; top:72px; align-self:start;
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.15));
-      border:1px solid var(--border); border-radius:16px; padding:16px;
-      box-shadow: var(--shadow);
-    }
-    aside h3{margin:0 0 10px 0; font-size:14px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted)}
-    .toc{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
-    .toc a{display:block; padding:8px 10px; border-radius:10px; color:var(--muted); text-decoration:none}
-    .toc a:hover{color:var(--text); background:rgba(255,255,255,.04)}
-    .section{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.14));
-      border:1px solid var(--border); border-radius:18px; padding:22px; margin:0 0 22px;
-      box-shadow: var(--shadow);
-    }
-    h1{
-      font-size: clamp(28px, 3.2vw, 44px);
-      line-height:1.15; margin:14px 0 4px;
-      letter-spacing:.2px;
-    }
-    .lead{color:var(--muted); font-size: clamp(14px, 1.5vw, 18px)}
-    h2{font-size: clamp(20px, 2.2vw, 28px); margin:0 0 6px}
-    h3{font-size: clamp(16px, 1.8vw, 20px); margin:8px 0}
-    p{margin:.4rem 0 1rem}
-    .badges{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
-    .chip{
-      font-size:12px; letter-spacing:.02em; border:1px solid var(--border); color:var(--muted);
-      padding:6px 8px; border-radius:999px; background:rgba(255,255,255,.03)
-    }
-
-    /* Details/accordion */
-    details{
-      border:1px solid var(--border); border-radius:14px; padding:12px 14px; background:rgba(255,255,255,.02); margin:10px 0;
-    }
-    details[open]{background:rgba(255,255,255,.04)}
-    summary{cursor:pointer; font-weight:700}
-    summary::marker{color:var(--accent)}
-    .list{padding-left:1.1rem}
-    .list li{margin:.24rem 0}
-    .callout{
-      border:1px dashed rgba(128,237,153,.35);
-      border-left:4px solid var(--accent-2);
-      background:linear-gradient(90deg, rgba(128,237,153,.10), transparent 55%);
-      padding:12px 14px; border-radius:12px; margin:10px 0;
-    }
-    .warn{
-      border-left:4px solid var(--warn);
-      background:linear-gradient(90deg, rgba(255,183,3,.12), transparent 55%);
-      border:1px dashed rgba(255,183,3,.35);
-    }
-    .danger{
-      border-left:4px solid var(--danger);
-      background:linear-gradient(90deg, rgba(239,71,111,.12), transparent 55%);
-      border:1px dashed rgba(239,71,111,.35);
-    }
-    .ok{
-      border-left:4px solid var(--ok);
-      background:linear-gradient(90deg, rgba(6,214,160,.12), transparent 55%);
-      border:1px dashed rgba(6,214,160,.35);
-    }
-
-    /* Tables */
-    table{width:100%; border-collapse:collapse; border:1px solid var(--border); border-radius:12px; overflow:hidden}
-    thead th{background:rgba(255,255,255,.03); text-align:left; padding:10px}
-    tbody td{padding:10px; border-top:1px solid var(--border)}
-    tbody tr:hover{background:rgba(255,255,255,.02)}
-
-    .footer{
-      margin-top:24px; color:var(--muted); font-size:13px;
-      display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between;
-    }
-    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.95em;
-      border:1px solid var(--border); border-bottom-color:rgba(255,255,255,.15); background:rgba(255,255,255,.04); padding:2px 6px; border-radius:6px}
-    .pill{padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:rgba(255,255,255,.03)}
-    .muted{color:var(--muted)}
-    .kilde{font-size:12px; color:var(--muted)}
-    @media print{
-      header, .btn.print-hide, aside{display:none !important}
-      body{background:#fff; color:#000}
-      .section{page-break-inside:avoid; background:#fff; border:1px solid #ddd; box-shadow:none}
-      a{color:#000}
-    }
+    @media print{ .no-print{display:none!important} }
   </style>
+  <!-- Dayjs (må være lastet før scriptet bruker det) -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
 </head>
-<body>
-  <header>
-    <div class="wrap">
-      <nav class="nav" aria-label="Toppnavigasjon">
-        <a class="brand" href="#top">
-          <span class="logo" aria-hidden="true"></span>
-          <span>Tanker om skyteteknikk</span>
-        </a>
-        <a href="#grunnprinsipper">Grunnprinsipper</a>
-        <a href="#alderssteg">Alderssteg</a>
-        <a href="#arbeidsoppgaver">Arbeidsoppgaver</a>
-        <a href="#tester">Tester</a>
-        <a href="#sesong">Sesong</a>
-        <span class="spacer"></span>
-        <button class="btn print-hide" onclick="window.print()">🖨️ Skriv ut</button>
-        <button class="btn accent print-hide" id="expandAll">⇵ Åpne/Lukk alt</button>
-      </nav>
+<body class="bg-gray-100 min-h-screen">
+  <!-- ========= HEADER (ENKEL, ENDELIG) ========= -->
+  <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
+    <div class="flex items-center gap-3">
+      <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
+      <div>
+        <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
+        <p class="text-sm opacity-80">Årsplan • Øktbank • Terminliste</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 no-print">
+      <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
+      <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
+      <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter</button>
+      <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm cursor-pointer">
+        <input id="file-import" type="file" accept="application/json" class="hidden" />Importer
+      </label>
     </div>
   </header>
 
-  <main class="wrap">
-    <div class="grid" id="top">
-      <aside>
-        <h3>Innhold</h3>
-        <nav>
-          <ul class="toc">
-            <li><a href="#intro">Introduksjon</a></li>
-            <li><a href="#grunnprinsipper">Grunnprinsipper i skyteteknikk</a></li>
-            <li><a href="#alderssteg">Utviklingstrinn (10–16 år)</a></li>
-            <li><a href="#prinsipper">Pedagogiske prinsipper</a></li>
-            <li><a href="#suksess">Suksesskriterier</a></li>
-            <li><a href="#arbeidsoppgaver">Arbeidsoppgaver & kontrollpunkt</a></li>
-            <li><a href="#tester">Brukte tester</a></li>
-            <li><a href="#sesong">Sesongtanke (grov)</a></li>
-            <li><a href="#sikkerhet">Sikkerhet & rulleski</a></li>
-            <li><a href="#kilder">Kilder</a></li>
-          </ul>
-        </nav>
-      </aside>
-
-      <section>
-        <div class="section" id="intro" role="region" aria-labelledby="h1">
-          <h1 id="h1">Tanker om skyteteknikk</h1>
-          <p class="lead">
-            Kompakt kompendium for trenere og utøvere i skiskyting: grunnprinsipper, alderstilpasset progresjon, konkrete arbeidsoppgaver, testopplegg og sikkerhetsrutiner. Omskrevet til web fra klubbmateriell og NSSF sin utviklingsmodell.
-          </p>
-          <div class="badges">
-            <span class="chip">Oppdatert versjon</span>
-            <span class="chip">Inkluderer reim-progresjon</span>
-            <span class="chip">Alder 10–16+</span>
-          </div>
-        </div>
-
-        <div class="section" id="grunnprinsipper">
-          <h2>Grunnprinsipper i skyteteknikk</h2>
-          <p>Fire fundamenter repeteres gjennom hele utviklingsløpet:</p>
-          <ul class="list">
-            <li><strong>Stilling</strong> – ytre struktur + indre avspenning. God bæring, nullpunkt og rekylopptak.</li>
-            <li><strong>Pust</strong> – jevn rytme og «frys» i samme punkt hver gang; avtrekk skjer i utpustens ro.</li>
-            <li><strong>Sikte</strong> – konsekvent sentrering; øye‑finger‑koordinasjon og visualisering.</li>
-            <li><strong>Avtrekk</strong> – fortrykk → jevn trykkøkning → tydelig ettertrykk. Høyt fortrykk før skudd.</li>
-          </ul>
-          <div class="callout ok">
-            Tipp: Tren kontrollert <span class="kbd">fortrykk → trykkøkning → ettertrykk</span> isolert før du setter alt sammen i konkurranselikt tempo.
-          </div>
-        </div>
-
-        <div class="section" id="alderssteg">
-          <h2>Utviklingstrinn (10–16 år)</h2>
-
-          <details open>
-            <summary><strong>10–12 år</strong> – skyte med bukk (støtte)</summary>
-            <ul class="list">
-              <li>Fokus: <em>sikteteknikk</em> og <em>avtrekk</em>, deretter grunnstilling og enkel pust.</li>
-              <li>Overgangskriterium til reim: stabile samlinger &gt; femkroning før reim introduseres.</li>
-              <li>Mål: stabil &gt; 250 poeng før overgang til reim (lokal standard).</li>
-            </ul>
-          </details>
-
-          <details>
-            <summary><strong>13–16 år</strong> – reim etablert</summary>
-            <ul class="list">
-              <li>Fokus: <em>stilling</em> (tilpasning v/vekst), <em>pusterytme &amp; låsing</em>, <em>avtrekk</em>. Siktebilde skal nå «sitte i kroppen».</li>
-              <li>Øv også: drill før/på/ut av matte, lading, vindforståelse, konkurransepress, enkel mental plan.</li>
-            </ul>
-          </details>
-
-          <div class="callout">
-            Rammeverk og begreper følger NSSF sin utviklingstrapp (LTAD) – lek og allsidighet i bunn, ferdigheter før resultat, og trygg progresjon gjennom pubertet. Se kilder nederst.)
-          </div>
-        </div>
-
-        <div class="section" id="prinsipper">
-          <h2>Pedagogiske prinsipper</h2>
-          <ul class="list">
-            <li>Høy frekvens på <strong>riktige repetisjoner</strong> (gjerne tørrtrening).</li>
-            <li><strong>1–2 arbeidsoppgaver av gangen</strong> – gjør komplekst enkelt.</li>
-            <li>Kontinuitet og felles «språk» mellom trenere.</li>
-            <li>Tilpass etter <strong>modenhet</strong> og vekst – ikke bare kronologisk alder.</li>
-          </ul>
-        </div>
-
-        <div class="section" id="suksess">
-          <h2>Suksesskriterier</h2>
-          <ul class="list">
-            <li><strong>Tålmodighet:</strong> utvikling er individuell; fokus på prosess.</li>
-            <li><strong>Tydelige oppgaver</strong> og <strong>konsekvent tilbakemelding</strong> på disse.</li>
-            <li><strong>Faste tester</strong> for å verifisere framgang.</li>
-            <li>Utviklingsfokus &gt; resultatfokus, og et miljø som er gøy å være i.</li>
-          </ul>
-        </div>
-
-        <div class="section" id="arbeidsoppgaver">
-          <h2>Arbeidsoppgaver & kontrollpunkt</h2>
-
-          <details open>
-            <summary>Stilling (liggende med reim)</summary>
-            <ul class="list">
-              <li>Trykk i skulder &amp; balanse over <em>venstre albue</em> (juster plassering 0–8 cm fra våpenlinje etter behov).</li>
-              <li>Kinnstøtte som lar hodet lande nøytralt i siktet; unngå press.</li>
-              <li>Kroppen <em>bak våpenet</em>, uten sideveis drag; sjekk nullpunkt mot midtblink.</li>
-              <li>Reim høyt på overarm, draget skal gi <em>bakovertrykk</em> (ikke sidekraft).</li>
-              <li>Rekyl: la <em>skuldra vinne</em> (håndstopper/kinn tar opp, men ikke «styrer»).</li>
-            </ul>
-            <div class="kilde">Stikkord omskrevet fra klubbnotat om stilling/reim. </div>
-          </details>
-
-          <details>
-            <summary>Avtrekk</summary>
-            <ul class="list">
-              <li>Finger pad på midten av avtrekkerflaten; bevegelse rett bakover.</li>
-              <li><strong>Fortrykk 90–95%</strong> før skudd → roligere våpen når det «går». </li>
-              <li>Tydelig <em>ettertrykk</em> – «føl skuddet inn» i blink.</li>
-            </ul>
-          </details>
-
-          <details>
-            <summary>Pust</summary>
-            <ul class="list">
-              <li>Jevn rytme. Pust ut, <em>frys likt</em> hver gang, avtrekk i rolig vindu.</li>
-              <li>To rolige pust mellom skudd er typisk – juster etter intensitet og ferdighet.</li>
-            </ul>
-          </details>
-
-          <details>
-            <summary>Sikte</summary>
-            <ul class="list">
-              <li>Konsekvent sentrering (fremsikt midt i bak, blink midt i hullkorn).</li>
-              <li>Juster siktet selv (lær «knepp → mm»); tren på å <em>lese treffbildet</em>.</li>
-            </ul>
-          </details>
-        </div>
-
-        <div class="section" id="tester">
-          <h2>Brukte tester</h2>
-          <ul class="list">
-            <li><strong>30 skudd liggende</strong> på 10‑delt skive (3× pr år) – følger presisjon og stabilitet.</li>
-            <li><strong>20 skudd papp</strong> – mål maks spredning (20 og 18 beste) for å avdekke basisbehov.</li>
-            <li><strong>Testløp</strong> / 4 runder rundt stadion (4 skytinger) uten strafferunder – prosessfokus.</li>
-          </ul>
-        </div>
-
-        <div class="section" id="sesong">
-          <h2>Sesongtanke (grov)</h2>
-          <table aria-label="Sesongoversikt">
-            <thead>
-              <tr><th>Periode</th><th>Innhold</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Mai–Juni</td>
-                <td>Basisøkter lav intensitet, teknikk og tørrtrening – bygg gode vaner.</td>
-              </tr>
-              <tr>
-                <td>Aug–Sept</td>
-                <td>Fortsett basis, øk frekvens; korte intensive innslag for fartspotensial.</td>
-              </tr>
-              <tr>
-                <td>Okt–Nov</td>
-                <td>Gradvis mer spesifikt/intensivt; flere konkurranselike skytinger.</td>
-              </tr>
-              <tr>
-                <td>Des–Mars</td>
-                <td>Sesong: stafetter, konkurranser, testløp – vedlikehold basisfokus.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="section" id="sikkerhet">
-          <h2>Sikkerhet & rulleski</h2>
-
-          <div class="callout danger"><strong>Sikkerhet på standplass:</strong> følg alltid grunnreglene (våpen tomt utenfor matte, pek alltid trygt, lading kun på standplass, følg skytebanesjef, visitering før du forlater). </div>
-
-          <details>
-            <summary>Rulleskivett (kortversjon)</summary>
-            <ul class="list">
-              <li>Opplæring uten biltrafikk; barn &lt; 15 år bør unngå trafikkert vei.</li>
-              <li>Synlig bekledning, hjelm og briller – ingen musikk på øret.</li>
-              <li>Velg kjent, trygt terreng; øv bremsing/vendinger før du trener i vei.</li>
-            </ul>
-            <div class="kilde">Punkter samsvarer med NSSF/NSF anbefalinger for sikker rulleskitrening. </div>
-          </details>
-        </div>
-
-        <div class="section" id="kilder">
-          <h2>Kilder & rammeverk</h2>
-          <p class="kilde">
-            – Klubbpresentasjon «Tanker om skyteteknikk» (Lørenskog skiskyting) – arbeidsoppgaver, alderssteg, tester og sesongskisse. 
-            <br />
-            – NSSF: <em>Utviklingstrapp for skiskyting</em> (2018) – LTAD‑ramme, sikkerhet, rulleskivett og pedagogiske nøkkelprinsipper. 
-          </p>
-          <div class="footer">
-            <span class="pill">© Ditt miljø / intern bruk</span>
-            <span class="muted">Tips: Trykk <span class="kbd">Ctrl/Cmd + P</span> for pen utskrift.</span>
-          </div>
-        </div>
-
-      </section>
+  <!-- Toolbar year and tabs -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+    <div class="flex items-center gap-2">
+      <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
+      <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
+      <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
     </div>
-  </main>
+    <nav class="flex gap-2">
+      <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
+      <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
+      <button data-tab="pdf" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">PDF‑referanse</button>
+      <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin/Import</button>
+    </nav>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+    <!-- Main -->
+    <main class="lg:col-span-3 space-y-4">
+      <!-- Calendar Tab -->
+      <section id="tab-calendar" class="tab-section">
+        <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b p-4">
+            <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
+            <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm no-print">Vis/skjul liste</button>
+          </div>
+          <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-slate-500"><th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th></tr>
+              </thead>
+              <tbody id="tbl-events"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bank Tab -->
+      <section id="tab-bank" class="tab-section hidden">
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
+          <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div>
+              <label class="text-sm font-medium">Søk</label>
+              <input id="q-bank" class="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Søk i øktbank…"/>
+            </div>
+            <div>
+              <label class="text-sm font-medium">Målgruppe</label>
+              <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2">
+                <option value="">Alle</option>
+                <option value="U12">10–12 år</option>
+                <option value="U14">13–14 år</option>
+                <option value="U16">15–16 år</option>
+                <option value="JR">Junior (17–20)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm font-medium">Type</label>
+              <select id="f-type" class="mt-1 w-full rounded-xl border px-3 py-2">
+                <option value="">Alle</option>
+                <option>Trening</option>
+                <option>Konkurranse</option>
+                <option>Restitusjon</option>
+              </select>
+            </div>
+          </div>
+          <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+        </div>
+      </section>
+
+      <!-- PDF Tab -->
+      <section id="tab-pdf" class="tab-section hidden">
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">PDF‑referanse</h3></div>
+          <div class="p-4">
+            <label class="inline-flex items-center gap-2 no-print">
+              <input id="file-pdf" type="file" accept="application/pdf" class="hidden"/>
+              <span class="rounded-2xl border bg-white px-3 py-2 shadow-sm cursor-pointer">Velg PDF</span>
+            </label>
+            <div id="pdf-embed" class="mt-4 h-[70vh] w-full overflow-hidden rounded-2xl border hidden">
+              <embed id="pdf-el" src="" type="application/pdf" class="h-full w-full" />
+            </div>
+            <p id="pdf-empty" class="mt-2 text-sm text-slate-600">Ingen PDF valgt ennå. Tips: Last opp «Utviklingstrapp_v01_2018-3.pdf» eller «Tanker skyteteknikk.pptx.pdf».</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin Tab -->
+      <section id="tab-admin" class="tab-section hidden">
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin • Import • Verktøy</h3></div>
+          <div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="space-y-3">
+              <div>
+                <label class="text-sm font-medium">CSV‑import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
+                <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; bevegelighet|balanse; U12|U14"></textarea>
+                <div class="mt-2 flex gap-2">
+                  <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
+                  <button id="btn-csv-eg" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lim inn eksempel</button>
+                </div>
+              </div>
+              <div>
+                <label class="text-sm font-medium">EQTiming‑sjekk (lim inn lenke pr. hendelse i skjemaet)</label>
+                <p class="text-sm text-slate-600">Hent tittel/arrangement‑navn fra eqtiming.no direkte i hendelsesdialogen. Merk: CORS kan hindre auto‑henting i noen nettlesere.</p>
+              </div>
+
+              <!-- NSSF terminliste -->
+              <div>
+                <label class="text-sm font-medium">Hent terminliste (NSSF/EQ)</label>
+                <div class="mt-1 flex gap-2">
+                  <input id="nssf-url" class="w-full rounded-xl border px-3 py-2" value="https://skiskyting.no/arrangement/terminliste-eq/"/>
+                  <button id="btn-nssf" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Hent</button>
+                </div>
+                <p class="text-xs text-slate-600 mt-1">Hvis CORS blokkerer: åpne siden, kopier HTML‑kilden og lim inn her:</p>
+                <textarea id="nssf-html" class="mt-2 h-24 w-full rounded-xl border px-3 py-2" placeholder="(Valgfritt) Lim inn HTML‑kilde fra terminlisten dersom direkte henting feiler"></textarea>
+                <div class="mt-2 flex gap-2">
+                  <button id="btn-nssf-parse" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer fra limt HTML</button>
+                </div>
+              </div>
+
+              <!-- Logo bytte -->
+              <div>
+                <label class="text-sm font-medium">Bytt logo (valgfritt)</label>
+                <div class="mt-1 flex items-center gap-2">
+                  <input id="file-logo" type="file" accept="image/*" class="hidden"/>
+                  <label for="file-logo" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm cursor-pointer">Velg bilde</label>
+                  <button id="btn-logo-reset" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Tilbakestill</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="text-sm font-medium">Ukekoder (BAS/OPP/KONK/RES/EKS)</label>
+                <div class="mt-2 max-h-72 overflow-auto rounded-xl border">
+                  <table class="w-full text-sm">
+                    <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
+                    <tbody id="tbl-weeks"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <label class="text-sm font-medium">Eksporter ICS (kalender)</label>
+                <div class="mt-2 flex gap-2">
+                  <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Sidepanel -->
+    <aside class="space-y-4">
+      <div class="rounded-2xl border bg-white shadow-sm">
+        <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
+        <div id="legend" class="p-4 space-y-1 text-sm"></div>
+      </div>
+      <div class="rounded-2xl border bg-white shadow-sm">
+        <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
+        <div class="p-4 text-sm text-slate-700 space-y-1">
+          <p><span class="font-medium">U12:</span> Variasjon/lek, korte økter, enkel liggende.</p>
+          <p><span class="font-medium">U14:</span> Mer organisert, fartstider, stående introduseres.</p>
+          <p><span class="font-medium">U16:</span> Systematisk progresjon, intensitetsstyring, kombinert.</p>
+          <p><span class="font-medium">JR:</span> Individtilpasning, helhetlig belastning, konk‑spesifikt.</p>
+        </div>
+      </div>
+      <div class="rounded-2xl border bg-white shadow-sm">
+        <div class="border-b p-4"><h3 class="text-lg font-semibold">Hurtigverktøy</h3></div>
+        <div class="p-4 flex flex-col gap-2 no-print">
+          <button id="quick-trening" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny trening</button>
+          <button id="quick-skyting" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny skyteøkt</button>
+          <button id="quick-konk" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny konkurranse</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Dialog -->
+  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-4">
+        <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
+        <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
+      </div>
+      <div class="p-4 space-y-3" id="dlg-body"></div>
+      <div class="border-t p-4 flex justify-end gap-2">
+        <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
+        <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
+        <button id="btn-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Toggle open/close all details
-    (function(){
-      const btn = document.getElementById('expandAll');
-      if(!btn) return;
-      let open = true; // start by closing the extras except first open
-      btn.addEventListener('click', ()=>{
-        document.querySelectorAll('details').forEach(d => d.open = open);
-        open = !open;
-      });
-      // Smooth scroll for anchor links
-      document.querySelectorAll('a[href^="#"]').forEach(a=>{
-        a.addEventListener('click', e=>{
-          const id = a.getAttribute('href').slice(1);
-          const el = document.getElementById(id);
-          if (el){
-            e.preventDefault();
-            el.scrollIntoView({behavior:'smooth', block:'start'});
-            history.replaceState(null, '', '#'+id);
-          }
-        })
-      });
-    })();
+    // Dayjs init
+    dayjs.extend(dayjs_plugin_isoWeek);
+    dayjs.extend(dayjs_plugin_weekday);
+    dayjs.extend(dayjs_plugin_localizedFormat);
+
+    const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
+    const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
+    const INTENS = ['I1','I2','I3','I4','I5'];
+    const KONK = ['Sprint','Normal','Jaktstart','Fellesstart','Stafett','Mix-stafett','KM','HL/NC','Kretsrenn','Lokalt renn'];
+    const ALDER = [ ['U12','10–12'], ['U14','13–14'], ['U16','15–16'], ['JR','17–20'] ];
+    const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
+    const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
+
+    const KEY = { EVENTS:'lss:events:v1', BANK:'lss:bank:v1', WEEKS:'lss:weeks:v1', YEAR:'lss:year:v1', LOGO:'lss:logo:v1' };
+
+    const $=(q,el=document)=>el.querySelector(q); const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
+    const uid=()=> (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));
+    const lsGet=(k,d)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch{return d;} };
+    const lsSet=(k,v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} };
+
+    let state={ year: lsGet(KEY.YEAR, dayjs().year()), events: lsGet(KEY.EVENTS, []), bank: lsGet(KEY.BANK, getDefaultTemplates()), weeks: lsGet(KEY.WEEKS, getDefaultWeeks(lsGet(KEY.YEAR, dayjs().year())))};
+
+    // ------- Defaults -------
+    function getDefaultWeeks(year){ const first=dayjs(year+'-01-01'); const last=dayjs(year+'-12-31'); const weeks={}; let d=first.startOf('week'); while(d.isBefore(last.add(1,'day'))){ const wk=d.isoWeek(); if(!weeks[wk]) weeks[wk]={code:'BAS',note:''}; d=d.add(7,'day'); } return weeks; }
+
+    function getDefaultTemplates(){ const T=[]; const add=(o)=>T.push({id:uid(),...o});
+      add({name:'U12 Lekpreget I2 (45–60) + 30 skudd ligg',type:'Trening',modality:'Løp',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12'],notes:'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'});
+      add({name:'U14 Rulleski I3 5×4 min + stående',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:40,tema:['Grunnstilling stående','Avtrekkstid/trigger']},age:['U14'],notes:'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'});
+      add({name:'U16 VO2 I4 6×3 min + kombinert',type:'Trening',modality:'Løp',intensity:'I4',durationMin:80,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'});
+      add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'Rolig langtur. 6×10 teknikkserier.'});
+      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde & avtrekk','Pust & rytme']},age:['U12','U14','U16','JR'],notes:'Fokus på balanse, fraskyv og tyngdeoverføring. Korte teknikkstasjoner på standplass.'});
+      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR'],notes:'Standard sprintoppsett.'});
+      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR'],notes:'Standard normaldistanse.'});
+      add({name:'Basistrening + styrke (sirkel)',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Sirkel: kjernestyrke, stabilitet, hofte/ankel. 8–10 stasjoner × 30–40 sek.'});
+      add({name:'Skyting – presisjon liggende 5×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:50,shooting:{stilling:'Liggende',skudd:25,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12','U14','U16'],notes:'Rolig bevegelse mellom serier. Fokus på avtrekkskontroll og etterhold.'});
+      add({name:'Skyting – presisjon stående 6×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:55,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Pust & rytme']},age:['U14','U16','JR'],notes:'Holdtid og nullpunkt. Minutters rolig bevegelse mellom serier.'});
+      add({name:'Komb – inn/ut + I3 drag 4×6 min',type:'Trening',modality:'Løp',intensity:'I3',durationMin:85,shooting:{stilling:'Kombinert',skudd:40,tema:['Overganger (inn/ut)','Repetisjonsrytme']},age:['U16','JR'],notes:'4×6 min I3. Skyting etter hvert drag (L/S annenhver). Fokus på inngang/utgang.'});
+      add({name:'Test – 3000 m + 2×5 skudd',type:'Trening',modality:'Løp',intensity:'I5',durationMin:60,shooting:{stilling:'Variert',skudd:10,tema:['Avtrekkstid/trigger']},age:['U16','JR'],notes:'Oppvarming 20 min, test 3000 m, deretter 2×5 skudd stå/ligg med puls.'});
+      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Rolig bevegelse i pratetempo. 10–15 min mobilitet.'});
+      add({name:'Stafett – vekslinger + skyterutiner',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Repetisjonsrytme']},age:['U14','U16','JR'],notes:'Vekslinger, inn/ut, standplassdisiplin. 8×5 skudd (L/S).'});
+      add({name:'HL/NC forberedelse – sprintsim',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Overganger (inn/ut)','Avtrekkstid/trigger']},age:['U16','JR'],notes:'Prolog + en omgang jaktstart med handicaptid.'});
+      return T;
+    }
+
+    // ------- Render -------
+    function render(){ $('#year-label').textContent=state.year; $('#event-year').textContent=state.year; renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks(); lsSet(KEY.YEAR,state.year); lsSet(KEY.EVENTS,state.events); lsSet(KEY.BANK,state.bank); lsSet(KEY.WEEKS,state.weeks); }
+
+    function renderLegend(){ const el=$('#legend'); el.innerHTML=''; Object.entries(COLORS).forEach(([k,c])=>{ const row=document.createElement('div'); row.className='flex items-center justify-between'; row.innerHTML=`<span class="flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${c}"></span>${k}</span>`; el.appendChild(row); }); }
+function renderCalendar(){
+  const grid = $('#calendar-grid');
+  grid.innerHTML = '';
+
+  // Finn gjeldende måned (1–12)
+  const nowMonth = dayjs().month() + 1;
+
+  // Lag en liste med måneder: start fra nå, til desember, så januar–(nå-1)
+  const months = [];
+  for(let m = nowMonth; m <= 12; m++) months.push(m);
+  for(let m = 1; m < nowMonth; m++) months.push(m);
+
+  months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
+}
+
+
+    function renderMonth(year,month){ const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm'; const header=document.createElement('div'); header.className='flex items-center justify-between border-b p-4'; header.innerHTML=`<h3 class="text-lg font-semibold">${dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM')}</h3>`; const body=document.createElement('div'); body.className='p-2'; const daysHeader=document.createElement('div'); daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1'; 'man tir ons tor fre lør søn'.split(' ').forEach(w=>{ const d=document.createElement('div'); d.className='px-1 py-1 text-center font-medium uppercase'; d.textContent=w; daysHeader.appendChild(d); }); const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1'; const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month'); const leading=(first.day()+6)%7; const days=first.daysInMonth(); for(let i=0;i<leading;i++) cells.appendChild(emptyCell()); for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`))); const total=leading+days; const trail=(7-(total%7))%7; for(let i=0;i<trail;i++) cells.appendChild(emptyCell()); body.appendChild(daysHeader); body.appendChild(cells); wrap.appendChild(header); wrap.appendChild(body); return wrap; }
+
+    function emptyCell(){ const d=document.createElement('div'); d.className='min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
+
+    function dayCell(d){ const key=d.format('YYYY-MM-DD'); const evts=state.events.filter(e=> dayjs(e.date).isSame(d,'day')); const box=document.createElement('div'); box.className='min-h-[80px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer'; box.addEventListener('click', ()=> openDialog({date:key})); const top=document.createElement('div'); top.className='flex items-center justify-between text-xs text-slate-600'; top.innerHTML=`<span class="font-medium">${d.date()}</span><span class="flex gap-1">${evts.slice(0,4).map(e=>`<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>`).join('')}</span>`; const list=document.createElement('div'); list.className='mt-1 flex flex-col gap-0.5'; evts.slice(0,3).forEach(e=>{ const row=document.createElement('div'); row.className='truncate text-xs'; row.innerHTML=`<span class='opacity-70'>• </span><span class='font-medium'>${e.title||e.type}</span>`; list.appendChild(row); }); if(evts.length>3){ const more=document.createElement('div'); more.className='text-[10px] text-slate-500'; more.textContent=`+${evts.length-3} flere…`; list.appendChild(more); } box.appendChild(top); box.appendChild(list); return box; }
+
+    function renderList(){ const tbody=$('#tbl-events'); tbody.innerHTML=''; const yearEvents=state.events.filter(e=> dayjs(e.date).year()===state.year).sort((a,b)=> dayjs(a.date)-dayjs(b.date)); yearEvents.forEach(e=>{ const tr=document.createElement('tr'); tr.className='border-t'; tr.innerHTML=`
+      <td class='py-1 whitespace-nowrap'>${dayjs(e.date).format('DD.MM.YYYY')}</td>
+      <td class='max-w-[280px] truncate'>${e.title||'<span class="opacity-50">(uten tittel)</span>'}</td>
+      <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]}'></span>${e.type}${e.raceSubtype?` · ${e.raceSubtype}`:''}</span></td>
+      <td>${e.modality||'–'}</td>
+      <td>${e.intensity||'–'}</td>
+      <td>${(e.shooting&&e.shooting.skudd)||0}</td>
+      <td class='text-right'><button class='rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Rediger</button></td>`; tr.querySelector('button').addEventListener('click', ()=> openDialog({...e})); tbody.appendChild(tr); }); }
+
+    function renderBank(){ const q=($('#q-bank').value||'').toLowerCase(); const age=$('#f-age').value; const type=$('#f-type').value; const box=$('#bank-cards'); box.innerHTML=''; state.bank.filter(t=> (!q||t.name.toLowerCase().includes(q)) && (!age||(t.age||[]).includes(age)) && (!type||t.type===type)).forEach(t=> box.appendChild(bankCard(t)) ); }
+
+    function bankCard(t){ const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm'; c.innerHTML=`
+      <div class='border-b p-4 flex items-center justify-between'>
+        <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${t.name}</h4>
+        <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${a}</span>`).join('')}</div>
+      </div>
+      <div class='p-4 text-sm space-y-1'>
+        <div><span class='font-medium'>Modalitet:</span> ${t.modality||'–'}</div>
+        <div><span class='font-medium'>Intensitet:</span> ${t.intensity||'–'}</div>
+        <div><span class='font-medium'>Varighet:</span> ${t.durationMin? t.durationMin+' min':'–'}</div>
+        <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
+        ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${x}</span>`).join('')}</div>`:''}
+        ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${t.notes}</p>`:''}
+        <div class='pt-2 flex flex-wrap gap-2'>
+          <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
+          <button class='btn-dup rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
+          <button class='btn-del text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
+        </div>
+      </div>`; c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t))); c.querySelector('.btn-dup').addEventListener('click', ()=>{ state.bank.unshift({...t,id:uid(),name:t.name+' (kopi)'}); renderBank(); lsSet(KEY.BANK,state.bank); }); c.querySelector('.btn-del').addEventListener('click', ()=>{ state.bank=state.bank.filter(x=>x.id!==t.id); renderBank(); lsSet(KEY.BANK,state.bank); }); return c; }
+
+    function fromTemplate(t){ return { id:uid(), title:t.name, type:t.type, date:dayjs(`${state.year}-01-01`).format('YYYY-MM-DD'), modality:t.modality, intensity:t.intensity, durationMin:t.durationMin, age:t.age||[], shooting:t.shooting||{stilling:'',skudd:0,tema:[]}, raceSubtype:t.raceSubtype, notes:t.notes||'', roles:{}, eqtiming:'' }; }
+
+    // ------- Dialog -------
+    function openDialog(data){ const isEdit=!!state.events.find(x=>x.id===data.id); const model=Object.assign({ id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, eqtiming:'' }, data); const body=$('#dlg-body'); body.innerHTML=''; $('#dlg-title').textContent=isEdit?'Rediger hendelse':'Ny hendelse'; $('#btn-delete').classList.toggle('hidden',!isEdit);
+      const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`; body.innerHTML=`
+        ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
+        <div class='grid grid-cols-2 gap-3'>
+          ${field('Type', select('f-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
+          ${field('Dato', `<input id='f-date' type='date' class='mt-1 w-full rounded-xl border px-3 py-2' value='${dayjs(model.date).format('YYYY-MM-DD')}'/>`)}
+        </div>
+        <div class='grid grid-cols-2 gap-3'>
+          ${field('Modalitet', select('f-mod', MODALITETER, model.modality))}
+          ${field('Intensitet', select('f-int', INTENS, model.intensity))}
+        </div>
+        <div class='grid grid-cols-3 gap-3'>
+          ${field('Varighet (min)', `<input id='f-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
+          ${field('Skytestilling', select('f-still', ['Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
+          ${field('Skudd', `<input id='f-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Tema (skyting)</label>
+          <div class='mt-1 flex flex-wrap gap-1' id='tema-tags'></div>
+          <div class='mt-1 flex gap-2'>
+            <input id='f-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
+            <button id='add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
+          </div>
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Målgruppe</label>
+          <div class='mt-1 flex flex-wrap gap-2'>
+            ${ALDER.map(([id,txt])=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'><input data-age='${id}' type='checkbox' ${model.age.includes(id)?'checked':''}/> <span class='text-sm'>${txt}</span></label>`).join('')}
+          </div>
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Roller</label>
+          <div class='mt-1 grid grid-cols-2 gap-2'>
+            ${ROLES.map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
+          </div>
+        </div>
+        <div class='grid grid-cols-2 gap-3'>
+          ${field('EQTiming‑lenke', `<input id='f-eqt' class='mt-1 w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.eqtiming||'')}' placeholder='https://www.eqtiming.com/...'>`)}
+          <div class='flex items-end'><button id='btn-fetch-eqt' class='rounded-xl border bg-white px-3 py-2 shadow-sm w-full'>Hent tittel fra lenke</button></div>
+        </div>
+        <div>
+          <label class='text-sm font-medium'>Notater</label>
+          <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${escapeHTML(model.notes||'')}</textarea>
+        </div>`;
+
+      function refreshTema(){ const holder=$('#tema-tags'); holder.innerHTML=''; (model.shooting.tema||[]).forEach((t,i)=>{ const b=document.createElement('span'); b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs'; b.textContent=t; const x=document.createElement('button'); x.textContent='×'; x.className='ml-1'; x.onclick=()=>{ model.shooting.tema.splice(i,1); refreshTema(); }; b.appendChild(x); holder.appendChild(b); }); }
+      refreshTema();
+      $('#add-tema').onclick=()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
+
+      $('#btn-save').onclick=()=>{ model.title=$('#f-title').value.trim(); model.type=$('#f-type').value; model.date=$('#f-date').value; model.modality=$('#f-mod').value; model.intensity=$('#f-int').value; model.durationMin=parseInt($('#f-dur').value)||60; model.shooting={stilling:$('#f-still').value, skudd:parseInt($('#f-skudd').value)||0, tema:model.shooting.tema||[]}; model.notes=$('#f-notes').value; model.raceSubtype=model.type==='Konkurranse'?(model.raceSubtype||''):''; model.age=ALDER.map(([id])=>id).filter(id=> $('[data-age="'+id+'"]').checked); model.roles={}; ROLES.forEach(r=> model.roles[r]=$('[data-role="'+r+'"]').value ); model.eqtiming=$('#f-eqt').value.trim(); const i=state.events.findIndex(x=>x.id===model.id); if(i>=0) state.events[i]=model; else state.events.push(model); closeDialog(); render(); };
+      $('#btn-delete').onclick=()=>{ state.events=state.events.filter(x=>x.id!==model.id); closeDialog(); render(); };
+      $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
+
+$('#btn-fetch-eqt').onclick = async () => {
+  const url = $('#f-eqt').value.trim();
+  if (!url) return alert('Lim inn en EQTiming‑lenke først.');
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    const text = await res.text();
+
+    // RIKTIG: escape slash med ÉN backslash
+    const m = text.match(/<title>([^<]+)<\/title>/i);
+
+    if (m) {
+      $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/, '').trim();
+    }
+    alert('Prøvde å lese tittel. Om den ikke endres, er det CORS.');
+  } catch (e) {
+    alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.');
+  }
+};
+
+      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex'); }
+    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
+
+    function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
+    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+    function decodeHTMLEntities(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
+
+    // ------- Weeks -------
+    function renderWeeks(){ const tbody=$('#tbl-weeks'); tbody.innerHTML=''; const weeks={}; let d=dayjs(state.year+'-01-01').startOf('week'); const end=dayjs(state.year+'-12-31'); while(d.isBefore(end.add(1,'day'))){ weeks[d.isoWeek()]=true; d=d.add(7,'day'); } Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{ const tr=document.createElement('tr'); tr.className='border-t'; const code=(state.weeks[wk]&&state.weeks[wk].code)||'BAS'; const note=(state.weeks[wk]&&state.weeks[wk].note)||''; tr.innerHTML=`<td class='p-2'>${wk}</td><td><select data-wk='${wk}' class='rounded-xl border px-2 py-1'>${WEEKCODES.map(c=>`<option ${c===code?'selected':''}>${c}</option>`).join('')}</select></td><td><input data-wkn='${wk}' class='w-full rounded-xl border px-2 py-1' value='${escapeHTML(note)}'/></td>`; tbody.appendChild(tr); }); $$('select[data-wk]').forEach(el=> el.onchange=()=>{ const wk=+el.getAttribute('data-wk'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].code=el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); }); $$('input[data-wkn]').forEach(el=> el.oninput=()=>{ const wk=+el.getAttribute('data-wkn'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].note=el.value; lsSet(KEY.WEEKS,state.weeks); }); }
+
+    // ------- CSV -------
+    function parseCSV(text){ const rows=text.split(/\r?\n/).map(r=>r.trim()).filter(Boolean); return rows.map(line=>{ const parts=line.split(';').map(x=>x.trim()); const [dato,title,type,modality,intensity,duration,skudd,stilling,tema,age]=parts; const dd=dato.includes('-')?dato:dato.split('.').reverse().join('-'); return { id:uid(), title, type:type||'Trening', date:dayjs(dd).format('YYYY-MM-DD'), modality:modality||'', intensity:intensity||'', durationMin:parseInt(duration)||60, age:(age||'').split('|').filter(Boolean), shooting:{ stilling:stilling||'', skudd:parseInt(skudd)||0, tema:(tema||'').split('|').filter(Boolean) }, notes:'', roles:{}, eqtiming:'' }; }); }
+
+    // ------- ICS (fikset escaping og nedlasting) -------
+    function exportICS(){ const pad=n=>String(n).padStart(2,'0'); const fmt=d=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`; const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO']; state.events.forEach(e=>{ const start=new Date(e.date+'T17:00:00'); const end=new Date(start.getTime()+((e.durationMin||60)*60000)); lines.push('BEGIN:VEVENT'); lines.push('UID:'+e.id); lines.push('DTSTAMP:'+fmt(new Date())); lines.push('DTSTART:'+fmt(start)); lines.push('DTEND:'+fmt(end)); const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+title.replace(/,/g,'\\,')); lines.push('DESCRIPTION:'+(e.notes||'').replace(/\n/g,'\\n').replace(/,/g,'\\,')); lines.push('END:VEVENT'); }); lines.push('END:VCALENDAR'); const blob=new Blob([lines.join('\n')],{type:'text/calendar'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url); }
+
+    // ------- NSSF (direkte/fallback) -------
+    function parseNSSF(html){
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+
+  const rows = [];
+
+  // 1) Primært: tabell på skiskyting.no
+  tmp.querySelectorAll('table tr').forEach(tr=>{
+    const tds = tr.querySelectorAll('td');
+    if(tds.length >= 2){
+      const dato   = (tds[0].textContent || '').trim();
+      const tittel = (tds[1].textContent || '').trim();
+      const linkEl = tds[1].querySelector('a');
+      const link   = linkEl ? linkEl.href : '';
+      if(/\d{2}\.\d{2}\.\d{4}/.test(dato) && tittel){
+        rows.push({ dato, tittel, link });
+      }
+    }
+  });
+
+  // 2) Fallback: grov matching uten \p{L}/u
+  if(rows.length === 0){
+    tmp.querySelectorAll('*').forEach(el=>{
+      const txt = (el.textContent || '').trim();
+      const m = txt.match(/(\d{2}\.\d{2}\.\d{4}).{0,10}([A-Za-zÆØÅæøå0-9].{3,100})/);
+      if(m){
+        const linkEl = el.querySelector && el.querySelector('a');
+        const tittel = linkEl ? linkEl.textContent.trim() : (m[2] || '').trim();
+        const link   = linkEl ? linkEl.href : '';
+        if(tittel){
+          rows.push({ dato: m[1], tittel, link });
+        }
+      }
+    });
+  }
+
+  return rows;
+}
+async function fetchNSSF(url){
+  const res = await fetch(url, { mode:'cors' }); // kan feile pga CORS
+  return await res.text();
+}
+async function importNSSFFromURL(){
+  const url = $('#nssf-url').value.trim();
+  if(!url) return alert('Skriv inn URL først.');
+  try{
+    const html = await fetchNSSF(url);
+    const rows = parseNSSF(html);
+    if(rows.length===0) return alert('Fant ingen rader (kan være CORS). Prøv å lime inn HTML i feltet under.');
+    addNSSFEvents(rows);
+  }catch(e){
+    alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML‑kilde i feltet og bruk «Importer fra limt HTML».');
+  }
+}
+function importNSSFFromHTML(){
+  const html = $('#nssf-html').value.trim();
+  if(!html) return alert('Lim inn HTML først.');
+  const rows = parseNSSF(html);
+  if(rows.length===0) return alert('Fant ingen rader i teksten.');
+  addNSSFEvents(rows);
+}
+function addNSSFEvents(rows){
+  const events = rows.map(r=>({
+    id: uid(),
+    title: r.tittel,
+    type: 'Konkurranse',
+    date: dayjs(r.dato.split('.').reverse().join('-')).format('YYYY-MM-DD'),
+    modality: 'Ski skøyting',
+    intensity: 'I5',
+    durationMin: 60,
+    shooting: { stilling:'Konk', skudd: (r.tittel.toLowerCase().includes('sprint')?10:20), tema:[] },
+    raceSubtype: (function(){ for(const k of KONK){ if((r.tittel||'').toLowerCase().includes(k.toLowerCase())) return k; } return ''; })(),
+    age: ['U12','U14','U16','JR'],
+    notes: 'Importert fra skiskyting.no',
+    roles: {},
+    eqtiming: r.link || ''
+  }));
+  // valgfritt: fjern dubletter (samme dato+tittel)
+  const key = e => `${e.date}__${(e.title||'').toLowerCase()}`;
+  const existing = new Set(state.events.map(key));
+  const fresh = events.filter(e=> !existing.has(key(e)));
+  state.events.push(...fresh);
+  render();
+  alert(`Importert ${fresh.length} konkurranser.`);
+}
+
+
+    // ------- Logo fallback + bytte -------
+    function fallbackLogo(){ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 120 60'); svg.className='h-14 w-20 rounded-xl bg-white p-1'; svg.innerHTML='<rect width="100%" height="100%" fill="white"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="18" fill="#18469a" font-family="Inter, Arial, sans-serif">LSK</text>'; return svg; }
+    (function initLogo(){ const saved=lsGet(KEY.LOGO,null); if(saved){ $('#club-logo').src=saved; } $('#file-logo')?.addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#club-logo').src=url; const b=await f.arrayBuffer(); const base64=btoa(String.fromCharCode(...new Uint8Array(b))); lsSet(KEY.LOGO, `data:${f.type};base64,${base64}`); }); $('#btn-logo-reset')?.addEventListener('click', ()=>{ lsSet(KEY.LOGO,null); location.reload(); }); })();
+
+    // ------- UI events -------
+    $('#btn-print').onclick=()=>window.print();
+    $('#btn-export').onclick=()=>{ const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url); };
+    $('#file-import').onchange=async(e)=>{ const f=e.target.files[0]; if(!f) return; const text=await f.text(); try{ const data=JSON.parse(text); if(data.events) state.events=data.events; if(data.bank) state.bank=data.bank; if(data.weeks) state.weeks=data.weeks; if(data.year) state.year=data.year; render(); alert('Import fullført'); }catch{ alert('Kunne ikke lese filen (må være JSON).'); } };
+
+    $('#btn-new').onclick=()=> openDialog({ date: dayjs(`${state.year}-01-01`).format('YYYY-MM-DD') });
+    $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date: dayjs().format('YYYY-MM-DD') }));
+    $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date: dayjs().format('YYYY-MM-DD') }));
+    $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse', date: dayjs().format('YYYY-MM-DD') }));
+
+    $('#year-prev').onclick=()=>{ state.year--; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); render(); };
+    $('#year-next').onclick=()=>{ state.year++; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); render(); };
+
+    $('#toggle-list').onclick=()=> $('#event-list').classList.toggle('hidden');
+
+    $('#q-bank').oninput=renderBank; $('#f-age').onchange=renderBank; $('#f-type').onchange=renderBank;
+
+    $('#btn-csv-eg').onclick=()=>{ $('#csv-text').value=`01.09.${state.year}; Basistrening + bevegelighet; Trening; Løp; I1; 45; 0; Variert; bevegelighet|balanse; U12|U14\n03.09.${state.year}; Komb – I3 drag 4×6 + skyting; Trening; Løp; I3; 85; 40; Kombinert; overganger (inn/ut)|repetisjonsrytme; U16|JR\n07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; U14|U16|JR`; };
+    $('#btn-csv-import').onclick=()=>{ const rows=parseCSV($('#csv-text').value); state.events.push(...rows); render(); alert(`Importert ${rows.length} hendelser.`); };
+
+    $('#btn-ics').onclick=exportICS; // NB: nå riktig binding uten param
+
+    // Tabs
+    $$('.tab-btn').forEach(b=> b.onclick=()=> switchTab(b.getAttribute('data-tab')) );
+    function switchTab(id){ $$('.tab-section').forEach(s=> s.classList.add('hidden')); $('#tab-'+id).classList.remove('hidden'); }
+
+    // PDF upload local
+    $('#file-pdf').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
+
+    // NSSF knapper
+    document.addEventListener('click',(e)=>{ if(e.target?.id==='btn-nssf') importNSSFFromURL(); if(e.target?.id==='btn-nssf-parse') importNSSFFromHTML(); });
+
+    // Init
+    render(); switchTab('calendar');
   </script>
 </body>
 </html>
