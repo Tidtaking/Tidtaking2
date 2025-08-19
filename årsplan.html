@@ -401,7 +401,7 @@
 
   const rows = [];
 
-  // 1) Vanlig tabell-parsing (primært tilfelle på skiskyting.no)
+  // 1) Primært: tabell på skiskyting.no
   tmp.querySelectorAll('table tr').forEach(tr=>{
     const tds = tr.querySelectorAll('td');
     if(tds.length >= 2){
@@ -415,11 +415,10 @@
     }
   });
 
-  // 2) Fallback: grov matching dersom innholdet ikke har en tydelig tabell
+  // 2) Fallback: grov matching uten \p{L}/u
   if(rows.length === 0){
     tmp.querySelectorAll('*').forEach(el=>{
       const txt = (el.textContent || '').trim();
-      // Matcher dato + litt tekst etterpå, uten \p{L}/u-flagget.
       const m = txt.match(/(\d{2}\.\d{2}\.\d{4}).{0,10}([A-Za-zÆØÅæøå0-9].{3,100})/);
       if(m){
         const linkEl = el.querySelector && el.querySelector('a');
@@ -434,6 +433,54 @@
 
   return rows;
 }
+async function fetchNSSF(url){
+  const res = await fetch(url, { mode:'cors' }); // kan feile pga CORS
+  return await res.text();
+}
+async function importNSSFFromURL(){
+  const url = $('#nssf-url').value.trim();
+  if(!url) return alert('Skriv inn URL først.');
+  try{
+    const html = await fetchNSSF(url);
+    const rows = parseNSSF(html);
+    if(rows.length===0) return alert('Fant ingen rader (kan være CORS). Prøv å lime inn HTML i feltet under.');
+    addNSSFEvents(rows);
+  }catch(e){
+    alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML‑kilde i feltet og bruk «Importer fra limt HTML».');
+  }
+}
+function importNSSFFromHTML(){
+  const html = $('#nssf-html').value.trim();
+  if(!html) return alert('Lim inn HTML først.');
+  const rows = parseNSSF(html);
+  if(rows.length===0) return alert('Fant ingen rader i teksten.');
+  addNSSFEvents(rows);
+}
+function addNSSFEvents(rows){
+  const events = rows.map(r=>({
+    id: uid(),
+    title: r.tittel,
+    type: 'Konkurranse',
+    date: dayjs(r.dato.split('.').reverse().join('-')).format('YYYY-MM-DD'),
+    modality: 'Ski skøyting',
+    intensity: 'I5',
+    durationMin: 60,
+    shooting: { stilling:'Konk', skudd: (r.tittel.toLowerCase().includes('sprint')?10:20), tema:[] },
+    raceSubtype: (function(){ for(const k of KONK){ if((r.tittel||'').toLowerCase().includes(k.toLowerCase())) return k; } return ''; })(),
+    age: ['U12','U14','U16','JR'],
+    notes: 'Importert fra skiskyting.no',
+    roles: {},
+    eqtiming: r.link || ''
+  }));
+  // valgfritt: fjern dubletter (samme dato+tittel)
+  const key = e => `${e.date}__${(e.title||'').toLowerCase()}`;
+  const existing = new Set(state.events.map(key));
+  const fresh = events.filter(e=> !existing.has(key(e)));
+  state.events.push(...fresh);
+  render();
+  alert(`Importert ${fresh.length} konkurranser.`);
+}
+
 
     // ------- Logo fallback + bytte -------
     function fallbackLogo(){ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 120 60'); svg.className='h-14 w-20 rounded-xl bg-white p-1'; svg.innerHTML='<rect width="100%" height="100%" fill="white"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="18" fill="#18469a" font-family="Inter, Arial, sans-serif">LSK</text>'; return svg; }
