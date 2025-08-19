@@ -13,32 +13,35 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root { --brand:#1e40af; --brand2:#60a5fa; }
+    /* Lørenskog fargepalett (tilpasset): */
+    :root{
+      --brand:#18469a;        /* klubb-blå */
+      --brand-2:#dbe723;      /* lime/gul kant */
+      --brand-red:#d21111;    /* rød topp */
+      --ink:#0f172a;
+    }
     html,body{height:100%;}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif; color:var(--ink);}
+    .brand-ring{box-shadow:0 0 0 2px var(--brand-2) inset}
     @media print { .no-print{display:none!important} body{background:white} }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-slate-50">
   <div class="mx-auto max-w-[1400px] p-4">
     <!-- Header -->
     <header class="mb-4 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <!-- Logo (enkel SVG, bytt gjerne til ekte PNG/SVG) -->
-        <svg viewBox="0 0 120 120" class="h-14 w-14 rounded-2xl bg-[var(--brand)] p-2 text-white">
-          <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#fff"/></linearGradient></defs>
-          <circle cx="60" cy="60" r="54" fill="url(#g)" opacity="0.2" />
-          <circle cx="60" cy="60" r="42" fill="none" stroke="white" stroke-width="6" />
-          <path d="M30 78 L52 50 L64 60 L90 32" stroke="white" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="92" cy="30" r="8" fill="white" />
-        </svg>
+        <!-- Logo -->
+        <picture class="h-14 w-20 overflow-hidden rounded-xl brand-ring bg-white">
+          <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiskyting" class="h-full w-full object-contain" onerror="this.replaceWith(fallbackLogo())"/>
+        </picture>
         <div>
-          <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
+          <h1 class="text-2xl font-bold text-[color:var(--brand)]">Lørenskog Skiskyting</h1>
           <p class="text-sm text-slate-600">Årsplan (kalenderår) • Øktbank • Konkurranser • Ukekoder • Roller</p>
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-2 no-print">
-        <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50"><span>Ny hendelse</span></button>
+        <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Ny hendelse</button>
         <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Skriv ut</button>
         <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Eksporter</button>
         <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50 cursor-pointer">
@@ -142,7 +145,7 @@
               <div class="space-y-3">
                 <div>
                   <label class="text-sm font-medium">CSV‑import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
-                  <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; balanse|avtrekk; U12|U14"></textarea>
+                  <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; bevegelighet|balanse; U12|U14"></textarea>
                   <div class="mt-2 flex gap-2">
                     <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
                     <button id="btn-csv-eg" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lim inn eksempel</button>
@@ -152,7 +155,32 @@
                   <label class="text-sm font-medium">EQTiming‑sjekk (lim inn lenke pr. hendelse i skjemaet)</label>
                   <p class="text-sm text-slate-600">Hent tittel/arrangement‑navn fra eqtiming.no direkte i hendelsesdialogen. Merk: CORS kan hindre auto‑henting i noen nettlesere.</p>
                 </div>
+
+                <!-- NSSF terminliste -->
+                <div>
+                  <label class="text-sm font-medium">Hent terminliste (NSSF/EQ)</label>
+                  <div class="mt-1 flex gap-2">
+                    <input id="nssf-url" class="w-full rounded-xl border px-3 py-2" value="https://skiskyting.no/arrangement/terminliste-eq/"/>
+                    <button id="btn-nssf" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Hent</button>
+                  </div>
+                  <p class="text-xs text-slate-600 mt-1">Hvis CORS blokkerer: åpne siden, kopier HTML‑kilden og lim inn her:</p>
+                  <textarea id="nssf-html" class="mt-2 h-24 w-full rounded-xl border px-3 py-2" placeholder="(Valgfritt) Lim inn HTML‑kilde fra terminlisten dersom direkte henting feiler"></textarea>
+                  <div class="mt-2 flex gap-2">
+                    <button id="btn-nssf-parse" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer fra limt HTML</button>
+                  </div>
+                </div>
+
+                <!-- Logo bytte -->
+                <div>
+                  <label class="text-sm font-medium">Bytt logo (valgfritt)</label>
+                  <div class="mt-1 flex items-center gap-2">
+                    <input id="file-logo" type="file" accept="image/*" class="hidden"/>
+                    <label for="file-logo" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm cursor-pointer">Velg bilde</label>
+                    <button id="btn-logo-reset" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Tilbakestill</button>
+                  </div>
+                </div>
               </div>
+
               <div class="space-y-3">
                 <div>
                   <label class="text-sm font-medium">Ukekoder (BAS/OPP/KONK/RES/EKS)</label>
@@ -236,7 +264,8 @@
       EVENTS: 'lss:events:v1',
       BANK: 'lss:bank:v1',
       WEEKS: 'lss:weeks:v1',
-      YEAR: 'lss:year:v1'
+      YEAR: 'lss:year:v1',
+      LOGO: 'lss:logo:v1'
     };
 
     const $ = (q, el=document) => el.querySelector(q);
@@ -254,7 +283,6 @@
 
     // ---------- Default Data ----------
     function getDefaultWeeks(year){
-      // create all ISO weeks present in the year
       const first = dayjs(year+'-01-01');
       const last = dayjs(year+'-12-31');
       const weeks = {};
@@ -283,9 +311,7 @@
       add({name:'Komb – inn/ut + I3 drag 4×6 min',type:'Trening',modality:'Løp',intensity:'I3',durationMin:85,shooting:{stilling:'Kombinert',skudd:40,tema:['Overganger (inn/ut)','Repetisjonsrytme']},age:['U16','JR'],notes:'4×6 min I3. Skyting etter hvert drag (L/S annenhver). Fokus på inngang/utgang.'});
       add({name:'Test – 3000 m + 2×5 skudd',type:'Trening',modality:'Løp',intensity:'I5',durationMin:60,shooting:{stilling:'Variert',skudd:10,tema:['Avtrekkstid/trigger']},age:['U16','JR'],notes:'Oppvarming 20 min, test 3000 m, deretter 2×5 skudd stå/ligg med puls.'});
       add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Rolig bevegelse i pratetempo. 10–15 min mobilitet.'});
-      // Stafettspesifikk
       add({name:'Stafett – vekslinger + skyterutiner',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Repetisjonsrytme']},age:['U14','U16','JR'],notes:'Vekslinger, inn/ut, standplassdisiplin. 8×5 skudd (L/S).'});
-      // HL-forberedelse
       add({name:'HL/NC forberedelse – sprintsim',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Overganger (inn/ut)','Avtrekkstid/trigger']},age:['U16','JR'],notes:'Prolog + en omgang jaktstart med handicaptid.'});
       return T;
     }
@@ -395,7 +421,7 @@
       const c = document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm';
       c.innerHTML = `
         <div class='border-b p-4 flex items-center justify-between'>
-          <h4 class='text-base font-semibold'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${t.name}</h4>
+          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${t.name}</h4>
           <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${a}</span>`).join('')}</div>
         </div>
         <div class='p-4 text-sm space-y-1'>
@@ -475,7 +501,6 @@
         </div>
       `;
 
-      // Tema chips
       function refreshTema(){
         const holder = $('#tema-tags'); holder.innerHTML='';
         (model.shooting.tema||[]).forEach((t,i)=>{
@@ -485,7 +510,6 @@
       refreshTema();
       $('#add-tema').onclick = ()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
 
-      // Handlers save/delete/cancel
       $('#btn-save').onclick = ()=>{
         model.title = $('#f-title').value.trim();
         model.type = $('#f-type').value; model.date = $('#f-date').value; model.modality = $('#f-mod').value; model.intensity = $('#f-int').value;
@@ -501,16 +525,15 @@
       $('#btn-delete').onclick = ()=>{ state.events = state.events.filter(x=>x.id!==model.id); closeDialog(); render(); };
       $('#btn-cancel').onclick = closeDialog; $('#dlg-close').onclick = closeDialog;
 
-      // EQTiming fetch (best-effort; CORS may block)
       $('#btn-fetch-eqt').onclick = async ()=>{
         const url = $('#f-eqt').value.trim(); if(!url) return alert('Lim inn en EQTiming‑lenke først.');
         try{
           const res = await fetch(url, { mode:'cors' });
           const text = await res.text();
-          const titleMatch = text.match(/<title>([^<]+)<\/title>/i);
-          if(titleMatch){ $('#f-title').value = decodeHTMLEntities(titleMatch[1]).replace(/\s+\|.*$/,'').trim(); }
-          alert('Forsøkte å lese tittel. Hvis ikke oppdatert, er det låst av CORS.');
-        }catch(e){ alert('Kunne ikke hente – sannsynligvis blokkert av CORS. Lagre lenken i feltet uansett.'); }
+          const titleMatch = text.match(/<title>([^<]+)<\\/title>/i);
+          if(titleMatch){ $('#f-title').value = decodeHTMLEntities(titleMatch[1]).replace(/\\s+\\|.*$/,'').trim(); }
+          alert('Prøvde å lese tittel. Hvis den ikke oppdateres er det CORS som blokkerer.');
+        }catch(e){ alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.'); }
       };
 
       $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
@@ -521,13 +544,12 @@
       return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`;
     }
 
-    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
+    function escapeHTML(s){ return (s||'').replace(/[&<>\"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\\'':'&#39;'}[m])); }
     function decodeHTMLEntities(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
 
     // ---------- Weeks ----------
     function renderWeeks(){
       const tbody = $('#tbl-weeks'); tbody.innerHTML='';
-      // list iso weeks present in the selected year
       const weeks = {};
       let d = dayjs(state.year+'-01-01').startOf('week');
       const end = dayjs(state.year+'-12-31');
@@ -538,13 +560,13 @@
         tr.innerHTML = `<td class='p-2'>${wk}</td><td><select data-wk='${wk}' class='rounded-xl border px-2 py-1'>${WEEKCODES.map(c=>`<option ${c===code?'selected':''}>${c}</option>`).join('')}</select></td><td><input data-wkn='${wk}' class='w-full rounded-xl border px-2 py-1' value='${escapeHTML(note)}'/></td>`;
         tbody.appendChild(tr);
       });
-      $$('select[data-wk]').forEach(el=> el.onchange = (e)=>{ const wk=+el.getAttribute('data-wk'); state.weeks[wk] = state.weeks[wk]||{}; state.weeks[wk].code = el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); });
-      $$('input[data-wkn]').forEach(el=> el.oninput = (e)=>{ const wk=+el.getAttribute('data-wkn'); state.weeks[wk] = state.weeks[wk]||{}; state.weeks[wk].note = el.value; lsSet(KEY.WEEKS,state.weeks); });
+      $$('select[data-wk]').forEach(el=> el.onchange = ()=>{ const wk=+el.getAttribute('data-wk'); state.weeks[wk] = state.weeks[wk]||{}; state.weeks[wk].code = el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); });
+      $$('input[data-wkn]').forEach(el=> el.oninput = ()=>{ const wk=+el.getAttribute('data-wkn'); state.weeks[wk] = state.weeks[wk]||{}; state.weeks[wk].note = el.value; lsSet(KEY.WEEKS,state.weeks); });
     }
 
     // ---------- CSV Import ----------
     function parseCSV(text){
-      const rows = text.split(/\r?\n/).map(r=>r.trim()).filter(Boolean);
+      const rows = text.split(/\\r?\\n/).map(r=>r.trim()).filter(Boolean);
       return rows.map(line=>{
         const parts = line.split(';').map(x=>x.trim());
         const [dato,title,type,modality,intensity,duration,skudd,stilling,tema,age] = parts;
@@ -564,7 +586,7 @@
       const fmt = (d)=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
       const lines = [ 'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO' ];
       state.events.forEach(e=>{
-        const start = new Date(e.date+'T17:00:00'); // standard 17:00
+        const start = new Date(e.date+'T17:00:00');
         const end = new Date(start.getTime() + ((e.durationMin||60)*60000));
         lines.push('BEGIN:VEVENT');
         lines.push('UID:'+e.id);
@@ -572,14 +594,93 @@
         lines.push('DTSTART:'+fmt(start));
         lines.push('DTEND:'+fmt(end));
         const title = e.title || (e.type + (e.raceSubtype? (' – '+e.raceSubtype):''));
-        lines.push('SUMMARY:'+title.replace(/,/g,'\,'));
-        lines.push('DESCRIPTION:'+ (e.notes||'') .replace(/[\n,]/g,m=> (m==='\n'?'\\n':'\\,')) );
+        lines.push('SUMMARY:'+title.replace(/,/g,'\\,'));
+        lines.push('DESCRIPTION:'+ (e.notes||'') .replace(/[\\n,]/g,m=> (m==='\\n'?'\\\\n':'\\\\,')) );
         lines.push('END:VEVENT');
       });
       lines.push('END:VCALENDAR');
-      const blob = new Blob([lines.join('\n')], {type:'text/calendar'});
+      const blob = new Blob([lines.join('\\n')], {type:'text/calendar'});
       const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
+
+    // ---------- NSSF terminliste (direkte/fallback) ----------
+    async function fetchNSSF(url){
+      const res = await fetch(url, {mode:'cors'}); // kan feile pga. CORS
+      return await res.text();
+    }
+    function parseNSSF(html){
+      const tmp = document.createElement('div'); tmp.innerHTML = html;
+      let rows = [];
+      tmp.querySelectorAll('table tr').forEach(tr=>{
+        const tds = tr.querySelectorAll('td');
+        if(tds.length>=2){
+          const dato = (tds[0].textContent||'').trim();
+          const tittel = (tds[1].textContent||'').trim();
+          const link = (tds[1].querySelector('a')||{}).href||'';
+          if(/\\d{2}\\.\\d{2}\\.\\d{4}/.test(dato) && tittel){ rows.push({dato,tittel,link}); }
+        }
+      });
+      if(rows.length===0){
+        tmp.querySelectorAll('*').forEach(el=>{
+          const txt = (el.textContent||'').trim();
+          const m = txt.match(/(\\d{2}\\.\\d{2}\\.\\d{4}).{0,10}([\\p{L}0-9].{3,100})/u);
+          if(m && el.querySelector && el.querySelector('a')) rows.push({dato:m[1], tittel:el.querySelector('a').textContent.trim(), link:el.querySelector('a').href});
+        });
+      }
+      return rows;
+    }
+    async function importNSSFFromURL(){
+      const url = $('#nssf-url').value.trim();
+      if(!url) return alert('Skriv inn URL først.');
+      try{
+        const html = await fetchNSSF(url);
+        const rows = parseNSSF(html);
+        if(rows.length===0) return alert('Fant ingen rader (kan være CORS). Prøv å lime inn HTML i feltet under.');
+        addNSSFEvents(rows);
+      }catch(e){ alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML‑kilde i feltet og bruk «Importer fra limt HTML».'); }
+    }
+    function addNSSFEvents(rows){
+      const events = rows.map(r=>({
+        id: uid(),
+        title: r.tittel,
+        type: 'Konkurranse',
+        date: dayjs(r.dato.split('.').reverse().join('-')).format('YYYY-MM-DD'),
+        modality: 'Ski skøyting', intensity:'I5', durationMin:60,
+        shooting:{stilling:'Konk',skudd: (r.tittel.toLowerCase().includes('sprint')?10:20), tema:[]},
+        raceSubtype: (function(){ for(const k of KONK){ if((r.tittel||'').toLowerCase().includes(k.toLowerCase())) return k; } return ''; })(),
+        age:['U12','U14','U16','JR'], notes:'Importert fra skiskyting.no', roles:{}, eqtiming:r.link||''
+      }));
+      state.events.push(...events); render(); alert(`Importert ${events.length} konkurranser.`);
+    }
+    function importNSSFFromHTML(){
+      const html = $('#nssf-html').value.trim(); if(!html) return alert('Lim inn HTML først.');
+      const rows = parseNSSF(html); if(rows.length===0) return alert('Fant ingen rader i teksten.');
+      addNSSFEvents(rows);
+    }
+
+    // ---------- Logo fallback + bytte ----------
+    function fallbackLogo(){
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 120 120');
+      svg.setAttribute('class','h-14 w-20 rounded-xl p-2 brand-ring');
+      svg.innerHTML = `<rect x="0" y="0" width="120" height="120" rx="16" fill="white"/>`
+        + `<circle cx="60" cy="60" r="52" fill="var(--brand)" opacity="0.1"/>`
+        + `<circle cx="60" cy="60" r="42" fill="none" stroke="var(--brand-2)" stroke-width="6"/>`;
+      return svg;
+    }
+    (function initLogo(){
+      const saved = lsGet(KEY.LOGO,null);
+      if(saved){ $('#club-logo').src = saved; }
+      $('#file-logo').addEventListener('change', async (e)=>{
+        const f = e.target.files[0]; if(!f) return;
+        const url = URL.createObjectURL(f);
+        $('#club-logo').src = url;
+        // persist som data-URL
+        const b = await f.arrayBuffer(); const base64 = btoa(String.fromCharCode(...new Uint8Array(b)));
+        lsSet(KEY.LOGO, `data:${f.type};base64,${base64}`);
+      });
+      $('#btn-logo-reset').onclick = ()=>{ lsSet(KEY.LOGO,null); location.reload(); };
+    })();
 
     // ---------- Events ----------
     $('#btn-print').onclick = ()=> window.print();
@@ -614,6 +715,9 @@
 
     // PDF upload local
     $('#file-pdf').onchange = (e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
+
+    // NSSF knapper
+    document.addEventListener('click', (e)=>{ if(e.target && e.target.id==='btn-nssf') importNSSFFromURL(); if(e.target && e.target.id==='btn-nssf-parse') importNSSFFromHTML(); });
 
     // Init
     render(); switchTab('calendar');
