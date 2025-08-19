@@ -761,3 +761,156 @@
     $('#downloadCsv').onclick=()=>{
       const head='date;title;type;modality;intensity;duration;shots;age;notes;raceSubtype\n';
       const sample=`${state.year}-01-10;Basistrening + 30 skudd;Trening;Løp
+      function getDefaultTemplates(){
+  const T = [];
+  const add = (o) => T.push({ id: uid(), ...o });
+
+  add({
+    name: 'U12 Lekpreget I2 (45–60) + 30 skudd ligg',
+    type: 'Trening',
+    modality: 'Løp',
+    intensity: 'I2',
+    durationMin: 55,
+    shooting: { stilling: 'Liggende', skudd: 30, tema: ['Grunnstilling liggende','Siktebilde & avtrekk'] },
+    age: ['U12'],
+    notes: 'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'
+  });
+
+  add({
+    name: 'U14 Rulleski I3 5×4 min + stående',
+    type: 'Trening',
+    modality: 'Rulleski skøyting',
+    intensity: 'I3',
+    durationMin: 75,
+    shooting: { stilling: 'Stående', skudd: 40, tema: ['Grunnstilling stående','Avtrekkstid/trigger'] },
+    age: ['U14'],
+    notes: 'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'
+  });
+
+  add({
+    name: 'U16 VO2 I4 6×3 min + kombinert',
+    type: 'Trening',
+    modality: 'Løp',
+    intensity: 'I4',
+    durationMin: 80,
+    shooting: { stilling: 'Kombinert', skudd: 50, tema: ['Repetisjonsrytme','Overganger (inn/ut)'] },
+    age: ['U16'],
+    notes: '6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'
+  });
+
+  add({
+    name: 'JR Langtur I1–2 120 + 60 skudd',
+    type: 'Trening',
+    modality: 'Ski skøyting',
+    intensity: 'I2',
+    durationMin: 120,
+    shooting: { stilling: 'Variert', skudd: 60, tema: ['Vind/korrigering','Pust & rytme'] },
+    age: ['JR'],
+    notes: 'Rolig langtur. 6×10 teknikkserier.'
+  });
+
+  add({
+    name: 'Teknikk skøyting (alle) + 40 skudd',
+    type: 'Trening',
+    modality: 'Rulleski skøyting',
+    intensity: 'I2',
+    durationMin: 70,
+    shooting: { stilling: 'Variert', skudd: 40, tema: ['Siktebilde & avtrekk','Pust & rytme'] },
+    age: ['U12','U14','U16','JR'],
+    notes: 'Fokus på balanse, fraskyv og tyngdeoverføring. Korte teknikkstasjoner på standplass.'
+  });
+
+  add({
+    name: 'Konk – Sprint',
+    type: 'Konkurranse',
+    modality: 'Ski skøyting',
+    intensity: 'I5',
+    durationMin: 45,
+    shooting: { stilling: 'Konk', skudd: 10, tema: [] },
+    raceSubtype: 'Sprint',
+    age: ['U12','U14','U16','JR'],
+    notes: 'Standard sprintoppsett.'
+  });
+
+  add({
+    name: 'Konk – Normal',
+    type: 'Konkurranse',
+    modality: 'Ski skøyting',
+    intensity: 'I5',
+    durationMin: 60,
+    shooting: { stilling: 'Konk', skudd: 20, tema: [] },
+    raceSubtype: 'Normal',
+    age: ['U14','U16','JR'],
+    notes: 'Standard normaldistanse.'
+  });
+
+  add({
+    name: 'Basistrening + styrke (sirkel)',
+    type: 'Trening',
+    modality: 'Basistrening',
+    intensity: 'I2',
+    durationMin: 60,
+    shooting: { stilling: 'Variert', skudd: 0, tema: [] },
+    age: ['U12','U14','U16','JR'],
+    notes: 'Sirkel: kjernestyrke, stabilitet, hofte/ankel. 8–10 stasjoner × 30–40 sek.'
+  });
+
+  // Ekstra nyttige maler:
+  add({
+    name: 'Skyting – presisjon liggende 5×5',
+    type: 'Trening',
+    modality: 'Basistrening',
+    intensity: 'I1',
+    durationMin: 50,
+    shooting: { stilling: 'Liggende', skudd: 25, tema: ['Grunnstilling liggende','Siktebilde & avtrekk'] },
+    age: ['U12','U14','U16'],
+    notes: 'Rolig bevegelse mellom serier. Fokus på avtrekkskontroll og etterhold.'
+  });
+
+  add({
+    name: 'Skyting – presisjon stående 6×5',
+    type: 'Trening',
+    modality: 'Basistrening',
+    intensity: 'I1',
+    durationMin: 55,
+    shooting: { stilling: 'Stående', skudd: 30, tema: ['Grunnstilling stående','Pust & rytme'] },
+    age: ['U14','U16','JR'],
+    notes: 'Holdtid og nullpunkt. Minutters rolig bevegelse mellom serier.'
+  });
+
+  add({
+    name: 'Komb – inn/ut + I3 drag 4×6 min',
+    type: 'Trening',
+    modality: 'Løp',
+    intensity: 'I3',
+    durationMin: 85,
+    shooting: { stilling: 'Kombinert', skudd: 40, tema: ['Overganger (inn/ut)','Repetisjonsrytme'] },
+    age: ['U16','JR'],
+    notes: '4×6 min I3. Skyting etter hvert drag (L/S annenhver). Fokus på inngang/utgang.'
+  });
+
+  add({
+    name: 'Test – 3000 m + 2×5 skudd',
+    type: 'Trening',
+    modality: 'Løp',
+    intensity: 'I5',
+    durationMin: 60,
+    shooting: { stilling: 'Variert', skudd: 10, tema: ['Avtrekkstid/trigger'] },
+    age: ['U16','JR'],
+    notes: 'Oppvarming 20 min, test 3000 m, deretter 2×5 skudd stå/ligg med puls.'
+  });
+
+  add({
+    name: 'Restitusjon I1 (45) + bevegelighet',
+    type: 'Restitusjon',
+    modality: 'Løp',
+    intensity: 'I1',
+    durationMin: 45,
+    shooting: { stilling: 'Variert', skudd: 0, tema: [] },
+    age: ['U12','U14','U16','JR'],
+    notes: 'Rolig bevegelse i pratetempo. 10–15 min mobilitet etterpå.'
+  });
+
+  return T;
+}
+
