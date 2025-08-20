@@ -362,7 +362,6 @@
       // events
       supabase.channel('events-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.events }, payload => {
-          // enkel sync: last inn aktuelle år på nytt
           if(payload.new?.year === state.year || payload.old?.year === state.year){
             supaLoadAll(state.year);
           }
@@ -452,7 +451,7 @@
     function getDefaultWeeks(year){
       const first=dayjs(year+'-01-01');
       const last=dayjs(year+'-12-31');
-      const weeks={}; let d=first.startOf('week');
+      const weeks={}; let d=first.startOf('isoWeek'); // ISO-uke mandag-start
       while(d.isBefore(last.add(1,'day'))){
         const wk=d.isoWeek();
         if(!weeks[wk]) weeks[wk]={code:'BAS',note:''};
@@ -546,7 +545,8 @@
       const list=document.createElement('div'); list.className='mt-1 flex flex-col gap-0.5';
       evts.slice(0,3).forEach(e=>{
         const row=document.createElement('div'); row.className='truncate text-xs';
-        row.innerHTML=`<span class='opacity-70'>• </span><span class='font-medium'>${e.title||e.type}</span>`;
+        // SIKKER RENDER AV TITTEL
+        row.innerHTML=`<span class='opacity-70'>• </span><span class='font-medium'>${escapeHTML(e.title||e.type)}</span>`;
         list.appendChild(row);
       });
       if(evts.length>3){ const more=document.createElement('div'); more.className='text-[10px] text-slate-500'; more.textContent=`+${evts.length-3} flere…`; list.appendChild(more); }
@@ -558,12 +558,13 @@
       const yearEvents=state.events.filter(e=> dayjs(e.date).year()===state.year).sort((a,b)=> dayjs(a.date)-dayjs(b.date));
       yearEvents.forEach(e=>{
         const tr=document.createElement('tr'); tr.className='border-t';
+        const safeTitle = e.title ? escapeHTML(e.title) : '<span class="opacity-50">(uten tittel)</span>';
         tr.innerHTML=`
           <td class='py-1 whitespace-nowrap'>${dayjs(e.date).format('DD.MM.YYYY')}</td>
-          <td class='max-w-[280px] truncate'>${e.title||'<span class="opacity-50">(uten tittel)</span>'}</td>
-          <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]}'></span>${e.type}${e.raceSubtype?` · ${e.raceSubtype}`:''}</span></td>
-          <td>${e.modality||'–'}</td>
-          <td>${e.intensity||'–'}</td>
+          <td class='max-w-[280px] truncate'>${safeTitle}</td>
+          <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]}'></span>${escapeHTML(e.type)}${e.raceSubtype?` · ${escapeHTML(e.raceSubtype)}`:''}</span></td>
+          <td>${escapeHTML(e.modality||'–')}</td>
+          <td>${escapeHTML(e.intensity||'–')}</td>
           <td>${(e.shooting&&e.shooting.skudd)||0}</td>
           <td class='text-right'><button class='rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Rediger</button></td>`;
         tr.querySelector('button').addEventListener('click', ()=> openDialog({...e}));
@@ -585,16 +586,16 @@
       const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm';
       c.innerHTML=`
         <div class='border-b p-4 flex items-center justify-between'>
-          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${t.name}</h4>
-          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${a}</span>`).join('')}</div>
+          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${escapeHTML(t.name)}</h4>
+          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}</div>
         </div>
         <div class='p-4 text-sm space-y-1'>
-          <div><span class='font-medium'>Modalitet:</span> ${t.modality||'–'}</div>
-          <div><span class='font-medium'>Intensitet:</span> ${t.intensity||'–'}</div>
-          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? t.durationMin+' min':'–'}</div>
+          <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
+          <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
+          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
           <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
-          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${x}</span>`).join('')}</div>`:''}
-          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${t.notes}</p>`:''}
+          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}</div>`:''}
+          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${escapeHTML(t.notes)}</p>`:''}
           <div class='pt-2 flex flex-wrap gap-2'>
             <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
             <button class='btn-dup rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
@@ -758,7 +759,7 @@
     // ---------- Weeks ----------
     function renderWeeks(){
       const tbody=$('#tbl-weeks'); tbody.innerHTML='';
-      const weeks={}; let d=dayjs(state.year+'-01-01').startOf('week'); const end=dayjs(state.year+'-12-31');
+      const weeks={}; let d=dayjs(state.year+'-01-01').startOf('isoWeek'); const end=dayjs(state.year+'-12-31');
       while(d.isBefore(end.add(1,'day'))){ weeks[d.isoWeek()]=true; d=d.add(7,'day'); }
       Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{
         const code=(state.weeks[wk]&&state.weeks[wk].code)||'BAS';
@@ -807,12 +808,13 @@
     function exportICS(){
       const pad=n=>String(n).padStart(2,'0');
       const fmt=d=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+      const esc=s=> (s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/[,;]/g, m=> '\\'+m);
       const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO'];
       state.events.forEach(e=>{
         const start=new Date(e.date+'T17:00:00'); const end=new Date(start.getTime()+((e.durationMin||60)*60000));
         lines.push('BEGIN:VEVENT'); lines.push('UID:'+e.id); lines.push('DTSTAMP:'+fmt(new Date())); lines.push('DTSTART:'+fmt(start)); lines.push('DTEND:'+fmt(end));
-        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+title.replace(/,/g,'\\,'));
-        lines.push('DESCRIPTION:'+(e.notes||'').replace(/\n/g,'\\n').replace(/,/g,'\\,'));
+        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+esc(title));
+        lines.push('DESCRIPTION:'+esc(e.notes||''));
         lines.push('END:VEVENT');
       });
       lines.push('END:VCALENDAR');
