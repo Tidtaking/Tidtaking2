@@ -771,28 +771,37 @@ async function supaUpsertEvent(model){
       refreshTema();
       $('#add-tema').onclick=()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
 
-      $('#btn-save').onclick=async ()=>{
-        model.title=$('#f-title').value.trim();
-        model.type=$('#f-type').value;
-        model.date=$('#f-date').value;
-        model.modality=$('#f-mod').value;
-        model.intensity=$('#f-int').value;
-        model.durationMin=parseInt($('#f-dur').value)||60;
-        model.shooting={stilling:$('#f-still').value, skudd:parseInt($('#f-skudd').value)||0, tema:model.shooting.tema||[]};
-        model.notes=$('#f-notes').value;
-        model.raceSubtype=model.type==='Konkurranse'?(model.raceSubtype||''):'';
-        model.age=ALDER.map(([id])=>id).filter(id=> $('[data-age="'+id+'"]').checked);
-        model.roles={}; ROLES.forEach(r=> model.roles[r]=$('[data-role="'+r+'"]').value );
-        model.eqtiming=$('#f-eqt').value.trim();
+      // ---- inne i openDialog, i stedet for alle $('#...') under btn-save:
+$('#btn-save').onclick = async () => {
+  const get = (id) => $('#'+id, body); // <-- SCOPE TIL DIALOGEN
 
-        const i=state.events.findIndex(x=>x.id===model.id);
-        if(i>=0) state.events[i]=model; else state.events.push(model);
-        lsSet(KEY.EVENTS,state.events);
-        render();
+  model.title       = get('f-title').value.trim();
+  model.type        = get('f-type').value;          // nå den riktige selecten
+  model.date        = get('f-date').value;
+  model.modality    = get('f-mod').value;
+  model.intensity   = get('f-int').value;
+  model.durationMin = parseInt(get('f-dur').value) || 60;
+  model.shooting    = {
+    stilling: get('f-still').value,
+    skudd: parseInt(get('f-skudd').value) || 0,
+    tema: model.shooting.tema || []
+  };
+  model.notes       = get('f-notes').value;
+  model.raceSubtype = model.type === 'Konkurranse' ? (model.raceSubtype || '') : '';
+  model.age         = ALDER.map(([id]) => id).filter(id => $('[data-age="'+id+'"]', body).checked);
+  model.roles       = {};
+  ROLES.forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
+  model.eqtiming    = get('f-eqt').value.trim();
 
-        await supaUpsertEvent(model);
-        closeDialog();
-      };
+  const i = state.events.findIndex(x => x.id === model.id);
+  if (i >= 0) state.events[i] = model; else state.events.push(model);
+  lsSet(KEY.EVENTS, state.events);
+  render();
+
+  await supaUpsertEvent(model);
+  closeDialog();
+};
+
 
       $('#btn-delete').onclick=async ()=>{
         state.events=state.events.filter(x=>x.id!==model.id);
