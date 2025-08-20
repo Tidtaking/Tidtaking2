@@ -378,10 +378,14 @@
 function mapEventToDb(e){
   return {
     id: e.id,
-    year: dayjs(e.date).year(),
+    // year:  <-- fjernet fordi kolonnen er GENERATED
     date: e.date,
-    title: e.title || null,          // <-- manglet
-    type: e.type || null,            // <-- skriv KUN til 'type'
+    title: e.title || null,
+    // Bruk kolonnenavnet du faktisk har i DB:
+    // - hvis du har event_type: behold linjen under
+    // - hvis du har type: behold e.type og slett event_type-linjen
+    event_type: e.type || null,   // legg til ELLER bruk 'type' nedenfor
+    type: e.type || null,         // behold hvis du har 'type' i skjemaet
     modality: e.modality || null,
     intensity: e.intensity || null,
     duration_min: e.durationMin ?? null,
@@ -394,6 +398,7 @@ function mapEventToDb(e){
     created_at: e.created_at || null
   };
 }
+
 
 function mapEventFromDb(r){
   const t = r.type ?? 'Trening';     // <-- les KUN fra 'type'
