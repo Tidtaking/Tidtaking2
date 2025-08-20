@@ -373,34 +373,28 @@
         .subscribe();
     }
 
-    // ---------- DB mappere ----------
-    // Viktig: støtt både event_type og type for kompatibilitet
+   // ---------- DB mappere (ERSTATTER DINE) ----------
 function mapEventToDb(e){
+  // Viktig: IKKE send generated columns (year/event_type)
   return {
     id: e.id,
-    // year:  <-- fjernet fordi kolonnen er GENERATED
-    date: e.date,
-    title: e.title || null,
-    // Bruk kolonnenavnet du faktisk har i DB:
-    // - hvis du har event_type: behold linjen under
-    // - hvis du har type: behold e.type og slett event_type-linjen
-    type: e.type || null,         // behold hvis du har 'type' i skjemaet
+    date: e.date,                 // DATE / TEXT
+    title: e.title || null,       // TEXT
+    type: e.type || null,         // TEXT: 'Trening' | 'Skyting' | 'Konkurranse' | ...
     modality: e.modality || null,
     intensity: e.intensity || null,
     duration_min: e.durationMin ?? null,
-    age: e.age || [],
-    shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
+    age: e.age || [],             // JSONB
+    shooting: e.shooting || { stilling:'', skudd:0, tema:[] }, // JSONB
     race_subtype: e.raceSubtype || null,
     notes: e.notes || null,
-    roles: e.roles || {},
-    eqtiming: e.eqtiming || null,
-    created_at: e.created_at || null
+    roles: e.roles || {},         // JSONB
+    eqtiming: e.eqtiming || null
   };
 }
 
-
 function mapEventFromDb(r){
-  const t = r.type ?? 'Trening';     // <-- les KUN fra 'type'
+  // Les bare 'type' fra DB. Fallback til 'Trening' kun hvis null.
   return {
     id: r.id,
     date: r.date,
@@ -417,7 +411,6 @@ function mapEventFromDb(r){
     eqtiming: r.eqtiming || ''
   };
 }
-
 
     function mapBankToDb(t){
       return {
