@@ -328,40 +328,6 @@
         state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
       }
 
-      // Logo (valgfritt)
-// ---------- Logo ----------
-function fallbackLogo(){
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('viewBox','0 0 120 60');
-  svg.className='h-14 w-20 rounded-xl bg-white p-1';
-  svg.innerHTML='<rect width="100%" height="100%" fill="white"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="18" fill="#18469a" font-family="Inter, Arial, sans-serif">LSK</text>';
-  return svg;
-}
-
-(function initLogo(){
-  // Standard logo fra root
-  const saved = lsGet(KEY.LOGO, null);
-  if (saved) {
-    $('#club-logo').src = saved;
-  } else {
-    $('#club-logo').src = 'Logo LSK Klubb farger JPG.jpeg';
-  }
-
-  // Hvis man velger en ny logo, lagres den bare lokalt
-  $('#file-logo')?.addEventListener('change', async (e)=>{
-    const f=e.target.files[0];
-    if(!f) return;
-    const url=URL.createObjectURL(f);
-    $('#club-logo').src=url;
-    lsSet(KEY.LOGO, url);
-  });
-
-  $('#btn-logo-reset')?.addEventListener('click', ()=>{
-    lsSet(KEY.LOGO,null);
-    $('#club-logo').src='Logo LSK Klubb farger JPG.jpeg';
-  });
-})();
-
 
       render();
     }
