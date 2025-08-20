@@ -384,7 +384,6 @@ function mapEventToDb(e){
     // Bruk kolonnenavnet du faktisk har i DB:
     // - hvis du har event_type: behold linjen under
     // - hvis du har type: behold e.type og slett event_type-linjen
-    event_type: e.type || null,   // legg til ELLER bruk 'type' nedenfor
     type: e.type || null,         // behold hvis du har 'type' i skjemaet
     modality: e.modality || null,
     intensity: e.intensity || null,
