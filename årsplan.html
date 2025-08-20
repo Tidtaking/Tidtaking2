@@ -375,43 +375,37 @@
 
     // ---------- DB mappere ----------
     // Viktig: støtt både event_type og type for kompatibilitet
-    function mapEventToDb(e){
-      return {
-        id: e.id,
-        year: dayjs(e.date).year(),
-        date: e.date,
-        event_type: e.type || null, // primær
-        type: e.type || null,       // fallback-kolonne hvis du allerede har 'type' i DB
-        modality: e.modality || null,
-        intensity: e.intensity || null,
-        duration_min: e.durationMin ?? null,
-        age: e.age || [],
-        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: e.raceSubtype || null,
-        notes: e.notes || null,
-        roles: e.roles || {},
-        eqtiming: e.eqtiming || null,
-        created_at: e.created_at || null
-      };
-    }
-    function mapEventFromDb(r){
-      const t = r.event_type ?? r.type ?? 'Trening';
-      return {
-        id: r.id,
-        date: r.date,
-        title: r.title || '',
-        type: t,
-        modality: r.modality || '',
-        intensity: r.intensity || '',
-        durationMin: r.duration_min ?? 60,
-        age: r.age || [],
-        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
-        raceSubtype: r.race_subtype || '',
-        notes: r.notes || '',
-        roles: r.roles || {},
-        eqtiming: r.eqtiming || ''
-      };
-    }
+function mapEventToDb(e){
+  return {
+    id: e.id,
+    date: e.date,
+    title: e.title || null,
+    type: e.type || null,        // <- skriv til 'type' (eksisterer i DB)
+    modality: e.modality || null,
+    intensity: e.intensity || null
+    // Legg til flere her KUN om du har tilsvarende kolonner i tabellen
+    // f.eks. duration_min, age, shooting, notes osv.
+  };
+}
+
+   function mapEventFromDb(r){
+  return {
+    id: r.id,
+    date: r.date,
+    title: r.title || '',
+    type: r.type || 'Trening',   // <- les fra 'type'
+    modality: r.modality || '',
+    intensity: r.intensity || '',
+    durationMin: 60,             // lokale defaultverdier (siden kolonne ikke finnes)
+    age: [],
+    shooting: { stilling:'', skudd:0, tema:[] },
+    raceSubtype: '',
+    notes: '',
+    roles: {},
+    eqtiming: ''
+  };
+}
+
     function mapBankToDb(t){
       return {
         id: t.id,
