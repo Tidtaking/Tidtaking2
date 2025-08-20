@@ -380,13 +380,10 @@
 function mapEventToDb(e){
   return {
     id: e.id,
-    // year genereres i DB -> ikke send
+    // year: (GENERATED i DB) – fjern
     date: e.date,
-    title: e.title || null,
-
-    // <- DETTE er viktig: sørg for at 'type' sendes 1:1
-    type: (e.type ?? '').trim() || null,
-
+    // event_type: (GENERATED i DB) – fjern
+    type: e.type || null,            // skriv KUN til 'type'
     modality: e.modality || null,
     intensity: e.intensity || null,
     duration_min: e.durationMin ?? null,
@@ -395,10 +392,11 @@ function mapEventToDb(e){
     race_subtype: e.raceSubtype || null,
     notes: e.notes || null,
     roles: e.roles || {},
-    eqtiming: e.eqtiming || null
-    // created_at håndteres av DB
+    eqtiming: e.eqtiming || null,
+    created_at: e.created_at || null
   };
 }
+
 
 function mapEventFromDb(r){
   // Les 'type' direkte. Ikke default til 'Trening' hvis DB faktisk returnerer noe annet enn null.
