@@ -329,8 +329,22 @@
       }
 
       // Logo (valgfritt)
-      const { data: logoRow } = await supabase.from(TBL.settings).select('value').eq('key','club_logo').maybeSingle();
-      if(logoRow && logoRow.value){ lsSet(KEY.LOGO, logoRow.value); const img=$('#club-logo'); if(img) img.src = logoRow.value; }
+(function initLogo(){
+  const saved=lsGet(KEY.LOGO,null);
+  if(saved){ $('#club-logo').src=saved; }
+  $('#file-logo')?.addEventListener('change', async (e)=>{
+    const f=e.target.files[0];
+    if(!f) return;
+    const url=URL.createObjectURL(f);
+    $('#club-logo').src=url;
+    lsSet(KEY.LOGO, url);
+  });
+  $('#btn-logo-reset')?.addEventListener('click', ()=>{
+    lsSet(KEY.LOGO,null);
+    $('#club-logo').src='Logo LSK Klubb farger JPG.jpeg';
+  });
+})();
+
 
       render();
     }
