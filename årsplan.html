@@ -374,12 +374,19 @@
     }
 
    // ---------- DB mappere (ERSTATTER DINE) ----------
+// --- DB mappere: bruk KUN skrivbare kolonner ---
+// NB: IKKE send generated-kolonner (year, event_type) i payloaden.
+
 function mapEventToDb(e){
   return {
     id: e.id,
+    // year genereres i DB -> ikke send
     date: e.date,
-    title: e.title,
-    type: e.type || 'Trening',   // <-- bruk kun denne
+    title: e.title || null,
+
+    // <- DETTE er viktig: sørg for at 'type' sendes 1:1
+    type: (e.type ?? '').trim() || null,
+
     modality: e.modality || null,
     intensity: e.intensity || null,
     duration_min: e.durationMin ?? null,
@@ -388,18 +395,19 @@ function mapEventToDb(e){
     race_subtype: e.raceSubtype || null,
     notes: e.notes || null,
     roles: e.roles || {},
-    eqtiming: e.eqtiming || null,
-    created_at: e.created_at || null
+    eqtiming: e.eqtiming || null
+    // created_at håndteres av DB
   };
 }
 
-
 function mapEventFromDb(r){
+  // Les 'type' direkte. Ikke default til 'Trening' hvis DB faktisk returnerer noe annet enn null.
+  const t = r.type ?? r.event_type ?? 'Trening';
   return {
     id: r.id,
     date: r.date,
     title: r.title || '',
-    type: r.type || 'Trening',   // <-- bruk kun denne
+    type: t,
     modality: r.modality || '',
     intensity: r.intensity || '',
     durationMin: r.duration_min ?? 60,
@@ -411,6 +419,21 @@ function mapEventFromDb(r){
     eqtiming: r.eqtiming || ''
   };
 }
+async function supaUpsertEvent(model){
+  const row = mapEventToDb(model);
+  // Hjelpelogg – fjern når du ser riktig verdi på 'type'
+  console.log('UPsert payload:', row);
+
+  const { data, error } = await supabase
+    .from(TBL.events)
+    .upsert(row, { onConflict: 'id' }) // eksplisitt onConflict på pk
+    .select()
+    .single();
+
+  if (error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
+  return data;
+}
+
 
 
     function mapBankToDb(t){
