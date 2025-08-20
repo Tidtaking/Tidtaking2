@@ -28,6 +28,7 @@
   <!-- ========= HEADER ========= -->
   <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
     <div class="flex items-center gap-3">
+      <!-- Logo ligger på rot sammen med html-filen -->
       <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
       <div>
         <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
@@ -287,35 +288,38 @@
 
     // ---------- Supabase I/O ----------
     async function supaLoadAll(year = state.year){
-      // Events
+      // Events (dato-intervall, ikke "year"-kolonne)
       const { data: ev, error: evErr } = await supabase
         .from(TBL.events)
         .select('*')
-        .eq('year', year)
+        .gte('date', `${year}-01-01`)
+        .lte('date', `${year}-12-31`)
         .order('date', { ascending: true });
+
       if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
-      // Bank (maler)
-      const { data: bk, error: bkErr } = await supabase
-        .from(TBL.bank)
-        .select('*')
-        .order('created_at', { ascending: false });
-      if(!bkErr && bk){
+      // Bank (maler) – kan mangle tabell
+      let bk = null, bkErr = null;
+      try{
+        const resp = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
+        bk = resp.data; bkErr = resp.error;
+      }catch{ bkErr = true; }
+      if(!bkErr && Array.isArray(bk)){
         state.bank = bk.map(mapBankFromDb);
         if(state.bank.length === 0){ state.bank = getDefaultTemplates(); }
         lsSet(KEY.BANK, state.bank);
       } else {
-        // fallback til cache eller defaults
         state.bank = lsGet(KEY.BANK, getDefaultTemplates());
       }
 
-      // Weeks
-      const { data: wks, error: wErr } = await supabase
-        .from(TBL.weeks)
-        .select('*')
-        .eq('year', year);
-      if(!wErr && wks){
+      // Weeks – kan mangle tabell
+      let wks = null, wErr = null;
+      try{
+        const resp = await supabase.from(TBL.weeks).select('*').eq('year', year);
+        wks = resp.data; wErr = resp.error;
+      }catch{ wErr = true; }
+      if(!wErr && Array.isArray(wks)){
         const dict = {};
         for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
         state.weeks = dict;
@@ -323,9 +327,15 @@
         state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
       }
 
-      // Logo (valgfritt)
-      const { data: logoRow } = await supabase.from(TBL.settings).select('value').eq('key','club_logo').maybeSingle();
-      if(logoRow && logoRow.value){ lsSet(KEY.LOGO, logoRow.value); $('#club-logo').src = logoRow.value; }
+      // Logo (valgfritt) – sett bare hvis streng og element finnes
+      try{
+        const logoEl = $('#club-logo');
+        const { data: logoRow } = await supabase.from(TBL.settings).select('value').eq('key','club_logo').maybeSingle();
+        if(logoEl && logoRow && typeof logoRow.value === 'string' && logoRow.value.trim()){
+          lsSet(KEY.LOGO, logoRow.value);
+          logoEl.src = logoRow.value; // dataURL eller https
+        }
+      }catch{/* ignorér hvis tabell mangler */}
 
       render();
     }
@@ -341,41 +351,44 @@
       if(error){ console.warn('Sletting feilet', error); alert('Kunne ikke slette i skyen. Slettet lokalt.'); }
     }
     async function supaUpsertWeek(year, week, code, note){
-      const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
-      if(error){ console.warn('Upsert week feilet', error); }
+      try{
+        const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
+        if(error) console.warn('Upsert week feilet', error);
+      }catch{ /* weeks-tabell kan mangle */ }
     }
     async function supaUpsertBankTemplate(t){
-      const row = mapBankToDb(t);
-      const { error } = await supabase.from(TBL.bank).upsert(row);
-      if(error){ console.warn('Upsert bank feilet', error); }
+      try{
+        const row = mapBankToDb(t);
+        const { error } = await supabase.from(TBL.bank).upsert(row);
+        if(error) console.warn('Upsert bank feilet', error);
+      }catch{ /* bank-tabell kan mangle */ }
     }
     async function supaDeleteBankTemplate(id){
-      const { error } = await supabase.from(TBL.bank).delete().eq('id', id);
-      if(error){ console.warn('Slett bank feilet', error); }
+      try{
+        const { error } = await supabase.from(TBL.bank).delete().eq('id', id);
+        if(error) console.warn('Slett bank feilet', error);
+      }catch{ /* bank-tabell kan mangle */ }
     }
     async function supaSaveLogo(dataUrl){
-      await supabase.from(TBL.settings).upsert({ key:'club_logo', value: dataUrl });
+      try{
+        await supabase.from(TBL.settings).upsert({ key:'club_logo', value: dataUrl });
+      }catch{ /* settings-tabell kan mangle */ }
     }
 
-    // Realtime: alle ser endringer
+    // Realtime (trygt selv om tabeller ikke finnes)
     function supaRealtimeInit(){
-      // events
       supabase.channel('events-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.events }, payload => {
-          if(payload.new?.year === state.year || payload.old?.year === state.year){
-            supaLoadAll(state.year);
-          }
+          if(payload.new?.date || payload.old?.date){ supaLoadAll(state.year); }
         })
         .subscribe();
 
-      // weeks
       supabase.channel('weeks-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.weeks }, payload => {
           if((payload.new?.year||payload.old?.year) === state.year){ supaLoadAll(state.year); }
         })
         .subscribe();
 
-      // bank
       supabase.channel('bank-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.bank }, () => supaLoadAll(state.year))
         .subscribe();
@@ -385,7 +398,7 @@
     function mapEventToDb(e){
       return {
         id: e.id,
-        year: dayjs(e.date).year(),
+        // Viktig: ikke send "year" i tilfelle kolonnen ikke finnes
         date: e.date,
         title: e.title || null,
         type: e.type || null,
@@ -461,8 +474,7 @@
     }
 
     function getDefaultTemplates(){
-      const T=[];
-      const add=(o)=>T.push({id:uid(),...o});
+      const T=[]; const add=(o)=>T.push({id:uid(),...o});
       add({name:'U12 Lekpreget I2 (45–60) + 30 skudd ligg',type:'Trening',modality:'Løp',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12'],notes:'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'});
       add({name:'U14 Rulleski I3 5×4 min + stående',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:40,tema:['Grunnstilling stående','Avtrekkstid/trigger']},age:['U14'],notes:'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'});
       add({name:'U16 VO2 I4 6×3 min + kombinert',type:'Trening',modality:'Løp',intensity:'I4',durationMin:80,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'});
@@ -487,7 +499,6 @@
       $('#event-year').textContent = state.year;
       renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks();
 
-      // cache lokalt (for offline)
       lsSet(KEY.YEAR,state.year);
       lsSet(KEY.EVENTS,state.events);
       lsSet(KEY.BANK,state.bank);
@@ -545,7 +556,6 @@
       const list=document.createElement('div'); list.className='mt-1 flex flex-col gap-0.5';
       evts.slice(0,3).forEach(e=>{
         const row=document.createElement('div'); row.className='truncate text-xs';
-        // SIKKER RENDER AV TITTEL
         row.innerHTML=`<span class='opacity-70'>• </span><span class='font-medium'>${escapeHTML(e.title||e.type)}</span>`;
         list.appendChild(row);
       });
@@ -716,7 +726,6 @@
         lsSet(KEY.EVENTS,state.events);
         render();
 
-        // Sky-lagring
         await supaUpsertEvent(model);
         closeDialog();
       };
@@ -822,11 +831,10 @@
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
 
-    // ---------- NSSF import (som før) ----------
+    // ---------- NSSF import ----------
     function parseNSSF(html){
       const tmp = document.createElement('div'); tmp.innerHTML = html;
       const rows = [];
-      // tabell
       tmp.querySelectorAll('table tr').forEach(tr=>{
         const tds=tr.querySelectorAll('td');
         if(tds.length>=2){
@@ -836,7 +844,6 @@
           if(/\d{2}\.\d{2}\.\d{4}/.test(dato) && tittel){ rows.push({ dato, tittel, link }); }
         }
       });
-      // fallback
       if(rows.length===0){
         tmp.querySelectorAll('*').forEach(el=>{
           const txt=(el.textContent||'').trim();
@@ -886,7 +893,6 @@
       const fresh=events.filter(e=>!existing.has(key(e)));
       state.events.push(...fresh); render();
       lsSet(KEY.EVENTS,state.events);
-      // sky
       for(const ev of fresh){ await supaUpsertEvent(ev); }
       alert(`Importert ${fresh.length} konkurranser.`);
     }
@@ -898,10 +904,13 @@
       return svg;
     }
     (function initLogo(){
-      const saved=lsGet(KEY.LOGO,null); if(saved){ $('#club-logo').src=saved; }
+      const el = $('#club-logo');
+      if(!el) return;
+      const saved=lsGet(KEY.LOGO,null);
+      if(saved && typeof saved === 'string'){ el.src = saved; } // dataURL/https – hvis du har valgt eget bilde
       $('#file-logo')?.addEventListener('change', async (e)=>{
         const f=e.target.files[0]; if(!f) return;
-        const url=URL.createObjectURL(f); $('#club-logo').src=url;
+        const url=URL.createObjectURL(f); el.src=url;
         const b=await f.arrayBuffer(); const base64=btoa(String.fromCharCode(...new Uint8Array(b)));
         const dataUrl=`data:${f.type};base64,${base64}`;
         lsSet(KEY.LOGO, dataUrl);
@@ -909,7 +918,7 @@
       });
       $('#btn-logo-reset')?.addEventListener('click', async ()=>{
         lsSet(KEY.LOGO,null); location.reload();
-        await supabase.from(TBL.settings).delete().eq('key','club_logo');
+        try{ await supabase.from(TBL.settings).delete().eq('key','club_logo'); }catch{}
       });
     })();
 
@@ -956,7 +965,7 @@
     function switchTab(id){ $$('.tab-section').forEach(s=> s.classList.add('hidden')); $('#tab-'+id).classList.remove('hidden'); }
 
     // PDF upload local
-    $('#file-pdf').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
+    $('#file-pdf').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); const el=$('#pdf-el'); if(el){ el.src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); } };
 
     // NSSF knapper
     document.addEventListener('click',(e)=>{ if(e.target?.id==='btn-nssf') importNSSFFromURL(); if(e.target?.id==='btn-nssf-parse') importNSSFFromHTML(); });
