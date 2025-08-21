@@ -666,8 +666,14 @@ function renderMonth(year, month, opts = { withNav:false }){
       const evts=state.events.filter(e=> dayjs(e.date).isSame(d,'day'));
       const box=document.createElement('div');
       box.className='min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
-      box.addEventListener('click', ()=> openDialog({date:key}));
-
+      box.addEventListener('click', (ev)=>{
+      hideTooltip();
+  if (evts.length > 0){
+      openDayView(key, evts);
+  } else {
+      openDialog({ date: key });
+  }
+});
       // Hvis man holder over tom dag: vis dato
       box.addEventListener('mouseenter', (e)=>{
         if(evts.length===0){
@@ -845,6 +851,91 @@ function renderMonth(year, month, opts = { withNav:false }){
           <label class='text-sm font-medium'>Notater</label>
           <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${esc(model.notes||'')}</textarea>
         </div>`;
+
+      function openDayView(dateISO, eventsForDay){
+  const d = dayjs(dateISO);
+  // Sorter pr. tittel for konsistent visning (dato er lik for alle)
+  const items = [...eventsForDay].sort((a,b)=> (a.title||'').localeCompare(b.title||''));
+
+  const body = $('#dlg-body');
+  $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
+  $('#btn-delete').classList.add('hidden'); // ikke relevant i oversikt
+  body.innerHTML = `
+    <div class="space-y-3">
+      ${items.map(e=> dayViewCard(e)).join('')}
+      <div class="pt-2">
+        <button id="btn-new-on-day" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny hendelse denne dagen</button>
+      </div>
+    </div>
+  `;
+
+  // Koble knapper for hvert kort
+  items.forEach(e=>{
+    const edit = document.getElementById(`day-edit-${e.id}`);
+    const dup  = document.getElementById(`day-dup-${e.id}`);
+    const del  = document.getElementById(`day-del-${e.id}`);
+
+    edit?.addEventListener('click', ()=> openDialog({...e}));
+    dup?.addEventListener('click', async ()=>{
+      const copy = { ...e, id: uid(), title: (e.title||e.type)+' (kopi)' };
+      state.events.push(copy);
+      lsSet(KEY.EVENTS, state.events);
+      render();
+      await supaUpsertEvent(copy);
+    });
+    del?.addEventListener('click', async ()=>{
+      if(!confirm('Slette denne hendelsen?')) return;
+      state.events = state.events.filter(x=> x.id !== e.id);
+      lsSet(KEY.EVENTS, state.events);
+      render();
+      await supaDeleteEvent(e.id);
+      // Oppdater dagvisningen uten å lukke
+      openDayView(dateISO, state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')));
+    });
+  });
+
+  // Ny hendelse samme dato
+  $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
+
+  // Vis dialog
+  $('#dialog').classList.remove('hidden');
+  $('#dialog').classList.add('flex');
+}
+
+// Liten hjelpe‑renderer for kortene i dagvisningen
+function dayViewCard(e){
+  const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
+  const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
+  const meta = [
+    e.type ? `<span class="inline-flex items-center gap-2">${dot}<span>${esc(e.type)}</span></span>` : '',
+    e.modality ? `<span>${esc(e.modality)}</span>` : '',
+    e.intensity ? `<span>${esc(e.intensity)}</span>` : '',
+    e.durationMin ? `<span>${String(e.durationMin)} min</span>` : ''
+  ].filter(Boolean).join(' • ');
+
+  const shoot = (e.shooting && (e.shooting.stilling || e.shooting.skudd))
+      ? `<div class="text-xs text-slate-600">Skyting: ${esc(e.shooting.stilling||'–')}, skudd: ${e.shooting.skudd||0}</div>` : '';
+
+  const notes = e.notes ? `<div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+
+  return `
+    <div class="rounded-2xl border bg-white shadow-sm p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-base font-semibold">${title}</div>
+          <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-2">${meta}</div>
+          ${shoot}
+          ${notes}
+        </div>
+        <div class="shrink-0 flex gap-1">
+          <button id="day-edit-${e.id}" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
+          <button id="day-dup-${e.id}"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
+          <button id="day-del-${e.id}"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
       function refreshTema(){
         const holder=$('#tema-tags'); holder.innerHTML='';
