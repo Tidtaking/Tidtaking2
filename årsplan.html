@@ -365,12 +365,21 @@ const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
       render();
     }
 
+
     async function supaUpsertEvent(model){
-      const row = mapEventToDb(model);
-      const { data, error } = await supabase.from(TBL.events).upsert(row).select().single();
-      if(error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
-      return data;
-    }
+  const row = mapEventToDb(model);
+  // Hjelpelogg – fjern når du ser riktig verdi på 'type'
+  console.log('UPsert payload:', row);
+
+  const { data, error } = await supabase
+    .from(TBL.events)
+    .upsert(row, { onConflict: 'id' }) // eksplisitt onConflict på pk
+    .select()
+    .single();
+
+  if (error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
+  return data;
+}
     async function supaDeleteEvent(id){
       const { error } = await supabase.from(TBL.events).delete().eq('id', id);
       if(error){ console.warn('Sletting feilet', error); alert('Kunne ikke slette i skyen. Slettet lokalt.'); }
@@ -450,20 +459,7 @@ function mapEventFromDb(r){
     eqtiming: r.eqtiming || ''
   };
 }
-async function supaUpsertEvent(model){
-  const row = mapEventToDb(model);
-  // Hjelpelogg – fjern når du ser riktig verdi på 'type'
-  console.log('UPsert payload:', row);
 
-  const { data, error } = await supabase
-    .from(TBL.events)
-    .upsert(row, { onConflict: 'id' }) // eksplisitt onConflict på pk
-    .select()
-    .single();
-
-  if (error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
-  return data;
-}
 
 
 
