@@ -422,10 +422,9 @@ const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 function mapEventToDb(e){
   return {
     id: e.id,
-    // year: (GENERATED i DB) – fjern
     date: e.date,
-    // event_type: (GENERATED i DB) – fjern
-    type: e.type || null,            // skriv KUN til 'type'
+    title: e.title || null,           // <-- MÅ med
+    type: e.type || null,
     modality: e.modality || null,
     intensity: e.intensity || null,
     duration_min: e.durationMin ?? null,
@@ -434,10 +433,11 @@ function mapEventToDb(e){
     race_subtype: e.raceSubtype || null,
     notes: e.notes || null,
     roles: e.roles || {},
-    eqtiming: e.eqtiming || null,
-    created_at: e.created_at || null
+    eqtiming: e.eqtiming || null
+    // created_at: (IKKE send genererte felt)
   };
 }
+
 
 
 function mapEventFromDb(r){
