@@ -15,6 +15,33 @@
     /* Tooltip */
     #lss-tooltip{ position:fixed; z-index:1000; pointer-events:none; transform:translate(-50%,-100%); }
   </style>
+  <style>
+  /* --- Mobile tweaks --- */
+  @media (max-width: 767px){
+    header h1{ font-size:1.125rem } /* 18px */
+    header .no-print button,
+    header .no-print label{ padding: .4rem .6rem; border-radius: .75rem; }
+
+    /* Gjør dialog fullskjerm-ish på mobil */
+    #dialog .dialog-card{
+      width:100%;
+      max-width:none;
+      height:92vh;
+      border-radius:0;
+      display:flex;
+      flex-direction:column;
+    }
+    #dialog .dialog-body{
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      flex:1 1 auto;
+    }
+  }
+
+  /* Tooltip: unngå at den som oftest legger seg utenfor på trange skjermer */
+  #lss-tooltip{ max-width: min(88vw, 22rem); }
+</style>
+
 
   <!-- Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
@@ -37,7 +64,7 @@
         <p class="text-sm opacity-80">Årsplan • Øktbank • Terminliste</p>
       </div>
     </div>
-    <div class="flex flex-wrap items-center gap-2 no-print">
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print md:sticky md:top-2 md:z-40">
       <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
       <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
       <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter</button>
@@ -228,12 +255,12 @@
 
   <!-- Dialog -->
   <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+<div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-4">
         <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
         <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
       </div>
-      <div class="p-4 space-y-3" id="dlg-body"></div>
+<div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
       <div class="border-t p-4 flex justify-end gap-2">
         <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
         <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
@@ -260,6 +287,8 @@
     const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
     const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
 
+
+
     // LocalStorage keys (cache)
     const KEY = { EVENTS:'lss:events:v1', BANK:'lss:bank:v1', WEEKS:'lss:weeks:v1', YEAR:'lss:year:v1' };
 
@@ -284,12 +313,16 @@
     };
 
     // Global state
-    let state = {
-      year: lsGet(KEY.YEAR, dayjs().year()),
-      events: [],        // lastes fra supabase
-      bank: [],          // lastes fra supabase
-      weeks: {}          // lastes fra supabase
-    };
+let state = {
+  year: lsGet(KEY.YEAR, dayjs().year()),
+  month: dayjs().month() + 1, // 1-12, brukes bare på mobil
+  events: [],
+  bank: [],
+  weeks: {}
+};
+    // ---- Responsivt oppsett ----
+const MOBILE_BREAKPOINT = 768;
+const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
     // ---------- Supabase I/O ----------
     async function supaLoadAll(year = state.year){
@@ -543,33 +576,92 @@ async function supaUpsertEvent(model){
       });
     }
 
-    function renderCalendar(){
-      const grid = $('#calendar-grid');
-      grid.innerHTML = '';
-      const nowMonth = dayjs().month() + 1;
-      const months = [];
-      for(let m = nowMonth; m <= 12; m++) months.push(m);
-      for(let m = 1; m < nowMonth; m++) months.push(m);
-      months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
-    }
+function renderCalendar(){
+  const grid = $('#calendar-grid');
+  grid.innerHTML = '';
 
-    function renderMonth(year,month){
-      const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm';
-      const header=document.createElement('div'); header.className='flex items-center justify-between border-b p-4';
-      header.innerHTML=`<h3 class="text-lg font-semibold">${dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM')}</h3>`;
-      const body=document.createElement('div'); body.className='p-2';
-      const daysHeader=document.createElement('div'); daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
-      'man tir ons tor fre lør søn'.split(' ').forEach(w=>{
-        const d=document.createElement('div'); d.className='px-1 py-1 text-center font-medium uppercase'; d.textContent=w; daysHeader.appendChild(d);
-      });
-      const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
-      const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
-      const leading=(first.day()+6)%7; const days=first.daysInMonth();
-      for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
-      for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
-      const total=leading+days; const trail=(7-(total%7))%7; for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
-      body.appendChild(daysHeader); body.appendChild(cells); wrap.appendChild(header); wrap.appendChild(body); return wrap;
-    }
+  if (isMobile()){
+    // Mobil: én måned, egne piler
+    grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
+    return;
+  }
+
+  // Desktop: “rullerende” årsvisning som før
+  const nowMonth = dayjs().month() + 1;
+  const months = [];
+  for(let m = nowMonth; m <= 12; m++) months.push(m);
+  for(let m = 1; m < nowMonth; m++) months.push(m);
+  months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
+}
+
+
+function renderMonth(year, month, opts = { withNav:false }){
+  const wrap=document.createElement('div'); 
+  wrap.className='rounded-2xl border bg-white shadow-sm';
+
+  const header=document.createElement('div'); 
+  header.className='flex items-center justify-between border-b p-4';
+
+  const title = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM');
+
+  if (opts.withNav){
+    // Mobil: egne piler for månedsnavigasjon
+    const left = document.createElement('button');
+    left.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
+    left.textContent = '◀';
+
+    const mid = document.createElement('div');
+    mid.className = 'text-lg font-semibold';
+    mid.textContent = `${title} ${year}`;
+
+    const right = document.createElement('button');
+    right.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
+    right.textContent = '▶';
+
+    left.onclick = () => {
+      let m = state.month - 1, y = state.year;
+      if (m < 1){ m = 12; y--; }
+      state.month = m; state.year = y;
+      render();
+    };
+    right.onclick = () => {
+      let m = state.month + 1, y = state.year;
+      if (m > 12){ m = 1; y++; }
+      state.month = m; state.year = y;
+      render();
+    };
+
+    header.append(left, mid, right);
+  } else {
+    header.innerHTML=`<h3 class="text-lg font-semibold">${title}</h3>`;
+  }
+
+  const body=document.createElement('div'); body.className='p-2';
+  const daysHeader=document.createElement('div'); 
+  daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
+  'man tir ons tor fre lør søn'.split(' ').forEach(w=>{
+    const d=document.createElement('div'); 
+    d.className='px-1 py-1 text-center font-medium uppercase'; 
+    d.textContent=w; 
+    daysHeader.appendChild(d);
+  });
+
+  const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
+  const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
+  const leading=(first.day()+6)%7; const days=first.daysInMonth();
+
+  for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
+  for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
+  const total=leading+days; const trail=(7-(total%7))%7; 
+  for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
+
+  body.appendChild(daysHeader); 
+  body.appendChild(cells); 
+  wrap.appendChild(header); 
+  wrap.appendChild(body); 
+  return wrap;
+}
+
 
     function emptyCell(){ const d=document.createElement('div'); d.className='min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
 
@@ -1016,6 +1108,15 @@ $('#btn-save').onclick = async () => {
 
     // NSSF knapper
     document.addEventListener('click',(e)=>{ if(e.target?.id==='btn-nssf') importNSSFFromURL(); if(e.target?.id==='btn-nssf-parse') importNSSFFromHTML(); });
+
+    let __lastIsMobile = isMobile();
+window.addEventListener('resize', () => {
+  const now = isMobile();
+  if (now !== __lastIsMobile){
+    __lastIsMobile = now;
+    render();
+  }
+});
 
     // ---------- Init ----------
     (async function init(){
