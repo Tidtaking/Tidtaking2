@@ -1,4 +1,4 @@
-<!doctype html>
+x<!doctype html>
 <html lang="no">
 <head>
   <meta charset="utf-8" />
@@ -661,57 +661,120 @@ function renderMonth(year, month, opts = { withNav:false }){
 
     function emptyCell(){ const d=document.createElement('div'); d.className='min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
 
-    function dayCell(d){
-      const key=d.format('YYYY-MM-DD');
-      const evts=state.events.filter(e=> dayjs(e.date).isSame(d,'day'));
-      const box=document.createElement('div');
-      box.className='min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
-      box.addEventListener('click', (ev)=>{
-      hideTooltip();
-  if (evts.length > 0){
-      openDayView(key, evts);
-  } else {
-      openDialog({ date: key });
-  }
-});
-      // Hvis man holder over tom dag: vis dato
-      box.addEventListener('mouseenter', (e)=>{
-        if(evts.length===0){
-          showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY);
-        }
-      });
-      box.addEventListener('mousemove', (e)=>{ if(evts.length===0) showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY); });
-      box.addEventListener('mouseleave', hideTooltip);
+function dayCell(d) {
+  const key = d.format('YYYY-MM-DD');
+  const evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
 
-      const top=document.createElement('div'); top.className='flex items-center justify-between text-xs text-slate-600';
-      top.innerHTML=`<span class="font-medium">${d.date()}</span><span class="flex gap-1">${evts.slice(0,4).map(e=>`<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>`).join('')}</span>`;
+  const box = document.createElement('div');
+  box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
+  box.setAttribute('data-date', key);
+  if (evts.length) box.setAttribute('data-has-events', 'true');
 
-      const list=document.createElement('div'); list.className='mt-1 flex flex-col gap-0.5';
+  // Klikk: vis eksisterende hendelser, ellers ny dialog
+  box.addEventListener('click', (ev) => {
+    hideTooltip();
 
-      evts.slice(0,3).forEach(e=>{
-        const row=document.createElement('div'); row.className='truncate text-xs flex items-center gap-1';
-        const dot=document.createElement('span'); dot.className='inline-block h-2 w-2 rounded-full'; dot.style.background = COLORS[e.type] || '#6b7280';
-        const txt=document.createElement('span'); txt.className='font-medium truncate'; txt.textContent = e.title || e.type;
-
-        // Tooltip pr hendelse
-        const tipHTML = eventTooltipHTML(e);
-        const move = (ev)=> showTooltip(tipHTML, ev.clientX, ev.clientY);
-        row.addEventListener('mouseenter', move);
-        row.addEventListener('mousemove', move);
-        row.addEventListener('mouseleave', hideTooltip);
-
-        row.appendChild(dot); row.appendChild(txt);
-        list.appendChild(row);
-      });
-
-      if(evts.length>3){
-        const more=document.createElement('div'); more.className='text-[10px] text-slate-500';
-        more.textContent=`+${evts.length-3} flere…`;
-        list.appendChild(more);
+    if (evts.length > 0) {
+      // 1) Foretrukket: dedikert dagvisning
+      if (typeof openDayView === 'function') {
+        openDayView(key, evts);
+        return;
       }
 
-      box.appendChild(top); box.appendChild(list); return box;
+      // 2) Fallback: bruk dialog til å vise en enkel liste (lese-modus)
+      if (typeof openDialog === 'function') {
+        const listHTML = `
+          <div class="space-y-2">
+            <div class="text-sm font-semibold">${dayjs(key).format('dddd D. MMMM')}</div>
+            ${evts.map(e => `
+              <div class="flex items-start gap-2 text-sm">
+                <span class="mt-1 inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type] || '#6b7280'}"></span>
+                <div class="min-w-0">
+                  <div class="font-medium truncate">${e.title || e.type || 'Uten tittel'}</div>
+                  ${e.time ? `<div class="text-xs text-slate-500">${e.time}</div>` : ''}
+                  ${e.note ? `<div class="text-xs text-slate-600">${e.note}</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        openDialog({ date: key, mode: 'list', readonly: true, html: listHTML });
+        return;
+      }
+
+      // 3) Nødfallback
+      alert(`${dayjs(key).format('YYYY-MM-DD')}\n\n` + evts.map(e => `• ${e.title || e.type || 'Uten tittel'}`).join('\n'));
+      return;
     }
+
+    // Ingen events: åpne "ny hendelse"
+    if (typeof openDialog === 'function') {
+      openDialog({ date: key });
+    }
+  });
+
+  // Hover: vis dato hvis tom dag
+  box.addEventListener('mouseenter', (e) => {
+    if (evts.length === 0) {
+      showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY);
+    }
+  });
+  box.addEventListener('mousemove', (e) => {
+    if (evts.length === 0) {
+      showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY);
+    }
+  });
+  box.addEventListener('mouseleave', hideTooltip);
+
+  // Topp-linje med dato + fargedotter
+  const top = document.createElement('div');
+  top.className = 'flex items-center justify-between text-xs text-slate-600';
+  top.innerHTML = `
+    <span class="font-medium">${d.date()}</span>
+    <span class="flex gap-1">
+      ${evts.slice(0, 4).map(e => `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type] || '#6b7280'}"></span>`).join('')}
+    </span>
+  `;
+
+  // Liste over opptil 3 hendelser
+  const list = document.createElement('div');
+  list.className = 'mt-1 flex flex-col gap-0.5';
+
+  evts.slice(0, 3).forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'truncate text-xs flex items-center gap-1';
+    const dot = document.createElement('span');
+    dot.className = 'inline-block h-2 w-2 rounded-full';
+    dot.style.background = COLORS[e.type] || '#6b7280';
+
+    const txt = document.createElement('span');
+    txt.className = 'font-medium truncate';
+    txt.textContent = e.title || e.type || 'Uten tittel';
+
+    // Tooltip pr. hendelse
+    const tipHTML = eventTooltipHTML(e);
+    const move = (ev) => showTooltip(tipHTML, ev.clientX, ev.clientY);
+    row.addEventListener('mouseenter', move);
+    row.addEventListener('mousemove', move);
+    row.addEventListener('mouseleave', hideTooltip);
+
+    row.appendChild(dot);
+    row.appendChild(txt);
+    list.appendChild(row);
+  });
+
+  if (evts.length > 3) {
+    const more = document.createElement('div');
+    more.className = 'text-[10px] text-slate-500';
+    more.textContent = `+${evts.length - 3} flere…`;
+    list.appendChild(more);
+  }
+
+  box.appendChild(top);
+  box.appendChild(list);
+  return box;
+}
+
 
     function renderList(){
       const tbody=$('#tbl-events'); tbody.innerHTML='';
