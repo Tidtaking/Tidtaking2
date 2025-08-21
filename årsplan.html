@@ -1011,6 +1011,18 @@ $('#btn-save').onclick = async () => {
     }
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
+    function openDayView(events, date){
+  if(events && events.length > 0){
+    // Hvis flere hendelser denne dagen: vis første i detaljer, 
+    // og bruk piltaster/klikk for å bla senere hvis ønskelig.
+    // Her åpner vi bare den første direkte:
+    openDialog(events[0]);
+  } else {
+    // Ingen hendelser => åpne ny
+    openDialog({ date });
+  }
+}
+
     function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
     function decodeHTMLEntities(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
