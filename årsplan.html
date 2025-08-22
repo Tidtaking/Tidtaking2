@@ -925,6 +925,9 @@ function dayCell(d){
       const body=$('#dlg-body'); body.innerHTML='';
       $('#dlg-title').textContent=isEdit?'Rediger hendelse':'Ny hendelse';
       $('#btn-delete').classList.toggle('hidden',!isEdit);
+$('#btn-save')?.classList.remove('hidden');
+$('#btn-save')?.removeAttribute('disabled');
+$('#btn-delete').classList.toggle('hidden', !isEdit);
 
       const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
       body.innerHTML=`
@@ -1254,11 +1257,12 @@ window.addEventListener('resize', () => {
 });
 
     // ---------- Init ----------
-    (async function init(){
-      render(); switchTab('calendar');
-      supaRealtimeInit();
-      await supaLoadAll(state.year);
-    })();
+(async function init(){
+  render(); switchTab('calendar');
+  bindDialogChrome();          // <--- LEGG TIL DENNE
+  supaRealtimeInit();
+  await supaLoadAll(state.year);
+})();
   </script>
 </body>
 </html>
