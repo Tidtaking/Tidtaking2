@@ -302,6 +302,15 @@
         : null;
 
       const rankMap = buildRankMap(allRows);
+      // Beste sluttid per klasse (for “Måltid”-diff)
+const classBestFinish = {};
+allRows.forEach(p => {
+  if (p.finish != null) {
+    const cls = p.class ?? "";
+    classBestFinish[cls] = Math.min(classBestFinish[cls] ?? Infinity, p.finish);
+  }
+});
+
       const filtered = applyFilters(allRows);
       const sorted = sortRows(filtered, rankMap);
 
@@ -356,11 +365,13 @@
         const s1 = renderTargets(shooting[0]);
         const s2 = renderTargets(shooting[1]);
 
-        const maltid = (p.finish != null)
-          ? (overallBestFinish != null
-              ? `${formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)`
-              : formatTime(p.finish))
-          : "-";
+const bestInClass = classBestFinish[p.class ?? ""];
+const maltid = (p.finish != null)
+  ? (bestInClass != null && isFinite(bestInClass)
+      ? `${formatTime(p.finish)} (+${(p.finish - bestInClass).toFixed(1)}s)`
+      : formatTime(p.finish))
+  : "-";
+
         const doneRow = p.status === "Fullført" ? "done-row" : "";
 
         html += `
