@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#1E57B7">
   <style>
     :root{
-      /* LSK-palett (justert litt for kontrast) */
+      /* LSK-palett (justert for kontrast) */
       --lsk-blue:   #1E57B7;
       --lsk-red:    #D01616;
       --lsk-yellow: #E3EB2C;
@@ -25,7 +25,7 @@
     * { box-sizing: border-box; }
     html,body{ margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: var(--ink); }
 
-    /* Header med logo og LSK-striper */
+    /* Header med logo og striper */
     header{
       border-bottom: 6px solid var(--lsk-yellow);
       background:
@@ -54,16 +54,26 @@
     }
     .legend{ font-size:12px; color: var(--muted); }
 
-    /* Table wrapper with shadow and sticky header */
-    .table-wrap{
+    /* Kort + scroll-container (fikser klipping) */
+    .table-card{
       background: var(--lsk-white);
-      border:1px solid var(--table-border);
-      border-radius:14px;
-      overflow:hidden;
+      border-radius: 14px;
       box-shadow: 0 6px 20px rgba(2,8,23,.06);
+      overflow: visible; /* ikke klipp – scroll-container styrer */
     }
+    .table-scroll{
+      border: 1px solid var(--table-border);
+      border-radius: 14px;
+      overflow-x: auto;     /* nøkkelen for å vise alt */
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Selve tabellen */
     table{
-      border-collapse: collapse; width:100%;
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1100px;  /* tving bredde, så vi scroller ved behov */
     }
     thead th{
       position: sticky; top:0; z-index:2;
@@ -93,9 +103,11 @@
     .target{
       display:inline-block; width:56px; height:56px; line-height:56px;
       margin:2px; border-radius:50%;
-      background: transparent; /* beholder mørk cellebakgrunn */
+      background: transparent;
       font-size:40px; vertical-align:middle;
     }
+    /* nok plass til 5 skiver */
+    th.shooting, td.shooting{ min-width: 320px; }
 
     /* “Fullført”-rad får grønn venstrekant */
     tr.done-row td:first-child{ border-left:6px solid var(--success); }
@@ -103,15 +115,21 @@
     /* Liten skjerm */
     @media (max-width: 700px){
       thead th, tbody td{ font-size:12px; padding:8px 6px; }
-      .target{ width:40px; height:40px; line-height:40px; font-size:28px; }
+      .target{ width: 40px; height: 40px; line-height: 40px; font-size: 28px; }
+      th.shooting, td.shooting{ min-width: 260px; }
       .titles h1{ font-size: 22px; }
     }
+    @media (max-width: 480px){
+      .target{ width: 32px; height: 32px; line-height: 32px; font-size: 22px; }
+      th.shooting, td.shooting{ min-width: 220px; }
+    }
 
-    /* Loader & tom-tilstand */
     .empty, .error, .loading{
       padding:22px; text-align:center; color: var(--muted);
     }
   </style>
+
+  <!-- Supabase SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // === Supabase ===
@@ -135,18 +153,15 @@
       try { return JSON.parse(p.shooting); }
       catch { return [Array(5).fill(false), Array(5).fill(false)]; }
     }
-
     function chip(status){
       if (status === "I gang") return `<span class="chip running">I gang</span>`;
       if (status === "Fullført") return `<span class="chip done">Fullført</span>`;
       return `<span class="chip wait">${status ?? "Venter"}</span>`;
     }
-
     function renderTargets(arr){
-      // Hvit ● = treff, sort ● = bom (på mørk bakgrunn)
-      return arr.map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join("");
+      // Hvit ● = treff, svart ● = bom (på mørk bakgrunn)
+      return (arr||[]).map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join("");
     }
-
     function updateLiveClock(){
       const el = $("#liveClock");
       if (el) el.textContent = new Date().toLocaleTimeString();
@@ -203,23 +218,24 @@
       const sorted = sortRows(rows, rankMap);
 
       let html = `
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Plass</th>
-              <th>Startnr</th>
-              <th>Navn</th>
-              <th>Klasse</th>
-              <th>Status</th>
-              <th>Tid</th>
-              <th>Rundetid</th>
-              <th class="shooting">S1</th>
-              <th class="shooting">S2</th>
-              <th>Måltid</th>
-            </tr>
-          </thead>
-          <tbody>`;
+      <div class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Plass</th>
+                <th>Startnr</th>
+                <th>Navn</th>
+                <th>Klasse</th>
+                <th>Status</th>
+                <th>Tid</th>
+                <th>Rundetid</th>
+                <th class="shooting">S1</th>
+                <th class="shooting">S2</th>
+                <th>Måltid</th>
+              </tr>
+            </thead>
+            <tbody>`;
 
       for (const p of sorted){
         const rank = (p.status === "Fullført" && rankMap[p.snr]) ? rankMap[p.snr] : "-";
@@ -230,14 +246,23 @@
         } else if (p.finish != null){
           tidDisplay = formatTime(p.finish);
         }
-        const laps = Array.isArray(p.laps) ? p.laps : (p.laps ? JSON.parse(p.laps).flat?.() || [] : []);
-        const lapsDisplay = laps.length ? laps.map(l=>formatTime(l)).join("<br>") : "-";
+
+        // laps kan være array eller JSON-string
+        let lapsArr = [];
+        try {
+          if (Array.isArray(p.laps)) lapsArr = p.laps;
+          else if (typeof p.laps === "string") {
+            const parsed = JSON.parse(p.laps);
+            lapsArr = Array.isArray(parsed) ? parsed.flat?.() || parsed : [];
+          }
+        } catch(_) { /* ignorer parsingfeil */ }
+        const lapsDisplay = lapsArr.length ? lapsArr.map(l=>formatTime(l)).join("<br>") : "-";
 
         const shooting = getShootingArray(p);
-        const s1 = renderTargets(shooting[0] || []);
-        const s2 = renderTargets(shooting[1] || []);
+        const s1 = renderTargets(shooting[0]);
+        const s2 = renderTargets(shooting[1]);
 
-        const måltid = (p.finish != null) ? formatTime(p.finish) : "-";
+        const maltid = (p.finish != null) ? formatTime(p.finish) : "-";
 
         const doneRow = p.status === "Fullført" ? "done-row" : "";
 
@@ -252,11 +277,11 @@
             <td>${lapsDisplay}</td>
             <td class="shooting">${s1}</td>
             <td class="shooting">${s2}</td>
-            <td>${måltid}</td>
+            <td>${maltid}</td>
           </tr>`;
       }
 
-      html += `</tbody></table></div>`;
+      html += `</tbody></table></div></div>`;
       $("#statusTable").innerHTML = html;
     }
 
@@ -276,15 +301,12 @@
 
     function startRealtime(){
       try{
-        const channel = supabaseClient
+        supabaseClient
           .channel('public:participants')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, payload => {
-            // Når noe endres, hent alt på nytt (enkelt og robust for denne visningen)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => {
             refresh();
           })
-          .subscribe((status) => {
-            // no-op; status: SUBSCRIBED, CHANNEL_ERROR, etc.
-          });
+          .subscribe();
       }catch(e){
         console.warn("Realtime ikke tilgjengelig, bruker polling:", e);
       }
@@ -294,7 +316,7 @@
       updateLiveClock();
       refresh();
       startRealtime();
-      // Fallback: jevnlig polling (roligere enn 1s)
+      // Fallback: rolig polling
       pollTimer = setInterval(refresh, 10000);
     });
   </script>
