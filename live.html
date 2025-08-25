@@ -112,34 +112,27 @@
     .chip.done{ background: var(--success); }
     .chip.wait{ background: var(--neutral); }
 
-    /* --- S1/S2: alltid side-om-side, skaler ned på små skjermer --- */
-    th.shooting,
-    td.shooting{
-      background: var(--shoot-bg);
-      color: #fff;
-      white-space: nowrap;   /* hindre linjeskift av S1/S2 */
-      min-width: 80px;       /* nok plass til merkelappen */
-    }
-    /* Raden med blink: fleksibel layout som kan krympe */
-    td.shooting{
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 4px;
-      padding-top: 8px;
-      padding-bottom: 8px;
-    }
-    /* Blinkene skalerer responsivt */
-    .target{
-      width: clamp(22px, 6vw, 56px);
-      height: clamp(22px, 6vw, 56px);
-      font-size: clamp(14px, 4vw, 40px);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-    }
+    /* --- S1/S2 alltid i bredden --- */
+td.shooting{
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  flex-wrap: nowrap;    /* hindre linjebryting */
+}
+.target{
+  flex-shrink: 0;       /* ikke skyv til ny linje */
+  width: clamp(20px, 5vw, 40px);
+  height: clamp(20px, 5vw, 40px);
+  font-size: clamp(14px, 4vw, 28px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 
     /* Markér fullført */
     tr.done-row td:first-child{ border-left:6px solid var(--success); }
