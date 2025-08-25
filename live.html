@@ -20,8 +20,8 @@
       --neutral:    #475569;
       --shoot-bg:   #3a3a3a;
 
-      /* Dot-størrelse default */
-      --dot: clamp(20px, 5vw, 40px);
+      /* Standard dot-størrelse (desktop baseline) */
+      --dot: 34px;
       --dot-gap: 4px;
     }
 
@@ -91,9 +91,9 @@
       border: 1px solid var(--table-border);
       overflow: hidden;
     }
-    /* Wrapper som gir mobil-scroll ved behov */
+    /* Wrapper for myk horisontal scroll på mobil */
     .table-scroll{
-      overflow-x: visible;   /* desktop */
+      overflow-x: visible; /* desktop */
     }
 
     /* Tabell – automatisk bredde */
@@ -143,33 +143,41 @@
       width: var(--dot);
       height: var(--dot);
       line-height: var(--dot);        /* vertikal sentrering */
-      font-size: clamp(14px, 4vw, 28px);
+      font-size: calc(var(--dot) * 0.7);
       border-radius: 50%;
       background: transparent;
       text-align: center;
       vertical-align: middle;
     }
 
+    /* Måltid-kolonne: kompakt og kan bryte linje for å få med diff */
+    td.maltid{
+      font-size: 12.5px;
+      line-height: 1.2;
+      white-space: normal;      /* kan bryte til to linjer */
+      padding-left: 6px;
+      padding-right: 6px;
+    }
+
     /* Markér fullført */
     tr.done-row td:first-child{ border-left:6px solid var(--success); }
 
-    /* Mobil: gi tabellen litt min-bredde + aktiver myk horisontal scroll */
-    @media (max-width: 640px){
-      :root{ --dot: clamp(18px, 6.2vw, 34px); }
-      .table-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      table{ min-width: 820px; } /* sørger for at alle kolonner/targets har plass */
-    }
+    /* Desktop-respons: krymp blinkene gradvis når bredden går ned */
+    @media (max-width: 1600px){ :root{ --dot: 32px; } }
+    @media (max-width: 1400px){ :root{ --dot: 30px; } }
+    @media (max-width: 1250px){ :root{ --dot: 28px; } }
+    @media (max-width: 1100px){ :root{ --dot: 26px; } }
 
-    @media (max-width: 700px){
-      thead th, tbody td{ font-size:12px; padding:8px 6px; }
-      .titles h1{ font-size: 22px; }
-      .controls{ gap:8px; }
+    /* Mobil: myk scroll + min-bredde så alt er synlig */
+    @media (max-width: 640px){
+      .table-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table{ min-width: 820px; } /* sikrer plass til alle kolonner/targets */
+      :root{ --dot: 24px; }      /* utgangspunkt på mobil */
     }
     @media (max-width: 480px){
+      :root{ --dot: 20px; }
       thead th, tbody td{ font-size:11px; }
     }
-
-    .empty, .error, .loading{ padding:22px; text-align:center; color: var(--muted); }
   </style>
 
   <!-- Supabase SDK v2 -->
@@ -267,7 +275,7 @@
 
     function applyFilters(rows){
       return rows.filter(r=>{
-        const okClass = !filters.class || r.class === filters.class;
+        const okClass = !filters.class || r.class === r.class && r.class === filters.class || !filters.class;
         const okStatus = !filters.status || r.status === filters.status;
         return okClass && okStatus;
       });
@@ -366,7 +374,7 @@
             <td>${lapsDisplay}</td>
             <td class="shooting">${s1}</td>
             <td class="shooting">${s2}</td>
-            <td>${maltid}</td>
+            <td class="maltid">${maltid}</td>
           </tr>`;
       }
 
