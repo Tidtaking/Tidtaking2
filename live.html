@@ -79,7 +79,7 @@
 
     .legend{ font-size:12px; color: var(--muted); margin: 10px 2px; }
 
-    /* Kort rundt tabellen – ingen horisontal scroll her */
+    /* Kort rundt tabellen – ingen horisontal scroll */
     .table-card{
       background: var(--lsk-white);
       border-radius: 14px;
@@ -96,6 +96,7 @@
       border-bottom: 1px solid var(--table-border);
       color:#0b1220; font-weight:800; font-size:13px; text-transform: uppercase; letter-spacing:.5px;
       padding:10px 8px; text-align:center;
+      white-space: nowrap;
     }
     tbody td{
       border-top: 1px solid var(--table-border);
@@ -111,24 +112,32 @@
     .chip.done{ background: var(--success); }
     .chip.wait{ background: var(--neutral); }
 
-    /* Skytedeler – fleksibel slik at 5 blink alltid får plass uten scroll */
-    th.shooting, td.shooting{ background: var(--shoot-bg); color:#fff; }
+    /* --- S1/S2: alltid side-om-side, skaler ned på små skjermer --- */
+    th.shooting,
     td.shooting{
-      white-space: nowrap;
-      display: flex;            /* legg blinkene i fleksrad */
+      background: var(--shoot-bg);
+      color: #fff;
+      white-space: nowrap;   /* hindre linjeskift av S1/S2 */
+      min-width: 80px;       /* nok plass til merkelappen */
+    }
+    /* Raden med blink: fleksibel layout som kan krympe */
+    td.shooting{
+      display: flex;
       justify-content: center;
       align-items: center;
       gap: 4px;
       padding-top: 8px;
       padding-bottom: 8px;
     }
+    /* Blinkene skalerer responsivt */
     .target{
-      /* skalerer automatisk mellom 22px og 56px */
       width: clamp(22px, 6vw, 56px);
       height: clamp(22px, 6vw, 56px);
       font-size: clamp(14px, 4vw, 40px);
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: transparent;
     }
 
@@ -139,10 +148,21 @@
       thead th, tbody td{ font-size:12px; padding:8px 6px; }
       .titles h1{ font-size: 22px; }
       .controls{ gap:8px; }
+      th.shooting{ font-size:11px; padding:6px 4px; min-width: 60px; }
+      .target{
+        width: clamp(18px, 5vw, 36px);
+        height: clamp(18px, 5vw, 36px);
+        font-size: clamp(12px, 3.2vw, 24px);
+      }
     }
     @media (max-width: 480px){
-      /* litt tettere typografi hvis det blir veldig smalt */
       thead th, tbody td{ font-size:11px; }
+      th.shooting{ min-width: 52px; font-size:10px; }
+      .target{
+        width: clamp(16px, 5.2vw, 30px);
+        height: clamp(16px, 5.2vw, 30px);
+        font-size: clamp(11px, 3vw, 20px);
+      }
     }
 
     .empty, .error, .loading{ padding:22px; text-align:center; color: var(--muted); }
