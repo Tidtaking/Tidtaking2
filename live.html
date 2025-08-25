@@ -278,6 +278,10 @@
     function renderTable(allRows){
       updateCounters(allRows);
       populateClassFilter(allRows);
+      const finishedAll = allRows.filter(p => p.finish != null);
+const overallBestFinish = finishedAll.length
+  ? Math.min(...finishedAll.map(p => p.finish))
+  : null;
 
       const rankMap = buildRankMap(allRows);
       const filtered = applyFilters(allRows);
@@ -333,7 +337,11 @@
         const s1 = renderTargets(shooting[0]);
         const s2 = renderTargets(shooting[1]);
 
-        const maltid = (p.finish != null) ? formatTime(p.finish) : "-";
+const maltid = (p.finish != null)
+  ? (overallBestFinish != null
+      ? `${formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)`
+      : formatTime(p.finish))
+  : "-";
         const doneRow = p.status === "Fullført" ? "done-row" : "";
 
         html += `
