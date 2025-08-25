@@ -24,7 +24,7 @@
     * { box-sizing: border-box; }
     html,body{ margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: var(--ink); }
 
-    /* Header: rød/blå bånd, hvitt midtbånd med innhold */
+    /* Header: rød/blå bånd, hvitt midtbånd med innhold (logo kun i hvitt felt) */
     header{
       background:
         linear-gradient(180deg, var(--lsk-red) 0 48px, transparent 48px),
@@ -79,23 +79,17 @@
 
     .legend{ font-size:12px; color: var(--muted); margin: 10px 2px; }
 
-    /* Kort + scroll-container (fikser klipping) */
+    /* Kort rundt tabellen – ingen horisontal scroll her */
     .table-card{
       background: var(--lsk-white);
       border-radius: 14px;
       box-shadow: 0 6px 20px rgba(2,8,23,.06);
-      overflow: visible;
-    }
-    .table-scroll{
       border: 1px solid var(--table-border);
-      border-radius: 14px;
-      overflow-x: auto;
-      overflow-y: visible;
-      -webkit-overflow-scrolling: touch;
+      overflow: hidden;
     }
 
-    /* Tabell */
-    table{ border-collapse: collapse; width: 100%; min-width: 1100px; }
+    /* Tabell – automatisk bredde, ingen min-width som tvinger scroll */
+    table{ border-collapse: collapse; width: 100%; }
     thead th{
       position: sticky; top:0; z-index:2;
       background: linear-gradient(180deg, #ffffff, #f3f6fb);
@@ -117,28 +111,38 @@
     .chip.done{ background: var(--success); }
     .chip.wait{ background: var(--neutral); }
 
-    /* Skytedeler */
+    /* Skytedeler – fleksibel slik at 5 blink alltid får plass uten scroll */
     th.shooting, td.shooting{ background: var(--shoot-bg); color:#fff; }
-    td.shooting{ white-space: nowrap; }
-    .target{
-      display:inline-block; width:56px; height:56px; line-height:56px;
-      margin:2px; border-radius:50%;
-      background: transparent; font-size:40px; vertical-align:middle;
+    td.shooting{
+      white-space: nowrap;
+      display: flex;            /* legg blinkene i fleksrad */
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      padding-top: 8px;
+      padding-bottom: 8px;
     }
-    th.shooting, td.shooting{ min-width: 320px; }
+    .target{
+      /* skalerer automatisk mellom 22px og 56px */
+      width: clamp(22px, 6vw, 56px);
+      height: clamp(22px, 6vw, 56px);
+      font-size: clamp(14px, 4vw, 40px);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+    }
 
     /* Markér fullført */
     tr.done-row td:first-child{ border-left:6px solid var(--success); }
 
     @media (max-width: 700px){
       thead th, tbody td{ font-size:12px; padding:8px 6px; }
-      .target{ width: 40px; height: 40px; line-height: 40px; font-size: 28px; }
-      th.shooting, td.shooting{ min-width: 260px; }
       .titles h1{ font-size: 22px; }
+      .controls{ gap:8px; }
     }
     @media (max-width: 480px){
-      .target{ width: 32px; height: 32px; line-height: 32px; font-size: 22px; }
-      th.shooting, td.shooting{ min-width: 220px; }
+      /* litt tettere typografi hvis det blir veldig smalt */
+      thead th, tbody td{ font-size:11px; }
     }
 
     .empty, .error, .loading{ padding:22px; text-align:center; color: var(--muted); }
@@ -229,7 +233,6 @@
       const classes = Array.from(new Set(rows.map(r=>r.class).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'no'));
       const current = sel.value;
       sel.innerHTML = `<option value="">Alle klasser</option>` + classes.map(c=>`<option value="${c}">${c}</option>`).join("");
-      // behold valgt om mulig
       sel.value = current && classes.includes(current) ? current : "";
       filters.class = sel.value;
     }
@@ -267,23 +270,22 @@
 
       let html = `
       <div class="table-card">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Plass</th>
-                <th>Startnr</th>
-                <th>Navn</th>
-                <th>Klasse</th>
-                <th>Status</th>
-                <th>Tid</th>
-                <th>Rundetid</th>
-                <th class="shooting">S1</th>
-                <th class="shooting">S2</th>
-                <th>Måltid</th>
-              </tr>
-            </thead>
-            <tbody>`;
+        <table>
+          <thead>
+            <tr>
+              <th>Plass</th>
+              <th>Startnr</th>
+              <th>Navn</th>
+              <th>Klasse</th>
+              <th>Status</th>
+              <th>Tid</th>
+              <th>Rundetid</th>
+              <th class="shooting">S1</th>
+              <th class="shooting">S2</th>
+              <th>Måltid</th>
+            </tr>
+          </thead>
+          <tbody>`;
 
       for (const p of sorted){
         const rank = (p.status === "Fullført" && rankMap[p.snr]) ? rankMap[p.snr] : "-";
@@ -329,7 +331,7 @@
           </tr>`;
       }
 
-      html += `</tbody></table></div></div>`;
+      html += `</tbody></table></div>`;
       $("#statusTable").innerHTML = html;
     }
 
