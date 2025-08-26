@@ -38,10 +38,17 @@
     /* Shooting cell */
     .shootingCell{white-space:nowrap; min-width:calc(var(--target)*5 + 16px)}
     .targets{display:inline-flex; align-items:center; gap:6px}
-    .target{width:var(--target); height:var(--target); border-radius:50%; display:inline-grid; place-content:center; user-select:none; cursor:pointer; border:2px solid #000; touch-action:manipulation}
-    .target[data-hit="true"]{background:#000; color:#fff}
-    .target[data-hit="false"]{background:#fff; color:#000}
-    .target:active{transform:scale(0.97)}
+    .target{width:var(--target); height:var(--target); border-radius:50%; display:inline-grid; place-content:center; user-select:none; cursor:pointer; border:2px solid #000; touch-action:manipulation; transition: transform 0.15s ease, box-shadow 0.15s ease;}
+    /* Treff = hvit. Bom = sort. */
+    .target[data-hit="true"]{background:#fff; color:#000; animation:pop 0.2s ease;}
+    .target[data-hit="false"]{background:#000; color:#fff;}
+    .target:active{transform:scale(0.92)}
+
+    @keyframes pop{
+      0%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}
+      50%{transform:scale(1.2); box-shadow:0 0 8px rgba(0,0,0,0.4)}
+      100%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}
+    }
 
     /* Inputs & buttons */
     .skive-input{width:70px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:16px; text-align:center}
@@ -60,7 +67,7 @@
     }
 
     /* Prefer reduced motion */
-    @media (prefers-reduced-motion: reduce){ .target:active{transform:none} }
+    @media (prefers-reduced-motion: reduce){ .target{transition:none} .target:active{transform:none} }
   </style>
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -240,12 +247,18 @@ function render(){
 const table = document.getElementById('shootingTable');
 
 table.addEventListener('click', async (e)=>{
+  const hitTarget = e.target.closest('.target');
+  if(hitTarget){
+    const snr = +hitTarget.dataset.snr; // set via parent container below
+  }
+
   const el = e.target.closest('[data-action]');
   if(!el) return;
   const action = el.dataset.action; const snr = +el.dataset.snr; const round = +el.dataset.round;
   if(action === 'toggle'){
     const idx = +el.dataset.idx; const p = participants[snr];
-    const arr = p.shootingLocal; arr[round][idx] = !arr[round][idx];
+    const arr = p?.shootingLocal || (p.shootingLocal=[Array(5).fill(false),Array(5).fill(false)]);
+    arr[round][idx] = !arr[round][idx];
     el.setAttribute('data-hit', String(arr[round][idx]));
   }
   if(action === 'send'){
@@ -253,6 +266,16 @@ table.addEventListener('click', async (e)=>{
   }
   if(action === 'time'){
     await registerShootingTime(snr, round, el);
+  }
+});
+
+// Keyboard support for targets
+ table.addEventListener('keydown', (e)=>{
+  const el = e.target.closest('.target');
+  if(!el) return;
+  if(e.key===' '|| e.key==='Enter'){
+    e.preventDefault();
+    el.click();
   }
 });
 
@@ -312,7 +335,6 @@ async function init(){
   try{
     const channel = sb.channel('participants_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
-        // Merge the new/updated row and re-render
         const rec = payload.new || payload.old; if(rec){ mergeDbRecord(rec); render(); }
       })
       .subscribe((status)=>{ if(status==='SUBSCRIBED'){ /* ok */ } });
