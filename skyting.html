@@ -8,7 +8,6 @@
     :root{
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
       --radius:14px; --pad:12px; --tap:48px; --gap:10px; --target:60px;
-      --col-start:88px; --col-name:200px; /* faste bredder for sticky-kolonner */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -16,7 +15,10 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
       margin:0; padding:0; color:var(--fg); background:var(--bg);
     }
-    header{ position:sticky; top:0; z-index:10; background:var(--bg); border-bottom:1px solid var(--border); }
+    header{
+      position:sticky; top:0; z-index:10; background:var(--bg);
+      border-bottom:1px solid var(--border);
+    }
     .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}    
     h1{font-size:clamp(20px, 4vw, 28px); margin:4px 0 8px}
 
@@ -26,20 +28,12 @@
     .toolbar .toggle{display:flex; align-items:center; gap:6px; font-size:14px}
     .toolbar .toggle input{accent-color:var(--primary)}
 
-    /* Table */
+    /* Responsive table wrapper with momentum scroll on mobile */
     .table-container{overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; border-top:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:12px}
-    table{border-collapse:separate; border-spacing:0; width:100%; min-width:860px; position:relative}
-    thead th{position:sticky; top:0; background:#f8fafc; text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; z-index:1}
-    tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px; background:#fff}
+    table{border-collapse:separate; border-spacing:0; width:100%; min-width:860px}
+    thead th{position:sticky; top:0; background:#f8fafc; text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px}
+    tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px}
     tbody tr:nth-child(odd){background:#fcfcfd}
-
-    /* Sticky first two columns */
-    th.col-startnr, td.col-startnr{ position:sticky; left:0; min-width:var(--col-start); width:var(--col-start); z-index:3; }
-    th.col-navn, td.col-navn{ position:sticky; left:var(--col-start); min-width:var(--col-name); width:var(--col-name); z-index:2; }
-    thead th.col-startnr, thead th.col-navn{ background:#f1f5f9; }
-    tbody td.col-startnr, tbody td.col-navn{ background:inherit; }
-    /* separasjonsskygge på kolonne 2 */
-    thead th.col-navn, tbody td.col-navn{ box-shadow: 6px 0 6px -6px rgba(0,0,0,0.2); }
 
     /* Shooting cell */
     .shootingCell{white-space:nowrap; min-width:calc(var(--target)*5 + 16px)}
@@ -50,7 +44,11 @@
     .target[data-hit="false"]{background:#000; color:#fff;}
     .target:active{transform:scale(0.92)}
 
-    @keyframes pop{ 0%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)} 50%{transform:scale(1.2); box-shadow:0 0 8px rgba(0,0,0,0.4)} 100%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)} }
+    @keyframes pop{
+      0%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}
+      50%{transform:scale(1.2); box-shadow:0 0 8px rgba(0,0,0,0.4)}
+      100%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}
+    }
 
     /* Inputs & buttons */
     .skive-input{width:70px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:16px; text-align:center}
@@ -62,7 +60,7 @@
 
     /* Make tap targets generous on phones */
     @media (max-width: 640px){
-      :root{--target:56px; --col-start:76px; --col-name:180px}
+      :root{--target:56px}
       thead th{font-size:12px; padding:8px}
       tbody td{font-size:15px; padding:8px}
       .skive-input{width:64px}
@@ -90,8 +88,8 @@
       <table id="shootingTable" aria-live="polite">
         <thead>
           <tr>
-            <th class="col-startnr">Startnr</th>
-            <th class="col-navn">Navn</th>
+            <th>Startnr</th>
+            <th>Navn</th>
             <th>Status</th>
             <th>Skive</th>
             <th>Skyting S1</th>
@@ -229,8 +227,8 @@ function render(){
     else { t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Registrer tid S2</button>`; }
 
     return `<tr data-snr="${p.snr}">
-      <td class="col-startnr">${p.snr ?? ''}</td>
-      <td class="col-navn">${p.name ?? ''}</td>
+      <td>${p.snr ?? ''}</td>
+      <td>${p.name ?? ''}</td>
       <td>${p.status ?? ''}</td>
       <td>
         <input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="${p.skive ?? ''}" data-action="skive" data-snr="${p.snr}" aria-label="Skive for ${p.name ?? ('startnr '+p.snr)}">
