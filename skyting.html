@@ -2,412 +2,327 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Registrering av Skyteresultat</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 10px;
-      padding: 5px;
-      background: #fff;
+    :root{
+      --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
+      --radius:14px; --pad:12px; --tap:48px; --gap:10px; --target:60px;
     }
-    h2 {
-      font-size: 28px;
-      margin-bottom: 20px;
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      margin:0; padding:0; color:var(--fg); background:var(--bg);
     }
-    /* Pakk tabellen i en container som tillater horisontal scrolling */
-    .table-container {
-      overflow-x: auto;
-      width: 100%;
+    header{
+      position:sticky; top:0; z-index:10; background:var(--bg);
+      border-bottom:1px solid var(--border);
     }
-    table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      width: 95%;
-      max-width: 600px;
+    .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}    
+    h1{font-size:clamp(20px, 4vw, 28px); margin:4px 0 8px}
+
+    /* Top toolbar */
+    .toolbar{display:flex; gap:var(--gap); align-items:center; flex-wrap:wrap}
+    .toolbar input[type="text"]{flex:1 1 220px; min-width:140px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; font-size:16px}
+    .toolbar .toggle{display:flex; align-items:center; gap:6px; font-size:14px}
+    .toolbar .toggle input{accent-color:var(--primary)}
+
+    /* Responsive table wrapper with momentum scroll on mobile */
+    .table-container{overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; border-top:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:12px}
+    table{border-collapse:separate; border-spacing:0; width:100%; min-width:860px}
+    thead th{position:sticky; top:0; background:#f8fafc; text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px}
+    tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px}
+    tbody tr:nth-child(odd){background:#fcfcfd}
+
+    /* Shooting cell */
+    .shootingCell{white-space:nowrap; min-width:calc(var(--target)*5 + 16px)}
+    .targets{display:inline-flex; align-items:center; gap:6px}
+    .target{width:var(--target); height:var(--target); border-radius:50%; display:inline-grid; place-content:center; user-select:none; cursor:pointer; border:2px solid #000; touch-action:manipulation}
+    .target[data-hit="true"]{background:#000; color:#fff}
+    .target[data-hit="false"]{background:#fff; color:#000}
+    .target:active{transform:scale(0.97)}
+
+    /* Inputs & buttons */
+    .skive-input{width:70px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:16px; text-align:center}
+    .btn{appearance:none; border:0; border-radius:12px; padding:12px 14px; font-size:16px; line-height:1; cursor:pointer; min-height:var(--tap)}
+    .btn-primary{background:var(--primary); color:var(--primary-fg)}
+    .btn-success{background:var(--success); color:#fff}
+    .btn-ghost{background:#f3f4f6}
+    .btn[disabled]{background:#e5e7eb; color:#6b7280; cursor:not-allowed}
+
+    /* Make tap targets generous on phones */
+    @media (max-width: 640px){
+      :root{--target:56px}
+      thead th{font-size:12px; padding:8px}
+      tbody td{font-size:15px; padding:8px}
+      .skive-input{width:64px}
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px; /* redusert for å spare plass */
-      font-size: 18px;
-      text-align: center;
-    }
-    th {
-      background-color: #f4f4f4;
-    }
-    /* Økt bredde slik at alle 5 blinkene vises */
-    .shootingCell {
-      background-color: gray;
-      width: 340px;
-      max-width: 340px;
-      white-space: nowrap;
-      overflow: visible;
-      text-align: center;
-    }
-    /* Blinkene – 60×60 px, fontstørrelse 48px */
-    .target {
-      display: inline-block;
-      width: 60px;
-      height: 60px;
-      line-height: 60px;
-      border-radius: 50%;
-      margin: 2px;
-      font-size: 48px;
-      cursor: pointer;
-      vertical-align: middle;
-    }
-    .skive-input {
-      width: 60px;
-      font-size: 18px;
-      text-align: center;
-    }
-    .send-button {
-      background-color: #28a745;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .send-button.sent {
-      background-color: #6c757d;
-      cursor: default;
-    }
-    .time-button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 14px;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .time-button.registered {
-      background-color: #6c757d;
-      cursor: default;
-    }
-    @media (max-width: 480px) {
-      th, td {
-        font-size: 16px;
-        padding: 4px;
-      }
-      .shootingCell {
-        width: 340px;
-        max-width: 340px;
-      }
-      .target {
-        width: 60px;
-        height: 60px;
-        line-height: 60px;
-        font-size: 48px;
-      }
-      .skive-input {
-        width: 50px;
-        font-size: 16px;
-      }
-      .send-button, .time-button {
-        font-size: 16px;
-        padding: 8px 12px;
-      }
-    }
+
+    /* Prefer reduced motion */
+    @media (prefers-reduced-motion: reduce){ .target:active{transform:none} }
   </style>
-  <!-- Inkluder Supabase SDK (UMD) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
-    // Konfigurer Supabase
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    window.participants = {};
-
-    // Funksjoner for parsing og formatering av skyting
-    function ensureShootingFormat(arr) {
-      if (!Array.isArray(arr) || arr.length !== 2) {
-        return [Array(5).fill(false), Array(5).fill(false)];
-      }
-      return arr.map(round => {
-        if (!Array.isArray(round) || round.length !== 5) {
-          return Array(5).fill(false);
-        }
-        return round;
-      });
-    }
-
-    function parseShooting(record) {
-      let val = record.shooting;
-      let arr;
-      if (typeof val === "string") {
-        try {
-          arr = JSON.parse(val);
-        } catch (e) {
-          arr = null;
-        }
-      } else if (Array.isArray(val)) {
-        arr = val;
-      }
-      if (!arr) {
-        arr = [Array(5).fill(false), Array(5).fill(false)];
-      }
-      return ensureShootingFormat(arr);
-    }
-
-    function getShootingArray(p) {
-      if (!p.shootingLocal) {
-        p.shootingLocal = parseShooting(p);
-      }
-      return p.shootingLocal;
-    }
-
-    function renderShooting(snr, shootIdx) {
-      let p = window.participants[snr];
-      let arr = getShootingArray(p)[shootIdx];
-      return arr.map((hit, i) =>
-        `<span class="target" onclick="toggleTarget(event, ${snr}, ${shootIdx}, ${i})" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
-      ).join("");
-    }
-
-    window.toggleTarget = function(e, snr, shootIdx, idx) {
-      let p = window.participants[snr];
-      let arr = getShootingArray(p);
-      arr[shootIdx][idx] = !arr[shootIdx][idx];
-      p.shootingLocal = arr;
-      e.target.style.color = arr[shootIdx][idx] ? "white" : "black";
-    };
-
-    function mergeDbRecordIntoLocal(dbRec) {
-      const snr = dbRec.snr;
-      let local = window.participants[snr];
-      if (!local) {
-        dbRec.shootingLocal = parseShooting(dbRec);
-        dbRec.s1sent = dbRec.s1sent || false;
-        dbRec.s2sent = dbRec.s2sent || false;
-        dbRec.skive = dbRec.skive || "";
-        dbRec.status = dbRec.status || "";
-        dbRec.shootingTimeStart1 = dbRec.shootingTimeStart1 || null;
-        dbRec.shootingTimeStart2 = dbRec.shootingTimeStart2 || null;
-        window.participants[snr] = dbRec;
-      } else {
-        local.status = dbRec.status || local.status;
-        local.s1sent = local.s1sent || dbRec.s1sent;
-        local.s2sent = local.s2sent || dbRec.s2sent;
-        if (!local.skive) {
-          local.skive = dbRec.skive || "";
-        }
-      }
-    }
-
-    async function fetchAllParticipants() {
-      const { data, error } = await window.supabaseClient
-        .from("participants")
-        .select("*");
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        return [];
-      }
-      return data;
-    }
-
-    async function updateDataFromDb() {
-      let dbData = await fetchAllParticipants();
-      let existingSnrs = {};
-      dbData.forEach(dbRec => {
-        mergeDbRecordIntoLocal(dbRec);
-        existingSnrs[dbRec.snr] = true;
-      });
-      for (let snr in window.participants) {
-        if (!existingSnrs[snr]) {
-          delete window.participants[snr];
-        }
-      }
-      renderTable();
-    }
-
-    function renderTable() {
-      const container = document.getElementById("shootingTable");
-      let data = Object.values(window.participants);
-      data.sort((a, b) => {
-        if(a.status === "I gang" && b.status !== "I gang") return -1;
-        if(a.status !== "I gang" && b.status === "I gang") return 1;
-        let aDone = (a.s1sent && a.s2sent) ? 1 : 0;
-        let bDone = (b.s1sent && b.s2sent) ? 1 : 0;
-        if (aDone !== bDone) return aDone - bDone;
-        return a.snr - b.snr;
-      });
-      
-      let html = `<div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Startnr</th>
-              <th>Navn</th>
-              <th>Status</th>
-              <th>Skive</th>
-              <th class="shootingCell">Skyting S1</th>
-              <th>Send S1</th>
-              <th>Skytetid S1</th>
-              <th class="shootingCell">Skyting S2</th>
-              <th>Send S2</th>
-              <th>Skytetid S2</th>
-            </tr>
-          </thead>
-          <tbody>`;
-      data.forEach(p => {
-        let s1 = renderShooting(p.snr, 0);
-        let s2 = renderShooting(p.snr, 1);
-        let inputSkive = `<input type="text" id="skive-${p.snr}" class="skive-input" value="${p.skive}" placeholder="Skive" onchange="window.participants[${p.snr}].skive=this.value">`;
-        let btnS1 = p.s1sent
-          ? `<button class="send-button sent" disabled>Sendt</button>`
-          : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 0)">Send S1</button>`;
-        let btnS2 = p.s2sent
-          ? `<button class="send-button sent" disabled>Sendt</button>`
-          : `<button class="send-button" onclick="sendShootingResult(${p.snr}, 1)">Send S2</button>`;
-        
-        let timeBtn1 = "";
-        if (p.shootingtime1) {
-          timeBtn1 = `<button class="time-button registered" disabled>Tid registrert</button>`;
-        } else if (!p.shootingTimeStart1) {
-          timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Start skytetid S1</button>`;
-        } else {
-          timeBtn1 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 0)" id="timeBtn-${p.snr}-0">Registrer tid S1</button>`;
-        }
-        
-        let timeBtn2 = "";
-        if (p.shootingtime2) {
-          timeBtn2 = `<button class="time-button registered" disabled>Tid registrert</button>`;
-        } else if (!p.shootingTimeStart2) {
-          timeBtn2 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 1)" id="timeBtn-${p.snr}-1">Start skytetid S2</button>`;
-        } else {
-          timeBtn2 = `<button class="time-button" onclick="registerShootingTime(${p.snr}, 1)" id="timeBtn-${p.snr}-1">Registrer tid S2</button>`;
-        }
-        
-        html += `
-          <tr>
-            <td>${p.snr}</td>
-            <td>${p.name}</td>
-            <td>${p.status}</td>
-            <td>${inputSkive}</td>
-            <td class="shootingCell">${s1}</td>
-            <td>${btnS1}</td>
-            <td>${timeBtn1}</td>
-            <td class="shootingCell">${s2}</td>
-            <td>${btnS2}</td>
-            <td>${timeBtn2}</td>
-          </tr>`;
-      });
-      html += `</tbody></table></div>`;
-      container.innerHTML = html;
-    }
-
-    async function sendShootingResult(snr, shootIdx) {
-      let p = window.participants[snr];
-      if (!p) return;
-      let skiveVal = document.getElementById("skive-" + snr).value.trim();
-      let arr = p.shootingLocal;
-      let updateData = {
-        skive: skiveVal,
-        shooting: JSON.stringify(arr)
-      };
-      if (shootIdx === 0) {
-        updateData.s1sent = true;
-        p.s1sent = true;
-      } else {
-        updateData.s2sent = true;
-        p.s2sent = true;
-      }
-      const { error } = await window.supabaseClient
-        .from("participants")
-        .update(updateData)
-        .eq("snr", snr);
-      if (error) {
-        console.error("Feil ved sending av skyteresultat for snr", snr, error);
-      }
-      updateDataFromDb();
-    }
-
-    async function registerShootingTime(snr, shootIdx) {
-      let p = window.participants[snr];
-      if (!p) return;
-      const btn = document.getElementById(`timeBtn-${p.snr}-${shootIdx}`);
-      if (shootIdx === 0) {
-        if (!p.shootingTimeStart1) {
-          p.shootingTimeStart1 = Date.now();
-          btn.innerText = "Registrer tid S1";
-        } else {
-          const elapsedMs = Date.now() - p.shootingTimeStart1;
-          const shootingTime = elapsedMs / 1000;
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ shootingtime1: shootingTime })
-            .eq("snr", snr);
-          if (error) {
-            console.error("Feil ved lagring av shootingtime1 for snr", snr, error);
-            alert("Feil ved lagring av tid – sjekk konsollen.");
-          } else {
-            p.shootingtime1 = shootingTime;
-            btn.innerText = "Tid registrert";
-            btn.classList.add("registered");
-            btn.disabled = true;
-          }
-        }
-      } else {
-        if (!p.shootingTimeStart2) {
-          p.shootingTimeStart2 = Date.now();
-          btn.innerText = "Registrer tid S2";
-        } else {
-          const elapsedMs = Date.now() - p.shootingTimeStart2;
-          const shootingTime = elapsedMs / 1000;
-          const { error } = await window.supabaseClient.from("participants")
-            .update({ shootingtime2: shootingTime })
-            .eq("snr", snr);
-          if (error) {
-            console.error("Feil ved lagring av shootingtime2 for snr", snr, error);
-            alert("Feil ved lagring av tid – sjekk konsollen.");
-          } else {
-            p.shootingtime2 = shootingTime;
-            btn.innerText = "Tid registrert";
-            btn.classList.add("registered");
-            btn.disabled = true;
-          }
-        }
-      }
-    }
-
-    async function fetchAllParticipants() {
-      const { data, error } = await window.supabaseClient
-        .from("participants")
-        .select("*");
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        return [];
-      }
-      return data;
-    }
-
-    async function updateDataFromDb() {
-      let dbData = await fetchAllParticipants();
-      let existingSnrs = {};
-      dbData.forEach(dbRec => {
-        mergeDbRecordIntoLocal(dbRec);
-        existingSnrs[dbRec.snr] = true;
-      });
-      for (let snr in window.participants) {
-        if (!existingSnrs[snr]) {
-          delete window.participants[snr];
-        }
-      }
-      renderTable();
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      updateDataFromDb();
-      // Vi setter automatisk oppdatering kun for desktop
-      if (window.innerWidth >= 600) {
-        setInterval(updateDataFromDb, 1000);
-      }
-    });
-  </script>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <h2>Registrering av Skyteresultat</h2>
-  <div id="shootingTable"></div>
+  <header>
+    <div class="wrap">
+      <h1>Registrering av skyteresultat</h1>
+      <div class="toolbar">
+        <input id="filter" type="text" placeholder="Søk på navn eller startnr…" aria-label="Filtrer deltakere">
+        <label class="toggle"><input id="onlyRunning" type="checkbox"> Kun "I gang"</label>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="table-container">
+      <table id="shootingTable" aria-live="polite">
+        <thead>
+          <tr>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Status</th>
+            <th>Skive</th>
+            <th>Skyting S1</th>
+            <th>Send S1</th>
+            <th>Skytetid S1</th>
+            <th>Skyting S2</th>
+            <th>Send S2</th>
+            <th>Skytetid S2</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+<script>
+// ---------------- Supabase setup ----------------
+const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// ---------------- Local state ----------------
+/** @type {Record<string, any>} */
+const participants = {};
+let lastRenderKey = ""; // used to skip unnecessary re-render
+
+function ensureShootingFormat(arr){
+  if(!Array.isArray(arr) || arr.length!==2) return [Array(5).fill(false), Array(5).fill(false)];
+  return arr.map(r => (Array.isArray(r) && r.length===5) ? r : Array(5).fill(false));
+}
+
+function parseShooting(rec){
+  let val = rec.shooting; let arr;
+  if(typeof val === 'string'){ try{ arr = JSON.parse(val); }catch{ arr=null; } }
+  else if(Array.isArray(val)){ arr = val; }
+  if(!arr) arr = [Array(5).fill(false), Array(5).fill(false)];
+  return ensureShootingFormat(arr);
+}
+
+function mergeDbRecord(dbRec){
+  const snr = dbRec.snr;
+  if(!participants[snr]){
+    participants[snr] = {
+      ...dbRec,
+      shootingLocal: parseShooting(dbRec),
+      s1sent: !!dbRec.s1sent,
+      s2sent: !!dbRec.s2sent,
+      skive: dbRec.skive || "",
+      status: dbRec.status || "",
+      shootingTimeStart1: dbRec.shootingTimeStart1 || null,
+      shootingTimeStart2: dbRec.shootingTimeStart2 || null,
+    };
+  } else {
+    const p = participants[snr];
+    p.status = dbRec.status || p.status;
+    p.s1sent = p.s1sent || !!dbRec.s1sent;
+    p.s2sent = p.s2sent || !!dbRec.s2sent;
+    if(!p.skive) p.skive = dbRec.skive || "";
+    if(dbRec.shooting) p.shootingLocal = parseShooting(dbRec);
+    if(dbRec.shootingtime1) p.shootingtime1 = dbRec.shootingtime1;
+    if(dbRec.shootingtime2) p.shootingtime2 = dbRec.shootingtime2;
+  }
+}
+
+async function fetchAll(){
+  const { data, error } = await sb.from('participants').select('*');
+  if(error){ console.error('Feil ved henting:', error); return []; }
+  return data;
+}
+
+function computeRenderKey(list){
+  // a tiny hash key to skip needless DOM work on auto-updates
+  return JSON.stringify(list.map(p=>({snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting})));
+}
+
+async function refreshFromDb(){
+  const data = await fetchAll();
+  const present = {};
+  data.forEach(rec=>{ mergeDbRecord(rec); present[rec.snr]=true; });
+  Object.keys(participants).forEach(snr=>{ if(!present[snr]) delete participants[snr]; });
+  render();
+}
+
+// ---------------- Rendering ----------------
+function renderShootingSpans(p, shootIdx){
+  const arr = p.shootingLocal?.[shootIdx] || Array(5).fill(false);
+  return `<div class="targets" role="group" aria-label="Skyting S${shootIdx+1}">`+
+    arr.map((hit, i)=>`<div class="target" role="button" aria-pressed="${hit}" tabindex="0" data-action="toggle" data-snr="${p.snr}" data-round="${shootIdx}" data-idx="${i}" data-hit="${hit}"></div>`).join('')+
+  `</div>`;
+}
+
+function sortParticipants(list){
+  return list.sort((a,b)=>{
+    if(a.status === 'I gang' && b.status !== 'I gang') return -1;
+    if(a.status !== 'I gang' && b.status === 'I gang') return 1;
+    const aDone = (a.s1sent && a.s2sent) ? 1 : 0;
+    const bDone = (b.s1sent && b.s2sent) ? 1 : 0;
+    if(aDone !== bDone) return aDone - bDone;
+    return (a.snr||0) - (b.snr||0);
+  });
+}
+
+function applyFilters(list){
+  const q = document.getElementById('filter').value.trim().toLowerCase();
+  const onlyRunning = document.getElementById('onlyRunning').checked;
+  return list.filter(p=>{
+    const matchQ = !q || (String(p.snr).includes(q) || (p.name||'').toLowerCase().includes(q));
+    const matchRun = !onlyRunning || p.status === 'I gang';
+    return matchQ && matchRun;
+  });
+}
+
+function render(){
+  const tbody = document.getElementById('tbody');
+  const list = sortParticipants(Object.values(participants));
+  const filtered = applyFilters(list);
+  const newKey = computeRenderKey(filtered);
+  if(newKey === lastRenderKey){ return; }
+  lastRenderKey = newKey;
+
+  tbody.innerHTML = filtered.map(p=>{
+    const s1 = renderShootingSpans(p,0);
+    const s2 = renderShootingSpans(p,1);
+    const s1Btn = p.s1sent ? `<button class="btn btn-ghost" disabled>Sendt</button>` : `<button class="btn btn-success" data-action="send" data-snr="${p.snr}" data-round="0">Send S1</button>`;
+    const s2Btn = p.s2sent ? `<button class="btn btn-ghost" disabled>Sendt</button>` : `<button class="btn btn-success" data-action="send" data-snr="${p.snr}" data-round="1">Send S2</button>`;
+
+    let t1Btn = '';
+    if(p.shootingtime1){ t1Btn = `<button class="btn btn-ghost" disabled>Tid registrert</button>`; }
+    else if(!p.shootingTimeStart1){ t1Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="0">Start skytetid S1</button>`; }
+    else { t1Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="0">Registrer tid S1</button>`; }
+
+    let t2Btn = '';
+    if(p.shootingtime2){ t2Btn = `<button class="btn btn-ghost" disabled>Tid registrert</button>`; }
+    else if(!p.shootingTimeStart2){ t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Start skytetid S2</button>`; }
+    else { t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Registrer tid S2</button>`; }
+
+    return `<tr data-snr="${p.snr}">
+      <td>${p.snr ?? ''}</td>
+      <td>${p.name ?? ''}</td>
+      <td>${p.status ?? ''}</td>
+      <td>
+        <input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="${p.skive ?? ''}" data-action="skive" data-snr="${p.snr}" aria-label="Skive for ${p.name ?? ('startnr '+p.snr)}">
+      </td>
+      <td class="shootingCell">${s1}</td>
+      <td>${s1Btn}</td>
+      <td>${t1Btn}</td>
+      <td class="shootingCell">${s2}</td>
+      <td>${s2Btn}</td>
+      <td>${t2Btn}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------------- Event delegation (mobile-friendly) ----------------
+const table = document.getElementById('shootingTable');
+
+table.addEventListener('click', async (e)=>{
+  const el = e.target.closest('[data-action]');
+  if(!el) return;
+  const action = el.dataset.action; const snr = +el.dataset.snr; const round = +el.dataset.round;
+  if(action === 'toggle'){
+    const idx = +el.dataset.idx; const p = participants[snr];
+    const arr = p.shootingLocal; arr[round][idx] = !arr[round][idx];
+    el.setAttribute('data-hit', String(arr[round][idx]));
+  }
+  if(action === 'send'){
+    await sendShootingResult(snr, round);
+  }
+  if(action === 'time'){
+    await registerShootingTime(snr, round, el);
+  }
+});
+
+// Update skive on change (debounced)
+let skiveTimer;
+table.addEventListener('input', (e)=>{
+  const el = e.target; if(!(el instanceof HTMLInputElement)) return;
+  if(el.dataset.action !== 'skive') return;
+  const snr = +el.dataset.snr; const p = participants[snr];
+  p.skive = el.value.trim();
+  clearTimeout(skiveTimer);
+  skiveTimer = setTimeout(()=>{ saveSkive(snr, p.skive); }, 450);
+});
+
+async function saveSkive(snr, skive){
+  const { error } = await sb.from('participants').update({ skive }).eq('snr', snr);
+  if(error){ console.error('Feil ved lagring av skive', snr, error); }
+}
+
+async function sendShootingResult(snr, shootIdx){
+  const p = participants[snr]; if(!p) return;
+  const updateData = { skive: p.skive ?? '', shooting: JSON.stringify(p.shootingLocal) };
+  if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
+  const { error } = await sb.from('participants').update(updateData).eq('snr', snr);
+  if(error){ console.error('Feil ved sending av skyteresultat', snr, error); }
+  await refreshFromDb();
+}
+
+async function registerShootingTime(snr, shootIdx, btnEl){
+  const p = participants[snr]; if(!p) return;
+  if(shootIdx===0){
+    if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = 'Registrer tid S1'; }
+    else {
+      const secs = (Date.now() - p.shootingTimeStart1) / 1000;
+      const { error } = await sb.from('participants').update({ shootingtime1: secs }).eq('snr', snr);
+      if(error){ console.error('Feil lagring shootingtime1', snr, error); alert('Feil ved lagring av tid – sjekk konsollen.'); }
+      else { p.shootingtime1 = secs; btnEl.textContent='Tid registrert'; btnEl.disabled=true; btnEl.classList.remove('btn-primary'); btnEl.classList.add('btn-ghost'); }
+    }
+  } else {
+    if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = 'Registrer tid S2'; }
+    else {
+      const secs = (Date.now() - p.shootingTimeStart2) / 1000;
+      const { error } = await sb.from('participants').update({ shootingtime2: secs }).eq('snr', snr);
+      if(error){ console.error('Feil lagring shootingtime2', snr, error); alert('Feil ved lagring av tid – sjekk konsollen.'); }
+      else { p.shootingtime2 = secs; btnEl.textContent='Tid registrert'; btnEl.disabled=true; btnEl.classList.remove('btn-primary'); btnEl.classList.add('btn-ghost'); }
+    }
+  }
+}
+
+// ---------------- Filters ----------------
+['filter','onlyRunning'].forEach(id=> document.getElementById(id).addEventListener('input', ()=> render()));
+
+// ---------------- Live updates: Realtime + polling fallback ----------------
+async function init(){
+  await refreshFromDb();
+  // Try Supabase Realtime (requires replication enabled for table)
+  try{
+    const channel = sb.channel('participants_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
+        // Merge the new/updated row and re-render
+        const rec = payload.new || payload.old; if(rec){ mergeDbRecord(rec); render(); }
+      })
+      .subscribe((status)=>{ if(status==='SUBSCRIBED'){ /* ok */ } });
+  }catch(err){ console.warn('Realtime ikke aktivert, bruker polling.', err); setInterval(refreshFromDb, 2000); }
+
+  // As a safety net, do light polling on desktop only
+  if(window.innerWidth >= 900){ setInterval(refreshFromDb, 4000); }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
