@@ -8,6 +8,8 @@
     :root{
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
       --radius:14px; --pad:12px; --tap:48px; --gap:10px; --target:60px;
+      --row-hover:#eef2ff; /* lys blålig hover-farge */
+      --row-active:#e6efff; /* ved trykk/touch */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -34,6 +36,12 @@
     thead th{position:sticky; top:0; background:#f8fafc; text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px}
     tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px}
     tbody tr:nth-child(odd){background:#fcfcfd}
+
+    /* Rad-hover (desktop), fokus (tastatur), og aktiv (touch/klikk) */
+    tbody tr{transition: background-color .12s ease}
+    tbody tr:hover,
+    tbody tr:focus-within{ background-color: var(--row-hover); }
+    tbody tr:active{ background-color: var(--row-active); }
 
     /* Shooting cell */
     .shootingCell{white-space:nowrap; min-width:calc(var(--target)*5 + 16px)}
