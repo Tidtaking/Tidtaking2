@@ -1,165 +1,330 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Rundetider for Ski Konkurranse</title>
   <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --error: #dc2626;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background: #fff;
+      margin: 0; padding: 16px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+      color: var(--fg); background: var(--bg);
     }
-    h1 {
-      font-size: 32px;
-      margin-bottom: 20px;
-      color: #333;
+    header {
+      position: sticky; top: env(safe-area-inset-top); z-index: 10;
+      background: var(--bg);
+      padding-bottom: 8px; margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
     }
-    table {
-      margin: 0 auto;
-      border-collapse: collapse;
-      width: 95%;
-      max-width: 600px;
+    h1 { font-size: 24px; margin: 0 0 6px; }
+    .sub { color: var(--muted); font-size: 14px; }
+
+    .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .status-pill { font-size: 12px; padding: 6px 10px; border-radius: 999px; border:1px solid var(--border); }
+    .online { background: #ecfdf5; border-color:#86efac; }
+    .offline { background: #fff7ed; border-color:#fdba74; }
+    .queue { background: #eff6ff; border-color:#93c5fd; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th { position: sticky; top: calc(env(safe-area-inset-top) + 52px); background: var(--bg); z-index: 5; }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px; text-align: center; font-size: 16px; }
+    th { font-weight: 600; }
+    tbody tr:hover { background: #fafafa; }
+
+    .name { font-size: 18px; font-weight: 600; }
+    .laps { line-height: 1.4; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; border: none; border-radius: 12px;
+      padding: 14px 18px; font-size: 18px; font-weight: 700; cursor: pointer;
+      user-select: none; touch-action: manipulation; min-width: 140px;
+      box-shadow: 0 1px 0 rgba(0,0,0,.05);
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      font-size: 20px;
-      text-align: center;
+    .btn:active { transform: translateY(1px); }
+    .btn[disabled] { opacity: .6; cursor: not-allowed; }
+    .btn-lap { background: var(--success); color: white; }
+    .btn-retry { background: var(--accent); color: white; }
+
+    .toast {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 1000;
+      background: #111827; color: white; padding: 10px 14px; border-radius: 10px; font-size: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      opacity: 0; pointer-events: none; transition: opacity .2s ease;
     }
-    th {
-      background-color: #f4f4f4;
-    }
-    /* Store knapp for registrering av rundetid */
-    .lap-button {
-      background-color: #28a745;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 22px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
+    .toast.show { opacity: 1; }
+
     @media (max-width: 480px) {
-      h1 { font-size: 28px; }
-      th, td { font-size: 16px; padding: 8px; }
-      .lap-button { font-size: 18px; padding: 12px 24px; }
+      body { padding: 12px; }
+      h1 { font-size: 20px; }
+      th, td { padding: 8px; font-size: 15px; }
+      .name { font-size: 17px; }
+      .btn { padding: 12px 16px; font-size: 17px; min-width: 126px; border-radius: 14px; }
     }
   </style>
-  <!-- Inkluder Supabase SDK (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – erstatt med dine opplysninger
+    // === Supabase ===
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"; // Vurder å flytte til server/env
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+      global: { headers: { "x-client-info": "rundetider-mobile-1.1" } }
+    });
 
-    // Globalt deltakerobjekt
-    let participants = {};
+    // === App state ===
+    let participants = {}; // { snr: { ...row, laps: number[] } }
+    let lastRenderHash = ""; // for å unngå unødvendig DOM-oppdateringer
+    const PENDING_KEY = "pendingLaps_v1";
 
-    // Henter deltakere med status "I gang" eller "Fullført"
-    async function fetchLapData() {
-      const { data, error } = await supabaseClient
-        .from("participants")
-        .select("*")
-        .in("status", ["I gang", "Fullført"]);
-      if (error) {
-        console.error("Feil ved henting av deltakerdata:", error);
-        return [];
-      }
-      return data;
-    }
+    // === Utils ===
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-    // Oppdaterer det globale deltakerobjektet og runder (lapptider)
-    async function updateLapTable() {
-      const data = await fetchLapData();
-      data.forEach(p => {
-        p.laps = p.laps || [];
-        participants[p.snr] = p;
-      });
-      renderLapTable();
-    }
-
-    // Formatterer tid (sekunder til "m/s")
     function formatTime(sec) {
       const minutes = Math.floor(sec / 60);
       const seconds = (sec % 60).toFixed(1);
       return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
     }
 
-    // Renderer tabellen med kolonnene snr, name, class, status og rundetider.
-    // Viser en stor "Rundetid"-knapp for de med status "I gang".
-    function renderLapTable() {
-      let data = Object.values(participants);
-      // Sorter: de med status "I gang" først, deretter andre, og "Fullført" nederst.
-      data.sort((a, b) => {
-        const rankA = (a.status === "I gang") ? 0 : (a.status === "Fullført" ? 2 : 1);
-        const rankB = (b.status === "I gang") ? 0 : (b.status === "Fullført" ? 2 : 1);
-        if (rankA !== rankB) return rankA - rankB;
-        return a.snr - b.snr;
-      });
-      
-      let html = `<table>
-        <thead>
-          <tr>
-            <th>Startnr</th>
-            <th>Navn</th>
-            <th>Klasse</th>
-            <th>Status</th>
-            <th>Rundetider</th>
-            <th>Handling</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      data.forEach(p => {
-        let lapsDisplay = p.laps.length > 0 ? p.laps.map(l => formatTime(l)).join("<br>") : "-";
-        let button = "";
-        if (p.status === "I gang") {
-          button = `<button class="lap-button" onclick="recordLap(${p.snr})">Rundetid</button>`;
+    function toast(msg, ms = 1400) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), ms);
+    }
+
+    function vibrate(pattern = [10, 40, 20]) {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    function getPending() {
+      try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch { return []; }
+    }
+    function setPending(arr) { localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
+
+    function hashData(data) {
+      // rask hash basert på JSON (til UI-diff)
+      try { return btoa(unescape(encodeURIComponent(JSON.stringify(data)))).slice(0, 64); } catch { return String(Math.random()); }
+    }
+
+    function onlineStatus() { return navigator.onLine; }
+
+    // === Data ===
+    async function fetchActiveParticipants() {
+      const { data, error } = await supabaseClient
+        .from('participants')
+        .select('snr,name,class,status,start,laps')
+        .in('status', ['I gang','Fullført'])
+        .order('status', { ascending: true })
+        .order('snr', { ascending: true });
+      if (error) { console.error('Henting feilet', error); return []; }
+      return data.map(p => ({ ...p, laps: Array.isArray(p.laps) ? p.laps : [] }));
+    }
+
+    function applyParticipants(list) {
+      for (const p of list) participants[p.snr] = p;
+      render();
+    }
+
+    // === Realtime ===
+    function subscribeRealtime() {
+      const channel = supabaseClient.channel('participants-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, payload => {
+          const row = payload.new || payload.old;
+          if (!row) return;
+          if (!['I gang','Fullført'].includes(row.status)) return; // bare relevante
+          participants[row.snr] = { ...participants[row.snr], ...row, laps: Array.isArray(row.laps) ? row.laps : [] };
+          render();
+        })
+        .subscribe(status => { /* noop */ });
+      return channel;
+    }
+
+    // === Offline kø ===
+    async function processQueue() {
+      if (!onlineStatus()) return;
+      let q = getPending();
+      if (!q.length) return;
+      for (let i = 0; i < q.length; i++) {
+        const item = q[i];
+        try {
+          const p = participants[item.snr];
+          const newLaps = [...(p?.laps || []), item.lapTime];
+          const { error } = await supabaseClient.from('participants').update({ laps: newLaps }).eq('snr', item.snr);
+          if (error) throw error;
+          // Optimistisk oppdatering
+          participants[item.snr] = { ...(participants[item.snr] || { snr: item.snr }), laps: newLaps };
+          q[i]._done = true;
+        } catch (e) {
+          console.warn('Køelement feilet, prøver senere', item, e);
+          break; // stopp tidlig hvis API sliter
         }
-        html += `<tr>
-          <td>${p.snr}</td>
-          <td style="font-size:22px;">${p.name}</td>
-          <td>${p.class}</td>
-          <td>${p.status}</td>
-          <td>${lapsDisplay}</td>
-          <td>${button}</td>
-        </tr>`;
+      }
+      q = q.filter(x => !x._done);
+      setPending(q);
+      updateBadges();
+      render();
+    }
+
+    // === UI ===
+    function updateBadges() {
+      const onlineEl = document.getElementById('online');
+      const queuedEl = document.getElementById('queued');
+      onlineEl.textContent = onlineStatus() ? 'Online' : 'Offline';
+      onlineEl.className = `status-pill ${onlineStatus() ? 'online' : 'offline'}`;
+      const q = getPending().length;
+      queuedEl.textContent = q ? `${q} i kø` : 'Ingen i kø';
+      queuedEl.className = `status-pill queue`;
+    }
+
+    function render() {
+      const arr = Object.values(participants).sort((a,b)=>{
+        const rank = v => (v.status==='I gang'?0:(v.status==='Fullført'?2:1));
+        const r = rank(a) - rank(b);
+        return r !== 0 ? r : (a.snr - b.snr);
       });
-      html += `</tbody></table>`;
-      document.getElementById("lapTable").innerHTML = html;
+      const compact = arr.map(p => ({ snr:p.snr, name:p.name, class:p.class, status:p.status, laps:p.laps }));
+      const newHash = hashData(compact);
+      if (newHash === lastRenderHash) return;
+      lastRenderHash = newHash;
+
+      const rows = arr.map(p => {
+        const laps = p.laps?.length ? p.laps.map(l => `<div>${formatTime(l)}</div>`).join('') : '<span style="color:var(--muted)">–</span>';
+        const canLap = p.status === 'I gang';
+        const btn = canLap ? `<button class="btn btn-lap" data-snr="${p.snr}">Rundetid</button>` : '';
+        return `<tr>
+          <td>${p.snr}</td>
+          <td class="name">${p.name || ''}</td>
+          <td>${p.class || ''}</td>
+          <td>${p.status}</td>
+          <td class="laps">${laps}</td>
+          <td>${btn}</td>
+        </tr>`;
+      }).join('');
+
+      document.querySelector('#tableBody').innerHTML = rows;
     }
 
-    // Funksjon for å registrere en ny rundetid for en deltaker med status "I gang"
-    async function recordLap(snr) {
-      let p = participants[snr];
-      if (!p || !p.start) {
-        alert("Deltakeren har ikke startet enda.");
-        return;
-      }
+    function delegateClicks() {
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button.btn-lap');
+        if (!btn) return;
+        const snr = Number(btn.dataset.snr);
+        await recordLap(snr, btn);
+      }, { passive: true });
+
+      // Støtt "touchstart" for snappy respons på iOS/Android
+      document.addEventListener('touchstart', (e) => {
+        const btn = e.target.closest('button.btn-lap');
+        if (!btn) return;
+        btn.style.transform = 'scale(0.98)';
+      }, { passive: true });
+      document.addEventListener('touchend', (e) => {
+        const btn = e.target.closest('button.btn-lap');
+        if (!btn) return;
+        btn.style.transform = '';
+      }, { passive: true });
+    }
+
+    // === Logikk for rundetid ===
+    async function recordLap(snr, buttonEl) {
+      const p = participants[snr];
+      if (!p || !p.start) { toast('Deltakeren har ikke startet enda.'); return; }
+
+      // Anti-dobbelklikk: disable kort
+      const restore = temporarilyDisable(buttonEl, 900);
+
+      // Beregn rundetid lokalt basert på klienttid
       const lapTime = (Date.now() - Date.parse(p.start)) / 1000;
-      p.laps.push(lapTime);
-      const { error } = await supabaseClient
-        .from("participants")
-        .update({ laps: p.laps })
-        .eq("snr", snr);
-      if (error) {
-        console.error("Feil ved registrering av rundetid for snr", snr, error);
-        alert("Feil ved registrering av rundetid.");
+
+      // Optimistisk UI
+      participants[snr] = { ...p, laps: [...(p.laps || []), lapTime] };
+      render();
+      vibrate([5,35,20]);
+
+      // Forsøk å lagre. Ved feil/offline -> kø
+      try {
+        if (!onlineStatus()) throw new Error('offline');
+        const { error } = await supabaseClient.from('participants').update({ laps: participants[snr].laps }).eq('snr', snr);
+        if (error) throw error;
+        toast('Rundetid lagret');
+      } catch (err) {
+        const q = getPending();
+        q.push({ snr, lapTime, at: Date.now() });
+        setPending(q);
+        updateBadges();
+        toast('Lagres når du er online');
+      } finally {
+        restore();
       }
-      updateLapTable();
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-      updateLapTable();
-      // Oppdater tabellen hvert sekund
-      setInterval(updateLapTable, 1000);
-    });
+    function temporarilyDisable(el, ms) {
+      if (!el) return () => {};
+      const prev = el.disabled; el.disabled = true;
+      const t = setTimeout(() => { el.disabled = prev; }, ms);
+      return () => { clearTimeout(t); el.disabled = prev; };
+    }
+
+    // === Lifecycle ===
+    async function init() {
+      updateBadges();
+      window.addEventListener('online', () => { updateBadges(); processQueue(); toast('Tilbake online'); });
+      window.addEventListener('offline', () => { updateBadges(); toast('Du er offline'); });
+
+      // Init fetch + realtime
+      const list = await fetchActiveParticipants();
+      applyParticipants(list);
+      subscribeRealtime();
+
+      // Prosesser evt. offline-kø i bakgrunnen
+      setInterval(processQueue, 2500);
+
+      delegateClicks();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </head>
 <body>
-  <h1>Rundetider for Ski Konkurranse</h1>
-  <div id="lapTable"></div>
+  <header>
+    <h1>Rundetider for Ski Konkurranse</h1>
+    <div class="toolbar">
+      <span id="online" class="status-pill">Sjekker …</span>
+      <span id="queued" class="status-pill queue">–</span>
+      <button id="retryQueue" class="btn btn-retry" onclick="processQueue()">Synk nå</button>
+    </div>
+    <div class="sub">Tips: Du kan registrere rundetid selv om du er offline – det synkes når dekning er tilbake.</div>
+  </header>
+
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th>Startnr</th>
+          <th>Navn</th>
+          <th>Klasse</th>
+          <th>Status</th>
+          <th>Rundetider</th>
+          <th>Handling</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
