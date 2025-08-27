@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Målregistrering (offline-first)</title>
   <style>
-    :root{
-      --bg:#ffffff; --fg:#111; --muted:#555; --accent:#0a7cff; --ok:#28a745; --warn:#cc8a00; --err:#cc1d1d; --card:#f2f7ff;
-    }
+    :root{ --bg:#ffffff; --fg:#111; --muted:#555; --accent:#0a7cff; --ok:#28a745; --warn:#cc8a00; --err:#cc1d1d; --card:#f2f7ff; }
     html,body{height:100%}
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
     header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;z-index:10}
@@ -38,14 +36,15 @@
     .finish.pending{background:#8fbf94;border-color:#8fbf94}
     .badge{font-size:.8rem;border:1px dashed #bbb;border-radius:.5rem;padding:.1rem .4rem;color:#666}
 
+    .row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+    .row input{padding:.5rem .6rem;border:1px solid #d6d6d6;border-radius:.6rem;font-size:1rem;width:8.5rem}
+    .ghost{opacity:.8}
+
     .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;padding:.7rem 1rem;border-radius:.7rem;font-size:.95rem;opacity:0;pointer-events:none;transition:opacity .2s}
     .toast.show{opacity:1}
 
-    @media (min-width:540px){
-      .grid{grid-template-columns:1fr 1fr}
-    }
+    @media (min-width:540px){ .grid{grid-template-columns:1fr 1fr} }
   </style>
-  <!-- Supabase UMD -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 <body>
@@ -77,49 +76,31 @@
   const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
   const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
   const sb = supabase.createClient(supabaseUrl, supabaseKey);
-
-  // Tabellnavn/kolonner
   const TABLE = "participants";
 
   /********************* STATE *********************/
   let cache = { active: [], finished: [], finishedByClass: {} };
   let sortMode = localStorage.getItem("sortMode") || "snr"; // snr | name
-  let pollingMs = 15000; // reduser nett-bruk i felt, vi oppdaterer lokalt hvert sekund
-  let backoff = 0; // økes ved feil
-  let tickTimer = null; // 1s lokal UI-tick
-  let pollTimer = null; // nett-poll
+  let pollingMs = 15000; // reduser nett-bruk
+  let backoff = 0; let tickTimer = null; let pollTimer = null;
+
+  // Lokal manuell start (lagres offline pr. løper)
+  const LSTART_KEY = "manual_starts_v1";
+  function lstarts(){ try{return JSON.parse(localStorage.getItem(LSTART_KEY)||"{}");}catch{return {}} }
+  function setLStart(snr, iso){ const m=lstarts(); m[snr]=iso; localStorage.setItem(LSTART_KEY, JSON.stringify(m)); }
+  function getStartIso(p){ return p.start || lstarts()[p.snr] || null; }
 
   /********************* UTIL *********************/
   const $ = sel => document.querySelector(sel);
-  function toast(msg){
-    const t = $("#toast");
-    t.textContent = msg; t.classList.add("show");
-    setTimeout(()=>t.classList.remove("show"), 1800);
-  }
-  function formatTime(timeSec){
-    if (timeSec == null || isNaN(timeSec)) return "";
-    const total = Math.max(0, Math.floor(timeSec));
-    const mm = Math.floor(total/60); const ss = total%60;
-    return `${mm}:${ss.toString().padStart(2,"0")}`;
-  }
+  function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 1800); }
+  function formatTime(timeSec){ if (timeSec == null || isNaN(timeSec)) return ""; const total = Math.max(0, Math.floor(timeSec)); const mm = Math.floor(total/60); const ss = total%60; return `${mm}:${ss.toString().padStart(2,"0")}`; }
   function nowIso(){ return new Date().toISOString(); }
   function isOnline(){ return navigator.onLine; }
-  function setNetBadge(){
-    const b = $("#netBadge");
-    b.classList.remove("online","offline");
-    if (isOnline()){ b.textContent = "Online"; b.classList.add("online"); }
-    else { b.textContent = "Offline"; b.classList.add("offline"); }
-  }
-  function setSyncBadge(text, cls){
-    const s = $("#syncBadge");
-    s.textContent = text; s.className = `pill ${cls||""}`;
-  }
-  function setQueueBadge(){
-    const q = outboxLoad();
-    $("#queueBadge").textContent = `Kø: ${q.length}`;
-  }
+  function setNetBadge(){ const b=$("#netBadge"); b.classList.remove("online","offline"); if(isOnline()){ b.textContent="Online"; b.classList.add("online"); } else { b.textContent="Offline"; b.classList.add("offline"); } }
+  function setSyncBadge(text, cls){ const s=$("#syncBadge"); s.textContent=text; s.className=`pill ${cls||""}`; }
+  function setQueueBadge(){ const q = outboxLoad(); $("#queueBadge").textContent = `Kø: ${q.length}`; }
 
-  /********************* OUTBOX (offline kø) *********************/
+  /********************* OUTBOX *********************/
   const OUTBOX_KEY = "finish_outbox_v1";
   function outboxLoad(){ try{ return JSON.parse(localStorage.getItem(OUTBOX_KEY)||"[]"); }catch{ return []; } }
   function outboxSave(items){ localStorage.setItem(OUTBOX_KEY, JSON.stringify(items)); setQueueBadge(); }
@@ -134,31 +115,30 @@
   /********************* RENDER *********************/
   function computeFinishedByClass(){
     const map = {};
-    for(const p of cache.finished){
-      const cls = p.class || "Ukjent";
-      const t = parseFloat(p.finish)||0;
-      if(!map[cls] || t < map[cls]) map[cls] = t;
-    }
+    for(const p of cache.finished){ const cls = p.class || "Ukjent"; const t = parseFloat(p.finish)||0; if(!map[cls] || t < map[cls]) map[cls] = t; }
     cache.finishedByClass = map;
   }
-
-  function sortParticipants(list){
-    if (sortMode === "name") return list.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||""));
-    return list.slice().sort((a,b)=> (a.snr||0)-(b.snr||0));
-  }
+  function sortParticipants(list){ if (sortMode === "name") return list.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"")); return list.slice().sort((a,b)=> (a.snr||0)-(b.snr||0)); }
 
   function render(){
     const grid = $("#participantGrid");
-    if (!cache.active.length){ grid.innerHTML = `<div class="card"><div>Ingen aktive deltakere.</div></div>`; return; }
-
+    if (!cache.active.length){ grid.innerHTML = `<div class=card><div>Ingen aktive deltakere.</div></div>`; return; }
     const H = [];
     for (const p of sortParticipants(cache.active)){
-      let elapsed = 0;
-      if (p.start) elapsed = (Date.now() - Date.parse(p.start)) / 1000;
-      const cls = p.class || "Ukjent";
-      const leader = cache.finishedByClass[cls];
-      const diff = (leader!=null && elapsed>leader) ? `+${formatTime(elapsed - leader)}` : "Leder";
+      const startIso = getStartIso(p);
+      let elapsed = 0; if (startIso) elapsed = (Date.now() - Date.parse(startIso)) / 1000;
+      const cls = p.class || "Ukjent"; const leader = cache.finishedByClass[cls];
+      const diff = (leader!=null && elapsed>leader) ? `+${formatTime(elapsed - leader)}` : (leader==null?"":"Leder");
       const pending = outboxLoad().some(x=>x.snr===p.snr);
+
+      const needsStart = !startIso;
+      const startUi = needsStart ? `
+        <div class="row ghost" style="margin:.4rem 0 .6rem">
+          <button onclick="startNow(${p.snr})">Start nå</button>
+          <input id="mmss-${p.snr}" placeholder="mm:ss" inputmode="numeric" />
+          <button onclick="startFromMmss(${p.snr})">Sett mm:ss siden</button>
+        </div>` : '';
+
       H.push(`
         <article class="card">
           <div class="title">
@@ -166,9 +146,10 @@
             <div class="badge">${cls}</div>
           </div>
           <div class="name">${p.name||"(uten navn)"}</div>
+          ${startUi}
           <div class="meta">
             <div>Tid: <strong>${formatTime(elapsed)}</strong></div>
-            <div class="distance">${leader==null?"":diff}</div>
+            <div class="distance">${diff||""}</div>
           </div>
           <button class="finish ${pending?"pending":""}" ${pending?"disabled":""} onclick="finishClick(${p.snr})">${pending?"I kø – synkes":"Mål"}</button>
         </article>
@@ -177,7 +158,6 @@
     grid.innerHTML = H.join("");
   }
 
-  // Lokal 1s-tick for å oppdatere tider uten nett
   function startTick(){ if (tickTimer) return; tickTimer = setInterval(render, 1000); }
   function stopTick(){ clearInterval(tickTimer); tickTimer=null; }
 
@@ -190,122 +170,96 @@
         sb.from(TABLE).select("*").eq("status","Fullført")
       ]);
       if (e1||e2) throw e1||e2;
-      cache.active = active||[];
-      cache.finished = finished||[];
-      computeFinishedByClass();
-      cacheSave();
-      render();
-      setSyncBadge("Synkret","online");
-      backoff = 0;
-    }catch(err){
-      setSyncBadge("Feil – viser cache","offline");
-      console.warn("Nettfeil:", err);
-      // øk backoff (maks 60s tillegg)
-      backoff = Math.min(60000, (backoff||0) + 5000);
-    }
+      cache.active = active||[]; cache.finished = finished||[]; computeFinishedByClass(); cacheSave(); render(); setSyncBadge("Synkret","online"); backoff = 0;
+    }catch(err){ setSyncBadge("Feil – viser cache","offline"); console.warn("Nettfeil:", err); backoff = Math.min(60000, (backoff||0) + 5000); }
   }
+  function schedulePoll(){ clearInterval(pollTimer); pollTimer = setInterval(fetchLists, pollingMs + backoff); }
 
-  function schedulePoll(){
-    clearInterval(pollTimer);
-    pollTimer = setInterval(fetchLists, pollingMs + backoff);
+  /********************* MANUELL START *********************/
+  function mmssToSeconds(mmss){
+    const m = (mmss||"").trim(); if(!m) return null;
+    const parts = m.split(":"); if(parts.length!==2) return null;
+    const mm = parseInt(parts[0],10); const ss = parseInt(parts[1],10);
+    if (isNaN(mm)||isNaN(ss)) return null; return Math.max(0, mm*60 + ss);
+  }
+  async function startNow(snr){
+    const iso = nowIso(); setLStart(snr, iso); toast(`Start satt (nå) for #${snr}`);
+    // legg i outbox: oppdater start på server når vi får nett
+    outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso: iso, createdAt: nowIso() });
+    render(); processOutbox();
+  }
+  async function startFromMmss(snr){
+    const el = document.getElementById(`mmss-${snr}`); const sec = mmssToSeconds(el && el.value);
+    if (sec==null){ toast("Ugyldig mm:ss"); return; }
+    const iso = new Date(Date.now() - sec*1000).toISOString();
+    setLStart(snr, iso); toast(`Start satt (${el.value}) for #${snr}`);
+    outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso: iso, createdAt: nowIso() });
+    render(); processOutbox();
   }
 
   /********************* FINISH FLOW *********************/
   async function finishClick(snr){
-    // hent deltaker fra cache
+    // hent deltaker
     const p = cache.active.find(x=>x.snr===snr);
-    if (!p || !p.start) { toast("Kan ikke registrere – ingen starttid"); return; }
-    const finishSec = (Date.now() - Date.parse(p.start)) / 1000;
-    const id = `${snr}-${Date.now()}`; // enkel idempotens i køen
-    outboxAdd({ id, snr, finish: finishSec, createdAt: nowIso() });
-    render();
-    processOutbox();
+    let startIso = getStartIso(p);
+
+    // hvis mangler start: sett start nå (fallback) og informer
+    if (!startIso){ startIso = nowIso(); setLStart(snr, startIso); outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso, createdAt: nowIso() }); toast("Start manglet – satt til nå"); }
+
+    const finishSec = (Date.now() - Date.parse(startIso)) / 1000;
+    const id = `${snr}-${Date.now()}`;
+    outboxAdd({ id, type:'finish', snr, finish: finishSec, createdAt: nowIso() });
+    render(); processOutbox();
   }
 
   async function processOutbox(){
-    if (!outboxLoad().length) return;
-    if (!isOnline()) { setSyncBadge("Venter på nett","offline"); return; }
+    const q = outboxLoad(); if (!q.length) return; if (!isOnline()){ setSyncBadge("Venter på nett","offline"); return; }
     setSyncBadge("Sender…","syncing");
-
-    const q = outboxLoad();
     for (const job of q){
       try{
-        // Sjekk om allerede fullført på server (unngå duplikat)
-        const { data:exists, error:e0 } = await sb.from(TABLE).select("status,finish").eq("snr", job.snr).single();
-        if (e0) throw e0;
-        if (exists && exists.status === "Fullført") { outboxRemoveById(job.id); continue; }
-        const { error:upErr } = await sb.from(TABLE)
-          .update({ status:"Fullført", finish: job.finish })
-          .eq("snr", job.snr);
-        if (upErr) throw upErr;
-        outboxRemoveById(job.id);
-        toast(`Mål registrert for #${job.snr}`);
-      }catch(err){
-        console.warn("Klarte ikke å synke", job, err);
-        setSyncBadge("Feil – prøver igjen","offline");
-        // Avbryt løkken – prøv igjen senere for resten
-        break;
-      }
+        if (job.type === 'start'){
+          const { error:up1 } = await sb.from(TABLE).update({ start: job.startIso }).eq("snr", job.snr);
+          if (up1) throw up1; outboxRemoveById(job.id);
+        } else if (job.type === 'finish'){
+          // Unngå duplikat
+          const { data:exists, error:e0 } = await sb.from(TABLE).select("status,finish").eq("snr", job.snr).single();
+          if (e0) throw e0;
+          if (exists && exists.status === "Fullført") { outboxRemoveById(job.id); continue; }
+          const { error:up2 } = await sb.from(TABLE).update({ status:"Fullført", finish: job.finish }).eq("snr", job.snr);
+          if (up2) throw up2; outboxRemoveById(job.id); toast(`Mål registrert for #${job.snr}`);
+        }
+      }catch(err){ console.warn("Synk-feil", job, err); setSyncBadge("Feil – prøver igjen","offline"); break; }
     }
-    // Etter forsøk: hent lister på nytt
     fetchLists();
   }
 
   /********************* EVENTS *********************/
-  window.finishClick = finishClick; // eksportrer for onclick i HTML
-
+  window.finishClick = finishClick; window.startNow = startNow; window.startFromMmss = startFromMmss;
   window.addEventListener('online', ()=>{ setNetBadge(); processOutbox(); fetchLists(); });
   window.addEventListener('offline', ()=>{ setNetBadge(); setSyncBadge("Offline – viser cache","offline"); });
-
-  document.addEventListener('visibilitychange', ()=>{
-    if (document.hidden){ stopTick(); }
-    else { startTick(); }
-  });
-
+  document.addEventListener('visibilitychange', ()=>{ if (document.hidden){ stopTick(); } else { startTick(); } });
   $("#refreshBtn").addEventListener('click', ()=>{ fetchLists(); processOutbox(); });
-  $("#toggleSortBtn").addEventListener('click', ()=>{
-    sortMode = (sortMode==="snr")?"name":"snr";
-    localStorage.setItem("sortMode", sortMode);
-    render();
-  });
+  $("#toggleSortBtn").addEventListener('click', ()=>{ sortMode = (sortMode==="snr")?"name":"snr"; localStorage.setItem("sortMode", sortMode); render(); });
 
-  /********************* SERVICE WORKER (cache-first) *********************/
-  // Inline SW via Blob slik at siden kan lagres som én fil
+  /********************* SERVICE WORKER *********************/
   if ('serviceWorker' in navigator){
     const swCode = `
-      const CACHE_NAME = 'malreg-offline-v1';
+      const CACHE_NAME = 'malreg-offline-v2';
       const ASSETS = [self.location.href, 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js'];
-      self.addEventListener('install', e=>{
-        e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
-      });
+      self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
       self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
       self.addEventListener('fetch', e=>{
-        const req = e.request;
-        // cache-first for GET
-        if (req.method === 'GET'){
-          e.respondWith(
-            caches.match(req).then(cached=>{
-              const fetchPromise = fetch(req).then(res=>{
-                const copy = res.clone();
-                caches.open(CACHE_NAME).then(c=>c.put(req, copy));
-                return res;
-              }).catch(()=>cached);
-              return cached || fetchPromise;
-            })
-          );
+        const req=e.request; if(req.method==='GET'){
+          e.respondWith(caches.match(req).then(cached=>{ const fetchPromise=fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE_NAME).then(c=>c.put(req, copy)); return res; }).catch(()=>cached); return cached||fetchPromise; }));
         }
       });
     `;
     const blob = new Blob([swCode], { type:'text/javascript' });
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl).catch(()=>{});
+    const swUrl = URL.createObjectURL(blob); navigator.serviceWorker.register(swUrl).catch(()=>{});
   }
 
   /********************* BOOT *********************/
-  function boot(){
-    setNetBadge(); setQueueBadge(); cacheLoad(); computeFinishedByClass(); render(); startTick();
-    fetchLists().then(()=>{ schedulePoll(); processOutbox(); });
-  }
+  function boot(){ setNetBadge(); setQueueBadge(); cacheLoad(); computeFinishedByClass(); render(); startTick(); fetchLists().then(()=>{ schedulePoll(); processOutbox(); }); }
   boot();
   </script>
 </body>
