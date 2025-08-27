@@ -9,11 +9,14 @@
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
       --radius:14px; --pad:12px; --tap:48px; --gap:10px; --target:60px;
       --row-hover:#eef2ff; --row-active:#e6efff;
-      --sticky-bg:#f8fafc; --shadow:0 0 0 1px rgba(0,0,0,.04), 10px 0 10px -10px rgba(0,0,0,.25) inset;
+      --sticky-bg:#f8fafc;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";margin:0; padding:0; color:var(--fg); background:var(--bg)}
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      margin:0; padding:0; color:var(--fg); background:var(--bg)
+    }
 
     header{position:sticky; top:0; z-index:30; background:var(--bg); border-bottom:1px solid var(--border)}
     .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}    
@@ -26,31 +29,12 @@
     .toolbar .chip{border:1px solid var(--border); padding:8px 10px; border-radius:999px; font-size:14px; cursor:pointer; user-select:none}
     .toolbar .chip[aria-pressed="true"]{background:var(--primary); color:#fff; border-color:transparent}
 
-    /* Edge fade hints for horizontal scroll */
-    .scroll-shadow{position:relative}
-    .scroll-shadow::before, .scroll-shadow::after{
-      content:""; position:sticky; top:0; width:18px; z-index:15; pointer-events:none; height:100%;
-    }
-    .scroll-shadow::before{left:0; background:linear-gradient(90deg, var(--bg), transparent)}
-    .scroll-shadow::after{right:0; background:linear-gradient(270deg, var(--bg), transparent)}
-
     .table-container{overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; border-top:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:12px}
     table{border-collapse:separate; border-spacing:0; width:100%; min-width:980px}
-    colgroup col.snr{width:90px}
-    colgroup col.name{width:220px}
-    colgroup col.status{width:120px}
 
     thead th{position:sticky; top:0; background:var(--sticky-bg); text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; z-index:20}
     tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px; background:#fff}
     tbody tr:nth-child(odd) td{background:#fcfcfd}
-
-    /* Sticky row header cells (Startnr, Navn, Status) to keep context while horizontal scrolling */
-    th.sticky-left-0, td.sticky-left-0{position:sticky; left:0; z-index:19; background:var(--sticky-bg); box-shadow:var(--shadow)}
-    th.sticky-left-1, td.sticky-left-1{position:sticky; left:90px; z-index:18; background:var(--sticky-bg); box-shadow:var(--shadow)}
-    th.sticky-left-2, td.sticky-left-2{position:sticky; left:310px; z-index:17; background:var(--sticky-bg); box-shadow:var(--shadow)}
-
-    /* Optional sticky right column for Send-knapper */
-    th.sticky-right, td.sticky-right{position:sticky; right:0; z-index:18; background:var(--sticky-bg); box-shadow:-10px 0 10px -10px rgba(0,0,0,.25) inset}
 
     tbody tr{transition: background-color .12s ease}
     tbody tr:hover, tbody tr:focus-within{ background-color: var(--row-hover); }
@@ -72,29 +56,25 @@
     .btn-ghost{background:#f3f4f6}
     .btn[disabled]{background:#e5e7eb; color:#6b7280; cursor:not-allowed}
 
+    /* Kun høyre kolonne (Fokus) sticky */
+    th.sticky-right, td.sticky-right{
+      position:sticky; right:0; z-index:18; background:var(--sticky-bg)
+    }
+
     /* Mobile tweaks */
     @media (max-width: 640px){
       :root{--target:56px}
       thead th{font-size:12px; padding:8px}
       tbody td{font-size:15px; padding:8px}
       .skive-input{width:64px}
-      /* Add scroll snap per row for easier vertical scanning */
+      /* Snap per rad for enklere vertikal skrolling */
       tbody{scroll-snap-type:y proximity}
       tbody tr{scroll-snap-align:start}
     }
 
-    /* Fullscreen focus sheet */
-    dialog#focusSheet{border:0; border-radius:16px; padding:0; width:min(720px, 96vw)}
-    dialog::backdrop{background:rgba(0,0,0,.35)}
-    .sheet{padding:16px}
-    .sheet .header{display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .sheet .header .id{font-weight:700}
-    .sheet .meta{display:flex; gap:10px; color:var(--muted); font-size:14px}
-    .sheet .targets{margin:12px 0 6px}
-    .sheet .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    .sheet .actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
-    .sheet .sub{color:var(--muted); font-size:13px}
+    @media (prefers-reduced-motion: reduce){ .target{transition:none} .target:active{transform:none} }
   </style>
+  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -110,26 +90,13 @@
   </header>
 
   <main class="wrap">
-    <div class="table-container scroll-shadow">
+    <div class="table-container">
       <table id="shootingTable" aria-live="polite">
-        <colgroup>
-          <col class="snr">
-          <col class="name">
-          <col class="status">
-          <col>
-          <col>
-          <col>
-          <col>
-          <col class="colS2">
-          <col class="colS2">
-          <col class="colS2">
-          <col class="sticky-right-col">
-        </colgroup>
         <thead>
           <tr>
-            <th class="sticky-left-0">Startnr</th>
-            <th class="sticky-left-1">Navn</th>
-            <th class="sticky-left-2">Status</th>
+            <th>Startnr</th>
+            <th>Navn</th>
+            <th>Status</th>
             <th>Skive</th>
             <th>Skyting S1</th>
             <th>Send S1</th>
@@ -147,38 +114,43 @@
 
   <!-- Focus sheet for single-participant full-screen controls -->
   <dialog id="focusSheet">
-    <div class="sheet">
-      <div class="header">
+    <div class="sheet" style="padding:16px">
+      <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
         <div>
-          <div class="id" id="fsId"></div>
-          <div class="meta"><span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span></div>
+          <div class="id" id="fsId" style="font-weight:700"></div>
+          <div class="meta" style="display:flex;gap:10px;color:var(--muted);font-size:14px">
+            <span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span>
+          </div>
         </div>
         <button class="btn" id="fsClose">Lukk</button>
       </div>
 
-      <div class="row">
-        <label for="fsSkiveInput" class="sub">Skive</label>
+      <div class="row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <label for="fsSkiveInput" class="sub" style="color:var(--muted);font-size:13px">Skive</label>
         <input id="fsSkiveInput" class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive">
         <button class="btn btn-ghost" id="fsCopyLink">Kopier lenke</button>
       </div>
 
       <h3>S1</h3>
       <div id="fsS1" class="targets"></div>
-      <div class="actions">
+      <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-success" id="fsSendS1">Send S1</button>
         <button class="btn btn-primary" id="fsTimeS1">Start skytetid S1</button>
       </div>
 
       <h3>S2</h3>
       <div id="fsS2" class="targets"></div>
-      <div class="actions">
+      <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-success" id="fsSendS2">Send S2</button>
         <button class="btn btn-primary" id="fsTimeS2">Start skytetid S2</button>
       </div>
 
-      <p class="sub">Tips: trykk og hold på en blink for å nullstille runden. Dobbelttrykk for å sette alle til treff.</p>
+      <p class="sub" style="color:var(--muted);font-size:13px;margin-top:12px">
+        Tips: trykk og hold på en blink for å nullstille runden. Dobbelttrykk for å sette alle til treff.
+      </p>
     </div>
   </dialog>
+
 
 <script>
 // ---------------- Supabase setup ----------------
