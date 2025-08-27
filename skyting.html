@@ -13,10 +13,7 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-      margin:0; padding:0; color:var(--fg); background:var(--bg)
-    }
+    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";margin:0; padding:0; color:var(--fg); background:var(--bg)}
 
     header{position:sticky; top:0; z-index:30; background:var(--bg); border-bottom:1px solid var(--border)}
     .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}    
@@ -56,25 +53,17 @@
     .btn-ghost{background:#f3f4f6}
     .btn[disabled]{background:#e5e7eb; color:#6b7280; cursor:not-allowed}
 
-    /* Kun høyre kolonne (Fokus) sticky */
-    th.sticky-right, td.sticky-right{
-      position:sticky; right:0; z-index:18; background:var(--sticky-bg)
-    }
-
-    /* Mobile tweaks */
     @media (max-width: 640px){
       :root{--target:56px}
       thead th{font-size:12px; padding:8px}
       tbody td{font-size:15px; padding:8px}
       .skive-input{width:64px}
-      /* Snap per rad for enklere vertikal skrolling */
       tbody{scroll-snap-type:y proximity}
       tbody tr{scroll-snap-align:start}
     }
 
-    @media (prefers-reduced-motion: reduce){ .target{transition:none} .target:active{transform:none} }
+    th.sticky-right, td.sticky-right{position:sticky; right:0; z-index:18; background:var(--sticky-bg)}
   </style>
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -84,7 +73,7 @@
       <div class="toolbar">
         <input id="filter" type="text" placeholder="Søk på navn eller startnr…" aria-label="Filtrer deltakere">
         <label class="toggle"><input id="onlyRunning" type="checkbox"> Kun "I gang"</label>
-        <button id="toggleCompact" class="chip" aria-pressed="false" title="Skjul S2 for smalere visning">Kompakt</button>
+        <button id="toggleCompact" class="chip" aria-pressed="false">Kompakt</button>
       </div>
     </div>
   </header>
@@ -112,47 +101,38 @@
     </div>
   </main>
 
-  <!-- Focus sheet for single-participant full-screen controls -->
+  <!-- Focus sheet (for én deltaker i fullskjerm) -->
   <dialog id="focusSheet">
-    <div class="sheet" style="padding:16px">
-      <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div class="sheet">
+      <div class="header">
         <div>
-          <div class="id" id="fsId" style="font-weight:700"></div>
-          <div class="meta" style="display:flex;gap:10px;color:var(--muted);font-size:14px">
-            <span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span>
-          </div>
+          <div class="id" id="fsId"></div>
+          <div class="meta"><span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span></div>
         </div>
         <button class="btn" id="fsClose">Lukk</button>
       </div>
-
-      <div class="row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
-        <label for="fsSkiveInput" class="sub" style="color:var(--muted);font-size:13px">Skive</label>
+      <div class="row">
+        <label for="fsSkiveInput" class="sub">Skive</label>
         <input id="fsSkiveInput" class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive">
         <button class="btn btn-ghost" id="fsCopyLink">Kopier lenke</button>
       </div>
-
       <h3>S1</h3>
       <div id="fsS1" class="targets"></div>
-      <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <div class="actions">
         <button class="btn btn-success" id="fsSendS1">Send S1</button>
         <button class="btn btn-primary" id="fsTimeS1">Start skytetid S1</button>
       </div>
-
       <h3>S2</h3>
       <div id="fsS2" class="targets"></div>
-      <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <div class="actions">
         <button class="btn btn-success" id="fsSendS2">Send S2</button>
         <button class="btn btn-primary" id="fsTimeS2">Start skytetid S2</button>
       </div>
-
-      <p class="sub" style="color:var(--muted);font-size:13px;margin-top:12px">
-        Tips: trykk og hold på en blink for å nullstille runden. Dobbelttrykk for å sette alle til treff.
-      </p>
     </div>
   </dialog>
 
-
-<script>
+<script
+  
 // ---------------- Supabase setup ----------------
 const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
