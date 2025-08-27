@@ -139,17 +139,36 @@
     }
 
     // === Realtime ===
+    let lastRealtimeAt = 0;
     function subscribeRealtime() {
-      const channel = supabaseClient.channel('participants-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, payload => {
-          const row = payload.new || payload.old;
-          if (!row) return;
-          if (!['I gang','Fullført'].includes(row.status)) return; // bare relevante
-          participants[row.snr] = { ...participants[row.snr], ...row, laps: Array.isArray(row.laps) ? row.laps : [] };
-          render();
-        })
-        .subscribe(status => { /* noop */ });
+      const channel = supabaseClient
+        .channel('participants-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'participants' },
+          payload => {
+            lastRealtimeAt = Date.now();
+            const row = payload.new || payload.old;
+            if (!row) return;
+            if (!['I gang', 'Fullført'].includes(row.status)) return; // bare relevante
+            participants[row.snr] = {
+              ...participants[row.snr],
+              ...row,
+              laps: Array.isArray(row.laps) ? row.laps : []
+            };
+            render();
+          }
+        )
+        .subscribe();
       return channel;
+    }
+
+    // Lett fallback-polling dersom Realtime ikke er aktivert i prosjektet
+    async function realtimeFallbackTick() {
+      const NO_EVENT_WINDOW_MS = 6000; // hvis vi ikke har fått realtime på 6s, poll
+      if (Date.now() - lastRealtimeAt < NO_EVENT_WINDOW_MS) return;
+      const list = await fetchActiveParticipants();
+      applyParticipants(list);
     }
 
     // === Offline kø ===
@@ -291,6 +310,9 @@
 
       // Prosesser evt. offline-kø i bakgrunnen
       setInterval(processQueue, 2500);
+
+      // Fallback-polling hvis realtime ikke leverer (f.eks. ikke aktivert i Supabase Dashboard)
+      setInterval(realtimeFallbackTick, 3500);
 
       delegateClicks();
     }
