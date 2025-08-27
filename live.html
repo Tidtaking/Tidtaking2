@@ -19,7 +19,6 @@
       --warning:    #ea580c;
       --neutral:    #475569;
       --shoot-bg:   #3a3a3a;
-
       /* Standard dot-størrelse (desktop baseline) */
       --dot: 34px;
       --dot-gap: 4px;
@@ -36,80 +35,37 @@
       background-position: top, bottom;
       background-repeat: no-repeat;
     }
-    .band{
-      background: var(--lsk-white);
-      border-top: 6px solid var(--lsk-yellow);
-      border-bottom: 6px solid var(--lsk-yellow);
-    }
-    .bar{
-      max-width: 1100px; margin: 0 auto; padding: 12px 16px;
-      display:flex; align-items:center; gap:16px;
-    }
+    .band{ background: var(--lsk-white); border-top: 6px solid var(--lsk-yellow); border-bottom: 6px solid var(--lsk-yellow); }
+    .bar{ max-width: 1100px; margin: 0 auto; padding: 12px 16px; display:flex; align-items:center; gap:16px; }
     .logo{ width:72px; height:72px; object-fit: contain; background:transparent; }
     .titles h1{ margin:0; font-size: clamp(20px, 3.5vw, 28px); font-weight: 800; letter-spacing:.2px; }
     .titles p{ margin:2px 0 0 0; font-size:14px; color:#111827; font-weight:600; }
 
-    #liveClock{
-      font-weight:700; letter-spacing:.5px;
-      padding:6px 10px; border-radius:10px; background: var(--lsk-blue); color: var(--lsk-white);
-      box-shadow: 0 2px 4px rgba(0,0,0,.06);
-    }
+    #liveClock{ font-weight:700; letter-spacing:.5px; padding:6px 10px; border-radius:10px; background: var(--lsk-blue); color: var(--lsk-white); box-shadow: 0 2px 4px rgba(0,0,0,.06); }
 
     main{ max-width:1100px; margin: 16px auto 40px; padding: 0 12px; }
 
     /* Kontrolllinje */
-    .controls{
-      display:flex; flex-wrap:wrap; align-items:center; gap:10px;
-      background:#fff; border:1px solid var(--table-border); border-radius:12px; padding:10px 12px;
-      box-shadow: 0 2px 10px rgba(2,8,23,.05);
-      margin-bottom:10px;
-    }
+    .controls{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; background:#fff; border:1px solid var(--table-border); border-radius:12px; padding:10px 12px; box-shadow: 0 2px 10px rgba(2,8,23,.05); margin-bottom:10px; }
     .controls label{ font-size:12px; color:var(--muted); margin-right:4px; }
-    .controls select{
-      padding:6px 8px; border:1px solid var(--table-border); border-radius:10px; background:#fff; font-size:14px;
-    }
-    .controls button{
-      padding:6px 10px; border:1px solid var(--table-border); border-radius:10px; background:#f8fafc; cursor:pointer;
-    }
-    .counters{
-      margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-      font-size:13px;
-    }
-    .badge{
-      padding:4px 8px; border-radius:999px; background:#eef2ff; border:1px solid var(--table-border);
-    }
+    .controls select{ padding:6px 8px; border:1px solid var(--table-border); border-radius:10px; background:#fff; font-size:14px; }
+    .controls button{ padding:6px 10px; border:1px solid var(--table-border); border-radius:10px; background:#f8fafc; cursor:pointer; }
+    .counters{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:13px; }
+    .badge{ padding:4px 8px; border-radius:999px; background:#eef2ff; border:1px solid var(--table-border); }
     .badge.green{ background:#ecfdf5; border-color:#d1fae5; }
     .badge.orange{ background:#fff7ed; border-color:#ffedd5; }
 
     .legend{ font-size:12px; color: var(--muted); margin: 10px 2px; }
 
     /* Kort rundt tabellen */
-    .table-card{
-      background: var(--lsk-white);
-      border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(2,8,23,.06);
-      border: 1px solid var(--table-border);
-      overflow: hidden;
-    }
+    .table-card{ background: var(--lsk-white); border-radius: 14px; box-shadow: 0 6px 20px rgba(2,8,23,.06); border: 1px solid var(--table-border); overflow: hidden; }
     /* Wrapper for myk horisontal scroll på mobil */
-    .table-scroll{
-      overflow-x: visible; /* desktop */
-    }
+    .table-scroll{ overflow-x: visible; /* desktop */ }
 
     /* Tabell – automatisk bredde */
     table{ border-collapse: collapse; width: 100%; }
-    thead th{
-      position: sticky; top:0; z-index:2;
-      background: linear-gradient(180deg, #ffffff, #f3f6fb);
-      border-bottom: 1px solid var(--table-border);
-      color:#0b1220; font-weight:800; font-size:13px; text-transform: uppercase; letter-spacing:.5px;
-      padding:10px 8px; text-align:center;
-      white-space: nowrap;
-    }
-    tbody td{
-      border-top: 1px solid var(--table-border);
-      padding:10px 8px; text-align:center; font-size:14px;
-    }
+    thead th{ position: sticky; top:0; z-index:2; background: linear-gradient(180deg, #ffffff, #f3f6fb); border-bottom: 1px solid var(--table-border); color:#0b1220; font-weight:800; font-size:13px; text-transform: uppercase; letter-spacing:.5px; padding:10px 8px; text-align:center; white-space: nowrap; }
+    tbody td{ border-top: 1px solid var(--table-border); padding:10px 8px; text-align:center; font-size:14px; }
     tbody tr:nth-child(odd){ background: var(--row-alt); }
     tbody tr:hover{ background:#eef2ff; }
     td:nth-child(3){ text-align:left; } /* Navn */
@@ -120,44 +76,14 @@
     .chip.done{ background: var(--success); }
     .chip.wait{ background: var(--neutral); }
 
-    /* Skyte-kolonner: robust oppsett med indre flex-wrapper */
-    th.shooting,
-    td.shooting{
-      background: var(--shoot-bg);
-      color:#fff;
-      white-space: nowrap;
-      overflow: visible; /* ikke klipp targets */
-    }
+    /* Skyte-kolonner */
+    th.shooting, td.shooting{ background: var(--shoot-bg); color:#fff; white-space: nowrap; overflow: visible; }
     td.shooting{ padding-top:8px; padding-bottom:8px; }
-    .targets{
-      display: inline-flex;           /* fungerer stabilt i tabellceller */
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: var(--dot-gap);
-      flex-wrap: nowrap;              /* aldri linjeskift */
-      vertical-align: middle;
-    }
-    .target{
-      display: inline-block;
-      width: var(--dot);
-      height: var(--dot);
-      line-height: var(--dot);        /* vertikal sentrering */
-      font-size: calc(var(--dot) * 0.7);
-      border-radius: 50%;
-      background: transparent;
-      text-align: center;
-      vertical-align: middle;
-    }
+    .targets{ display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: var(--dot-gap); flex-wrap: nowrap; vertical-align: middle; }
+    .target{ display: inline-block; width: var(--dot); height: var(--dot); line-height: var(--dot); font-size: calc(var(--dot) * 0.7); border-radius: 50%; background: transparent; text-align: center; vertical-align: middle; }
 
-    /* Måltid-kolonne: kompakt og kan bryte linje for å få med diff */
-    td.maltid{
-      font-size: 12.5px;
-      line-height: 1.2;
-      white-space: normal;      /* kan bryte til to linjer */
-      padding-left: 6px;
-      padding-right: 6px;
-    }
+    /* Måltid-kolonne */
+    td.maltid{ font-size: 12.5px; line-height: 1.2; white-space: normal; padding-left: 6px; padding-right: 6px; }
 
     /* Markér fullført */
     tr.done-row td:first-child{ border-left:6px solid var(--success); }
@@ -169,15 +95,8 @@
     @media (max-width: 1100px){ :root{ --dot: 26px; } }
 
     /* Mobil: myk scroll + min-bredde så alt er synlig */
-    @media (max-width: 640px){
-      .table-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      table{ min-width: 820px; } /* sikrer plass til alle kolonner/targets */
-      :root{ --dot: 24px; }      /* utgangspunkt på mobil */
-    }
-    @media (max-width: 480px){
-      :root{ --dot: 20px; }
-      thead th, tbody td{ font-size:11px; }
-    }
+    @media (max-width: 640px){ .table-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; } table{ min-width: 820px; } :root{ --dot: 24px; } }
+    @media (max-width: 480px){ :root{ --dot: 20px; } thead th, tbody td{ font-size:11px; } }
   </style>
 
   <!-- Supabase SDK v2 -->
@@ -191,13 +110,14 @@
     // === Hjelpere ===
     const $ = (sel) => document.querySelector(sel);
 
+    // Viser alltid hele sekunder (avrundet) – 1:05s eller 5s
     function formatTime(sec){
       if (sec == null || isNaN(sec)) return "-";
       const sign = sec < 0 ? "-" : "";
-      sec = Math.abs(sec);
+      sec = Math.round(Math.abs(sec));
       const m = Math.floor(sec / 60);
-      const s = (sec % 60).toFixed(1).padStart(4, "0");
-      return m > 0 ? `${sign}${m}m ${s}s` : `${sign}${s}s`;
+      const s = sec % 60;
+      return m > 0 ? `${sign}${m}m ${String(s).padStart(2, "0")}s` : `${sign}${s}s`;
     }
     function getShootingArray(p){
       if (Array.isArray(p.shooting)) return p.shooting;
@@ -212,9 +132,7 @@
 
     // Wrap blinkene i .targets (sikker layout i tabellceller)
     function renderTargets(arr){
-      const dots = (arr||[]).map(hit =>
-        `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`
-      ).join("");
+      const dots = (arr||[]).map(hit => `<span class="target" style="color:${hit ? 'white' : 'black'};">&#9679;</span>`).join("");
       return `<div class="targets">${dots}</div>`;
     }
 
@@ -235,15 +153,9 @@
 
     function buildRankMap(rows){
       const byClass = {};
-      rows.forEach(p=>{
-        if (p.finish != null){
-          (byClass[p.class] ||= []).push({ snr: p.snr, finish: p.finish });
-        }
-      });
+      rows.forEach(p=>{ if (p.finish != null){ (byClass[p.class] ||= []).push({ snr: p.snr, finish: p.finish }); } });
       const rank = {};
-      Object.keys(byClass).forEach(cls=>{
-        byClass[cls].sort((a,b)=>a.finish-b.finish).forEach((r,i)=>{ rank[r.snr]=i+1; });
-      });
+      Object.keys(byClass).forEach(cls=>{ byClass[cls].sort((a,b)=>a.finish-b.finish).forEach((r,i)=>{ rank[r.snr]=i+1; }); });
       return rank;
     }
 
@@ -275,7 +187,7 @@
 
     function applyFilters(rows){
       return rows.filter(r=>{
-        const okClass = !filters.class || r.class === r.class && r.class === filters.class || !filters.class;
+        const okClass = !filters.class || r.class === filters.class;
         const okStatus = !filters.status || r.status === filters.status;
         return okClass && okStatus;
       });
@@ -290,55 +202,72 @@
       $("#countDone").textContent = done;
     }
 
-    // ====== Rendering ======
-    function renderTable(allRows){
+    // === Stabil tabell-rendering (unngå scroll-hopp på mobil) ===
+    function ensureTableStructure(){
+      const container = $("#statusTable");
+      if (container.dataset.ready === "1") return; // allerede satt opp
+      container.innerHTML = `
+        <div class="table-card">
+          <div class="table-scroll" id="tableScroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Plass</th>
+                  <th>Startnr</th>
+                  <th>Navn</th>
+                  <th>Klasse</th>
+                  <th>Status</th>
+                  <th>Tid</th>
+                  <th>Rundetid</th>
+                  <th class="shooting">S1</th>
+                  <th class="shooting">S2</th>
+                  <th>Måltid</th>
+                </tr>
+              </thead>
+              <tbody id="statusBody"></tbody>
+            </table>
+          </div>
+        </div>`;
+      container.dataset.ready = "1";
+
+      // Flag når bruker scroller horisontalt (unngå at vi resetter posisjonen midt i gesten)
+      const scroller = $("#tableScroll");
+      let touchActive = false;
+      scroller.addEventListener('touchstart', ()=>{ touchActive = true; }, {passive:true});
+      scroller.addEventListener('touchend', ()=>{ setTimeout(()=>touchActive=false, 200); }, {passive:true});
+      container._touchActive = () => touchActive;
+    }
+
+    function renderBody(allRows){
       updateCounters(allRows);
       populateClassFilter(allRows);
 
-      // For "Måltid": sluttid + diff mot beste totalt
-      const finishedAll = allRows.filter(p => p.finish != null);
-      const overallBestFinish = finishedAll.length
-        ? Math.min(...finishedAll.map(p => p.finish))
-        : null;
+      // Beste sluttid per klasse (for "Måltid"-diff)
+      const classBestFinish = {};
+      for (const p of allRows){
+        if (p.finish != null){
+          const cls = p.class ?? "";
+          const cur = classBestFinish[cls];
+          classBestFinish[cls] = cur == null ? p.finish : Math.min(cur, p.finish);
+        }
+      }
 
       const rankMap = buildRankMap(allRows);
-      // Beste sluttid per klasse (for “Måltid”-diff)
-const classBestFinish = {};
-allRows.forEach(p => {
-  if (p.finish != null) {
-    const cls = p.class ?? "";
-    classBestFinish[cls] = Math.min(classBestFinish[cls] ?? Infinity, p.finish);
-  }
-});
-
       const filtered = applyFilters(allRows);
       const sorted = sortRows(filtered, rankMap);
 
+      const tbody = $("#statusBody");
       if (!sorted.length){
-        $("#statusTable").innerHTML = `<div class="empty">Ingen deltakere for gjeldende filter.</div>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:16px; color:var(--muted)">Ingen deltakere for gjeldende filter.</td></tr>`;
         return;
       }
 
-      let html = `
-      <div class="table-card">
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Plass</th>
-                <th>Startnr</th>
-                <th>Navn</th>
-                <th>Klasse</th>
-                <th>Status</th>
-                <th>Tid</th>
-                <th>Rundetid</th>
-                <th class="shooting">S1</th>
-                <th class="shooting">S2</th>
-                <th>Måltid</th>
-              </tr>
-            </thead>
-            <tbody>`;
+      // Bevar scrollposisjon (horisontal på tabellen + vinduets vertikale)
+      const scroller = $("#tableScroll");
+      const sx = scroller ? scroller.scrollLeft : 0;
+      const winX = window.pageXOffset, winY = window.pageYOffset;
 
+      let html = "";
       for (const p of sorted){
         const rank = (p.status === "Fullført" && rankMap[p.snr]) ? rankMap[p.snr] : "-";
 
@@ -365,12 +294,16 @@ allRows.forEach(p => {
         const s1 = renderTargets(shooting[0]);
         const s2 = renderTargets(shooting[1]);
 
-const bestInClass = classBestFinish[p.class ?? ""];
-const maltid = (p.finish != null)
-  ? (bestInClass != null && isFinite(bestInClass)
-      ? `${formatTime(p.finish)} (+${(p.finish - bestInClass).toFixed(1)}s)`
-      : formatTime(p.finish))
-  : "-";
+        const bestInClass = classBestFinish[p.class ?? ""];
+        let maltid = "-";
+        if (p.finish != null){
+          if (bestInClass != null && isFinite(bestInClass)){
+            const diff = Math.round(p.finish - bestInClass);
+            maltid = `${formatTime(p.finish)} (+${diff}s)`;
+          } else {
+            maltid = formatTime(p.finish);
+          }
+        }
 
         const doneRow = p.status === "Fullført" ? "done-row" : "";
 
@@ -389,31 +322,44 @@ const maltid = (p.finish != null)
           </tr>`;
       }
 
-      html += `</tbody></table></div></div>`;
-      $("#statusTable").innerHTML = html;
+      tbody.innerHTML = html;
+
+      // Gjenopprett scroll posisjon (ikke forstyrr hvis bruker er midt i en touch-scroll)
+      if (!$("#statusTable")._touchActive?.()){
+        if (scroller) scroller.scrollLeft = sx;
+        window.scrollTo(winX, winY);
+      }
     }
 
     // === Realtime + fallback polling ===
     let pollTimer;
     let cacheRows = [];
+    let refreshQueued = false;
 
     async function refresh(){
       try{
-        $("#statusTable").innerHTML ||= `<div class="loading">Laster...</div>`;
+        ensureTableStructure();
         const data = await fetchParticipants();
         cacheRows = data;
-        renderTable(cacheRows);
+        renderBody(cacheRows);
       }catch(err){
         console.error(err);
-        $("#statusTable").innerHTML = `<div class="error">Kunne ikke hente data: ${err.message}</div>`;
+        const tbody = $("#statusBody");
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:16px; color:#b91c1c">Kunne ikke hente data: ${err.message}</td></tr>`;
       }
+    }
+
+    function scheduleRefresh(){
+      if (refreshQueued) return;
+      refreshQueued = true;
+      setTimeout(()=>{ refresh(); refreshQueued = false; }, 300);
     }
 
     function startRealtime(){
       try{
         supabaseClient
           .channel('public:participants')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => refresh())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => scheduleRefresh())
           .subscribe();
       }catch(e){
         console.warn("Realtime ikke tilgjengelig, bruker polling:", e);
@@ -422,18 +368,15 @@ const maltid = (p.finish != null)
 
     document.addEventListener("DOMContentLoaded", () => {
       updateLiveClock();
+      ensureTableStructure();
       refresh();
       startRealtime();
       pollTimer = setInterval(refresh, 10000);
 
       // Koble filtre
-      $("#classFilter").addEventListener("change", (e)=>{ filters.class = e.target.value; renderTable(cacheRows); });
-      $("#statusFilter").addEventListener("change", (e)=>{ filters.status = e.target.value; renderTable(cacheRows); });
-      $("#clearFilters").addEventListener("click", ()=>{
-        filters.class = ""; filters.status = "";
-        $("#classFilter").value = ""; $("#statusFilter").value = "";
-        renderTable(cacheRows);
-      });
+      $("#classFilter").addEventListener("change", (e)=>{ filters.class = e.target.value; renderBody(cacheRows); });
+      $("#statusFilter").addEventListener("change", (e)=>{ filters.status = e.target.value; renderBody(cacheRows); });
+      $("#clearFilters").addEventListener("click", ()=>{ filters.class = ""; filters.status = ""; $("#classFilter").value = ""; $("#statusFilter").value = ""; renderBody(cacheRows); });
     });
   </script>
 </head>
@@ -482,7 +425,7 @@ const maltid = (p.finish != null)
       <strong>Forklaring blink:</strong> hvit ● = treff, svart ● = bom.
     </div>
 
-    <div id="statusTable" class="loading">Laster...</div>
+    <div id="statusTable" class="loading" data-ready="0" style="min-height:120px; display:block;"></div>
   </main>
 </body>
 </html>
