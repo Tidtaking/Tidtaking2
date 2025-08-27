@@ -3,62 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Registrering av Skyteresultat</title>
+  <title>Registrering av Skyteresultat — Mobilforbedret</title>
   <style>
     :root{
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
       --radius:14px; --pad:12px; --tap:48px; --gap:10px; --target:60px;
-      --row-hover:#eef2ff; /* lys blålig hover-farge */
-      --row-active:#e6efff; /* ved trykk/touch */
+      --row-hover:#eef2ff; --row-active:#e6efff;
+      --sticky-bg:#f8fafc; --shadow:0 0 0 1px rgba(0,0,0,.04), 10px 0 10px -10px rgba(0,0,0,.25) inset;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-      margin:0; padding:0; color:var(--fg); background:var(--bg);
-    }
-    header{
-      position:sticky; top:0; z-index:10; background:var(--bg);
-      border-bottom:1px solid var(--border);
-    }
+    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";margin:0; padding:0; color:var(--fg); background:var(--bg)}
+
+    header{position:sticky; top:0; z-index:30; background:var(--bg); border-bottom:1px solid var(--border)}
     .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}    
     h1{font-size:clamp(20px, 4vw, 28px); margin:4px 0 8px}
 
-    /* Top toolbar */
     .toolbar{display:flex; gap:var(--gap); align-items:center; flex-wrap:wrap}
     .toolbar input[type="text"]{flex:1 1 220px; min-width:140px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; font-size:16px}
     .toolbar .toggle{display:flex; align-items:center; gap:6px; font-size:14px}
     .toolbar .toggle input{accent-color:var(--primary)}
+    .toolbar .chip{border:1px solid var(--border); padding:8px 10px; border-radius:999px; font-size:14px; cursor:pointer; user-select:none}
+    .toolbar .chip[aria-pressed="true"]{background:var(--primary); color:#fff; border-color:transparent}
 
-    /* Responsive table wrapper with momentum scroll on mobile */
+    /* Edge fade hints for horizontal scroll */
+    .scroll-shadow{position:relative}
+    .scroll-shadow::before, .scroll-shadow::after{
+      content:""; position:sticky; top:0; width:18px; z-index:15; pointer-events:none; height:100%;
+    }
+    .scroll-shadow::before{left:0; background:linear-gradient(90deg, var(--bg), transparent)}
+    .scroll-shadow::after{right:0; background:linear-gradient(270deg, var(--bg), transparent)}
+
     .table-container{overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; border-top:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:12px}
-    table{border-collapse:separate; border-spacing:0; width:100%; min-width:860px}
-    thead th{position:sticky; top:0; background:#f8fafc; text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px}
-    tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px}
-    tbody tr:nth-child(odd){background:#fcfcfd}
+    table{border-collapse:separate; border-spacing:0; width:100%; min-width:980px}
+    colgroup col.snr{width:90px}
+    colgroup col.name{width:220px}
+    colgroup col.status{width:120px}
 
-    /* Rad-hover (desktop), fokus (tastatur), og aktiv (touch/klikk) */
+    thead th{position:sticky; top:0; background:var(--sticky-bg); text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; z-index:20}
+    tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px; background:#fff}
+    tbody tr:nth-child(odd) td{background:#fcfcfd}
+
+    /* Sticky row header cells (Startnr, Navn, Status) to keep context while horizontal scrolling */
+    th.sticky-left-0, td.sticky-left-0{position:sticky; left:0; z-index:19; background:var(--sticky-bg); box-shadow:var(--shadow)}
+    th.sticky-left-1, td.sticky-left-1{position:sticky; left:90px; z-index:18; background:var(--sticky-bg); box-shadow:var(--shadow)}
+    th.sticky-left-2, td.sticky-left-2{position:sticky; left:310px; z-index:17; background:var(--sticky-bg); box-shadow:var(--shadow)}
+
+    /* Optional sticky right column for Send-knapper */
+    th.sticky-right, td.sticky-right{position:sticky; right:0; z-index:18; background:var(--sticky-bg); box-shadow:-10px 0 10px -10px rgba(0,0,0,.25) inset}
+
     tbody tr{transition: background-color .12s ease}
-    tbody tr:hover,
-    tbody tr:focus-within{ background-color: var(--row-hover); }
+    tbody tr:hover, tbody tr:focus-within{ background-color: var(--row-hover); }
     tbody tr:active{ background-color: var(--row-active); }
 
-    /* Shooting cell */
     .shootingCell{white-space:nowrap; min-width:calc(var(--target)*5 + 16px)}
     .targets{display:inline-flex; align-items:center; gap:6px}
     .target{width:var(--target); height:var(--target); border-radius:50%; display:inline-grid; place-content:center; user-select:none; cursor:pointer; border:2px solid #000; touch-action:manipulation; transition: transform 0.15s ease, box-shadow 0.15s ease;}
-    /* Treff = hvit. Bom = sort. */
     .target[data-hit="true"]{background:#fff; color:#000; animation:pop 0.2s ease;}
     .target[data-hit="false"]{background:#000; color:#fff;}
     .target:active{transform:scale(0.92)}
 
-    @keyframes pop{
-      0%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}
-      50%{transform:scale(1.2); box-shadow:0 0 8px rgba(0,0,0,0.4)}
-      100%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}
-    }
+    @keyframes pop{0%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}50%{transform:scale(1.2); box-shadow:0 0 8px rgba(0,0,0,0.4)}100%{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0)}}
 
-    /* Inputs & buttons */
     .skive-input{width:70px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font-size:16px; text-align:center}
     .btn{appearance:none; border:0; border-radius:12px; padding:12px 14px; font-size:16px; line-height:1; cursor:pointer; min-height:var(--tap)}
     .btn-primary{background:var(--primary); color:var(--primary-fg)}
@@ -66,18 +72,29 @@
     .btn-ghost{background:#f3f4f6}
     .btn[disabled]{background:#e5e7eb; color:#6b7280; cursor:not-allowed}
 
-    /* Make tap targets generous on phones */
+    /* Mobile tweaks */
     @media (max-width: 640px){
       :root{--target:56px}
       thead th{font-size:12px; padding:8px}
       tbody td{font-size:15px; padding:8px}
       .skive-input{width:64px}
+      /* Add scroll snap per row for easier vertical scanning */
+      tbody{scroll-snap-type:y proximity}
+      tbody tr{scroll-snap-align:start}
     }
 
-    /* Prefer reduced motion */
-    @media (prefers-reduced-motion: reduce){ .target{transition:none} .target:active{transform:none} }
+    /* Fullscreen focus sheet */
+    dialog#focusSheet{border:0; border-radius:16px; padding:0; width:min(720px, 96vw)}
+    dialog::backdrop{background:rgba(0,0,0,.35)}
+    .sheet{padding:16px}
+    .sheet .header{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .sheet .header .id{font-weight:700}
+    .sheet .meta{display:flex; gap:10px; color:var(--muted); font-size:14px}
+    .sheet .targets{margin:12px 0 6px}
+    .sheet .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .sheet .actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+    .sheet .sub{color:var(--muted); font-size:13px}
   </style>
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -87,31 +104,81 @@
       <div class="toolbar">
         <input id="filter" type="text" placeholder="Søk på navn eller startnr…" aria-label="Filtrer deltakere">
         <label class="toggle"><input id="onlyRunning" type="checkbox"> Kun "I gang"</label>
+        <button id="toggleCompact" class="chip" aria-pressed="false" title="Skjul S2 for smalere visning">Kompakt</button>
       </div>
     </div>
   </header>
 
   <main class="wrap">
-    <div class="table-container">
+    <div class="table-container scroll-shadow">
       <table id="shootingTable" aria-live="polite">
+        <colgroup>
+          <col class="snr">
+          <col class="name">
+          <col class="status">
+          <col>
+          <col>
+          <col>
+          <col>
+          <col class="colS2">
+          <col class="colS2">
+          <col class="colS2">
+          <col class="sticky-right-col">
+        </colgroup>
         <thead>
           <tr>
-            <th>Startnr</th>
-            <th>Navn</th>
-            <th>Status</th>
+            <th class="sticky-left-0">Startnr</th>
+            <th class="sticky-left-1">Navn</th>
+            <th class="sticky-left-2">Status</th>
             <th>Skive</th>
             <th>Skyting S1</th>
             <th>Send S1</th>
             <th>Skytetid S1</th>
-            <th>Skyting S2</th>
-            <th>Send S2</th>
-            <th>Skytetid S2</th>
+            <th class="colS2">Skyting S2</th>
+            <th class="colS2">Send S2</th>
+            <th class="colS2">Skytetid S2</th>
+            <th class="sticky-right">Fokus</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
   </main>
+
+  <!-- Focus sheet for single-participant full-screen controls -->
+  <dialog id="focusSheet">
+    <div class="sheet">
+      <div class="header">
+        <div>
+          <div class="id" id="fsId"></div>
+          <div class="meta"><span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span></div>
+        </div>
+        <button class="btn" id="fsClose">Lukk</button>
+      </div>
+
+      <div class="row">
+        <label for="fsSkiveInput" class="sub">Skive</label>
+        <input id="fsSkiveInput" class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive">
+        <button class="btn btn-ghost" id="fsCopyLink">Kopier lenke</button>
+      </div>
+
+      <h3>S1</h3>
+      <div id="fsS1" class="targets"></div>
+      <div class="actions">
+        <button class="btn btn-success" id="fsSendS1">Send S1</button>
+        <button class="btn btn-primary" id="fsTimeS1">Start skytetid S1</button>
+      </div>
+
+      <h3>S2</h3>
+      <div id="fsS2" class="targets"></div>
+      <div class="actions">
+        <button class="btn btn-success" id="fsSendS2">Send S2</button>
+        <button class="btn btn-primary" id="fsTimeS2">Start skytetid S2</button>
+      </div>
+
+      <p class="sub">Tips: trykk og hold på en blink for å nullstille runden. Dobbelttrykk for å sette alle til treff.</p>
+    </div>
+  </dialog>
 
 <script>
 // ---------------- Supabase setup ----------------
@@ -123,6 +190,7 @@ const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 /** @type {Record<string, any>} */
 const participants = {};
 let lastRenderKey = ""; // used to skip unnecessary re-render
+let compact = false; // hide S2 cols on mobile if desired
 
 function ensureShootingFormat(arr){
   if(!Array.isArray(arr) || arr.length!==2) return [Array(5).fill(false), Array(5).fill(false)];
@@ -169,7 +237,6 @@ async function fetchAll(){
 }
 
 function computeRenderKey(list){
-  // a tiny hash key to skip needless DOM work on auto-updates
   return JSON.stringify(list.map(p=>({snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting})));
 }
 
@@ -214,7 +281,7 @@ function render(){
   const tbody = document.getElementById('tbody');
   const list = sortParticipants(Object.values(participants));
   const filtered = applyFilters(list);
-  const newKey = computeRenderKey(filtered);
+  const newKey = computeRenderKey(filtered) + `|c:${compact}`;
   if(newKey === lastRenderKey){ return; }
   lastRenderKey = newKey;
 
@@ -234,32 +301,35 @@ function render(){
     else if(!p.shootingTimeStart2){ t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Start skytetid S2</button>`; }
     else { t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Registrer tid S2</button>`; }
 
-    return `<tr data-snr="${p.snr}">
-      <td>${p.snr ?? ''}</td>
-      <td>${p.name ?? ''}</td>
-      <td>${p.status ?? ''}</td>
+    const focusBtn = `<button class="btn" data-action="focus" data-snr="${p.snr}">Åpne</button>`;
+
+    return `<tr data-snr="${p.snr}" id="snr-${p.snr}">
+      <td class="sticky-left-0">${p.snr ?? ''}</td>
+      <td class="sticky-left-1" style="text-align:left">${p.name ?? ''}</td>
+      <td class="sticky-left-2">${p.status ?? ''}</td>
       <td>
         <input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="${p.skive ?? ''}" data-action="skive" data-snr="${p.snr}" aria-label="Skive for ${p.name ?? ('startnr '+p.snr)}">
       </td>
       <td class="shootingCell">${s1}</td>
       <td>${s1Btn}</td>
       <td>${t1Btn}</td>
-      <td class="shootingCell">${s2}</td>
-      <td>${s2Btn}</td>
-      <td>${t2Btn}</td>
+      <td class="shootingCell colS2">${s2}</td>
+      <td class="colS2">${s2Btn}</td>
+      <td class="colS2">${t2Btn}</td>
+      <td class="sticky-right">${focusBtn}</td>
     </tr>`;
   }).join('');
+
+  // Toggle visibility of S2 columns in compact mode
+  document.querySelectorAll('.colS2, .colS2 th').forEach(el=>{
+    if(compact) el.style.display = 'none'; else el.style.display = '';
+  });
 }
 
-// ---------------- Event delegation (mobile-friendly) ----------------
+// ---------------- Event delegation ----------------
 const table = document.getElementById('shootingTable');
 
 table.addEventListener('click', async (e)=>{
-  const hitTarget = e.target.closest('.target');
-  if(hitTarget){
-    const snr = +hitTarget.dataset.snr; // set via parent container below
-  }
-
   const el = e.target.closest('[data-action]');
   if(!el) return;
   const action = el.dataset.action; const snr = +el.dataset.snr; const round = +el.dataset.round;
@@ -268,12 +338,16 @@ table.addEventListener('click', async (e)=>{
     const arr = p?.shootingLocal || (p.shootingLocal=[Array(5).fill(false),Array(5).fill(false)]);
     arr[round][idx] = !arr[round][idx];
     el.setAttribute('data-hit', String(arr[round][idx]));
+    if(navigator.vibrate) navigator.vibrate(10);
   }
   if(action === 'send'){
     await sendShootingResult(snr, round);
   }
   if(action === 'time'){
     await registerShootingTime(snr, round, el);
+  }
+  if(action === 'focus'){
+    openFocusSheet(snr);
   }
 });
 
@@ -333,26 +407,120 @@ async function registerShootingTime(snr, shootIdx, btnEl){
   }
 }
 
-// ---------------- Filters ----------------
+// ---------------- Filters & compact toggle ----------------
 ['filter','onlyRunning'].forEach(id=> document.getElementById(id).addEventListener('input', ()=> render()));
+document.getElementById('toggleCompact').addEventListener('click', (e)=>{
+  compact = !compact;
+  e.currentTarget.setAttribute('aria-pressed', String(compact));
+  render();
+});
 
-// ---------------- Live updates: Realtime + polling fallback ----------------
+// ---------------- Focus Sheet logic ----------------
+const focusSheet = document.getElementById('focusSheet');
+const fsId = document.getElementById('fsId');
+const fsStatus = document.getElementById('fsStatus');
+const fsSkive = document.getElementById('fsSkive');
+const fsSkiveInput = document.getElementById('fsSkiveInput');
+const fsS1 = document.getElementById('fsS1');
+const fsS2 = document.getElementById('fsS2');
+const fsSendS1 = document.getElementById('fsSendS1');
+const fsSendS2 = document.getElementById('fsSendS2');
+const fsTimeS1 = document.getElementById('fsTimeS1');
+const fsTimeS2 = document.getElementById('fsTimeS2');
+const fsClose = document.getElementById('fsClose');
+const fsCopyLink = document.getElementById('fsCopyLink');
+let focusedSnr = null;
+
+function renderTargetsInline(p, shootIdx, container){
+  container.innerHTML = '';
+  const arr = p.shootingLocal?.[shootIdx] || Array(5).fill(false);
+  arr.forEach((hit, i)=>{
+    const d = document.createElement('div');
+    d.className = 'target';
+    d.setAttribute('role', 'button');
+    d.setAttribute('tabindex', '0');
+    d.dataset.action = 'toggle-focus';
+    d.dataset.snr = p.snr;
+    d.dataset.round = shootIdx;
+    d.dataset.idx = i;
+    d.dataset.hit = hit;
+    d.addEventListener('click', ()=>{
+      const arr = participants[p.snr].shootingLocal[shootIdx];
+      arr[i] = !arr[i];
+      d.dataset.hit = String(arr[i]);
+      if(navigator.vibrate) navigator.vibrate(10);
+    });
+    // Long press to clear round
+    let t; d.addEventListener('pointerdown', ()=>{ t=setTimeout(()=>{ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(false); renderTargetsInline(participants[p.snr], shootIdx, container); }, 450); });
+    d.addEventListener('pointerup', ()=>clearTimeout(t));
+    d.addEventListener('pointerleave', ()=>clearTimeout(t));
+    // Double click to set all true
+    let last=0; d.addEventListener('click', (e)=>{ const now = Date.now(); if(now-last<300){ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container);} last=now; }, {capture:true});
+    container.appendChild(d);
+  });
+}
+
+function openFocusSheet(snr){
+  focusedSnr = snr;
+  const p = participants[snr];
+  if(!p) return;
+  fsId.textContent = `${p.name ?? ''} (Startnr ${p.snr})`;
+  fsStatus.textContent = p.status ?? '';
+  fsSkive.textContent = p.skive ?? '';
+  fsSkiveInput.value = p.skive ?? '';
+  renderTargetsInline(p,0,fsS1);
+  renderTargetsInline(p,1,fsS2);
+
+  fsSendS1.disabled = !!p.s1sent; fsSendS1.textContent = p.s1sent ? 'Sendt' : 'Send S1';
+  fsSendS2.disabled = !!p.s2sent; fsSendS2.textContent = p.s2sent ? 'Sendt' : 'Send S2';
+  fsTimeS1.textContent = p.shootingtime1 ? 'Tid registrert' : (p.shootingTimeStart1 ? 'Registrer tid S1' : 'Start skytetid S1');
+  fsTimeS1.disabled = !!p.shootingtime1;
+  fsTimeS2.textContent = p.shootingtime2 ? 'Tid registrert' : (p.shootingTimeStart2 ? 'Registrer tid S2' : 'Start skytetid S2');
+  fsTimeS2.disabled = !!p.shootingtime2;
+
+  focusSheet.showModal();
+  // update URL hash for quick link
+  history.replaceState(null, '', `#snr-${snr}`);
+}
+
+fsClose.addEventListener('click', ()=>{ focusSheet.close(); });
+fsCopyLink.addEventListener('click', async ()=>{
+  const url = location.origin + location.pathname + `#snr-${focusedSnr}`;
+  try{ await navigator.clipboard.writeText(url); alert('Lenke kopiert.'); }catch{ prompt('Kopier lenken:', url); }
+});
+
+fsSkiveInput.addEventListener('input', ()=>{
+  if(focusedSnr==null) return; const p = participants[focusedSnr]; p.skive = fsSkiveInput.value.trim(); fsSkive.textContent = p.skive; debounce(()=>saveSkive(focusedSnr, p.skive), 400)();
+});
+
+fsSendS1.addEventListener('click', ()=> sendShootingResult(focusedSnr, 0));
+fsSendS2.addEventListener('click', ()=> sendShootingResult(focusedSnr, 1));
+fsTimeS1.addEventListener('click', (e)=> registerShootingTime(focusedSnr, 0, e.currentTarget));
+fsTimeS2.addEventListener('click', (e)=> registerShootingTime(focusedSnr, 1, e.currentTarget));
+
+// Jump to focused row if hash present
+window.addEventListener('load', ()=>{
+  const id = location.hash.replace('#','');
+  if(id){ const row = document.getElementById(id); if(row){ row.scrollIntoView({behavior:'smooth', block:'start'}); const snr = +id.replace('snr-',''); if(snr) openFocusSheet(snr); } }
+});
+
+// ---------------- Live updates ----------------
 async function init(){
   await refreshFromDb();
-  // Try Supabase Realtime (requires replication enabled for table)
   try{
     const channel = sb.channel('participants_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
-        const rec = payload.new || payload.old; if(rec){ mergeDbRecord(rec); render(); }
+        const rec = payload.new || payload.old; if(rec){ mergeDbRecord(rec); render(); if(focusedSnr && rec.snr===focusedSnr){ openFocusSheet(focusedSnr); } }
       })
-      .subscribe((status)=>{ if(status==='SUBSCRIBED'){ /* ok */ } });
+      .subscribe();
   }catch(err){ console.warn('Realtime ikke aktivert, bruker polling.', err); setInterval(refreshFromDb, 2000); }
-
-  // As a safety net, do light polling on desktop only
   if(window.innerWidth >= 900){ setInterval(refreshFromDb, 4000); }
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ---------------- Small utils ----------------
+function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); } }
 </script>
 </body>
 </html>
