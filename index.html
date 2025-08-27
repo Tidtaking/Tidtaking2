@@ -282,8 +282,8 @@
           <td>${p.class}</td>
           <td>${p.status}</td>
           <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
-          <td class="shooting">${window.renderShooting(${snr}, 0)}</td>
-          <td class="shooting">${window.renderShooting(${snr}, 1)}</td>
+<td class="shooting">${window.renderShooting(snr, 0)}</td>
+<td class="shooting">${window.renderShooting(snr, 1)}</td>
           <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
           <td>${p.laps.map(window.formatTime).join('<br>')}</td>
           <td>${finishDiff}</td>
