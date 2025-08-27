@@ -13,7 +13,6 @@
     .btn-lap { background-color: #3498db; color: white; }
     .btn-finish { background-color: #27ae60; color: white; }
     .btn-start { background-color: #e67e22; color: white; }
-    /* Blinkene – økt størrelse slik at de er lettere å trykke på */
     .target { font-size: 36px; cursor: pointer; }
     .shooting { background-color: gray; }
     #liveClock { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
@@ -30,10 +29,9 @@
       #liveClock { font-size: 14px; }
     }
   </style>
-  <!-- Last Supabase SDK (UMD) -->
+  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // Konfigurer Supabase – oppdater med dine opplysninger:
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -127,25 +125,24 @@
   </dialog>
   
   <script>
-    // Globalt deltakerobjekt og timerbevaring
+    // Global state
     window.participants = {};
     window.localTimers = {};
 
-    // Funksjon for å oppdatere markeringen
+    // Markering
     window.updateSelection = function(snr, isSelected) {
       if (window.participants[snr]) {
         window.participants[snr].selected = isSelected;
       }
     };
 
-    // Hjelpefunksjoner
+    // Helpers
     window.getShootingArray = function(p) {
       if (Array.isArray(p.shooting)) return p.shooting;
       if (typeof p.shooting === "string") {
-        try {
-          return JSON.parse(p.shooting.trim());
-        } catch (e) {
-          console.error("Kunne ikke parse shooting for snr", p.snr, p.shooting, e);
+        try { return JSON.parse(p.shooting.trim()); }
+        catch (e) {
+          console.error("Kunne ikke parse shooting for snr", p?.snr, p?.shooting, e);
           return [Array(5).fill(false), Array(5).fill(false)];
         }
       }
@@ -177,36 +174,34 @@
       });
     };
 
-    // Funksjoner for databaseoperasjoner og visning
+    // Fetch + normalisering + lokal beregning av finish
     window.fetchParticipants = async function() {
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved henting av deltakere:", error);
         return;
       }
-      // Lagre gammel deltakervalg for å bevare markering
       const oldParticipants = window.participants;
       window.participants = {};
       data.forEach(record => {
+        // typer
+        if (record.rawFinish != null) record.rawFinish = Number(record.rawFinish);
+        if (record.finish    != null) record.finish    = Number(record.finish);
+
         record.laps = record.laps || [];
-        // Sørg for at shooting er et 2x5-boolean-array
         record.shooting = (typeof record.shooting === "string")
           ? window.getShootingArray(record)
           : (Array.isArray(record.shooting) ? record.shooting : [Array(5).fill(false), Array(5).fill(false)]);
 
-        // Beregn finish lokalt hvis rawFinish finnes (inkl. straff basert på nåværende penaltyTime)
+        // Beregn finish lokalt fra rawFinish + straff (for visning)
         if (record.rawFinish != null) {
           const penaltyPerMiss = Number(document.getElementById("penaltyTime").value) || 0;
           const totalMisses = record.shooting.flat().filter(h => h === false).length;
           record.finish = Number(record.rawFinish) + totalMisses * penaltyPerMiss;
         }
 
-        // Bevar valgt status hvis den eksisterer
-        if (oldParticipants[record.snr] && oldParticipants[record.snr].selected) {
-          record.selected = true;
-        } else {
-          record.selected = false;
-        }
+        // bevar markering og timer-flagg
+        record.selected = !!(oldParticipants[record.snr] && oldParticipants[record.snr].selected);
         if (window.localTimers[record.snr]) {
           record.timer = window.localTimers[record.snr];
         }
@@ -221,7 +216,7 @@
     };
 
     window.updateLocalDisplay = function() {
-      // Oppdater finish-tid for fullførte deltakere kontinuerlig
+      // Sikre finish kontinuerlig for fullførte
       Object.keys(window.participants).forEach(snr => {
         let p = window.participants[snr];
         if (p.status === "Fullført" && p.rawFinish != null) {
@@ -235,14 +230,14 @@
           overallBestFinish = p.finish;
         }
       });
+
       let maxLaps = 0;
-      Object.values(window.participants).forEach(p => {
-        if (p.laps.length > maxLaps) maxLaps = p.laps.length;
-      });
+      Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
       let bestLapTimes = Array(maxLaps).fill(Infinity);
       Object.values(window.participants).forEach(p => {
         p.laps.forEach((lap, i) => { if (lap < bestLapTimes[i]) bestLapTimes[i] = lap; });
       });
+
       let classPlacements = {};
       Object.entries(window.participants).forEach(([snr, p]) => {
         if (p.finish != null) {
@@ -257,7 +252,6 @@
       
       let rows = [];
       for (const [snr, p] of Object.entries(window.participants)) {
-        // Legg til sjekkboks med unike id og name, og med onchange for å oppdatere valgt status
         let checkbox = `<input type="checkbox" class="select-participant" data-snr="${snr}" id="select-${snr}" name="select-participant" onchange="updateSelection(${snr}, this.checked)" ${p.selected ? "checked" : ""}>`;
         let placement = '-';
         if (p.finish != null && classPlacements[p.class]) {
@@ -288,8 +282,8 @@
           <td>${p.class}</td>
           <td>${p.status}</td>
           <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
-          <td class="shooting">${window.renderShooting(snr, 0)}</td>
-          <td class="shooting">${window.renderShooting(snr, 1)}</td>
+          <td class="shooting">${window.renderShooting(${snr}, 0)}</td>
+          <td class="shooting">${window.renderShooting(${snr}, 1)}</td>
           <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
           <td>${p.laps.map(window.formatTime).join('<br>')}</td>
           <td>${finishDiff}</td>
@@ -299,7 +293,7 @@
       document.getElementById("results").innerHTML = rows.join("");
     };
 
-    window.updateLiveClock = async function() {
+    window.updateLiveClock = function() {
       const now = new Date();
       document.getElementById("liveClock").innerText = now.toLocaleTimeString();
     };
@@ -330,28 +324,20 @@
         alert("Fyll ut alle felt!");
         return;
       }
-      console.log("Legger til deltaker:", snr, name, cls);
       let { data: existing } = await window.supabaseClient.from("participants").select("*").eq("snr", snr);
       if (existing && existing.length > 0) {
         alert("Startnummer allerede brukt!");
         return;
       }
       const newPart = {
-        snr: snr,
-        name: name,
-        class: cls,
-        start: null,
-        status: "Venter",
-        laps: [],
-        finish: null,
-        rawFinish: null,
+        snr, name, class: cls,
+        start: null, status: "Venter", laps: [],
+        finish: null, rawFinish: null,
         shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)]),
         selected: false
       };
-      console.log("Nytt deltakerobjekt:", newPart);
-      const { error, data } = await window.supabaseClient.from("participants").insert([newPart]);
+      const { error } = await window.supabaseClient.from("participants").insert([newPart]);
       if (error) console.error("Feil ved lagring:", error);
-      else console.log("Ny deltaker lagret:", data);
       document.getElementById("newStartNumber").value = "";
       document.getElementById("newParticipant").value = "";
       setTimeout(window.updateTable, 500);
@@ -446,35 +432,38 @@
       }
     };
 
-    // ***** FIKSET: lagrer også finish når blinkene endres etter målgang *****
+    // VIKTIG: Lagrer også finish når blink endres etter målgang
     window.toggleTarget = async function(snr, shootIdx, idx) {
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
+
       shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
       p.shooting = JSON.stringify(shootingArr);
 
-      // Bygg opp payload – lagre finish hvis vi har en rå sluttid
-      let updatePayload = { shooting: p.shooting };
-      if (p.rawFinish != null) {
+      const updatePayload = { shooting: p.shooting };
+
+      // Dersom i mål (eller rå sluttid finnes), beregn og persister finish
+      if (p.status === "Fullført" || p.rawFinish != null) {
         window.updateFinalTime(snr);
         updatePayload.finish = p.finish;
       }
 
-      const { error } = await window.supabaseClient.from("participants")
+      const { error } = await window.supabaseClient
+        .from("participants")
         .update(updatePayload)
         .eq("snr", snr);
       if (error) console.error("Feil ved toggleTarget for snr", snr, error);
+
       window.updateTable();
     };
 
-    // ***** MER ROBUST: tving tall og tell bom trygt *****
+    // Robust beregning av finish
     window.updateFinalTime = function(snr) {
       let p = window.participants[snr];
       const penaltyPerMiss = Number(document.getElementById("penaltyTime").value) || 0;
-      let shootingArr = window.getShootingArray(p);
+      const shootingArr = window.getShootingArray(p);
       const totalMisses = shootingArr.flat().filter(hit => hit === false).length;
-      const penalty = totalMisses * penaltyPerMiss;
-      p.finish = Number(p.rawFinish || 0) + penalty;
+      p.finish = Number(p.rawFinish || 0) + (totalMisses * penaltyPerMiss);
     };
 
     window.renderShooting = function(snr, shootIdx) {
@@ -485,7 +474,7 @@
       }).join(" ");
     };
 
-    // CSV-import: Leser CSV-fil med feltene snr, name og class
+    // CSV-import
     window.importCSV = function() {
       const fileInput = document.getElementById("csvImport");
       if (!fileInput.files || fileInput.files.length === 0) {
@@ -496,12 +485,10 @@
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
-        console.log("CSV-tekst:", text);
         const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
         let startIdx = 0;
-        if (lines[0].toLowerCase().startsWith("snr")) {
-          startIdx = 1;
-        }
+        if (lines[0].toLowerCase().startsWith("snr")) startIdx = 1;
+
         let newParticipants = [];
         for (let i = startIdx; i < lines.length; i++) {
           const parts = lines[i].split(",");
@@ -511,19 +498,13 @@
           const cls = parts[2].trim();
           if (isNaN(snr) || !name || !cls) continue;
           newParticipants.push({
-            snr: snr,
-            name: name,
-            class: cls,
-            start: null,
-            status: "Venter",
-            laps: [],
-            finish: null,
-            rawFinish: null,
+            snr, name, class: cls,
+            start: null, status: "Venter", laps: [],
+            finish: null, rawFinish: null,
             shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)]),
             selected: false
           });
         }
-        console.log("Nye deltakere fra CSV:", newParticipants);
         if (newParticipants.length === 0) {
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
@@ -540,15 +521,13 @@
       reader.readAsText(file);
     };
 
-    // CSV-eksport: Henter alle data og bygger CSV-streng
+    // CSV-eksport
     window.saveCSV = async function() {
-      console.log("CSV-knapp trykket – starter CSV eksport");
       const { data, error } = await window.supabaseClient.from("participants").select("*");
       if (error) {
         console.error("Feil ved CSV-export:", error);
         return;
       }
-      console.log("Data hentet for CSV:", data);
       if (!data || data.length === 0) {
         alert("Ingen data funnet for CSV-export!");
         return;
@@ -565,7 +544,8 @@
         groups[cls].sort((a, b) => a.finish - b.finish);
         const bestFinish = groups[cls][0].finish;
         groups[cls].forEach((p, i) => {
-          const bom = window.getShootingArray(p).flat().filter(hit => hit === false).length;
+          const shooting = (typeof p.shooting === "string") ? JSON.parse(p.shooting) : p.shooting || [[],[]];
+          const bom = shooting.flat().filter(hit => hit === false).length;
           const diff = p.finish - bestFinish;
           csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
         });
@@ -573,14 +553,10 @@
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined);
       unfinishedData.sort((a, b) => a.snr - b.snr);
       unfinishedData.forEach(p => {
-        const bom = window.getShootingArray(p).flat().filter(hit => hit === false).length;
+        const shooting = (typeof p.shooting === "string") ? JSON.parse(p.shooting) : p.shooting || [[],[]];
+        const bom = shooting.flat().filter(hit => hit === false).length;
         csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`;
       });
-      console.log("CSV-innhold:\n", csv);
-      if (csv.trim() === "Klasse,Plass,Startnummer,Navn,Tid,Bom") {
-        alert("Ingen data funnet for CSV-export!");
-        return;
-      }
       const link = document.createElement("a");
       link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
       link.download = "resultater.csv";
@@ -589,7 +565,7 @@
       document.body.removeChild(link);
     };
 
-    // Start oppdatering
+    // Timere og init
     setInterval(window.updateLiveClock, 1000);
     window.updateLiveClock();
     setInterval(window.updateTable, 1000);
@@ -617,19 +593,28 @@
     document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
     document.getElementById("btnStartMass").addEventListener("click", window.startMass);
     document.getElementById("btnImportCSV").addEventListener("click", window.importCSV);
-    // Event listeners for markerte deltakere
+
+    document.getElementById("penaltyTime").addEventListener("change", async function() {
+      // Reberegn og PERSISTER alle ferdige tider basert på ny straffetid
+      for (const [snr, p] of Object.entries(window.participants)) {
+        if (p.rawFinish != null) {
+          window.updateFinalTime(snr);
+          const { error } = await window.supabaseClient
+            .from("participants")
+            .update({ finish: p.finish })
+            .eq("snr", snr);
+          if (error) console.error("Feil ved oppdatering av finish etter straffe-endring for snr", snr, error);
+        }
+      }
+      window.updateTable();
+    });
+
+    // Markerte deltakere (start/stop/slett)
     document.getElementById("btnDeleteSelected").addEventListener("click", async function() {
       const checkboxes = document.querySelectorAll(".select-participant");
       let selected = [];
-      checkboxes.forEach(cb => {
-        if (cb.checked) {
-          selected.push(parseInt(cb.getAttribute("data-snr")));
-        }
-      });
-      if (selected.length === 0) {
-        alert("Ingen deltakere er markert.");
-        return;
-      }
+      checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute("data-snr"))); });
+      if (selected.length === 0) { alert("Ingen deltakere er markert."); return; }
       const confirmed = await window.customConfirm("Er du sikker på at du vil slette de markerte deltakerne?");
       if (!confirmed) return;
       for (let snr of selected) {
@@ -638,18 +623,12 @@
       }
       window.updateTable();
     });
+
     document.getElementById("btnToggleSelected").addEventListener("click", async function() {
       const checkboxes = document.querySelectorAll(".select-participant");
       let selected = [];
-      checkboxes.forEach(cb => {
-        if (cb.checked) {
-          selected.push(parseInt(cb.getAttribute("data-snr")));
-        }
-      });
-      if (selected.length === 0) {
-        alert("Ingen deltakere er markert.");
-        return;
-      }
+      checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute("data-snr"))); });
+      if (selected.length === 0) { alert("Ingen deltakere er markert."); return; }
       for (let snr of selected) {
         let p = window.participants[snr];
         if (!p) continue;
