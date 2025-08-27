@@ -88,7 +88,11 @@
   const LSTART_KEY = "manual_starts_v1";
   function lstarts(){ try{return JSON.parse(localStorage.getItem(LSTART_KEY)||"{}");}catch{return {}} }
   function setLStart(snr, iso){ const m=lstarts(); m[snr]=iso; localStorage.setItem(LSTART_KEY, JSON.stringify(m)); }
-  function getStartIso(p){ return p.start || lstarts()[p.snr] || null; }
+  function getStartIso(pOrSnr){
+    const snr = (typeof pOrSnr === 'object' && pOrSnr) ? pOrSnr.snr : pOrSnr;
+    const startFromObj = (typeof pOrSnr === 'object' && pOrSnr) ? pOrSnr.start : null;
+    return startFromObj || (snr!=null ? lstarts()[snr] : null) || null;
+  }
 
   /********************* UTIL *********************/
   const $ = sel => document.querySelector(sel);
@@ -199,17 +203,28 @@
 
   /********************* FINISH FLOW *********************/
   async function finishClick(snr){
-    // hent deltaker
-    const p = cache.active.find(x=>x.snr===snr);
-    let startIso = getStartIso(p);
+    try{
+      // hent deltaker (kan være undefined hvis ikke i cache akkurat nå)
+      const p = cache.active.find(x=>x.snr===snr);
+      let startIso = getStartIso(p || snr);
 
-    // hvis mangler start: sett start nå (fallback) og informer
-    if (!startIso){ startIso = nowIso(); setLStart(snr, startIso); outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso, createdAt: nowIso() }); toast("Start manglet – satt til nå"); }
+      // hvis mangler start: sett start nå (fallback) og informer
+      if (!startIso){
+        startIso = nowIso();
+        setLStart(snr, startIso);
+        outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso, createdAt: nowIso() });
+        toast("Start manglet – satt til nå");
+      }
 
-    const finishSec = (Date.now() - Date.parse(startIso)) / 1000;
-    const id = `${snr}-${Date.now()}`;
-    outboxAdd({ id, type:'finish', snr, finish: finishSec, createdAt: nowIso() });
-    render(); processOutbox();
+      const finishSec = (Date.now() - Date.parse(startIso)) / 1000;
+      const id = `${snr}-${Date.now()}`;
+      outboxAdd({ id, type:'finish', snr, finish: finishSec, createdAt: nowIso() });
+      render();
+      processOutbox();
+    }catch(err){
+      console.error('finishClick feil', err);
+      toast('Klarte ikke å registrere mål (se konsoll)');
+    }
   }
 
   async function processOutbox(){
