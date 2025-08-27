@@ -1,202 +1,312 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Målregistrering for Ski Konkurranse</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Målregistrering (offline-first)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background: #fff;
+    :root{
+      --bg:#ffffff; --fg:#111; --muted:#555; --accent:#0a7cff; --ok:#28a745; --warn:#cc8a00; --err:#cc1d1d; --card:#f2f7ff;
     }
-    h1 {
-      font-size: 36px;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    /* Hver deltaker vises som et kort */
-    .participant-card {
-      border: 2px solid #007bff;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 10px auto;
-      max-width: 500px;
-      background-color: #e9f5ff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .participant-card h2 {
-      font-size: 32px;
-      margin: 0;
-      color: #007bff;
-    }
-    .participant-card p {
-      font-size: 28px;
-      margin: 10px 0;
-      color: #333;
-    }
-    .distance {
-      font-size: 24px;
-      color: #d00;
-      margin-top: 10px;
-    }
-    .finish-button {
-      background-color: #28a745;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 26px;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-top: 15px;
-    }
-    @media (max-width: 480px) {
-      .participant-card h2 {
-        font-size: 28px;
-      }
-      .participant-card p, .distance {
-        font-size: 22px;
-      }
-      .finish-button {
-        font-size: 22px;
-        padding: 12px 24px;
-      }
+    html,body{height:100%}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
+    header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;z-index:10}
+    .bar{display:flex;gap:.5rem;align-items:center;justify-content:space-between;padding:.75rem 1rem}
+    h1{font-size:1.3rem;margin:0}
+    .status{font-size:.9rem}
+    .pill{border:1px solid #e5e5e5;border-radius:999px;padding:.25rem .6rem}
+    .pill.online{background:#eaffea;border-color:#b8e5b8;color:#1a7d1a}
+    .pill.offline{background:#fff6d6;border-color:#f0d082;color:#7a5a00}
+    .pill.syncing{background:#eef5ff;border-color:#cfe0ff;color:#20509e}
+
+    .controls{display:flex;gap:.5rem}
+    button{appearance:none;border:1px solid #d6d6d6;border-radius:.8rem;padding:.6rem .9rem;font-size:1rem;background:#fff}
+    button:active{transform:scale(.98)}
+    .primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+    main{padding:1rem;max-width:720px;margin:0 auto}
+    .grid{display:grid;grid-template-columns:1fr;gap:.8rem}
+
+    .card{border:1px solid #e5eefc;border-radius:1rem;padding:1rem;background:var(--card)}
+    .title{display:flex;justify-content:space-between;align-items:center}
+    .snr{font-weight:700;font-size:1.3rem;color:var(--accent)}
+    .name{font-size:1.1rem}
+    .meta{display:flex;gap:1rem;margin:.4rem 0;color:var(--muted);font-size:.95rem}
+    .distance{color:#d00;font-weight:600}
+
+    .finish{width:100%;background:var(--ok);border-color:var(--ok);color:#fff;font-size:1.15rem;padding:0.9rem;border-radius:.9rem}
+    .finish.pending{background:#8fbf94;border-color:#8fbf94}
+    .badge{font-size:.8rem;border:1px dashed #bbb;border-radius:.5rem;padding:.1rem .4rem;color:#666}
+
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;padding:.7rem 1rem;border-radius:.7rem;font-size:.95rem;opacity:0;pointer-events:none;transition:opacity .2s}
+    .toast.show{opacity:1}
+
+    @media (min-width:540px){
+      .grid{grid-template-columns:1fr 1fr}
     }
   </style>
-  <!-- Inkluder Supabase SDK (UMD) -->
+  <!-- Supabase UMD -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
-    // Konfigurer Supabase – bruk dine verdier
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Hent aktive deltakere (status "I gang")
-    async function fetchActiveParticipants() {
-      const { data, error } = await supabaseClient
-        .from("participants")
-        .select("*")
-        .eq("status", "I gang");
-      if (error) {
-        console.error("Feil ved henting av aktive deltakere:", error);
-        return [];
-      }
-      return data;
-    }
-
-    // Hent fullførte deltakere (status "Fullført")
-    async function fetchFinishedParticipants() {
-      const { data, error } = await supabaseClient
-        .from("participants")
-        .select("*")
-        .eq("status", "Fullført");
-      if (error) {
-        console.error("Feil ved henting av fullførte deltakere:", error);
-        return [];
-      }
-      return data;
-    }
-
-    // Formatér tid (sekunder) til mm:ss
-    function formatTime(timeSec) {
-      if (!timeSec || isNaN(timeSec)) return "";
-      const totalSec = Math.floor(timeSec);
-      const mm = Math.floor(totalSec / 60);
-      const ss = totalSec % 60;
-      return `${mm}:${ss.toString().padStart(2, "0")}`;
-    }
-
-    // Oppdater deltakerkortene
-    async function updateParticipantCards() {
-      // Hent aktive og fullførte deltakere
-      const active = await fetchActiveParticipants();
-      const finished = await fetchFinishedParticipants();
-
-      // Gruppe fullførte deltakere etter klasse og finn ledertiden (min finish-tid) for hver klasse
-      const finishedByClass = {};
-      finished.forEach(p => {
-        const cls = p.class || "Ukjent klasse";
-        const finishTime = parseFloat(p.finish) || 0;
-        if (!finishedByClass[cls] || finishTime < finishedByClass[cls]) {
-          finishedByClass[cls] = finishTime;
-        }
-      });
-
-      const container = document.getElementById("participantContainer");
-      if (active.length === 0) {
-        container.innerHTML = "<p>Ingen aktive deltakere.</p>";
-        return;
-      }
-
-      // Sorter aktive deltakere etter startnummer
-      active.sort((a, b) => a.snr - b.snr);
-
-      let html = "";
-      active.forEach(p => {
-        // Beregn deltakerens nåværende tid (hvis start er registrert)
-        let elapsed = 0;
-        if (p.start) {
-          elapsed = (Date.now() - Date.parse(p.start)) / 1000;
-        }
-        // Finn ledertiden for deltakerens klasse (hvis noen har fullført)
-        const cls = p.class || "Ukjent klasse";
-        let leaderTime = finishedByClass[cls] || null;
-        let diffStr = "";
-        if (leaderTime !== null && elapsed > leaderTime) {
-          let diff = elapsed - leaderTime;
-          diffStr = `<p class="distance">Avstand: +${formatTime(diff)}</p>`;
-        }
-        html += `
-          <div class="participant-card">
-            <h2>Startnr: ${p.snr}</h2>
-            <p>${p.name}</p>
-            ${diffStr}
-            <button class="finish-button" onclick="markAsFinished(${p.snr})">Mål</button>
-          </div>
-        `;
-      });
-      container.innerHTML = html;
-    }
-
-    // Registrer at en deltaker har nådd målet
-    async function markAsFinished(snr) {
-      // Hent deltakerdata
-      const { data, error } = await supabaseClient
-        .from("participants")
-        .select("*")
-        .eq("snr", snr)
-        .single();
-      if (error) {
-        console.error("Feil ved henting av deltaker for snr", snr, error);
-        return;
-      }
-      let p = data;
-      if (!p.start) {
-        // Deltakeren har ikke startet enda
-        return;
-      }
-      // Beregn finish-tid i sekunder
-      const finishTime = (Date.now() - Date.parse(p.start)) / 1000;
-      const { error: updateError } = await supabaseClient
-        .from("participants")
-        .update({ status: "Fullført", finish: finishTime })
-        .eq("snr", snr);
-      if (updateError) {
-        console.error("Feil ved registrering av måltid for snr", snr, updateError);
-      }
-      updateParticipantCards();
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-      updateParticipantCards();
-      // Oppdater kortene hvert sekund (dette gir nedtellingseffekt)
-      setInterval(updateParticipantCards, 1000);
-    });
-  </script>
 </head>
 <body>
-  <h1>Registrer Måltid</h1>
-  <div id="participantContainer"></div>
+  <header>
+    <div class="bar">
+      <h1>Målregistrering</h1>
+      <div class="controls">
+        <button id="refreshBtn" title="Synk nå">⟳ Synk</button>
+        <button id="toggleSortBtn" title="Sorter">⇅ Sort</button>
+        <span id="netBadge" class="pill">Sjekker…</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="status">
+      <span id="syncBadge" class="pill syncing">Klar</span>
+      <span id="queueBadge" class="pill" title="Antall ventende oppdateringer">Kø: 0</span>
+      <span class="pill" id="tsBadge">–</span>
+    </div>
+
+    <section class="grid" id="participantGrid"></section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+  /********************* CONFIG *********************/
+  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+  const sb = supabase.createClient(supabaseUrl, supabaseKey);
+
+  // Tabellnavn/kolonner
+  const TABLE = "participants";
+
+  /********************* STATE *********************/
+  let cache = { active: [], finished: [], finishedByClass: {} };
+  let sortMode = localStorage.getItem("sortMode") || "snr"; // snr | name
+  let pollingMs = 15000; // reduser nett-bruk i felt, vi oppdaterer lokalt hvert sekund
+  let backoff = 0; // økes ved feil
+  let tickTimer = null; // 1s lokal UI-tick
+  let pollTimer = null; // nett-poll
+
+  /********************* UTIL *********************/
+  const $ = sel => document.querySelector(sel);
+  function toast(msg){
+    const t = $("#toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 1800);
+  }
+  function formatTime(timeSec){
+    if (timeSec == null || isNaN(timeSec)) return "";
+    const total = Math.max(0, Math.floor(timeSec));
+    const mm = Math.floor(total/60); const ss = total%60;
+    return `${mm}:${ss.toString().padStart(2,"0")}`;
+  }
+  function nowIso(){ return new Date().toISOString(); }
+  function isOnline(){ return navigator.onLine; }
+  function setNetBadge(){
+    const b = $("#netBadge");
+    b.classList.remove("online","offline");
+    if (isOnline()){ b.textContent = "Online"; b.classList.add("online"); }
+    else { b.textContent = "Offline"; b.classList.add("offline"); }
+  }
+  function setSyncBadge(text, cls){
+    const s = $("#syncBadge");
+    s.textContent = text; s.className = `pill ${cls||""}`;
+  }
+  function setQueueBadge(){
+    const q = outboxLoad();
+    $("#queueBadge").textContent = `Kø: ${q.length}`;
+  }
+
+  /********************* OUTBOX (offline kø) *********************/
+  const OUTBOX_KEY = "finish_outbox_v1";
+  function outboxLoad(){ try{ return JSON.parse(localStorage.getItem(OUTBOX_KEY)||"[]"); }catch{ return []; } }
+  function outboxSave(items){ localStorage.setItem(OUTBOX_KEY, JSON.stringify(items)); setQueueBadge(); }
+  function outboxAdd(item){ const q = outboxLoad(); q.push(item); outboxSave(q); }
+  function outboxRemoveById(id){ const q = outboxLoad().filter(x=>x.id!==id); outboxSave(q); }
+
+  /********************* CACHE *********************/
+  const CACHE_KEY = "participants_cache_v1";
+  function cacheSave(){ localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); $("#tsBadge").textContent = `Sist oppdatert: ${new Date().toLocaleTimeString()}`; }
+  function cacheLoad(){ try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); if(c){ cache=c; } }catch{} }
+
+  /********************* RENDER *********************/
+  function computeFinishedByClass(){
+    const map = {};
+    for(const p of cache.finished){
+      const cls = p.class || "Ukjent";
+      const t = parseFloat(p.finish)||0;
+      if(!map[cls] || t < map[cls]) map[cls] = t;
+    }
+    cache.finishedByClass = map;
+  }
+
+  function sortParticipants(list){
+    if (sortMode === "name") return list.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+    return list.slice().sort((a,b)=> (a.snr||0)-(b.snr||0));
+  }
+
+  function render(){
+    const grid = $("#participantGrid");
+    if (!cache.active.length){ grid.innerHTML = `<div class="card"><div>Ingen aktive deltakere.</div></div>`; return; }
+
+    const H = [];
+    for (const p of sortParticipants(cache.active)){
+      let elapsed = 0;
+      if (p.start) elapsed = (Date.now() - Date.parse(p.start)) / 1000;
+      const cls = p.class || "Ukjent";
+      const leader = cache.finishedByClass[cls];
+      const diff = (leader!=null && elapsed>leader) ? `+${formatTime(elapsed - leader)}` : "Leder";
+      const pending = outboxLoad().some(x=>x.snr===p.snr);
+      H.push(`
+        <article class="card">
+          <div class="title">
+            <div class="snr">Startnr ${p.snr}</div>
+            <div class="badge">${cls}</div>
+          </div>
+          <div class="name">${p.name||"(uten navn)"}</div>
+          <div class="meta">
+            <div>Tid: <strong>${formatTime(elapsed)}</strong></div>
+            <div class="distance">${leader==null?"":diff}</div>
+          </div>
+          <button class="finish ${pending?"pending":""}" ${pending?"disabled":""} onclick="finishClick(${p.snr})">${pending?"I kø – synkes":"Mål"}</button>
+        </article>
+      `);
+    }
+    grid.innerHTML = H.join("");
+  }
+
+  // Lokal 1s-tick for å oppdatere tider uten nett
+  function startTick(){ if (tickTimer) return; tickTimer = setInterval(render, 1000); }
+  function stopTick(){ clearInterval(tickTimer); tickTimer=null; }
+
+  /********************* DATA (nett) *********************/
+  async function fetchLists(){
+    setSyncBadge("Henter…","syncing");
+    try{
+      const [{ data:active, error:e1 }, { data:finished, error:e2 }] = await Promise.all([
+        sb.from(TABLE).select("*").eq("status","I gang"),
+        sb.from(TABLE).select("*").eq("status","Fullført")
+      ]);
+      if (e1||e2) throw e1||e2;
+      cache.active = active||[];
+      cache.finished = finished||[];
+      computeFinishedByClass();
+      cacheSave();
+      render();
+      setSyncBadge("Synkret","online");
+      backoff = 0;
+    }catch(err){
+      setSyncBadge("Feil – viser cache","offline");
+      console.warn("Nettfeil:", err);
+      // øk backoff (maks 60s tillegg)
+      backoff = Math.min(60000, (backoff||0) + 5000);
+    }
+  }
+
+  function schedulePoll(){
+    clearInterval(pollTimer);
+    pollTimer = setInterval(fetchLists, pollingMs + backoff);
+  }
+
+  /********************* FINISH FLOW *********************/
+  async function finishClick(snr){
+    // hent deltaker fra cache
+    const p = cache.active.find(x=>x.snr===snr);
+    if (!p || !p.start) { toast("Kan ikke registrere – ingen starttid"); return; }
+    const finishSec = (Date.now() - Date.parse(p.start)) / 1000;
+    const id = `${snr}-${Date.now()}`; // enkel idempotens i køen
+    outboxAdd({ id, snr, finish: finishSec, createdAt: nowIso() });
+    render();
+    processOutbox();
+  }
+
+  async function processOutbox(){
+    if (!outboxLoad().length) return;
+    if (!isOnline()) { setSyncBadge("Venter på nett","offline"); return; }
+    setSyncBadge("Sender…","syncing");
+
+    const q = outboxLoad();
+    for (const job of q){
+      try{
+        // Sjekk om allerede fullført på server (unngå duplikat)
+        const { data:exists, error:e0 } = await sb.from(TABLE).select("status,finish").eq("snr", job.snr).single();
+        if (e0) throw e0;
+        if (exists && exists.status === "Fullført") { outboxRemoveById(job.id); continue; }
+        const { error:upErr } = await sb.from(TABLE)
+          .update({ status:"Fullført", finish: job.finish })
+          .eq("snr", job.snr);
+        if (upErr) throw upErr;
+        outboxRemoveById(job.id);
+        toast(`Mål registrert for #${job.snr}`);
+      }catch(err){
+        console.warn("Klarte ikke å synke", job, err);
+        setSyncBadge("Feil – prøver igjen","offline");
+        // Avbryt løkken – prøv igjen senere for resten
+        break;
+      }
+    }
+    // Etter forsøk: hent lister på nytt
+    fetchLists();
+  }
+
+  /********************* EVENTS *********************/
+  window.finishClick = finishClick; // eksportrer for onclick i HTML
+
+  window.addEventListener('online', ()=>{ setNetBadge(); processOutbox(); fetchLists(); });
+  window.addEventListener('offline', ()=>{ setNetBadge(); setSyncBadge("Offline – viser cache","offline"); });
+
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.hidden){ stopTick(); }
+    else { startTick(); }
+  });
+
+  $("#refreshBtn").addEventListener('click', ()=>{ fetchLists(); processOutbox(); });
+  $("#toggleSortBtn").addEventListener('click', ()=>{
+    sortMode = (sortMode==="snr")?"name":"snr";
+    localStorage.setItem("sortMode", sortMode);
+    render();
+  });
+
+  /********************* SERVICE WORKER (cache-first) *********************/
+  // Inline SW via Blob slik at siden kan lagres som én fil
+  if ('serviceWorker' in navigator){
+    const swCode = `
+      const CACHE_NAME = 'malreg-offline-v1';
+      const ASSETS = [self.location.href, 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js'];
+      self.addEventListener('install', e=>{
+        e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
+      });
+      self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
+      self.addEventListener('fetch', e=>{
+        const req = e.request;
+        // cache-first for GET
+        if (req.method === 'GET'){
+          e.respondWith(
+            caches.match(req).then(cached=>{
+              const fetchPromise = fetch(req).then(res=>{
+                const copy = res.clone();
+                caches.open(CACHE_NAME).then(c=>c.put(req, copy));
+                return res;
+              }).catch(()=>cached);
+              return cached || fetchPromise;
+            })
+          );
+        }
+      });
+    `;
+    const blob = new Blob([swCode], { type:'text/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+
+  /********************* BOOT *********************/
+  function boot(){
+    setNetBadge(); setQueueBadge(); cacheLoad(); computeFinishedByClass(); render(); startTick();
+    fetchLists().then(()=>{ schedulePoll(); processOutbox(); });
+  }
+  boot();
+  </script>
 </body>
 </html>
