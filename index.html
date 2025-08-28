@@ -92,24 +92,24 @@
 
   <div style="overflow-x:auto;">
     <table>
-      <thead>
-        <tr>
-          <th>Velg</th>
-          <th>Plass</th>
-          <th>Start</th>
-          <th>#</th>
-          <th>Navn</th>
-          <th>Kl.</th>
-          <th>Status</th>
-          <th>Tid</th>
-          <th>S1</th>
-          <th>S2</th>
-          <th>Bom</th>
-          <th>Rundetider (Diff)</th>
-          <th>Mål (Diff)</th>
-          <th>Handl.</th>
-        </tr>
-      </thead>
+<thead>
+  <tr>
+    <th>Velg <input type="checkbox" id="masterSelect"></th>
+    <th>Plass</th>
+    <th>Start</th>
+    <th>#</th>
+    <th>Navn</th>
+    <th>Kl.</th>
+    <th>Status</th>
+    <th>Tid</th>
+    <th>S1</th>
+    <th>S2</th>
+    <th>Bom</th>
+    <th>Rundetider (Diff)</th>
+    <th>Mål (Diff)</th>
+    <th>Handl.</th>
+  </tr>
+</thead>
       <tbody id="results"></tbody>
     </table>
   </div>
@@ -176,6 +176,16 @@
     window.updateSelection = function(snr, isSelected) {
       if (window.participants[snr]) window.participants[snr].selected = isSelected;
     };
+    // Marker/fjern alle i hovedtabellen (og andre lister med samme klasse)
+window.selectAll = function(checked) {
+  const boxes = document.querySelectorAll(".select-participant");
+  boxes.forEach(cb => {
+    cb.checked = checked;
+    const snr = parseInt(cb.getAttribute("data-snr"));
+    if (!isNaN(snr)) updateSelection(snr, checked); // vedlikeholder p.selected så det overlever refresh
+  });
+};
+
 
     // Helpers
     window.getShootingArray = function(p) {
@@ -753,6 +763,10 @@
     document.getElementById("btnStartMass").addEventListener("click", window.startMass);
     document.getElementById("btnImportCSV").addEventListener("click", window.importCSV);
     document.getElementById("btnSaveSelectedHistory").addEventListener("click", window.saveSelectedToHistory);
+const master = document.getElementById('masterSelect');
+if (master) {
+  master.addEventListener('change', (e) => window.selectAll(e.target.checked));
+}
 
     // Historikk – initialiser
     (function(){
