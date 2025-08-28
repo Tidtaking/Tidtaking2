@@ -170,7 +170,8 @@ function toggleFavorite(snr){
   snr = Number(snr);
   if(favorites.has(snr)) favorites.delete(snr); else favorites.add(snr);
   saveFavorites();
-  render();
+  // Tving render for å reflektere filter og visuell stjerne umiddelbart
+  lastRenderKey = ""; render();
   if(focusedSnr===snr) updateFocusFav();
 }
 
@@ -274,11 +275,13 @@ async function fetchAll(){
 // ---------------- Key used to minimize re-render ----------------
 function computeRenderKey(list){
   const onlyFavs = document.getElementById("onlyFavs").checked;
-  var base = JSON.stringify(list.map(function(p){
+  const onlyRunning = document.getElementById("onlyRunning").checked;
+  const q = document.getElementById("filter").value.trim().toLowerCase();
+  const base = JSON.stringify(list.map(function(p){
     return {snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting};
   }));
-  var favs = Array.from(favorites).join(",");
-  return base + "|c:" + String(compact) + "|f:" + favs + "|favOnly:" + String(onlyFavs);
+  const favs = Array.from(favorites).join(",");
+  return base + "|c:" + String(compact) + "|f:" + favs + "|favOnly:" + String(onlyFavs) + "|runOnly:" + String(onlyRunning) + "|q:" + q;
 }
 
 // ---------------- Rendering ----------------
@@ -405,7 +408,7 @@ table.addEventListener("click", async (e)=>{
   if(action === "send"){ await sendShootingResult(snr, round); }
   if(action === "time"){ await registerShootingTime(snr, round, el); }
   if(action === "focus"){ openFocusSheet(snr); }
-  if(action === "fav"){ toggleFavorite(snr); }      // <- viktig: bruker Number(snr)
+  if(action === "fav"){ toggleFavorite(snr); }
   if(action === "undo-send"){ await undoSend(snr, round); }
   if(action === "undo-time"){ await undoTime(snr, round); }
 });
@@ -432,7 +435,7 @@ async function sendShootingResult(snr, shootIdx){
   const updateData = { skive: p.skive ?? "", shooting: JSON.stringify(p.shootingLocal) };
   if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
   enqueueUpdate("participants", updateData, { snr: snr });
-  render();
+  lastRenderKey = ""; render();
 }
 async function registerShootingTime(snr, shootIdx, btnEl){
   const p = participants[snr]; if(!p) return;
@@ -440,25 +443,25 @@ async function registerShootingTime(snr, shootIdx, btnEl){
     if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = "Registrer tid S1"; }
     else {
       const secs = (Date.now() - p.shootingTimeStart1) / 1000;
-      p.shootingtime1 = secs; enqueueUpdate("participants", { shootingtime1: secs }, { snr: snr }); render();
+      p.shootingtime1 = secs; enqueueUpdate("participants", { shootingtime1: secs }, { snr: snr }); lastRenderKey = ""; render();
     }
   } else {
     if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = "Registrer tid S2"; }
     else {
       const secs = (Date.now() - p.shootingTimeStart2) / 1000;
-      p.shootingtime2 = secs; enqueueUpdate("participants", { shootingtime2: secs }, { snr: snr }); render();
+      p.shootingtime2 = secs; enqueueUpdate("participants", { shootingtime2: secs }, { snr: snr }); lastRenderKey = ""; render();
     }
   }
 }
 async function undoSend(snr, round){
   const col = round===0? "s1sent":"s2sent";
   const p = participants[snr]; if(!p) return;
-  p[col] = false; var o={}; o[col]=false; enqueueUpdate("participants", o, {snr:snr}); render();
+  p[col] = false; var o={}; o[col]=false; enqueueUpdate("participants", o, {snr:snr}); lastRenderKey = ""; render();
 }
 async function undoTime(snr, round){
   const col = round===0? "shootingtime1":"shootingtime2";
   const p = participants[snr]; if(!p) return;
-  delete p[col]; var o={}; o[col]=null; enqueueUpdate("participants", o, {snr:snr}); render();
+  delete p[col]; var o={}; o[col]=null; enqueueUpdate("participants", o, {snr:snr}); lastRenderKey = ""; render();
 }
 function enableUndoButtons(){ /* no-op */ }
 
@@ -542,7 +545,7 @@ async function refreshFromDb(){
   const present = {};
   data.forEach(function(rec){ mergeDbRecord(rec); present[rec.snr]=true; });
   Object.keys(participants).forEach(function(snr){ if(!present[snr]) delete participants[snr]; });
-  render();
+  lastRenderKey = ""; render();
 }
 async function init(){
   await refreshFromDb();
@@ -550,7 +553,7 @@ async function init(){
     sb.channel("participants_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "participants" }, (payload) => {
         const rec = payload.new || payload.old;
-        if(rec){ mergeDbRecord(rec); render(); if(focusedSnr && rec.snr===focusedSnr){ openFocusSheet(focusedSnr); } }
+        if(rec){ mergeDbRecord(rec); lastRenderKey = ""; render(); if(focusedSnr && rec.snr===focusedSnr){ openFocusSheet(focusedSnr); } }
       })
       .subscribe();
   }catch(err){
@@ -560,10 +563,39 @@ async function init(){
   if(window.innerWidth >= 900){ setInterval(refreshFromDb, 4000); }
   netBadge(); setSyncBadge(); processQueue();
 }
-document.addEventListener("DOMContentLoaded", init);
+
+// ---------------- UI filter listeners (fix for mobil) ----------------
+function setupUiFilterListeners(){
+  const filterEl = document.getElementById('filter');
+  const onlyFavsEl = document.getElementById('onlyFavs');
+  const onlyRunningEl = document.getElementById('onlyRunning');
+  const toggleCompactEl = document.getElementById('toggleCompact');
+
+  const triggerRender = () => { lastRenderKey = ""; render(); };
+
+  // Live-søk m/ debounce
+  filterEl.addEventListener('input', debounce(triggerRender, 120));
+
+  // Filter-checkboxer
+  onlyFavsEl.addEventListener('change', triggerRender);
+  onlyRunningEl.addEventListener('change', triggerRender);
+
+  // Kompakt visning (skjuler S2-kolonner)
+  toggleCompactEl.addEventListener('click', (e) => {
+    compact = !compact;
+    e.currentTarget.setAttribute('aria-pressed', String(compact));
+    triggerRender();
+  });
+}
 
 // ---------------- Small utils ----------------
 function debounce(fn, ms){ let t; return function(){ const args=arguments; clearTimeout(t); t=setTimeout(function(){ fn.apply(null, args); }, ms); } }
+
+// Start app
+document.addEventListener("DOMContentLoaded", () => {
+  init();
+  setupUiFilterListeners();
+});
 </script>
 </body>
 </html>
