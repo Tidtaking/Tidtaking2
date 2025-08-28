@@ -554,7 +554,7 @@ l.setPopupContent(`
       if (avisMap) {
         for (const [avisId, avisData] of avisMap.entries()) {
           const navn = avisNavnMap[avisId] || avisId;
-          const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokstr || navn.toLowerCase().includes(sokStr));
+const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
 
           if (!avisMatch) continue;
 
