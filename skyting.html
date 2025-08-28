@@ -167,33 +167,40 @@ let compact = false; // hide S2 cols on demand
 // --- Offline/queue state ---
 const QUEUE_KEY = 'pendingOps_v1';
 let pendingOps = [];
-try{ pendingOps = JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]'); }catch{ pendingOps = []; }
+try { pendingOps = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { pendingOps = []; }
 function saveQueue(){ localStorage.setItem(QUEUE_KEY, JSON.stringify(pendingOps)); }
 function queueSize(){ return pendingOps.length; }
-function setSyncBadge(){ const el=document.getElementById('syncBadge'); const n=queueSize(); if(n>0){ el.style.display='inline'; el.textContent = `Synkroniserer (${n})…`; } else { el.style.display='none'; } }
-
+function setSyncBadge(){
+  var el = document.getElementById('syncBadge');
+  if(!el) return;
+  var n = queueSize();
+  if(n>0){ el.style.display='inline'; el.textContent = 'Synkroniserer ('+n+')...'; }
+  else { el.style.display='none'; }
+}
 async function execOp(op){
   if(op.type==='update'){
-    const {table, values, match} = op;
-    const { error } = await sb.from(table).update(values).match(match);
-    if(error) throw error; return true;
+    var table = op.table, values = op.values, match = op.match;
+    var resp = await sb.from(table).update(values).match(match);
+    if(resp.error) throw resp.error; return true;
   }
 }
-
-let processing=false; async function processQueue(){ if(processing) return; processing=true; try{
-  if(!navigator.onLine) return; setSyncBadge();
-  let backoff=800; // ms
-  while(pendingOps.length){
-    try{ await execOp(pendingOps[0]); pendingOps.shift(); saveQueue(); setSyncBadge(); }
-    catch(e){ console.warn('Queue op failed, retrying later', e); await new Promise(r=>setTimeout(r, backoff)); backoff = Math.min(backoff*1.8, 8000); if(!navigator.onLine) break; }
-  }
-} finally{ processing=false; setSyncBadge(); }}
-
-function enqueueUpdate(table, values, match){ pendingOps.push({type:'update', table, values, match}); saveQueue(); setSyncBadge(); processQueue(); }
-
+var processing=false;
+async function processQueue(){
+  if(processing) return; processing=true;
+  try{
+    if(!navigator.onLine) return;
+    setSyncBadge();
+    var backoff=800; // ms
+    while(pendingOps.length){
+      try{ await execOp(pendingOps[0]); pendingOps.shift(); saveQueue(); setSyncBadge(); }
+      catch(e){ console.warn('Queue op failed, retrying later', e); await new Promise(function(r){ setTimeout(r, backoff); }); backoff = Math.min(backoff*1.8, 8000); if(!navigator.onLine) break; }
+    }
+  } finally { processing=false; setSyncBadge(); }
+}
+function enqueueUpdate(table, values, match){ pendingOps.push({type:'update', table:table, values:values, match:match}); saveQueue(); setSyncBadge(); processQueue(); }
 // Nettverksstatus badge
-const netBadge = ()=>{
-  const el = document.getElementById('netBadge');
+var netBadge = function(){
+  var el = document.getElementById('netBadge');
   if(!el) return;
   if(navigator.onLine){ el.textContent='● Online'; el.style.color = '#16a34a'; processQueue(); }
   else { el.textContent='● Offline – lagrer lokalt'; el.style.color = '#ef4444'; }
