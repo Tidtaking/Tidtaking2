@@ -123,7 +123,6 @@
       <button id="btnRefreshHistory">Oppdater historikk</button>
       <small id="historySummary" style="opacity:0.8"></small>
     </div>
-
     <div style="overflow-x:auto; margin-top:8px;">
       <table>
         <caption style="caption-side:top; text-align:left; font-weight:bold;">Lagret i history</caption>
@@ -139,7 +138,6 @@
         <tbody id="historySavedBody"></tbody>
       </table>
     </div>
-
     <div style="overflow-x:auto; margin-top:12px;">
       <table>
         <caption style="caption-side:top; text-align:left; font-weight:bold;">Ikke lagret ennå (fra participants)</caption>
@@ -536,15 +534,11 @@
     // toLower helper
     function lc(x){return (x||'').toString().toLowerCase().trim();}
 
-    // Interaktiv rendering av "Ikke lagret"-rader (med S1/S2, Velg og Handl.)
+    // Interaktiv rendering av 'Ikke lagret' rader
     window.renderPendingInteractive = function(pending, compDate){
-      if (!pending || pending.length === 0)
-        return `<tr><td colspan="10">Alle er lagret for ${compDate}.</td></tr>`;
-
+      if (!pending || pending.length === 0) return `<tr><td colspan="10">Alle er lagret for ${compDate}.</td></tr>`;
       return pending.map(p => {
-        // Bruk lokal state hvis den finnes (for timer/selected), else rad fra SELECT
-        const wp = window.participants[p.snr] || p;
-
+        const wp = window.participants[p.snr] || p; // bruk lokale data hvis de finnes
         const selectedAttr = wp.selected ? 'checked' : '';
         let tid = '-';
         if (wp.status === 'Planlagt') {
@@ -557,18 +551,9 @@
           tid = window.formatTime(wp.finish);
         }
         const bom = window.getShootingArray(wp).flat().filter(h => h === false).length;
-
-        // Handlingsknapper: Start hvis ikke i gang/planlagt startknapp finnes i hovedtabell,
-        // men vi tilbyr her Rundetid/Mål når timer går (samme som hovedtabell)
-        const actions = wp.timer
-          ? `<button class="btn-lap" onclick="recordLap(${wp.snr})">Rundetid</button> <button class="btn-finish" onclick="recordFinish(${wp.snr})">Mål</button>`
-          : (wp.status === 'Planlagt' || wp.status === 'Venter')
-            ? `<button class="btn-start" onclick="startIndividual(${wp.snr})">Start</button>`
-            : '-';
-
+        const actions = wp.timer ? `<button class="btn-lap" onclick="recordLap(${wp.snr})">Rundetid</button> <button class="btn-finish" onclick="recordFinish(${wp.snr})">Mål</button>` : '-';
         return `<tr>
-          <td><input type="checkbox" class="select-participant" data-snr="${wp.snr}"
-                     onchange="updateSelection(${wp.snr}, this.checked)" ${selectedAttr}></td>
+          <td><input type="checkbox" class="select-participant" data-snr="${wp.snr}" onchange="updateSelection(${wp.snr}, this.checked)" ${selectedAttr}></td>
           <td>${wp.snr}</td>
           <td>${wp.name}</td>
           <td>${wp.class}</td>
@@ -602,7 +587,7 @@
       const savedSnr = new Set((hist||[]).map(h => h.snr).filter(v => v !== null && v !== undefined));
       const savedNameClass = new Set((hist||[]).map(h => `name:${lc(h.name)}|class:${lc(h.class)}`));
 
-      // 4) Finn de som ikke er lagret ennå (matcher på snr hvis finnes ellers name+class)
+      // 4) Finn de som ikke er lagret ennå
       const pending = (parts||[]).filter(p => {
         const bySnr = (p.snr != null) && savedSnr.has(p.snr);
         const byNC  = savedNameClass.has(`name:${lc(p.name)}|class:${lc(p.class)}`);
@@ -618,7 +603,7 @@
       const savedBody = document.getElementById('historySavedBody');
       if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="5">Ingen lagret for ${compDate}.</td></tr>`;
 
-      // 6) Render ikke-lagret interaktivt (fra participants)
+      // 6) Render ikke-lagret (fra participants) – interaktiv
       const pendingBody = document.getElementById('historyPendingBody');
       if (pendingBody) pendingBody.innerHTML = window.renderPendingInteractive(pending, compDate);
 
@@ -728,7 +713,7 @@
           rawFinish: p.rawFinish ?? null,  // float8
           shooting: shootingArr,           // jsonb (ikke string)
           penalty: Number(document.getElementById('penaltyTime').value) || null, // numeric
-          // competition, skive, s1sent, s2sent, shootingtime1/2 kan legges til senere ved behov
+          // competition, skive, s1sent, s2sent, shootingtime1/2 kan legges til senere
           // Anbefalt: legg til en kolonne 'snr int' i history for enklere sporing
         };
       }).filter(Boolean);
@@ -743,7 +728,32 @@
       }
     };
 
+    // Timere og init
+    setInterval(window.updateLiveClock, 1000);
+    window.updateLiveClock();
+    setInterval(window.updateTable, 1000);
+    setInterval(window.updateLocalDisplay, 1000);
+    window.updateTable();
+
+    // Event listeners
+    document.getElementById("btnAddParticipant").addEventListener("click", window.addParticipant);
+    document.getElementById("btnAssignStartTimes").addEventListener("click", window.assignStartTimes);
+    document.getElementById("btnResetAll").addEventListener("click", async function() {
+      const confirmed = await window.customConfirm("Er du sikker på at du vil nullstille alt?");
+      if (!confirmed) return;
+      for (const snr in window.participants) {
+        if (window.localTimers[snr]) { clearInterval(window.localTimers[snr]); delete window.localTimers[snr]; }
+      }
+      window.participants = {};
+      const { error } = await window.supabaseClient.from("participants").delete().neq("snr", 0);
+      if (error) console.error("Feil ved nullstilling:", error);
+      window.updateTable();
+    });
+    document.getElementById("btnSaveCSV").addEventListener("click", window.saveCSV);
+    document.getElementById("btnStartMass").addEventListener("click", window.startMass);
+    document.getElementById("btnImportCSV").addEventListener("click", window.importCSV);
     document.getElementById("btnSaveSelectedHistory").addEventListener("click", window.saveSelectedToHistory);
+
     // Historikk – initialiser
     (function(){
       const dateInput = document.getElementById('historyDate');
@@ -763,6 +773,7 @@
         }
       }
       window.updateTable();
+      if (window.updateHistoryView) window.updateHistoryView();
     });
 
     // Markerte deltakere (start/stop/slett)
@@ -778,6 +789,7 @@
         if (error) console.error("Feil ved sletting av snr", snr, error);
       }
       window.updateTable();
+      if (window.updateHistoryView) window.updateHistoryView();
     });
 
     document.getElementById("btnToggleSelected").addEventListener("click", async function() {
@@ -795,6 +807,7 @@
         }
       }
       window.updateTable();
+      if (window.updateHistoryView) window.updateHistoryView();
     });
   </script>
 </body>
