@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Registrering av Skyteresultat — Mobilforbedret (med favoritter)</title>
+  <title>Registrering av Skyteresultat — Mobilforbedret (favoritter + offline-robust)</title>
   <style>
     :root{
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
@@ -84,6 +84,8 @@
         <label class="toggle"><input id="onlyRunning" type="checkbox"> Kun "I gang"</label>
         <label class="toggle"><input id="onlyFavs" type="checkbox"> Kun favoritter</label>
         <button id="toggleCompact" class="chip" aria-pressed="false" title="Skjul S2 for smalere visning">Kompakt</button>
+        <span id="netBadge" style="margin-left:auto;font-size:13px;color:var(--muted)">● Kobler til…</span>
+        <span id="syncBadge" style="font-size:13px;color:var(--muted);display:none">Synkroniserer…</span>
       </div>
     </div>
   </header>
@@ -161,6 +163,45 @@ const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 const participants = {};
 let lastRenderKey = "";
 let compact = false; // hide S2 cols on demand
+
+// --- Offline/queue state ---
+const QUEUE_KEY = 'pendingOps_v1';
+let pendingOps = [];
+try{ pendingOps = JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]'); }catch{ pendingOps = []; }
+function saveQueue(){ localStorage.setItem(QUEUE_KEY, JSON.stringify(pendingOps)); }
+function queueSize(){ return pendingOps.length; }
+function setSyncBadge(){ const el=document.getElementById('syncBadge'); const n=queueSize(); if(n>0){ el.style.display='inline'; el.textContent = `Synkroniserer (${n})…`; } else { el.style.display='none'; } }
+
+async function execOp(op){
+  if(op.type==='update'){
+    const {table, values, match} = op;
+    const { error } = await sb.from(table).update(values).match(match);
+    if(error) throw error; return true;
+  }
+}
+
+let processing=false; async function processQueue(){ if(processing) return; processing=true; try{
+  if(!navigator.onLine) return; setSyncBadge();
+  let backoff=800; // ms
+  while(pendingOps.length){
+    try{ await execOp(pendingOps[0]); pendingOps.shift(); saveQueue(); setSyncBadge(); }
+    catch(e){ console.warn('Queue op failed, retrying later', e); await new Promise(r=>setTimeout(r, backoff)); backoff = Math.min(backoff*1.8, 8000); if(!navigator.onLine) break; }
+  }
+} finally{ processing=false; setSyncBadge(); }}
+
+function enqueueUpdate(table, values, match){ pendingOps.push({type:'update', table, values, match}); saveQueue(); setSyncBadge(); processQueue(); }
+
+// Nettverksstatus badge
+const netBadge = ()=>{
+  const el = document.getElementById('netBadge');
+  if(!el) return;
+  if(navigator.onLine){ el.textContent='● Online'; el.style.color = '#16a34a'; processQueue(); }
+  else { el.textContent='● Offline – lagrer lokalt'; el.style.color = '#ef4444'; }
+};
+window.addEventListener('online', netBadge);
+window.addEventListener('offline', netBadge);
+setTimeout(netBadge,0);
+setTimeout(setSyncBadge,0);
 
 // Favourites (persist locally per enhet/nettleser)
 let favorites = new Set(JSON.parse(localStorage.getItem('favorites')||'[]'));
@@ -269,16 +310,16 @@ function render(){
   tbody.innerHTML = filtered.map(p=>{
     const s1 = renderShootingSpans(p,0);
     const s2 = renderShootingSpans(p,1);
-    const s1Btn = p.s1sent ? `<button class="btn btn-ghost" disabled data-snr="${p.snr}" data-round="0">Sendt</button>` : `<button class="btn btn-success" data-action="send" data-snr="${p.snr}" data-round="0">Send S1</button>`;
-    const s2Btn = p.s2sent ? `<button class="btn btn-ghost" disabled data-snr="${p.snr}" data-round="1">Sendt</button>` : `<button class="btn btn-success" data-action="send" data-snr="${p.snr}" data-round="1">Send S2</button>`;
+    const s1Btn = p.s1sent ? `<button class=\"btn btn-ghost\" data-action=\"undo-send\" data-snr=\"${p.snr}\" data-round=\"0\">Angre S1</button>` : `<button class=\"btn btn-success\" data-action=\"send\" data-snr=\"${p.snr}\" data-round=\"0\">Send S1</button>`;
+    const s2Btn = p.s2sent ? `<button class=\"btn btn-ghost\" data-action=\"undo-send\" data-snr=\"${p.snr}\" data-round=\"1\">Angre S2</button>` : `<button class=\"btn btn-success\" data-action=\"send\" data-snr=\"${p.snr}\" data-round=\"1\">Send S2</button>`;
 
     let t1Btn = '';
-    if(p.shootingtime1){ t1Btn = `<button class=\"btn btn-ghost\" disabled data-snr=\"${p.snr}\" data-round=\"0\">Tid registrert</button>`; }
+    if(p.shootingtime1){ t1Btn = `<button class=\"btn btn-ghost\" data-action=\"undo-time\" data-snr=\"${p.snr}\" data-round=\"0\">Angre tid S1</button>`; }\" data-round=\"0\">Tid registrert</button>`; }
     else if(!p.shootingTimeStart1){ t1Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"0\">Start skytetid S1</button>`; }
     else { t1Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"0\">Registrer tid S1</button>`; }
 
     let t2Btn = '';
-    if(p.shootingtime2){ t2Btn = `<button class=\"btn btn-ghost\" disabled data-snr=\"${p.snr}\" data-round=\"1\">Tid registrert</button>`; }
+    if(p.shootingtime2){ t2Btn = `<button class=\"btn btn-ghost\" data-action=\"undo-time\" data-snr=\"${p.snr}\" data-round=\"1\">Angre tid S2</button>`; }\" data-round=\"1\">Tid registrert</button>`; }
     else if(!p.shootingTimeStart2){ t2Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"1\">Start skytetid S2</button>`; }
     else { t2Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"1\">Registrer tid S2</button>`; }
 
@@ -339,6 +380,12 @@ table.addEventListener('click', async (e)=>{
   if(action === 'fav'){
     toggleFavorite(snr);
   }
+  if(action === 'undo-send'){
+    await undoSend(snr, round);
+  }
+  if(action === 'undo-time'){
+    await undoTime(snr, round);
+  }
 });
 
 // Keyboard support for targets
@@ -363,11 +410,19 @@ table.addEventListener('input', (e)=>{
 });
 
 async function saveSkive(snr, skive){
+  enqueueUpdate('participants', { skive }, { snr });
+}{
   const { error } = await sb.from('participants').update({ skive }).eq('snr', snr);
   if(error){ console.error('Feil ved lagring av skive', snr, error); }
 }
 
 async function sendShootingResult(snr, shootIdx){
+  const p = participants[snr]; if(!p) return;
+  const updateData = { skive: p.skive ?? '', shooting: JSON.stringify(p.shootingLocal) };
+  if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
+  enqueueUpdate('participants', updateData, { snr });
+  render();
+}{
   const p = participants[snr]; if(!p) return;
   const updateData = { skive: p.skive ?? '', shooting: JSON.stringify(p.shootingLocal) };
   if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
@@ -377,6 +432,23 @@ async function sendShootingResult(snr, shootIdx){
 }
 
 async function registerShootingTime(snr, shootIdx, btnEl){
+  const p = participants[snr]; if(!p) return;
+  if(shootIdx===0){
+    if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = 'Registrer tid S1'; }
+    else {
+      const secs = (Date.now() - p.shootingTimeStart1) / 1000;
+      p.shootingtime1 = secs; enqueueUpdate('participants', { shootingtime1: secs }, { snr });
+      render();
+    }
+  } else {
+    if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = 'Registrer tid S2'; }
+    else {
+      const secs = (Date.now() - p.shootingTimeStart2) / 1000;
+      p.shootingtime2 = secs; enqueueUpdate('participants', { shootingtime2: secs }, { snr });
+      render();
+    }
+  }
+}{
   const p = participants[snr]; if(!p) return;
   if(shootIdx===0){
     if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = 'Registrer tid S1'; }
@@ -413,6 +485,11 @@ function addLongPress(el, callback){
 }
 
 async function undoSend(snr, round){
+  const col = round==0? 's1sent':'s2sent';
+  const p = participants[snr]; if(!p) return;
+  p[col] = false; enqueueUpdate('participants', {[col]:false}, {snr});
+  render();
+}{
   if(!confirm('Angre registrert skyting?')) return;
   const col = round==0? 's1sent':'s2sent';
   const {error} = await sb.from('participants').update({[col]:false}).eq('snr', snr);
@@ -420,13 +497,18 @@ async function undoSend(snr, round){
 }
 
 async function undoTime(snr, round){
+  const col = round==0? 'shootingtime1':'shootingtime2';
+  const p = participants[snr]; if(!p) return;
+  delete p[col]; enqueueUpdate('participants', {[col]:null}, {snr});
+  render();
+}{
   if(!confirm('Angre registrert skytetid?')) return;
   const col = round==0? 'shootingtime1':'shootingtime2';
   const {error} = await sb.from('participants').update({[col]:null}).eq('snr', snr);
   if(error) console.error('Feil ved angre tid', error); else refreshFromDb();
 }
 
-function enableUndoButtons(){
+function enableUndoButtons(){ /* Angre-knapper vises alltid eksplisitt; long-press trengs ikke. */ }{
   // deaktiverte knapper i tabellen
   document.querySelectorAll('table button[disabled]').forEach(btn=>{
     const snr = btn.dataset.snr; const round = btn.dataset.round;
@@ -495,12 +577,12 @@ function openFocusSheet(snr){
   renderTargetsInline(p,0,fsS1);
   renderTargetsInline(p,1,fsS2);
 
-  fsSendS1.disabled = !!p.s1sent; fsSendS1.textContent = p.s1sent ? 'Sendt' : 'Send S1';
-  fsSendS2.disabled = !!p.s2sent; fsSendS2.textContent = p.s2sent ? 'Sendt' : 'Send S2';
-  fsTimeS1.textContent = p.shootingtime1 ? 'Tid registrert' : (p.shootingTimeStart1 ? 'Registrer tid S1' : 'Start skytetid S1');
-  fsTimeS1.disabled = !!p.shootingtime1;
-  fsTimeS2.textContent = p.shootingtime2 ? 'Tid registrert' : (p.shootingTimeStart2 ? 'Registrer tid S2' : 'Start skytetid S2');
-  fsTimeS2.disabled = !!p.shootingtime2;
+  fsSendS1.disabled = false; fsSendS1.textContent = p.s1sent ? 'Angre S1' : 'Send S1';
+  fsSendS2.disabled = false; fsSendS2.textContent = p.s2sent ? 'Angre S2' : 'Send S2';
+  fsTimeS1.textContent = p.shootingtime1 ? 'Angre tid S1' : (p.shootingTimeStart1 ? 'Registrer tid S1' : 'Start skytetid S1');
+  fsTimeS1.disabled = false;
+  fsTimeS2.textContent = p.shootingtime2 ? 'Angre tid S2' : (p.shootingTimeStart2 ? 'Registrer tid S2' : 'Start skytetid S2');
+  fsTimeS2.disabled = false;
 
   updateFocusFav();
 
@@ -523,10 +605,10 @@ fsSkiveInput.addEventListener('input', ()=>{
   if(focusedSnr==null) return; const p = participants[focusedSnr]; p.skive = fsSkiveInput.value.trim(); fsSkive.textContent = p.skive; debounce(()=>saveSkive(focusedSnr, p.skive), 400)();
 });
 
-fsSendS1.addEventListener('click', ()=> sendShootingResult(focusedSnr, 0));
-fsSendS2.addEventListener('click', ()=> sendShootingResult(focusedSnr, 1));
-fsTimeS1.addEventListener('click', (e)=> registerShootingTime(focusedSnr, 0, e.currentTarget));
-fsTimeS2.addEventListener('click', (e)=> registerShootingTime(focusedSnr, 1, e.currentTarget));
+fsSendS1.addEventListener('click', ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s1sent) undoSend(focusedSnr,0); else sendShootingResult(focusedSnr,0); });
+fsSendS2.addEventListener('click', ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s2sent) undoSend(focusedSnr,1); else sendShootingResult(focusedSnr,1); });
+fsTimeS1.addEventListener('click', (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime1) undoTime(focusedSnr,0); else registerShootingTime(focusedSnr,0, e.currentTarget); });
+fsTimeS2.addEventListener('click', (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime2) undoTime(focusedSnr,1); else registerShootingTime(focusedSnr,1, e.currentTarget); });
 
 // Jump to focused row if hash present
 window.addEventListener('load', ()=>{
@@ -545,6 +627,7 @@ async function init(){
       .subscribe();
   }catch(err){ console.warn('Realtime ikke aktivert, bruker polling.', err); setInterval(refreshFromDb, 2000); }
   if(window.innerWidth >= 900){ setInterval(refreshFromDb, 4000); }
+  netBadge(); setSyncBadge(); processQueue();
 }
 
 document.addEventListener('DOMContentLoaded', init);
