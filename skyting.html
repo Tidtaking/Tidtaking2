@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Registrering av Skyteresultat — Mobilforbedret (favoritter + offline-robust)</title>
+  <title>Registrering av Skyteresultat - Mobilforbedret (favoritter + offline-robust)</title>
   <style>
     :root{
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
@@ -17,7 +17,7 @@
     body{font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";margin:0; padding:0; color:var(--fg); background:var(--bg)}
 
     header{position:sticky; top:0; z-index:30; background:var(--bg); border-bottom:1px solid var(--border)}
-    .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}    
+    .wrap{max-width:1000px; margin:0 auto; padding:12px clamp(10px, 3vw, 20px);}
     h1{font-size:clamp(20px, 4vw, 28px); margin:4px 0 8px}
 
     .toolbar{display:flex; gap:var(--gap); align-items:center; flex-wrap:wrap}
@@ -80,12 +80,12 @@
     <div class="wrap">
       <h1>Registrering av skyteresultat</h1>
       <div class="toolbar">
-        <input id="filter" type="text" placeholder="Søk på navn eller startnr…" aria-label="Filtrer deltakere">
+        <input id="filter" type="text" placeholder="Søk på navn eller startnr..." aria-label="Filtrer deltakere">
         <label class="toggle"><input id="onlyRunning" type="checkbox"> Kun "I gang"</label>
         <label class="toggle"><input id="onlyFavs" type="checkbox"> Kun favoritter</label>
         <button id="toggleCompact" class="chip" aria-pressed="false" title="Skjul S2 for smalere visning">Kompakt</button>
-        <span id="netBadge" style="margin-left:auto;font-size:13px;color:var(--muted)">● Kobler til…</span>
-        <span id="syncBadge" style="font-size:13px;color:var(--muted);display:none">Synkroniserer…</span>
+        <span id="netBadge" style="margin-left:auto;font-size:13px;color:var(--muted)">Kobler til...</span>
+        <span id="syncBadge" style="font-size:13px;color:var(--muted);display:none">Synkroniserer...</span>
       </div>
     </div>
   </header>
@@ -114,7 +114,6 @@
     </div>
   </main>
 
-  <!-- Focus sheet for single-participant full-screen controls -->
   <dialog id="focusSheet">
     <div class="sheet" style="padding:16px">
       <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
@@ -164,26 +163,37 @@ const participants = {};
 let lastRenderKey = "";
 let compact = false; // hide S2 cols on demand
 
+// Favourites (persist locally per enhet/nettleser)
+let favorites = new Set(JSON.parse(localStorage.getItem('favorites')||'[]'));
+function saveFavorites(){ localStorage.setItem('favorites', JSON.stringify(Array.from(favorites))); }
+function toggleFavorite(snr){
+  snr = Number(snr);
+  if(favorites.has(snr)) favorites.delete(snr); else favorites.add(snr);
+  saveFavorites(); render(); if(focusedSnr===snr) updateFocusFav();
+}
+
 // --- Offline/queue state ---
-const QUEUE_KEY = 'pendingOps_v1';
+const QUEUE_KEY = "pendingOps_v1";
 let pendingOps = [];
-try { pendingOps = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch (e) { pendingOps = []; }
+try { pendingOps = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]"); } catch (e) { pendingOps = []; }
 function saveQueue(){ localStorage.setItem(QUEUE_KEY, JSON.stringify(pendingOps)); }
 function queueSize(){ return pendingOps.length; }
 function setSyncBadge(){
-  var el = document.getElementById('syncBadge');
+  var el = document.getElementById("syncBadge");
   if(!el) return;
   var n = queueSize();
-  if(n>0){ el.style.display='inline'; el.textContent = 'Synkroniserer ('+n+')...'; }
-  else { el.style.display='none'; }
+  if(n>0){ el.style.display="inline"; el.textContent = "Synkroniserer ("+n+")..."; }
+  else { el.style.display="none"; }
 }
+
 async function execOp(op){
-  if(op.type==='update'){
+  if(op.type==="update"){
     var table = op.table, values = op.values, match = op.match;
     var resp = await sb.from(table).update(values).match(match);
     if(resp.error) throw resp.error; return true;
   }
 }
+
 var processing=false;
 async function processQueue(){
   if(processing) return; processing=true;
@@ -193,36 +203,42 @@ async function processQueue(){
     var backoff=800; // ms
     while(pendingOps.length){
       try{ await execOp(pendingOps[0]); pendingOps.shift(); saveQueue(); setSyncBadge(); }
-      catch(e){ console.warn('Queue op failed, retrying later', e); await new Promise(function(r){ setTimeout(r, backoff); }); backoff = Math.min(backoff*1.8, 8000); if(!navigator.onLine) break; }
+      catch(e){ console.warn("Queue op failed, retrying later", e); await new Promise(function(r){ setTimeout(r, backoff); }); backoff = Math.min(backoff*1.8, 8000); if(!navigator.onLine) break; }
     }
   } finally { processing=false; setSyncBadge(); }
 }
-function enqueueUpdate(table, values, match){ pendingOps.push({type:'update', table:table, values:values, match:match}); saveQueue(); setSyncBadge(); processQueue(); }
-// Nettverksstatus badge
+
+function enqueueUpdate(table, values, match){
+  pendingOps.push({type:"update", table:table, values:values, match:match});
+  saveQueue(); setSyncBadge(); processQueue();
+}
+
+// Nettverksstatus badge (ASCII trygt)
 var netBadge = function(){
-  var el = document.getElementById('netBadge');
+  var el = document.getElementById("netBadge");
   if(!el) return;
-  if(navigator.onLine){ el.textContent='● Online'; el.style.color = '#16a34a'; processQueue(); }
-  else { el.textContent='● Offline – lagrer lokalt'; el.style.color = '#ef4444'; }
+  if(navigator.onLine){
+    el.textContent = "\u25CF Online";
+    el.style.color = "#16a34a";
+    processQueue();
+  } else {
+    el.textContent = "\u25CF Offline - lagrer lokalt";
+    el.style.color = "#ef4444";
+  }
 };
-window.addEventListener('online', netBadge);
-window.addEventListener('offline', netBadge);
+window.addEventListener("online", netBadge);
+window.addEventListener("offline", netBadge);
 setTimeout(netBadge,0);
 setTimeout(setSyncBadge,0);
 
-// Favourites (persist locally per enhet/nettleser)
-let favorites = new Set(JSON.parse(localStorage.getItem('favorites')||'[]'));
-function saveFavorites(){ localStorage.setItem('favorites', JSON.stringify([...favorites])); }
-function toggleFavorite(snr){ snr = Number(snr); if(favorites.has(snr)) favorites.delete(snr); else favorites.add(snr); saveFavorites(); render(); if(focusedSnr===snr) updateFocusFav(); }
-
 function ensureShootingFormat(arr){
   if(!Array.isArray(arr) || arr.length!==2) return [Array(5).fill(false), Array(5).fill(false)];
-  return arr.map(r => (Array.isArray(r) && r.length===5) ? r : Array(5).fill(false));
+  return arr.map(function(r){ return (Array.isArray(r) && r.length===5) ? r : Array(5).fill(false); });
 }
 
 function parseShooting(rec){
-  let val = rec.shooting; let arr;
-  if(typeof val === 'string'){ try{ arr = JSON.parse(val); }catch{ arr=null; } }
+  var val = rec.shooting; var arr;
+  if(typeof val === "string"){ try{ arr = JSON.parse(val); }catch(e){ arr=null; } }
   else if(Array.isArray(val)){ arr = val; }
   if(!arr) arr = [Array(5).fill(false), Array(5).fill(false)];
   return ensureShootingFormat(arr);
@@ -254,39 +270,39 @@ function mergeDbRecord(dbRec){
 }
 
 async function fetchAll(){
-  const { data, error } = await sb.from('participants').select('*');
-  if(error){ console.error('Feil ved henting:', error); return []; }
+  const { data, error } = await sb.from("participants").select("*");
+  if(error){ console.error("Feil ved henting:", error); return []; }
   return data;
 }
 
 function computeRenderKey(list){
-  const onlyFavs = document.getElementById('onlyFavs').checked;
-  return JSON.stringify(list.map(p=>({snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting}))) + `|c:${compact}|f:${[...favorites].join(',')}|favOnly:${onlyFavs}`;
-}
-
-async function refreshFromDb(){
-  const data = await fetchAll();
-  const present = {};
-  data.forEach(rec=>{ mergeDbRecord(rec); present[rec.snr]=true; });
-  Object.keys(participants).forEach(snr=>{ if(!present[snr]) delete participants[snr]; });
-  render();
+  const onlyFavs = document.getElementById("onlyFavs").checked;
+  var base = JSON.stringify(list.map(function(p){
+    return {snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting};
+  }));
+  var favs = Array.from(favorites).join(",");
+  return base + "|c:" + String(compact) + "|f:" + favs + "|favOnly:" + String(onlyFavs);
 }
 
 // ---------------- Rendering ----------------
 function renderShootingSpans(p, shootIdx){
-  const arr = p.shootingLocal?.[shootIdx] || Array(5).fill(false);
-  return `<div class="targets" role="group" aria-label="Skyting S${shootIdx+1}">`+
-    arr.map((hit, i)=>`<div class="target" role="button" aria-pressed="${hit}" tabindex="0" data-action="toggle" data-snr="${p.snr}" data-round="${shootIdx}" data-idx="${i}" data-hit="${hit}"></div>`).join('')+
-  `</div>`;
+  const arr = (p.shootingLocal && p.shootingLocal[shootIdx]) ? p.shootingLocal[shootIdx] : Array(5).fill(false);
+  var html = '<div class="targets" role="group" aria-label="Skyting S' + (shootIdx+1) + '">';
+  for(var i=0;i<5;i++){
+    var hit = !!arr[i];
+    html += '<div class="target" role="button" aria-pressed="' + hit + '" tabindex="0" data-action="toggle" data-snr="' + p.snr + '" data-round="' + shootIdx + '" data-idx="' + i + '" data-hit="' + hit + '"></div>';
+  }
+  html += "</div>";
+  return html;
 }
 
 function sortParticipants(list){
-  return list.sort((a,b)=>{
+  return list.sort(function(a,b){
     // Favoritter først
-    const af = favorites.has(a.snr) ? 1 : 0; const bf = favorites.has(b.snr) ? 1 : 0;
+    var af = favorites.has(a.snr) ? 1 : 0; var bf = favorites.has(b.snr) ? 1 : 0;
     if(af !== bf) return bf - af;
-    if(a.status === 'I gang' && b.status !== 'I gang') return -1;
-    if(a.status !== 'I gang' && b.status === 'I gang') return 1;
+    if(a.status === "I gang" && b.status !== "I gang") return -1;
+    if(a.status !== "I gang" && b.status === "I gang") return 1;
     const aDone = (a.s1sent && a.s2sent) ? 1 : 0;
     const bDone = (b.s1sent && b.s2sent) ? 1 : 0;
     if(aDone !== bDone) return aDone - bDone;
@@ -295,111 +311,125 @@ function sortParticipants(list){
 }
 
 function applyFilters(list){
-  const q = document.getElementById('filter').value.trim().toLowerCase();
-  const onlyRunning = document.getElementById('onlyRunning').checked;
-  const onlyFavs = document.getElementById('onlyFavs').checked;
-  return list.filter(p=>{
-    const matchQ = !q || (String(p.snr).includes(q) || (p.name||'').toLowerCase().includes(q));
-    const matchRun = !onlyRunning || p.status === 'I gang';
+  const q = document.getElementById("filter").value.trim().toLowerCase();
+  const onlyRunning = document.getElementById("onlyRunning").checked;
+  const onlyFavs = document.getElementById("onlyFavs").checked;
+  return list.filter(function(p){
+    const matchQ = !q || (String(p.snr).includes(q) || (p.name||"").toLowerCase().includes(q));
+    const matchRun = !onlyRunning || p.status === "I gang";
     const matchFav = !onlyFavs || favorites.has(p.snr);
     return matchQ && matchRun && matchFav;
   });
 }
 
 function render(){
-  const tbody = document.getElementById('tbody');
+  const tbody = document.getElementById("tbody");
   const list = sortParticipants(Object.values(participants));
   const filtered = applyFilters(list);
   const newKey = computeRenderKey(filtered);
   if(newKey === lastRenderKey){ return; }
   lastRenderKey = newKey;
 
-  tbody.innerHTML = filtered.map(p=>{
+  var rowsHtml = "";
+  filtered.forEach(function(p){
     const s1 = renderShootingSpans(p,0);
     const s2 = renderShootingSpans(p,1);
-    const s1Btn = p.s1sent ? `<button class=\"btn btn-ghost\" data-action=\"undo-send\" data-snr=\"${p.snr}\" data-round=\"0\">Angre S1</button>` : `<button class=\"btn btn-success\" data-action=\"send\" data-snr=\"${p.snr}\" data-round=\"0\">Send S1</button>`;
-    const s2Btn = p.s2sent ? `<button class=\"btn btn-ghost\" data-action=\"undo-send\" data-snr=\"${p.snr}\" data-round=\"1\">Angre S2</button>` : `<button class=\"btn btn-success\" data-action=\"send\" data-snr=\"${p.snr}\" data-round=\"1\">Send S2</button>`;
 
-    let t1Btn = '';
-    if(p.shootingtime1){ t1Btn = `<button class=\"btn btn-ghost\" data-action=\"undo-time\" data-snr=\"${p.snr}\" data-round=\"0\">Angre tid S1</button>`; }\" data-round=\"0\">Tid registrert</button>`; }
-    else if(!p.shootingTimeStart1){ t1Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"0\">Start skytetid S1</button>`; }
-    else { t1Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"0\">Registrer tid S1</button>`; }
+    var s1Btn = p.s1sent
+      ? '<button class="btn btn-ghost" data-action="undo-send" data-snr="'+p.snr+'" data-round="0">Angre S1</button>'
+      : '<button class="btn btn-success" data-action="send" data-snr="'+p.snr+'" data-round="0">Send S1</button>';
 
-    let t2Btn = '';
-    if(p.shootingtime2){ t2Btn = `<button class=\"btn btn-ghost\" data-action=\"undo-time\" data-snr=\"${p.snr}\" data-round=\"1\">Angre tid S2</button>`; }\" data-round=\"1\">Tid registrert</button>`; }
-    else if(!p.shootingTimeStart2){ t2Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"1\">Start skytetid S2</button>`; }
-    else { t2Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"1\">Registrer tid S2</button>`; }
+    var t1Btn = "";
+    if(p.shootingtime1){
+      t1Btn = '<button class="btn btn-ghost" data-action="undo-time" data-snr="'+p.snr+'" data-round="0">Angre tid S1</button>';
+    } else if(!p.shootingTimeStart1){
+      t1Btn = '<button class="btn btn-primary" data-action="time" data-snr="'+p.snr+'" data-round="0">Start skytetid S1</button>';
+    } else {
+      t1Btn = '<button class="btn btn-primary" data-action="time" data-snr="'+p.snr+'" data-round="0">Registrer tid S1</button>';
+    }
 
-    const focusBtn = `<button class="btn sticky-right" data-action="focus" data-snr="${p.snr}">Åpne</button>`;
+    var s2Btn = p.s2sent
+      ? '<button class="btn btn-ghost" data-action="undo-send" data-snr="'+p.snr+'" data-round="1">Angre S2</button>'
+      : '<button class="btn btn-success" data-action="send" data-snr="'+p.snr+'" data-round="1">Send S2</button>';
+
+    var t2Btn = "";
+    if(p.shootingtime2){
+      t2Btn = '<button class="btn btn-ghost" data-action="undo-time" data-snr="'+p.snr+'" data-round="1">Angre tid S2</button>';
+    } else if(!p.shootingTimeStart2){
+      t2Btn = '<button class="btn btn-primary" data-action="time" data-snr="'+p.snr+'" data-round="1">Start skytetid S2</button>';
+    } else {
+      t2Btn = '<button class="btn btn-primary" data-action="time" data-snr="'+p.snr+'" data-round="1">Registrer tid S2</button>';
+    }
+
+    const focusBtn = '<button class="btn sticky-right" data-action="focus" data-snr="'+p.snr+'">Åpne</button>';
     const isFav = favorites.has(p.snr);
-    const favBtn = `<button class="fav-btn" title="Favoritt" data-action="fav" data-snr="${p.snr}" aria-pressed="${isFav}"><span class="star">${isFav? '★':'☆'}</span></button>`;
+    const favBtn = '<button class="fav-btn" title="Favoritt" data-action="fav" data-snr="'+p.snr+'" aria-pressed="'+isFav+'"><span class="star">'+(isFav? "★":"☆")+'</span></button>';
 
-    return `<tr data-snr="${p.snr}" id="snr-${p.snr}" class="${isFav? 'fav':''}">
-      <td>${p.snr ?? ''}</td>
-      <td style="text-align:left">${p.name ?? ''}</td>
-      <td>${p.status ?? ''}</td>
-      <td>
-        <input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="${p.skive ?? ''}" data-action="skive" data-snr="${p.snr}" aria-label="Skive for ${p.name ?? ('startnr '+p.snr)}">
-      </td>
-      <td class="shootingCell">${s1}</td>
-      <td>${s1Btn}</td>
-      <td>${t1Btn}</td>
-      <td class="shootingCell colS2">${s2}</td>
-      <td class="colS2">${s2Btn}</td>
-      <td class="colS2">${t2Btn}</td>
-      <td>${favBtn}</td>
-      <td class="sticky-right">${focusBtn}</td>
-    </tr>`;
-  }).join('');
+    rowsHtml += '<tr data-snr="'+p.snr+'" id="snr-'+p.snr+'" class="'+(isFav? "fav": "")+'">'+
+      '<td>'+(p.snr ?? "")+'</td>'+
+      '<td style="text-align:left">'+(p.name ?? "")+'</td>'+
+      '<td>'+(p.status ?? "")+'</td>'+
+      '<td><input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="'+(p.skive ?? "")+'" data-action="skive" data-snr="'+p.snr+'" aria-label="Skive for '+(p.name ?? ("startnr "+p.snr))+'"></td>'+
+      '<td class="shootingCell">'+s1+'</td>'+
+      '<td>'+s1Btn+'</td>'+
+      '<td>'+t1Btn+'</td>'+
+      '<td class="shootingCell colS2">'+s2+'</td>'+
+      '<td class="colS2">'+s2Btn+'</td>'+
+      '<td class="colS2">'+t2Btn+'</td>'+
+      '<td>'+favBtn+'</td>'+
+      '<td class="sticky-right">'+focusBtn+'</td>'+
+    '</tr>';
+  });
+  tbody.innerHTML = rowsHtml;
 
   // Toggle visibility of S2 columns in compact mode
-  document.querySelectorAll('.colS2').forEach(el=>{
-    el.style.display = compact ? 'none' : '';
+  document.querySelectorAll(".colS2").forEach(function(el){
+    el.style.display = compact ? "none" : "";
   });
 
-  // Etter at DOM er tegnet: aktiver long-press for å angre
+  // Ikke behov for long-press lenger
   enableUndoButtons();
 }
 
 // ---------------- Event delegation (mobile-friendly) ----------------
-const table = document.getElementById('shootingTable');
+const table = document.getElementById("shootingTable");
 
-table.addEventListener('click', async (e)=>{
-  const el = e.target.closest('[data-action]');
+table.addEventListener("click", async (e)=>{
+  const el = e.target.closest("[data-action]");
   if(!el) return;
   const action = el.dataset.action; const snr = +el.dataset.snr; const round = +el.dataset.round;
-  if(action === 'toggle'){
+  if(action === "toggle"){
     const idx = +el.dataset.idx; const p = participants[snr];
     const arr = p?.shootingLocal || (p.shootingLocal=[Array(5).fill(false),Array(5).fill(false)]);
     arr[round][idx] = !arr[round][idx];
-    el.setAttribute('data-hit', String(arr[round][idx]));
+    el.setAttribute("data-hit", String(arr[round][idx]));
     if(navigator.vibrate) navigator.vibrate(10);
   }
-  if(action === 'send'){
+  if(action === "send"){
     await sendShootingResult(snr, round);
   }
-  if(action === 'time'){
+  if(action === "time"){
     await registerShootingTime(snr, round, el);
   }
-  if(action === 'focus'){
+  if(action === "focus"){
     openFocusSheet(snr);
   }
-  if(action === 'fav'){
+  if(action === "fav"){
     toggleFavorite(snr);
   }
-  if(action === 'undo-send'){
+  if(action === "undo-send"){
     await undoSend(snr, round);
   }
-  if(action === 'undo-time'){
+  if(action === "undo-time"){
     await undoTime(snr, round);
   }
 });
 
 // Keyboard support for targets
- table.addEventListener('keydown', (e)=>{
-  const el = e.target.closest('.target');
+table.addEventListener("keydown", (e)=>{
+  const el = e.target.closest(".target");
   if(!el) return;
-  if(e.key===' '|| e.key==='Enter'){
+  if(e.key===" "|| e.key==="Enter"){
     e.preventDefault();
     el.click();
   }
@@ -407,9 +437,9 @@ table.addEventListener('click', async (e)=>{
 
 // Update skive on change (debounced)
 let skiveTimer;
-table.addEventListener('input', (e)=>{
+table.addEventListener("input", (e)=>{
   const el = e.target; if(!(el instanceof HTMLInputElement)) return;
-  if(el.dataset.action !== 'skive') return;
+  if(el.dataset.action !== "skive") return;
   const snr = +el.dataset.snr; const p = participants[snr];
   p.skive = el.value.trim();
   clearTimeout(skiveTimer);
@@ -417,230 +447,175 @@ table.addEventListener('input', (e)=>{
 });
 
 async function saveSkive(snr, skive){
-  enqueueUpdate('participants', { skive }, { snr });
-}{
-  const { error } = await sb.from('participants').update({ skive }).eq('snr', snr);
-  if(error){ console.error('Feil ved lagring av skive', snr, error); }
+  enqueueUpdate("participants", { skive: skive }, { snr: snr });
 }
 
+// Sending and timing (optimistic + queued)
 async function sendShootingResult(snr, shootIdx){
   const p = participants[snr]; if(!p) return;
-  const updateData = { skive: p.skive ?? '', shooting: JSON.stringify(p.shootingLocal) };
+  const updateData = { skive: p.skive ?? "", shooting: JSON.stringify(p.shootingLocal) };
   if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
-  enqueueUpdate('participants', updateData, { snr });
+  enqueueUpdate("participants", updateData, { snr: snr });
   render();
-}{
-  const p = participants[snr]; if(!p) return;
-  const updateData = { skive: p.skive ?? '', shooting: JSON.stringify(p.shootingLocal) };
-  if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
-  const { error } = await sb.from('participants').update(updateData).eq('snr', snr);
-  if(error){ console.error('Feil ved sending av skyteresultat', snr, error); }
-  await refreshFromDb();
 }
 
 async function registerShootingTime(snr, shootIdx, btnEl){
   const p = participants[snr]; if(!p) return;
   if(shootIdx===0){
-    if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = 'Registrer tid S1'; }
+    if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = "Registrer tid S1"; }
     else {
       const secs = (Date.now() - p.shootingTimeStart1) / 1000;
-      p.shootingtime1 = secs; enqueueUpdate('participants', { shootingtime1: secs }, { snr });
+      p.shootingtime1 = secs; enqueueUpdate("participants", { shootingtime1: secs }, { snr: snr });
       render();
     }
   } else {
-    if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = 'Registrer tid S2'; }
+    if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = "Registrer tid S2"; }
     else {
       const secs = (Date.now() - p.shootingTimeStart2) / 1000;
-      p.shootingtime2 = secs; enqueueUpdate('participants', { shootingtime2: secs }, { snr });
+      p.shootingtime2 = secs; enqueueUpdate("participants", { shootingtime2: secs }, { snr: snr });
       render();
-    }
-  }
-}{
-  const p = participants[snr]; if(!p) return;
-  if(shootIdx===0){
-    if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = 'Registrer tid S1'; }
-    else {
-      const secs = (Date.now() - p.shootingTimeStart1) / 1000;
-      const { error } = await sb.from('participants').update({ shootingtime1: secs }).eq('snr', snr);
-      if(error){ console.error('Feil lagring shootingtime1', snr, error); alert('Feil ved lagring av tid – sjekk konsollen.'); }
-      else { p.shootingtime1 = secs; btnEl.textContent='Tid registrert'; btnEl.disabled=true; btnEl.classList.remove('btn-primary'); btnEl.classList.add('btn-ghost'); enableUndoButtons(); }
-    }
-  } else {
-    if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = 'Registrer tid S2'; }
-    else {
-      const secs = (Date.now() - p.shootingTimeStart2) / 1000;
-      const { error } = await sb.from('participants').update({ shootingtime2: secs }).eq('snr', snr);
-      if(error){ console.error('Feil lagring shootingtime2', snr, error); alert('Feil ved lagring av tid – sjekk konsollen.'); }
-      else { p.shootingtime2 = secs; btnEl.textContent='Tid registrert'; btnEl.disabled=true; btnEl.classList.remove('btn-primary'); btnEl.classList.add('btn-ghost'); enableUndoButtons(); }
     }
   }
 }
 
-// ---------------- Filters & compact toggle ----------------
-['filter','onlyRunning','onlyFavs'].forEach(id=> document.getElementById(id).addEventListener('input', ()=> render()));
-document.getElementById('toggleCompact').addEventListener('click', (e)=>{
-  compact = !compact;
-  e.currentTarget.setAttribute('aria-pressed', String(compact));
-  render();
-});
-
-// ---------------- Long press (angre) helpers ----------------
-let longPressTimer;
-function addLongPress(el, callback){
-  el.addEventListener('pointerdown', ()=>{ longPressTimer = setTimeout(()=>{ callback(); }, 800); });
-  ['pointerup','pointerleave','pointercancel'].forEach(ev=> el.addEventListener(ev, ()=> clearTimeout(longPressTimer)));
-}
-
+// Angre
 async function undoSend(snr, round){
-  const col = round==0? 's1sent':'s2sent';
+  const col = round===0? "s1sent":"s2sent";
   const p = participants[snr]; if(!p) return;
-  p[col] = false; enqueueUpdate('participants', {[col]:false}, {snr});
+  p[col] = false; enqueueUpdate("participants", (function(){var o={}; o[col]=false; return o;})(), {snr:snr});
   render();
-}{
-  if(!confirm('Angre registrert skyting?')) return;
-  const col = round==0? 's1sent':'s2sent';
-  const {error} = await sb.from('participants').update({[col]:false}).eq('snr', snr);
-  if(error) console.error('Feil ved angre send', error); else refreshFromDb();
 }
 
 async function undoTime(snr, round){
-  const col = round==0? 'shootingtime1':'shootingtime2';
+  const col = round===0? "shootingtime1":"shootingtime2";
   const p = participants[snr]; if(!p) return;
-  delete p[col]; enqueueUpdate('participants', {[col]:null}, {snr});
+  delete p[col]; var o={}; o[col]=null; enqueueUpdate("participants", o, {snr:snr});
   render();
-}{
-  if(!confirm('Angre registrert skytetid?')) return;
-  const col = round==0? 'shootingtime1':'shootingtime2';
-  const {error} = await sb.from('participants').update({[col]:null}).eq('snr', snr);
-  if(error) console.error('Feil ved angre tid', error); else refreshFromDb();
 }
 
-function enableUndoButtons(){ /* Angre-knapper vises alltid eksplisitt; long-press trengs ikke. */ }{
-  // deaktiverte knapper i tabellen
-  document.querySelectorAll('table button[disabled]').forEach(btn=>{
-    const snr = btn.dataset.snr; const round = btn.dataset.round;
-    if(!snr || round===undefined) return;
-    if(btn.textContent.includes('Sendt')) addLongPress(btn, ()=> undoSend(snr, round));
-    if(btn.textContent.includes('Tid registrert')) addLongPress(btn, ()=> undoTime(snr, round));
-  });
-  // deaktiverte knapper i fokus-skjema
-  [fsSendS1, fsSendS2, fsTimeS1, fsTimeS2].forEach(btn=>{
-    if(!btn.disabled) return;
-    const snr = btn.dataset.snr; const round = btn.dataset.round;
-    if(btn.textContent.includes('Sendt')) addLongPress(btn, ()=> undoSend(snr, round));
-    if(btn.textContent.includes('Tid registrert')) addLongPress(btn, ()=> undoTime(snr, round));
-  });
-}
+function enableUndoButtons(){ /* Angre-knapper vises eksplisitt; long-press trengs ikke. */ }
 
 // ---------------- Focus Sheet logic ----------------
-const focusSheet = document.getElementById('focusSheet');
-const fsId = document.getElementById('fsId');
-const fsStatus = document.getElementById('fsStatus');
-const fsSkive = document.getElementById('fsSkive');
-const fsSkiveInput = document.getElementById('fsSkiveInput');
-const fsS1 = document.getElementById('fsS1');
-const fsS2 = document.getElementById('fsS2');
-const fsSendS1 = document.getElementById('fsSendS1');
-const fsSendS2 = document.getElementById('fsSendS2');
-const fsTimeS1 = document.getElementById('fsTimeS1');
-const fsTimeS2 = document.getElementById('fsTimeS2');
-const fsClose = document.getElementById('fsClose');
-const fsCopyLink = document.getElementById('fsCopyLink');
-const fsFavBtn = document.getElementById('fsFavBtn');
-const fsStar = document.getElementById('fsStar');
+const focusSheet = document.getElementById("focusSheet");
+const fsId = document.getElementById("fsId");
+const fsStatus = document.getElementById("fsStatus");
+const fsSkive = document.getElementById("fsSkive");
+const fsSkiveInput = document.getElementById("fsSkiveInput");
+const fsS1 = document.getElementById("fsS1");
+const fsS2 = document.getElementById("fsS2");
+const fsSendS1 = document.getElementById("fsSendS1");
+const fsSendS2 = document.getElementById("fsSendS2");
+const fsTimeS1 = document.getElementById("fsTimeS1");
+const fsTimeS2 = document.getElementById("fsTimeS2");
+const fsClose = document.getElementById("fsClose");
+const fsCopyLink = document.getElementById("fsCopyLink");
+const fsFavBtn = document.getElementById("fsFavBtn");
+const fsStar = document.getElementById("fsStar");
 let focusedSnr = null;
 
 function renderTargetsInline(p, shootIdx, container){
-  container.innerHTML = '';
+  container.innerHTML = "";
   const arr = p.shootingLocal?.[shootIdx] || Array(5).fill(false);
   arr.forEach((hit, i)=>{
-    const d = document.createElement('div');
-    d.className = 'target'; d.setAttribute('role', 'button'); d.setAttribute('tabindex', '0');
-    d.dataset.action = 'toggle-focus'; d.dataset.snr = p.snr; d.dataset.round = shootIdx; d.dataset.idx = i; d.dataset.hit = hit;
-    d.addEventListener('click', ()=>{ const arr = participants[p.snr].shootingLocal[shootIdx]; arr[i] = !arr[i]; d.dataset.hit = String(arr[i]); if(navigator.vibrate) navigator.vibrate(10); });
+    const d = document.createElement("div");
+    d.className = "target"; d.setAttribute("role", "button"); d.setAttribute("tabindex", "0");
+    d.dataset.action = "toggle-focus"; d.dataset.snr = String(p.snr); d.dataset.round = String(shootIdx); d.dataset.idx = String(i); d.dataset.hit = String(!!hit);
+    d.addEventListener("click", ()=>{
+      const a = participants[p.snr].shootingLocal[shootIdx]; a[i] = !a[i]; d.dataset.hit = String(a[i]); if(navigator.vibrate) navigator.vibrate(10);
+    });
     // Long press to clear round
-    let t; d.addEventListener('pointerdown', ()=>{ t=setTimeout(()=>{ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(false); renderTargetsInline(participants[p.snr], shootIdx, container); }, 450); });
-    d.addEventListener('pointerup', ()=>clearTimeout(t)); d.addEventListener('pointerleave', ()=>clearTimeout(t));
+    let t;
+    d.addEventListener("pointerdown", ()=>{ t=setTimeout(()=>{ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(false); renderTargetsInline(participants[p.snr], shootIdx, container); }, 450); });
+    d.addEventListener("pointerup", ()=>clearTimeout(t)); d.addEventListener("pointerleave", ()=>clearTimeout(t));
     // Double click to set all true
-    let last=0; d.addEventListener('click', (e)=>{ const now = Date.now(); if(now-last<300){ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container);} last=now; }, {capture:true});
+    let last=0; d.addEventListener("click", (e)=>{ const now = Date.now(); if(now-last<300){ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container);} last=now; }, {capture:true});
     container.appendChild(d);
   });
 }
 
 function updateFocusFav(){
   const isFav = favorites.has(focusedSnr);
-  fsFavBtn.setAttribute('aria-pressed', String(isFav));
-  fsStar.textContent = isFav ? '★' : '☆';
+  fsFavBtn.setAttribute("aria-pressed", String(isFav));
+  fsStar.textContent = isFav ? "★" : "☆";
 }
 
 function openFocusSheet(snr){
   focusedSnr = snr;
   const p = participants[snr]; if(!p) return;
   fsSendS1.dataset.snr = fsSendS2.dataset.snr = fsTimeS1.dataset.snr = fsTimeS2.dataset.snr = String(snr);
-  fsId.textContent = `${p.name ?? ''} (Startnr ${p.snr})`;
-  fsStatus.textContent = p.status ?? '';
-  fsSkive.textContent = p.skive ?? '';
-  fsSkiveInput.value = p.skive ?? '';
+  fsId.textContent = (p.name ?? "") + " (Startnr " + p.snr + ")";
+  fsStatus.textContent = p.status ?? "";
+  fsSkive.textContent = p.skive ?? "";
+  fsSkiveInput.value = p.skive ?? "";
   renderTargetsInline(p,0,fsS1);
   renderTargetsInline(p,1,fsS2);
 
-  fsSendS1.disabled = false; fsSendS1.textContent = p.s1sent ? 'Angre S1' : 'Send S1';
-  fsSendS2.disabled = false; fsSendS2.textContent = p.s2sent ? 'Angre S2' : 'Send S2';
-  fsTimeS1.textContent = p.shootingtime1 ? 'Angre tid S1' : (p.shootingTimeStart1 ? 'Registrer tid S1' : 'Start skytetid S1');
+  fsSendS1.disabled = false; fsSendS1.textContent = p.s1sent ? "Angre S1" : "Send S1";
+  fsSendS2.disabled = false; fsSendS2.textContent = p.s2sent ? "Angre S2" : "Send S2";
+  fsTimeS1.textContent = p.shootingtime1 ? "Angre tid S1" : (p.shootingTimeStart1 ? "Registrer tid S1" : "Start skytetid S1");
   fsTimeS1.disabled = false;
-  fsTimeS2.textContent = p.shootingtime2 ? 'Angre tid S2' : (p.shootingTimeStart2 ? 'Registrer tid S2' : 'Start skytetid S2');
+  fsTimeS2.textContent = p.shootingtime2 ? "Angre tid S2" : (p.shootingTimeStart2 ? "Registrer tid S2" : "Start skytetid S2");
   fsTimeS2.disabled = false;
 
   updateFocusFav();
 
   focusSheet.showModal();
-  // enable long-press on disabled buttons inside sheet
   enableUndoButtons();
-  // update URL hash for quick link
-  history.replaceState(null, '', `#snr-${snr}`);
+  history.replaceState(null, "", "#snr-" + snr);
 }
 
-fsFavBtn.addEventListener('click', ()=>{ if(focusedSnr!=null){ toggleFavorite(focusedSnr); } });
-
-fsClose.addEventListener('click', ()=>{ focusSheet.close(); });
-fsCopyLink.addEventListener('click', async ()=>{
-  const url = location.origin + location.pathname + `#snr-${focusedSnr}`;
-  try{ await navigator.clipboard.writeText(url); alert('Lenke kopiert.'); }catch{ prompt('Kopier lenken:', url); }
+fsFavBtn.addEventListener("click", ()=>{ if(focusedSnr!=null){ toggleFavorite(focusedSnr); } });
+fsClose.addEventListener("click", ()=>{ focusSheet.close(); });
+fsCopyLink.addEventListener("click", async ()=>{
+  const url = location.origin + location.pathname + "#snr-" + focusedSnr;
+  try{ await navigator.clipboard.writeText(url); alert("Lenke kopiert."); }catch(e){ prompt("Kopier lenken:", url); }
 });
-
-fsSkiveInput.addEventListener('input', ()=>{
-  if(focusedSnr==null) return; const p = participants[focusedSnr]; p.skive = fsSkiveInput.value.trim(); fsSkive.textContent = p.skive; debounce(()=>saveSkive(focusedSnr, p.skive), 400)();
+fsSkiveInput.addEventListener("input", ()=>{
+  if(focusedSnr==null) return; const p = participants[focusedSnr]; p.skive = fsSkiveInput.value.trim(); fsSkive.textContent = p.skive; debounce(function(){ saveSkive(focusedSnr, p.skive); }, 400)();
 });
-
-fsSendS1.addEventListener('click', ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s1sent) undoSend(focusedSnr,0); else sendShootingResult(focusedSnr,0); });
-fsSendS2.addEventListener('click', ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s2sent) undoSend(focusedSnr,1); else sendShootingResult(focusedSnr,1); });
-fsTimeS1.addEventListener('click', (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime1) undoTime(focusedSnr,0); else registerShootingTime(focusedSnr,0, e.currentTarget); });
-fsTimeS2.addEventListener('click', (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime2) undoTime(focusedSnr,1); else registerShootingTime(focusedSnr,1, e.currentTarget); });
+fsSendS1.addEventListener("click", ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s1sent) undoSend(focusedSnr,0); else sendShootingResult(focusedSnr,0); });
+fsSendS2.addEventListener("click", ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s2sent) undoSend(focusedSnr,1); else sendShootingResult(focusedSnr,1); });
+fsTimeS1.addEventListener("click", (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime1) undoTime(focusedSnr,0); else registerShootingTime(focusedSnr,0, e.currentTarget); });
+fsTimeS2.addEventListener("click", (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime2) undoTime(focusedSnr,1); else registerShootingTime(focusedSnr,1, e.currentTarget); });
 
 // Jump to focused row if hash present
-window.addEventListener('load', ()=>{
-  const id = location.hash.replace('#','');
-  if(id){ const row = document.getElementById(id); if(row){ row.scrollIntoView({behavior:'smooth', block:'start'}); const snr = +id.replace('snr-',''); if(snr) openFocusSheet(snr); } }
+window.addEventListener("load", ()=>{
+  const id = location.hash.replace("#","");
+  if(id){
+    const row = document.getElementById(id);
+    if(row){ row.scrollIntoView({behavior:"smooth", block:"start"}); const snr = +id.replace("snr-",""); if(snr) openFocusSheet(snr); }
+  }
 });
 
 // ---------------- Live updates ----------------
+async function refreshFromDb(){
+  const data = await fetchAll();
+  const present = {};
+  data.forEach(function(rec){ mergeDbRecord(rec); present[rec.snr]=true; });
+  Object.keys(participants).forEach(function(snr){ if(!present[snr]) delete participants[snr]; });
+  render();
+}
+
 async function init(){
   await refreshFromDb();
   try{
-    sb.channel('participants_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
-        const rec = payload.new || payload.old; if(rec){ mergeDbRecord(rec); render(); if(focusedSnr && rec.snr===focusedSnr){ openFocusSheet(focusedSnr); } }
+    sb.channel("participants_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "participants" }, (payload) => {
+        const rec = payload.new || payload.old;
+        if(rec){ mergeDbRecord(rec); render(); if(focusedSnr && rec.snr===focusedSnr){ openFocusSheet(focusedSnr); } }
       })
       .subscribe();
-  }catch(err){ console.warn('Realtime ikke aktivert, bruker polling.', err); setInterval(refreshFromDb, 2000); }
+  }catch(err){
+    console.warn("Realtime ikke aktivert, bruker polling.", err);
+    setInterval(refreshFromDb, 2000);
+  }
   if(window.innerWidth >= 900){ setInterval(refreshFromDb, 4000); }
   netBadge(); setSyncBadge(); processQueue();
 }
-
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener("DOMContentLoaded", init);
 
 // ---------------- Small utils ----------------
-function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); } }
+function debounce(fn, ms){ let t; return function(){ const args=arguments; clearTimeout(t); t=setTimeout(function(){ fn.apply(null, args); }, ms); } }
 </script>
 </body>
 </html>
