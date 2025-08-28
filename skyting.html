@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Registrering av Skyteresultat — Mobilforbedret</title>
+  <title>Registrering av Skyteresultat — Mobilforbedret (med favoritter)</title>
   <style>
     :root{
       --bg:#ffffff;--fg:#111;--muted:#6b7280;--border:#e5e7eb;--primary:#0ea5e9;--primary-fg:#fff;--success:#22c55e;--disabled:#9ca3af;
       --radius:14px; --pad:12px; --tap:48px; --gap:10px; --target:60px;
       --row-hover:#eef2ff; --row-active:#e6efff;
       --sticky-bg:#f8fafc;
+      --star:#f59e0b;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -27,7 +28,7 @@
     .toolbar .chip[aria-pressed="true"]{background:var(--primary); color:#fff; border-color:transparent}
 
     .table-container{overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; border-top:1px solid var(--border); border-bottom:1px solid var(--border); border-radius:12px}
-    table{border-collapse:separate; border-spacing:0; width:100%; min-width:980px}
+    table{border-collapse:separate; border-spacing:0; width:100%; min-width:1020px}
 
     thead th{position:sticky; top:0; background:var(--sticky-bg); text-align:center; font-weight:600; font-size:14px; border-bottom:1px solid var(--border); padding:10px; z-index:20}
     tbody td{border-bottom:1px solid var(--border); padding:10px; text-align:center; font-size:16px; background:#fff}
@@ -36,6 +37,7 @@
     tbody tr{transition: background-color .12s ease}
     tbody tr:hover, tbody tr:focus-within{ background-color: var(--row-hover); }
     tbody tr:active{ background-color: var(--row-active); }
+    tbody tr.fav td{box-shadow: inset 3px 0 0 0 var(--star)}
 
     .shootingCell{white-space:nowrap; min-width:calc(var(--target)*5 + 16px)}
     .targets{display:inline-flex; align-items:center; gap:6px}
@@ -52,6 +54,10 @@
     .btn-success{background:var(--success); color:#fff}
     .btn-ghost{background:#f3f4f6}
     .btn[disabled]{background:#e5e7eb; color:#6b7280; cursor:not-allowed}
+
+    .fav-btn{display:inline-grid; place-items:center; min-width:44px; padding:10px 12px; border-radius:999px; border:1px solid var(--border); background:#fff}
+    .fav-btn[aria-pressed="true"]{background:#fff3; color:var(--star); border-color:var(--star)}
+    .fav-btn .star{font-size:18px; line-height:1}
 
     @media (max-width: 640px){
       :root{--target:56px}
@@ -76,6 +82,7 @@
       <div class="toolbar">
         <input id="filter" type="text" placeholder="Søk på navn eller startnr…" aria-label="Filtrer deltakere">
         <label class="toggle"><input id="onlyRunning" type="checkbox"> Kun "I gang"</label>
+        <label class="toggle"><input id="onlyFavs" type="checkbox"> Kun favoritter</label>
         <button id="toggleCompact" class="chip" aria-pressed="false" title="Skjul S2 for smalere visning">Kompakt</button>
       </div>
     </div>
@@ -96,6 +103,7 @@
             <th class="colS2">Skyting S2</th>
             <th class="colS2">Send S2</th>
             <th class="colS2">Skytetid S2</th>
+            <th>★</th>
             <th class="sticky-right">Fokus</th>
           </tr>
         </thead>
@@ -108,10 +116,13 @@
   <dialog id="focusSheet">
     <div class="sheet" style="padding:16px">
       <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <div>
-          <div class="id" id="fsId" style="font-weight:700"></div>
-          <div class="meta" style="display:flex;gap:10px;color:var(--muted);font-size:14px">
-            <span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span>
+        <div style="display:flex; align-items:center; gap:8px">
+          <button class="fav-btn" id="fsFavBtn" aria-pressed="false" title="Merk som favoritt"><span class="star" id="fsStar">☆</span></button>
+          <div>
+            <div class="id" id="fsId" style="font-weight:700"></div>
+            <div class="meta" style="display:flex;gap:10px;color:var(--muted);font-size:14px">
+              <span id="fsStatus"></span><span>•</span><span>Skive <span id="fsSkive"></span></span>
+            </div>
           </div>
         </div>
         <button class="btn" id="fsClose">Lukk</button>
@@ -150,6 +161,11 @@ const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 const participants = {};
 let lastRenderKey = "";
 let compact = false; // hide S2 cols on demand
+
+// Favourites (persist locally per enhet/nettleser)
+let favorites = new Set(JSON.parse(localStorage.getItem('favorites')||'[]'));
+function saveFavorites(){ localStorage.setItem('favorites', JSON.stringify([...favorites])); }
+function toggleFavorite(snr){ snr = Number(snr); if(favorites.has(snr)) favorites.delete(snr); else favorites.add(snr); saveFavorites(); render(); if(focusedSnr===snr) updateFocusFav(); }
 
 function ensureShootingFormat(arr){
   if(!Array.isArray(arr) || arr.length!==2) return [Array(5).fill(false), Array(5).fill(false)];
@@ -196,7 +212,8 @@ async function fetchAll(){
 }
 
 function computeRenderKey(list){
-  return JSON.stringify(list.map(p=>({snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting}))) + `|c:${compact}`;
+  const onlyFavs = document.getElementById('onlyFavs').checked;
+  return JSON.stringify(list.map(p=>({snr:p.snr, s1:p.s1sent, s2:p.s2sent, sk:p.skive, st:p.status, t1:p.shootingtime1, t2:p.shootingtime2, sh:p.shooting}))) + `|c:${compact}|f:${[...favorites].join(',')}|favOnly:${onlyFavs}`;
 }
 
 async function refreshFromDb(){
@@ -217,6 +234,9 @@ function renderShootingSpans(p, shootIdx){
 
 function sortParticipants(list){
   return list.sort((a,b)=>{
+    // Favoritter først
+    const af = favorites.has(a.snr) ? 1 : 0; const bf = favorites.has(b.snr) ? 1 : 0;
+    if(af !== bf) return bf - af;
     if(a.status === 'I gang' && b.status !== 'I gang') return -1;
     if(a.status !== 'I gang' && b.status === 'I gang') return 1;
     const aDone = (a.s1sent && a.s2sent) ? 1 : 0;
@@ -229,10 +249,12 @@ function sortParticipants(list){
 function applyFilters(list){
   const q = document.getElementById('filter').value.trim().toLowerCase();
   const onlyRunning = document.getElementById('onlyRunning').checked;
+  const onlyFavs = document.getElementById('onlyFavs').checked;
   return list.filter(p=>{
     const matchQ = !q || (String(p.snr).includes(q) || (p.name||'').toLowerCase().includes(q));
     const matchRun = !onlyRunning || p.status === 'I gang';
-    return matchQ && matchRun;
+    const matchFav = !onlyFavs || favorites.has(p.snr);
+    return matchQ && matchRun && matchFav;
   });
 }
 
@@ -251,18 +273,20 @@ function render(){
     const s2Btn = p.s2sent ? `<button class="btn btn-ghost" disabled data-snr="${p.snr}" data-round="1">Sendt</button>` : `<button class="btn btn-success" data-action="send" data-snr="${p.snr}" data-round="1">Send S2</button>`;
 
     let t1Btn = '';
-    if(p.shootingtime1){ t1Btn = `<button class="btn btn-ghost" disabled data-snr="${p.snr}" data-round="0">Tid registrert</button>`; }
-    else if(!p.shootingTimeStart1){ t1Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="0">Start skytetid S1</button>`; }
-    else { t1Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="0">Registrer tid S1</button>`; }
+    if(p.shootingtime1){ t1Btn = `<button class=\"btn btn-ghost\" disabled data-snr=\"${p.snr}\" data-round=\"0\">Tid registrert</button>`; }
+    else if(!p.shootingTimeStart1){ t1Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"0\">Start skytetid S1</button>`; }
+    else { t1Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"0\">Registrer tid S1</button>`; }
 
     let t2Btn = '';
-    if(p.shootingtime2){ t2Btn = `<button class="btn btn-ghost" disabled data-snr="${p.snr}" data-round="1">Tid registrert</button>`; }
-    else if(!p.shootingTimeStart2){ t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Start skytetid S2</button>`; }
-    else { t2Btn = `<button class="btn btn-primary" data-action="time" data-snr="${p.snr}" data-round="1">Registrer tid S2</button>`; }
+    if(p.shootingtime2){ t2Btn = `<button class=\"btn btn-ghost\" disabled data-snr=\"${p.snr}\" data-round=\"1\">Tid registrert</button>`; }
+    else if(!p.shootingTimeStart2){ t2Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"1\">Start skytetid S2</button>`; }
+    else { t2Btn = `<button class=\"btn btn-primary\" data-action=\"time\" data-snr=\"${p.snr}\" data-round=\"1\">Registrer tid S2</button>`; }
 
     const focusBtn = `<button class="btn sticky-right" data-action="focus" data-snr="${p.snr}">Åpne</button>`;
+    const isFav = favorites.has(p.snr);
+    const favBtn = `<button class="fav-btn" title="Favoritt" data-action="fav" data-snr="${p.snr}" aria-pressed="${isFav}"><span class="star">${isFav? '★':'☆'}</span></button>`;
 
-    return `<tr data-snr="${p.snr}" id="snr-${p.snr}">
+    return `<tr data-snr="${p.snr}" id="snr-${p.snr}" class="${isFav? 'fav':''}">
       <td>${p.snr ?? ''}</td>
       <td style="text-align:left">${p.name ?? ''}</td>
       <td>${p.status ?? ''}</td>
@@ -275,6 +299,7 @@ function render(){
       <td class="shootingCell colS2">${s2}</td>
       <td class="colS2">${s2Btn}</td>
       <td class="colS2">${t2Btn}</td>
+      <td>${favBtn}</td>
       <td class="sticky-right">${focusBtn}</td>
     </tr>`;
   }).join('');
@@ -310,6 +335,9 @@ table.addEventListener('click', async (e)=>{
   }
   if(action === 'focus'){
     openFocusSheet(snr);
+  }
+  if(action === 'fav'){
+    toggleFavorite(snr);
   }
 });
 
@@ -370,7 +398,7 @@ async function registerShootingTime(snr, shootIdx, btnEl){
 }
 
 // ---------------- Filters & compact toggle ----------------
-['filter','onlyRunning'].forEach(id=> document.getElementById(id).addEventListener('input', ()=> render()));
+['filter','onlyRunning','onlyFavs'].forEach(id=> document.getElementById(id).addEventListener('input', ()=> render()));
 document.getElementById('toggleCompact').addEventListener('click', (e)=>{
   compact = !compact;
   e.currentTarget.setAttribute('aria-pressed', String(compact));
@@ -429,6 +457,8 @@ const fsTimeS1 = document.getElementById('fsTimeS1');
 const fsTimeS2 = document.getElementById('fsTimeS2');
 const fsClose = document.getElementById('fsClose');
 const fsCopyLink = document.getElementById('fsCopyLink');
+const fsFavBtn = document.getElementById('fsFavBtn');
+const fsStar = document.getElementById('fsStar');
 let focusedSnr = null;
 
 function renderTargetsInline(p, shootIdx, container){
@@ -446,6 +476,12 @@ function renderTargetsInline(p, shootIdx, container){
     let last=0; d.addEventListener('click', (e)=>{ const now = Date.now(); if(now-last<300){ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container);} last=now; }, {capture:true});
     container.appendChild(d);
   });
+}
+
+function updateFocusFav(){
+  const isFav = favorites.has(focusedSnr);
+  fsFavBtn.setAttribute('aria-pressed', String(isFav));
+  fsStar.textContent = isFav ? '★' : '☆';
 }
 
 function openFocusSheet(snr){
@@ -466,12 +502,16 @@ function openFocusSheet(snr){
   fsTimeS2.textContent = p.shootingtime2 ? 'Tid registrert' : (p.shootingTimeStart2 ? 'Registrer tid S2' : 'Start skytetid S2');
   fsTimeS2.disabled = !!p.shootingtime2;
 
+  updateFocusFav();
+
   focusSheet.showModal();
   // enable long-press on disabled buttons inside sheet
   enableUndoButtons();
   // update URL hash for quick link
   history.replaceState(null, '', `#snr-${snr}`);
 }
+
+fsFavBtn.addEventListener('click', ()=>{ if(focusedSnr!=null){ toggleFavorite(focusedSnr); } });
 
 fsClose.addEventListener('click', ()=>{ focusSheet.close(); });
 fsCopyLink.addEventListener('click', async ()=>{
