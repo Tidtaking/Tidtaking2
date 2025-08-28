@@ -68,7 +68,7 @@
       tbody tr{scroll-snap-align:start}
     }
 
-    /* Kun høyre kolonne (Fokus) sticky */
+    /* Høyre kolonne (Fokus) sticky */
     th.sticky-right, td.sticky-right{position:sticky; right:0; z-index:18; background:var(--sticky-bg)}
 
     @media (prefers-reduced-motion: reduce){ .target{transition:none} .target:active{transform:none} }
@@ -95,6 +95,7 @@
       <table id="shootingTable" aria-live="polite">
         <thead>
           <tr>
+            <th>&#9733;</th> <!-- stjerne først -->
             <th>Startnr</th>
             <th>Navn</th>
             <th>Status</th>
@@ -105,7 +106,6 @@
             <th class="colS2">Skyting S2</th>
             <th class="colS2">Send S2</th>
             <th class="colS2">Skytetid S2</th>
-            <th>★</th>
             <th class="sticky-right">Fokus</th>
           </tr>
         </thead>
@@ -118,7 +118,7 @@
     <div class="sheet" style="padding:16px">
       <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
         <div style="display:flex; align-items:center; gap:8px">
-          <button class="fav-btn" id="fsFavBtn" aria-pressed="false" title="Merk som favoritt"><span class="star" id="fsStar">☆</span></button>
+          <button class="fav-btn" id="fsFavBtn" aria-pressed="false" title="Merk som favoritt"><span class="star" id="fsStar">&#9734;</span></button>
           <div>
             <div class="id" id="fsId" style="font-weight:700"></div>
             <div class="meta" style="display:flex;gap:10px;color:var(--muted);font-size:14px">
@@ -164,12 +164,14 @@ let lastRenderKey = "";
 let compact = false; // hide S2 cols on demand
 
 // Favourites (persist locally per enhet/nettleser)
-let favorites = new Set(JSON.parse(localStorage.getItem('favorites')||'[]'));
-function saveFavorites(){ localStorage.setItem('favorites', JSON.stringify(Array.from(favorites))); }
+let favorites = new Set(JSON.parse(localStorage.getItem("favorites")||"[]"));
+function saveFavorites(){ localStorage.setItem("favorites", JSON.stringify(Array.from(favorites))); }
 function toggleFavorite(snr){
   snr = Number(snr);
   if(favorites.has(snr)) favorites.delete(snr); else favorites.add(snr);
-  saveFavorites(); render(); if(focusedSnr===snr) updateFocusFav();
+  saveFavorites();
+  render();
+  if(focusedSnr===snr) updateFocusFav();
 }
 
 // --- Offline/queue state ---
@@ -185,7 +187,6 @@ function setSyncBadge(){
   if(n>0){ el.style.display="inline"; el.textContent = "Synkroniserer ("+n+")..."; }
   else { el.style.display="none"; }
 }
-
 async function execOp(op){
   if(op.type==="update"){
     var table = op.table, values = op.values, match = op.match;
@@ -193,27 +194,24 @@ async function execOp(op){
     if(resp.error) throw resp.error; return true;
   }
 }
-
 var processing=false;
 async function processQueue(){
   if(processing) return; processing=true;
   try{
     if(!navigator.onLine) return;
     setSyncBadge();
-    var backoff=800; // ms
+    var backoff=800;
     while(pendingOps.length){
       try{ await execOp(pendingOps[0]); pendingOps.shift(); saveQueue(); setSyncBadge(); }
       catch(e){ console.warn("Queue op failed, retrying later", e); await new Promise(function(r){ setTimeout(r, backoff); }); backoff = Math.min(backoff*1.8, 8000); if(!navigator.onLine) break; }
     }
   } finally { processing=false; setSyncBadge(); }
 }
-
 function enqueueUpdate(table, values, match){
   pendingOps.push({type:"update", table:table, values:values, match:match});
   saveQueue(); setSyncBadge(); processQueue();
 }
-
-// Nettverksstatus badge (ASCII trygt)
+// Nettverksstatus badge
 var netBadge = function(){
   var el = document.getElementById("netBadge");
   if(!el) return;
@@ -231,11 +229,11 @@ window.addEventListener("offline", netBadge);
 setTimeout(netBadge,0);
 setTimeout(setSyncBadge,0);
 
+// ---------------- Utils for shooting arrays ----------------
 function ensureShootingFormat(arr){
   if(!Array.isArray(arr) || arr.length!==2) return [Array(5).fill(false), Array(5).fill(false)];
   return arr.map(function(r){ return (Array.isArray(r) && r.length===5) ? r : Array(5).fill(false); });
 }
-
 function parseShooting(rec){
   var val = rec.shooting; var arr;
   if(typeof val === "string"){ try{ arr = JSON.parse(val); }catch(e){ arr=null; } }
@@ -243,7 +241,6 @@ function parseShooting(rec){
   if(!arr) arr = [Array(5).fill(false), Array(5).fill(false)];
   return ensureShootingFormat(arr);
 }
-
 function mergeDbRecord(dbRec){
   const snr = dbRec.snr;
   if(!participants[snr]){
@@ -268,13 +265,13 @@ function mergeDbRecord(dbRec){
     if(dbRec.shootingtime2) p.shootingtime2 = dbRec.shootingtime2;
   }
 }
-
 async function fetchAll(){
   const { data, error } = await sb.from("participants").select("*");
   if(error){ console.error("Feil ved henting:", error); return []; }
   return data;
 }
 
+// ---------------- Key used to minimize re-render ----------------
 function computeRenderKey(list){
   const onlyFavs = document.getElementById("onlyFavs").checked;
   var base = JSON.stringify(list.map(function(p){
@@ -298,15 +295,16 @@ function renderShootingSpans(p, shootIdx){
 
 function sortParticipants(list){
   return list.sort(function(a,b){
-    // Favoritter først
-    var af = favorites.has(a.snr) ? 1 : 0; var bf = favorites.has(b.snr) ? 1 : 0;
+    // Favoritter først (tving snr til Number)
+    var af = favorites.has(Number(a.snr)) ? 1 : 0;
+    var bf = favorites.has(Number(b.snr)) ? 1 : 0;
     if(af !== bf) return bf - af;
     if(a.status === "I gang" && b.status !== "I gang") return -1;
     if(a.status !== "I gang" && b.status === "I gang") return 1;
     const aDone = (a.s1sent && a.s2sent) ? 1 : 0;
     const bDone = (b.s1sent && b.s2sent) ? 1 : 0;
     if(aDone !== bDone) return aDone - bDone;
-    return (a.snr||0) - (b.snr||0);
+    return (Number(a.snr)||0) - (Number(b.snr)||0);
   });
 }
 
@@ -317,7 +315,7 @@ function applyFilters(list){
   return list.filter(function(p){
     const matchQ = !q || (String(p.snr).includes(q) || (p.name||"").toLowerCase().includes(q));
     const matchRun = !onlyRunning || p.status === "I gang";
-    const matchFav = !onlyFavs || favorites.has(p.snr);
+    const matchFav = !onlyFavs || favorites.has(Number(p.snr));
     return matchQ && matchRun && matchFav;
   });
 }
@@ -331,7 +329,9 @@ function render(){
   lastRenderKey = newKey;
 
   var rowsHtml = "";
-  filtered.forEach(function(p){
+  filtered.forEach(function(pp){
+    // sørg for Number-snr for favorittlogikk
+    const p = {...pp, snr: Number(pp.snr)};
     const s1 = renderShootingSpans(p,0);
     const s2 = renderShootingSpans(p,1);
 
@@ -361,12 +361,13 @@ function render(){
       t2Btn = '<button class="btn btn-primary" data-action="time" data-snr="'+p.snr+'" data-round="1">Registrer tid S2</button>';
     }
 
+    const isFav = favorites.has(Number(p.snr));
+    const favBtn = '<button class="fav-btn" title="Favoritt" data-action="fav" data-snr="'+p.snr+'" aria-pressed="'+isFav+'"><span class="star">'+(isFav? "&#9733;":"&#9734;")+'</span></button>';
     const focusBtn = '<button class="btn sticky-right" data-action="focus" data-snr="'+p.snr+'">Åpne</button>';
-    const isFav = favorites.has(p.snr);
-    const favBtn = '<button class="fav-btn" title="Favoritt" data-action="fav" data-snr="'+p.snr+'" aria-pressed="'+isFav+'"><span class="star">'+(isFav? "★":"☆")+'</span></button>';
 
     rowsHtml += '<tr data-snr="'+p.snr+'" id="snr-'+p.snr+'" class="'+(isFav? "fav": "")+'">'+
-      '<td>'+(p.snr ?? "")+'</td>'+
+      '<td>'+favBtn+'</td>'+                 // ★ først
+      '<td>'+(p.snr ?? "")+'</td>'+         // startnr
       '<td style="text-align:left">'+(p.name ?? "")+'</td>'+
       '<td>'+(p.status ?? "")+'</td>'+
       '<td><input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="'+(p.skive ?? "")+'" data-action="skive" data-snr="'+p.snr+'" aria-label="Skive for '+(p.name ?? ("startnr "+p.snr))+'"></td>'+
@@ -376,81 +377,56 @@ function render(){
       '<td class="shootingCell colS2">'+s2+'</td>'+
       '<td class="colS2">'+s2Btn+'</td>'+
       '<td class="colS2">'+t2Btn+'</td>'+
-      '<td>'+favBtn+'</td>'+
       '<td class="sticky-right">'+focusBtn+'</td>'+
     '</tr>';
   });
   tbody.innerHTML = rowsHtml;
 
-  // Toggle visibility of S2 columns in compact mode
   document.querySelectorAll(".colS2").forEach(function(el){
     el.style.display = compact ? "none" : "";
   });
 
-  // Ikke behov for long-press lenger
-  enableUndoButtons();
+  enableUndoButtons(); // no-op (beholder for struktur)
 }
 
-// ---------------- Event delegation (mobile-friendly) ----------------
+// ---------------- Events ----------------
 const table = document.getElementById("shootingTable");
-
 table.addEventListener("click", async (e)=>{
   const el = e.target.closest("[data-action]");
   if(!el) return;
-  const action = el.dataset.action; const snr = +el.dataset.snr; const round = +el.dataset.round;
+  const action = el.dataset.action; const snr = Number(el.dataset.snr); const round = Number(el.dataset.round);
   if(action === "toggle"){
-    const idx = +el.dataset.idx; const p = participants[snr];
+    const idx = Number(el.dataset.idx); const p = participants[snr];
     const arr = p?.shootingLocal || (p.shootingLocal=[Array(5).fill(false),Array(5).fill(false)]);
     arr[round][idx] = !arr[round][idx];
     el.setAttribute("data-hit", String(arr[round][idx]));
     if(navigator.vibrate) navigator.vibrate(10);
   }
-  if(action === "send"){
-    await sendShootingResult(snr, round);
-  }
-  if(action === "time"){
-    await registerShootingTime(snr, round, el);
-  }
-  if(action === "focus"){
-    openFocusSheet(snr);
-  }
-  if(action === "fav"){
-    toggleFavorite(snr);
-  }
-  if(action === "undo-send"){
-    await undoSend(snr, round);
-  }
-  if(action === "undo-time"){
-    await undoTime(snr, round);
-  }
+  if(action === "send"){ await sendShootingResult(snr, round); }
+  if(action === "time"){ await registerShootingTime(snr, round, el); }
+  if(action === "focus"){ openFocusSheet(snr); }
+  if(action === "fav"){ toggleFavorite(snr); }      // <- viktig: bruker Number(snr)
+  if(action === "undo-send"){ await undoSend(snr, round); }
+  if(action === "undo-time"){ await undoTime(snr, round); }
 });
-
-// Keyboard support for targets
 table.addEventListener("keydown", (e)=>{
   const el = e.target.closest(".target");
   if(!el) return;
-  if(e.key===" "|| e.key==="Enter"){
-    e.preventDefault();
-    el.click();
-  }
+  if(e.key===" "|| e.key==="Enter"){ e.preventDefault(); el.click(); }
 });
 
-// Update skive on change (debounced)
+// Skive debounce
 let skiveTimer;
 table.addEventListener("input", (e)=>{
   const el = e.target; if(!(el instanceof HTMLInputElement)) return;
   if(el.dataset.action !== "skive") return;
-  const snr = +el.dataset.snr; const p = participants[snr];
+  const snr = Number(el.dataset.snr); const p = participants[snr];
   p.skive = el.value.trim();
   clearTimeout(skiveTimer);
   skiveTimer = setTimeout(()=>{ saveSkive(snr, p.skive); }, 450);
 });
 
-async function saveSkive(snr, skive){
-  enqueueUpdate("participants", { skive: skive }, { snr: snr });
-}
-
-// Sending and timing (optimistic + queued)
+async function saveSkive(snr, skive){ enqueueUpdate("participants", { skive: skive }, { snr: snr }); }
 async function sendShootingResult(snr, shootIdx){
   const p = participants[snr]; if(!p) return;
   const updateData = { skive: p.skive ?? "", shooting: JSON.stringify(p.shootingLocal) };
@@ -458,44 +434,35 @@ async function sendShootingResult(snr, shootIdx){
   enqueueUpdate("participants", updateData, { snr: snr });
   render();
 }
-
 async function registerShootingTime(snr, shootIdx, btnEl){
   const p = participants[snr]; if(!p) return;
   if(shootIdx===0){
     if(!p.shootingTimeStart1){ p.shootingTimeStart1 = Date.now(); btnEl.textContent = "Registrer tid S1"; }
     else {
       const secs = (Date.now() - p.shootingTimeStart1) / 1000;
-      p.shootingtime1 = secs; enqueueUpdate("participants", { shootingtime1: secs }, { snr: snr });
-      render();
+      p.shootingtime1 = secs; enqueueUpdate("participants", { shootingtime1: secs }, { snr: snr }); render();
     }
   } else {
     if(!p.shootingTimeStart2){ p.shootingTimeStart2 = Date.now(); btnEl.textContent = "Registrer tid S2"; }
     else {
       const secs = (Date.now() - p.shootingTimeStart2) / 1000;
-      p.shootingtime2 = secs; enqueueUpdate("participants", { shootingtime2: secs }, { snr: snr });
-      render();
+      p.shootingtime2 = secs; enqueueUpdate("participants", { shootingtime2: secs }, { snr: snr }); render();
     }
   }
 }
-
-// Angre
 async function undoSend(snr, round){
   const col = round===0? "s1sent":"s2sent";
   const p = participants[snr]; if(!p) return;
-  p[col] = false; enqueueUpdate("participants", (function(){var o={}; o[col]=false; return o;})(), {snr:snr});
-  render();
+  p[col] = false; var o={}; o[col]=false; enqueueUpdate("participants", o, {snr:snr}); render();
 }
-
 async function undoTime(snr, round){
   const col = round===0? "shootingtime1":"shootingtime2";
   const p = participants[snr]; if(!p) return;
-  delete p[col]; var o={}; o[col]=null; enqueueUpdate("participants", o, {snr:snr});
-  render();
+  delete p[col]; var o={}; o[col]=null; enqueueUpdate("participants", o, {snr:snr}); render();
 }
+function enableUndoButtons(){ /* no-op */ }
 
-function enableUndoButtons(){ /* Angre-knapper vises eksplisitt; long-press trengs ikke. */ }
-
-// ---------------- Focus Sheet logic ----------------
+// ---------------- Focus Sheet ----------------
 const focusSheet = document.getElementById("focusSheet");
 const fsId = document.getElementById("fsId");
 const fsStatus = document.getElementById("fsStatus");
@@ -523,47 +490,38 @@ function renderTargetsInline(p, shootIdx, container){
     d.addEventListener("click", ()=>{
       const a = participants[p.snr].shootingLocal[shootIdx]; a[i] = !a[i]; d.dataset.hit = String(a[i]); if(navigator.vibrate) navigator.vibrate(10);
     });
-    // Long press to clear round
     let t;
     d.addEventListener("pointerdown", ()=>{ t=setTimeout(()=>{ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(false); renderTargetsInline(participants[p.snr], shootIdx, container); }, 450); });
     d.addEventListener("pointerup", ()=>clearTimeout(t)); d.addEventListener("pointerleave", ()=>clearTimeout(t));
-    // Double click to set all true
     let last=0; d.addEventListener("click", (e)=>{ const now = Date.now(); if(now-last<300){ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container);} last=now; }, {capture:true});
     container.appendChild(d);
   });
 }
-
 function updateFocusFav(){
-  const isFav = favorites.has(focusedSnr);
+  const isFav = favorites.has(Number(focusedSnr));
   fsFavBtn.setAttribute("aria-pressed", String(isFav));
-  fsStar.textContent = isFav ? "★" : "☆";
+  fsStar.innerHTML = isFav ? "&#9733;" : "&#9734;";
 }
-
 function openFocusSheet(snr){
-  focusedSnr = snr;
-  const p = participants[snr]; if(!p) return;
-  fsSendS1.dataset.snr = fsSendS2.dataset.snr = fsTimeS1.dataset.snr = fsTimeS2.dataset.snr = String(snr);
+  focusedSnr = Number(snr);
+  const p = participants[focusedSnr]; if(!p) return;
+  fsSendS1.dataset.snr = fsSendS2.dataset.snr = fsTimeS1.dataset.snr = fsTimeS2.dataset.snr = String(focusedSnr);
   fsId.textContent = (p.name ?? "") + " (Startnr " + p.snr + ")";
   fsStatus.textContent = p.status ?? "";
   fsSkive.textContent = p.skive ?? "";
   fsSkiveInput.value = p.skive ?? "";
   renderTargetsInline(p,0,fsS1);
   renderTargetsInline(p,1,fsS2);
-
   fsSendS1.disabled = false; fsSendS1.textContent = p.s1sent ? "Angre S1" : "Send S1";
   fsSendS2.disabled = false; fsSendS2.textContent = p.s2sent ? "Angre S2" : "Send S2";
   fsTimeS1.textContent = p.shootingtime1 ? "Angre tid S1" : (p.shootingTimeStart1 ? "Registrer tid S1" : "Start skytetid S1");
   fsTimeS1.disabled = false;
   fsTimeS2.textContent = p.shootingtime2 ? "Angre tid S2" : (p.shootingTimeStart2 ? "Registrer tid S2" : "Start skytetid S2");
   fsTimeS2.disabled = false;
-
   updateFocusFav();
-
   focusSheet.showModal();
-  enableUndoButtons();
-  history.replaceState(null, "", "#snr-" + snr);
+  history.replaceState(null, "", "#snr-" + focusedSnr);
 }
-
 fsFavBtn.addEventListener("click", ()=>{ if(focusedSnr!=null){ toggleFavorite(focusedSnr); } });
 fsClose.addEventListener("click", ()=>{ focusSheet.close(); });
 fsCopyLink.addEventListener("click", async ()=>{
@@ -578,15 +536,6 @@ fsSendS2.addEventListener("click", ()=>{ if(focusedSnr==null) return; const p=pa
 fsTimeS1.addEventListener("click", (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime1) undoTime(focusedSnr,0); else registerShootingTime(focusedSnr,0, e.currentTarget); });
 fsTimeS2.addEventListener("click", (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime2) undoTime(focusedSnr,1); else registerShootingTime(focusedSnr,1, e.currentTarget); });
 
-// Jump to focused row if hash present
-window.addEventListener("load", ()=>{
-  const id = location.hash.replace("#","");
-  if(id){
-    const row = document.getElementById(id);
-    if(row){ row.scrollIntoView({behavior:"smooth", block:"start"}); const snr = +id.replace("snr-",""); if(snr) openFocusSheet(snr); }
-  }
-});
-
 // ---------------- Live updates ----------------
 async function refreshFromDb(){
   const data = await fetchAll();
@@ -595,7 +544,6 @@ async function refreshFromDb(){
   Object.keys(participants).forEach(function(snr){ if(!present[snr]) delete participants[snr]; });
   render();
 }
-
 async function init(){
   await refreshFromDb();
   try{
