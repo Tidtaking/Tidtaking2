@@ -114,6 +114,47 @@
     </table>
   </div>
 
+  <!-- Historikkvisning (viser history for valgt dato, og fallback fra participants for de som ikke er lagret) -->
+  <div id="historySection" style="margin-top:16px; text-align:left; max-width:1000px; margin-left:auto; margin-right:auto;">
+    <h3 style="text-align:center;">Historikk – lagret vs. ikke lagret</h3>
+    <div style="display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap;">
+      <label for="historyDate">Dato:</label>
+      <input type="date" id="historyDate">
+      <button id="btnRefreshHistory">Oppdater historikk</button>
+      <small id="historySummary" style="opacity:0.8"></small>
+    </div>
+    <div style="overflow-x:auto; margin-top:8px;">
+      <table>
+        <caption style="caption-side:top; text-align:left; font-weight:bold;">Lagret i history</caption>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Navn</th>
+            <th>Kl.</th>
+            <th>Status</th>
+            <th>Tid</th>
+          </tr>
+        </thead>
+        <tbody id="historySavedBody"></tbody>
+      </table>
+    </div>
+    <div style="overflow-x:auto; margin-top:12px;">
+      <table>
+        <caption style="caption-side:top; text-align:left; font-weight:bold;">Ikke lagret ennå (fra participants)</caption>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Navn</th>
+            <th>Kl.</th>
+            <th>Status</th>
+            <th>Tid</th>
+          </tr>
+        </thead>
+        <tbody id="historyPendingBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <dialog id="confirmDialog">
     <p id="confirmText">Er du sikker på at du vil nullstille alt?</p>
     <button id="btnConfirmOk">OK</button>
@@ -472,6 +513,76 @@
       }).join(" ");
     };
 
+    // === Historikk: fetch & render (viser history for valgt dato, og participants for de som ikke er lagret) ===
+    window.getTodayCompDate = function() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    // toLower helper
+    function lc(x){return (x||'').toString().toLowerCase().trim();}
+
+    window.updateHistoryView = async function(dateStr) {
+      const compDate = dateStr || (document.getElementById('historyDate')?.value || window.getTodayCompDate());
+
+      // 1) Hent history for valgt dato
+      let { data: hist, error: errH } = await window.supabaseClient
+        .from('history')
+        .select('*')
+        .eq('comp_date', compDate);
+      if (errH) { console.error('Feil ved henting av history:', errH); hist = []; }
+
+      // 2) Hent participants (alltid)
+      let { data: parts, error: errP } = await window.supabaseClient
+        .from('participants')
+        .select('*');
+      if (errP) { console.error('Feil ved henting av participants:', errP); parts = []; }
+
+      // 3) Sett for matching (støtter både med og uten snr i history)
+      const savedSnr = new Set((hist||[]).map(h => h.snr).filter(v => v !== null && v !== undefined));
+      const savedNameClass = new Set((hist||[]).map(h => `name:${lc(h.name)}|class:${lc(h.class)}`));
+
+      // 4) Finn de som ikke er lagret ennå
+      const pending = (parts||[]).filter(p => {
+        const bySnr = (p.snr != null) && savedSnr.has(p.snr);
+        const byNC  = savedNameClass.has(`name:${lc(p.name)}|class:${lc(p.class)}`);
+        return !(bySnr || byNC);
+      });
+
+      // 5) Render lagret
+      const savedRows = (hist || []).map(h => {
+        const tid = (h.finish != null) ? window.formatTime(h.finish) : '-';
+        const snr = (h.snr != null) ? h.snr : '-';
+        return `<tr><td>${snr}</td><td>${h.name || ''}</td><td>${h.class || ''}</td><td>${h.status || ''}</td><td>${tid}</td></tr>`;
+      }).join('');
+      const savedBody = document.getElementById('historySavedBody');
+      if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="5">Ingen lagret for ${compDate}.</td></tr>`;
+
+      // 6) Render ikke-lagret (fra participants)
+      const pendingRows = (pending || []).map(p => {
+        let tid = '-';
+        if (p.status === 'Planlagt') {
+          let remainingSec = (Date.parse(p.start) - Date.now()) / 1000;
+          if (remainingSec < 0) remainingSec = 0;
+          tid = window.formatClockTimeFull(Date.parse(p.start)) + " (" + window.formatTime(remainingSec) + ")";
+        } else if (p.start && (p.status === 'I gang')) {
+          tid = window.formatTime((Date.now()-Date.parse(p.start))/1000);
+        } else if (p.finish != null) {
+          tid = window.formatTime(p.finish);
+        }
+        return `<tr><td>${p.snr}</td><td>${p.name}</td><td>${p.class}</td><td>${p.status}</td><td>${tid}</td></tr>`;
+      }).join('');
+      const pendingBody = document.getElementById('historyPendingBody');
+      if (pendingBody) pendingBody.innerHTML = pendingRows || `<tr><td colspan="5">Alle er lagret for ${compDate}.</td></tr>`;
+
+      // 7) Oppsummering
+      const summaryEl = document.getElementById('historySummary');
+      if (summaryEl) summaryEl.textContent = `${hist.length} lagret · ${pending.length} ikke lagret`;
+    };
+
     // CSV-import
     window.importCSV = function() {
       const fileInput = document.getElementById("csvImport");
@@ -584,10 +695,19 @@
         alert('Feil ved lagring til history – sjekk konsollen.');
       } else {
         alert(`Lagret ${rows.length} markerte til history for ${compDate}.`);
+        if (window.updateHistoryView) { window.updateHistoryView(); }
       }
     };
 
     document.getElementById("btnSaveSelectedHistory").addEventListener("click", window.saveSelectedToHistory);
+    // Historikk – initialiser
+    (function(){
+      const dateInput = document.getElementById('historyDate');
+      if (dateInput) { dateInput.value = window.getTodayCompDate(); }
+      const btnRefr = document.getElementById('btnRefreshHistory');
+      if (btnRefr) { btnRefr.addEventListener('click', () => window.updateHistoryView()); }
+      if (dateInput || btnRefr) { window.updateHistoryView(); }
+    })();
 
     // Når straffetid endres → reberegn og PERSISTER for alle med rå sluttid
     document.getElementById("penaltyTime").addEventListener("change", async function() {
