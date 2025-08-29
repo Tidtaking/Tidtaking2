@@ -79,11 +79,13 @@
     </div>
   </label>
   <!-- NYTT: Butikker -->
-  <label><input type="checkbox" id="toggleButikk" checked />
+  $1
+  <!-- NYTT: Butikker 2 -->
+  <label><input type="checkbox" id="toggleButikk2" checked />
     <div class="label-content">
-      <span class="label-text">Butikker</span>
+      <span class="label-text">Butikker 2</span>
       <div class="counts">
-        <span id="butikkCount" class="count"><span class="color-box" style="background:#0066cc"></span> 0 stk</span>
+        <span id="butikk2Count" class="count"><span class="color-box" style="background:#00aa88"></span> 0 stk</span>
       </div>
     </div>
   </label>
@@ -104,6 +106,7 @@
   <div id="search-summary"></div>
   <div id="search-timer" style="margin-top: 8px; font-size: 12px; font-style: italic;"></div>
   <div id="butikker-status"></div>
+  <div id="butikker2-status"></div>
 </div>
 <div id="map"></div>
 
@@ -233,6 +236,7 @@
     Utenfor: '#663399'
   };
   const butikkFarge = '#0066cc';
+  const butikk2Farge = '#00aa88';
 
   const filterKeys = {
     Anbud: 'anbudet',
@@ -288,10 +292,13 @@
       document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
     });
   }
-  function oppdaterButikkTeller(){
-    const n = layers.Butikk ? layers.Butikk.getLayers().length : 0;
-    const el = document.getElementById('butikkCount');
-    if(el) el.innerHTML = `<span class="color-box" style="background:${butikkFarge}"></span> ${n} stk`;
+  function oppdaterButikkTellere(){
+    const n1 = layers.Butikk ? layers.Butikk.getLayers().length : 0;
+    const n2 = layers.Butikk2 ? layers.Butikk2.getLayers().length : 0;
+    const el1 = document.getElementById('butikkCount');
+    if(el1) el1.innerHTML = `<span class="color-box" style="background:${butikkFarge}"></span> ${n1} stk`;
+    const el2 = document.getElementById('butikk2Count');
+    if(el2) el2.innerHTML = `<span class="color-box" style="background:${butikk2Farge}"></span> ${n2} stk`;
   }
 
   // Parsing av søk: postnummer (4 siffer), avis (tekst/id) og frekvensdager (1-7)
@@ -394,7 +401,7 @@
       const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers?l.getLayers():[]:[]);
       if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
     }
-    ;['Anbud','Brukt','Innenfor','Utenfor','Butikk'].forEach(k=>
+    ;['Anbud','Brukt','Innenfor','Utenfor','Butikk','Butikk2'].forEach(k=>
       document.getElementById('toggle'+k)?.addEventListener('change',oppdaterLag)
     );
 
@@ -418,6 +425,8 @@
 
     // === NYTT: Butikker ===
     initButikker();
+
+    initButikker2();
 
   });
 
@@ -728,10 +737,89 @@
   }
 
   // === Butikker: les CSV, bruk lat/lon hvis finnes, ellers geokodér adresse ===
-  async function initButikker(){
+  $1
+
+  // === NYTT: Butikker 2 ===
+  async function initButikker2(){
     try {
-      const rows = await lesCSVRows('butikker.csv');
-      if(!rows.length){ butikkerStatus.textContent = ''; return; }
+      const rows = await lesCSVRows('butikker2.csv');
+      const butikker2Status = document.getElementById('butikker2-status');
+      if(!rows.length){ if(butikker2Status) butikker2Status.textContent = ''; return; }
+
+      const butikkLayer = L.layerGroup();
+      layers.Butikk2 = butikkLayer;
+
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      async function geocodeAdresse(q){
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if(!res.ok) return null;
+        const data = await res.json();
+        if(Array.isArray(data) && data[0]){
+          return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+        }
+        return null;
+      }
+
+      const points = [];
+      let toGeocode = 0, doneGeocode = 0;
+
+      for(const r of rows){
+        const navn = r.navn || r.name || '';
+        const adr  = r.adresse || r.address || '';
+        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+        const ps   = r.poststed || r.sted || '';
+
+        let lat = parseFloat(r.lat || r.latitude);
+        let lon = parseFloat(r.lon || r.lng || r.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
+
+        const x = parseFloat(r.x3035 || r.x);
+        const y = parseFloat(r.y3035 || r.y);
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
+          points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
+          continue;
+        }
+        toGeocode++;
+        points.push({lat: null, lon: null, navn, adr, pn, ps});
+      }
+
+      if(toGeocode){
+        if(butikker2Status) butikker2Status.textContent = `Geokoder ${toGeocode} adresser …`;
+        for(const p of points){
+          if(p.lat != null && p.lon != null) continue;
+          const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
+          const res = await geocodeAdresse(query);
+          if(res){ p.lat = res.lat; p.lon = res.lon; }
+          doneGeocode++;
+          if(butikker2Status && doneGeocode % 1 === 0){ butikker2Status.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
+          await sleep(300);
+        }
+        if(butikker2Status) butikker2Status.textContent = '';
+      }
+
+      let added = 0;
+      points.forEach(p => {
+        if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
+        const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikk2Farge, fillOpacity: 0.85});
+        const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
+        m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
+        butikkLayer.addLayer(m);
+        added++;
+      });
+
+      const cb = document.getElementById('toggleButikk2');
+      if(cb?.checked) map.addLayer(butikkLayer);
+      oppdaterButikkTellere();
+      if(added){ try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {} }
+
+    } catch(err){
+      console.warn('Feil ved lasting av butikker2:', err);
+      const butikker2Status = document.getElementById('butikker2-status');
+      if(butikker2Status) butikker2Status.textContent = '';
+    }
+  }
 
       const butikkLayer = L.layerGroup();
       layers.Butikk = butikkLayer; // slik at toggle virker likt
@@ -806,7 +894,7 @@
       // Vis laget hvis valgt
       const cb = document.getElementById('toggleButikk');
       if(cb?.checked) map.addLayer(butikkLayer);
-      oppdaterButikkTeller();
+      oppdaterButikkTellere();
       if(added){
         try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {}
       }
