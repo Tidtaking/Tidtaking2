@@ -13,18 +13,11 @@
     background: white; padding: 10px; border-radius: 4px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     font-family: sans-serif; font-size: 14px; line-height: 1.4;
-    width: 480px;
-    max-height: 95vh;
-    overflow-y: auto;
+    width: 480px; max-height: 95vh; overflow-y: auto;
   }
-  #controls label {
-    display: flex; align-items: center; margin-bottom: 10px;
-    padding: 4px; border-radius: 4px;
-  }
+  #controls label { display: flex; align-items: center; margin-bottom: 10px; padding: 4px; border-radius: 4px; }
   #controls label:nth-of-type(odd) { background-color: rgba(0,0,0,0.03); }
-  #controls .label-content {
-    display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px;
-  }
+  #controls .label-content { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 6px; }
   #controls .label-text { font-weight: 500; flex: 1; }
   #controls .counts { display: flex; flex-direction: column; align-items: flex-end; min-width: 120px; }
   #controls .counts .count { font-weight: bold; color: #0077cc; }
@@ -37,7 +30,7 @@
   #search-summary th { background-color: #f4f4f4; font-weight: 600; }
   #search-summary tr:nth-child(odd) td { background-color: rgba(0,0,0,0.02); }
   .color-box { display: inline-block; width: 18px; height: 18px; border: 1px solid #999; border-radius: 3px; }
-  #butikker-status { margin-top: 6px; font-size: 12px; color: #333; font-style: italic; }
+  #butikker-status, #butikker2-status { margin-top: 6px; font-size: 12px; color: #333; font-style: italic; }
 </style>
 </head>
 <body>
@@ -78,9 +71,17 @@
       </div>
     </div>
   </label>
-  <!-- NYTT: Butikker -->
-  $1
-  <!-- NYTT: Butikker 2 -->
+
+  <!-- Butikker -->
+  <label><input type="checkbox" id="toggleButikk" checked />
+    <div class="label-content">
+      <span class="label-text">Butikker</span>
+      <div class="counts">
+        <span id="butikkCount" class="count"><span class="color-box" style="background:#0066cc"></span> 0 stk</span>
+      </div>
+    </div>
+  </label>
+  <!-- Butikker 2 -->
   <label><input type="checkbox" id="toggleButikk2" checked />
     <div class="label-content">
       <span class="label-text">Butikker 2</span>
@@ -398,7 +399,7 @@
         if(!cb) return;
         cb.checked ? map.addLayer(lyr) : map.removeLayer(lyr);
       });
-      const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?l.getLayers?l.getLayers():[]:[]);
+      const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?(l.getLayers?l.getLayers():[]):[]);
       if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
     }
     ;['Anbud','Brukt','Innenfor','Utenfor','Butikk','Butikk2'].forEach(k=>
@@ -423,11 +424,9 @@
       URL.revokeObjectURL(url);
     });
 
-    // === NYTT: Butikker ===
+    // Butikk-lag
     initButikker();
-
     initButikker2();
-
   });
 
   function getPolygonCentroid(feature){
@@ -448,11 +447,10 @@
 
   function searchMap() {
     const startTime = performance.now();
-
     const qRawInput = document.getElementById('searchInput').value.trim();
     if (!qRawInput) return;
 
-    // Sjekk om søket er eksakt "N dag frekvens"
+    // Eksakt "N dag frekvens"
     const dagFreqMatch = qRawInput.match(/^(\d) dag frekvens$/i);
     if (dagFreqMatch) {
       const ønsketDager = Number(dagFreqMatch[1]);
@@ -460,8 +458,7 @@
       return;
     }
 
-    // --- Vanlig søk ---
-
+    // Vanlig søk
     Object.values(layers).forEach(l => map.removeLayer(l));
     if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; heatmapBtn.disabled = true; }
@@ -469,7 +466,7 @@
     const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
     const matchedPostnr = new Set();
 
-    Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+    Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([_, mapData]) => {
       Object.entries(mapData).forEach(([pRaw, info]) => {
         const p = pRaw.padStart(4, '0');
         if (postnummerSok) {
@@ -494,7 +491,7 @@
       return;
     }
 
-    // Oppsummering
+    // Oppsummeringstabell
     let totalSum = 0;
     let samletFrekvenserTotal = new Set();
     let samletAviserTotal = new Set();
@@ -512,7 +509,7 @@
         if (avisMap) {
           for (const [avisId, avisData] of avisMap.entries()) {
             const navn = avisNavnMap[avisId] || avisId;
-            const avisMatch = (avisSok.length === 0) || avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr)); // <- fikset sokStr
+            const avisMatch = (avisSok.length === 0) || avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr)); // <- FIX
             if (!avisMatch) continue;
 
             if (frekvensSok.size === 0) {
@@ -563,7 +560,7 @@
     html += '</tbody></table>';
     document.getElementById('search-summary').innerHTML = html;
 
-    // lastMatches
+    // CSV-data
     lastMatches = [];
     matches.forEach(f => {
       const p = f.properties.postnummer.trim().padStart(4, '0');
@@ -588,6 +585,7 @@
 
     exportBtn.disabled = false;
 
+    // Heatmap
     const intensitetFaktor = 5;
     const heatPointsRaw = matches.map(f => {
       const [lat, lng] = getPolygonCentroid(f);
@@ -616,8 +614,8 @@
       }
     };
 
+    // Treff som polygon
     searchLayer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 }) }).addTo(map);
-
     searchLayer.eachLayer(l => {
       const p = l.feature.properties;
       l.bindPopup(`
@@ -714,21 +712,16 @@
     document.getElementById('search-summary').innerHTML = html;
     exportBtn.disabled = false; heatmapBtn.disabled = false;
 
+    // Vis polygoner i dette moduset
+    const matches = [...fInnenfor, ...fUtenfor].filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
     if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; }
 
-    const matches = allFeatures.filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
     searchLayer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#0077cc', fillOpacity: 0.4, weight: 2 }) }).addTo(map);
-
     searchLayer.eachLayer(l => {
       const p = l.feature.properties;
-      l.bindPopup(`
-        <strong>Postnummer: ${p.postnummer}</strong><br>
-        Totalt antall: ${p.antall}<br>
-        Detaljer pr avis: ${p.avis || 'Ingen'}
-      `);
+      l.bindPopup(`<strong>Postnummer: ${p.postnummer}</strong><br>Totalt antall: ${p.antall}<br>Detaljer pr avis: ${p.avis || 'Ingen'}`);
     });
-
     map.fitBounds(searchLayer.getBounds().pad(0.05));
 
     const endTime = performance.now();
@@ -736,10 +729,86 @@
     document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
   }
 
-  // === Butikker: les CSV, bruk lat/lon hvis finnes, ellers geokodér adresse ===
-  $1
+  // === Butikker: les CSV, bruk lat/lon eller x3035/y3035, ellers geokodér adresse ===
+  async function initButikker(){
+    try {
+      const rows = await lesCSVRows('butikker.csv');
+      if(!rows.length){ if(butikkerStatus) butikkerStatus.textContent = ''; return; }
 
-  // === NYTT: Butikker 2 ===
+      const butikkLayer = L.layerGroup();
+      layers.Butikk = butikkLayer;
+
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      async function geocodeAdresse(q){
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if(!res.ok) return null;
+        const data = await res.json();
+        if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+        return null;
+      }
+
+      const points = [];
+      let toGeocode = 0, doneGeocode = 0;
+
+      for(const r of rows){
+        const navn = r.navn || r.name || '';
+        const adr  = r.adresse || r.address || '';
+        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+        const ps   = r.poststed || r.sted || '';
+
+        let lat = parseFloat(r.lat || r.latitude);
+        let lon = parseFloat(r.lon || r.lng || r.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
+
+        const x = parseFloat(r.x3035 || r.x);
+        const y = parseFloat(r.y3035 || r.y);
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
+          points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
+          continue;
+        }
+
+        toGeocode++;
+        points.push({lat: null, lon: null, navn, adr, pn, ps});
+      }
+
+      if(toGeocode){
+        if(butikkerStatus) butikkerStatus.textContent = `Geokoder ${toGeocode} adresser …`;
+        for(const p of points){
+          if(p.lat != null && p.lon != null) continue;
+          const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
+          const res = await geocodeAdresse(query);
+          if(res){ p.lat = res.lat; p.lon = res.lon; }
+          doneGeocode++;
+          if(butikkerStatus && doneGeocode % 1 === 0){ butikkerStatus.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
+          await sleep(300);
+        }
+        if(butikkerStatus) butikkerStatus.textContent = '';
+      }
+
+      let added = 0;
+      points.forEach(p => {
+        if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
+        const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikkFarge, fillOpacity: 0.85});
+        const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
+        m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
+        butikkLayer.addLayer(m);
+        added++;
+      });
+
+      const cb = document.getElementById('toggleButikk');
+      if(cb?.checked) map.addLayer(butikkLayer);
+      oppdaterButikkTellere();
+      if(added){ try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {} }
+
+    } catch(err){
+      console.warn('Feil ved lasting av butikker:', err);
+      if(butikkerStatus) butikkerStatus.textContent = '';
+    }
+  }
+
+  // === Butikker 2 ===
   async function initButikker2(){
     try {
       const rows = await lesCSVRows('butikker2.csv');
@@ -755,9 +824,7 @@
         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
         if(!res.ok) return null;
         const data = await res.json();
-        if(Array.isArray(data) && data[0]){
-          return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-        }
+        if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
         return null;
       }
 
@@ -821,90 +888,7 @@
     }
   }
 
-      const butikkLayer = L.layerGroup();
-      layers.Butikk = butikkLayer; // slik at toggle virker likt
-
-      // Hjelpefunksjoner
-      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-      async function geocodeAdresse(q){
-        // Nominatim – OK til små mengder. For produksjon: pre-geokodér eller bruk egen tjeneste.
-        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if(!res.ok) return null;
-        const data = await res.json();
-        if(Array.isArray(data) && data[0]){
-          return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-        }
-        return null;
-      }
-
-      const points = [];
-      let toGeocode = 0, doneGeocode = 0;
-
-      // Første pass: forsøk direkte koordinater / 3035
-      for(const r of rows){
-        const navn = r.navn || r.name || '';
-        const adr  = r.adresse || r.address || '';
-        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-        const ps   = r.poststed || r.sted || '';
-
-        // WGS84
-        let lat = parseFloat(r.lat || r.latitude);
-        let lon = parseFloat(r.lon || r.lng || r.longitude);
-        if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
-        // 3035
-        const x = parseFloat(r.x3035 || r.x);
-        const y = parseFloat(r.y3035 || r.y);
-        if (Number.isFinite(x) && Number.isFinite(y)) {
-          const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
-          points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
-          continue;
-        }
-        // Merk for geokoding
-        toGeocode++;
-        points.push({lat: null, lon: null, navn, adr, pn, ps});
-      }
-
-      // Andre pass: geokodér de som mangler
-      if(toGeocode){
-        butikkerStatus.textContent = `Geokoder ${toGeocode} adresser …`;
-        for(const p of points){
-          if(p.lat != null && p.lon != null) continue;
-          const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
-          const res = await geocodeAdresse(query);
-          if(res){ p.lat = res.lat; p.lon = res.lon; }
-          doneGeocode++;
-          if(doneGeocode % 1 === 0){ butikkerStatus.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
-          await sleep(300); // enkel throttle
-        }
-        butikkerStatus.textContent = '';
-      }
-
-      // Lag markører for de som har fått koordinater
-      let added = 0;
-      points.forEach(p => {
-        if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
-        const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikkFarge, fillOpacity: 0.85});
-        const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
-        m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
-        butikkLayer.addLayer(m);
-        added++;
-      });
-
-      // Vis laget hvis valgt
-      const cb = document.getElementById('toggleButikk');
-      if(cb?.checked) map.addLayer(butikkLayer);
-      oppdaterButikkTellere();
-      if(added){
-        try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {}
-      }
-
-    } catch(err){
-      console.warn('Feil ved lasting av butikker:', err);
-      butikkerStatus.textContent = '';
-    }
-  }
-
+  // Login/passord for navnesøk
   document.getElementById('loginBtn').addEventListener('click', () => {
     const pw = document.getElementById('passwordInput').value;
     if(pw === riktigPassord){
