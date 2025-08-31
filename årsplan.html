@@ -1,4 +1,4 @@
-x<!doctype html>
+<!doctype html>
 <html lang="no">
 <head>
   <meta charset="utf-8" />
@@ -42,7 +42,6 @@ x<!doctype html>
   #lss-tooltip{ max-width: min(88vw, 22rem); }
 </style>
 
-
   <!-- Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
@@ -57,14 +56,13 @@ x<!doctype html>
   <!-- ========= HEADER ========= -->
   <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
     <div class="flex items-center gap-3">
-      <!-- Logo ligger på rot – bruker direkte filnavn -->
       <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
       <div>
         <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
         <p class="text-sm opacity-80">Årsplan • Øktbank • Terminliste</p>
       </div>
     </div>
-<div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print md:sticky md:top-2 md:z-40">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print md:sticky md:top-2 md:z-40">
       <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
       <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
       <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter</button>
@@ -84,7 +82,7 @@ x<!doctype html>
     <nav class="flex gap-2">
       <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
       <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
-      <button data-tab="pdf" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">PDF‑referanse</button>
+      <button data-tab="pdf" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">PDF-referanse</button>
       <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin/Import</button>
     </nav>
   </div>
@@ -147,7 +145,7 @@ x<!doctype html>
       <!-- PDF Tab -->
       <section id="tab-pdf" class="tab-section hidden">
         <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="border-b p-4"><h3 class="text-lg font-semibold">PDF‑referanse</h3></div>
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">PDF-referanse</h3></div>
           <div class="p-4">
             <label class="inline-flex items-center gap-2 no-print">
               <input id="file-pdf" type="file" accept="application/pdf" class="hidden"/>
@@ -168,7 +166,7 @@ x<!doctype html>
           <div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div class="space-y-3">
               <div>
-                <label class="text-sm font-medium">CSV‑import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
+                <label class="text-sm font-medium">CSV-import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
                 <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; bevegelighet|balanse; U12|U14"></textarea>
                 <div class="mt-2 flex gap-2">
                   <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
@@ -176,8 +174,8 @@ x<!doctype html>
                 </div>
               </div>
               <div>
-                <label class="text-sm font-medium">EQTiming‑sjekk (lim inn lenke pr. hendelse i skjemaet)</label>
-                <p class="text-sm text-slate-600">Hent tittel/arrangement‑navn fra eqtiming.no direkte i hendelsesdialogen. Merk: CORS kan hindre auto‑henting i noen nettlesere.</p>
+                <label class="text-sm font-medium">EQTiming-sjekk (lim inn lenke pr. hendelse i skjemaet)</label>
+                <p class="text-sm text-slate-600">Hent tittel/arrangement-navn fra eqtiming.no direkte i hendelsesdialogen. Merk: CORS kan hindre auto-henting i noen nettlesere.</p>
               </div>
 
               <!-- NSSF terminliste -->
@@ -187,8 +185,8 @@ x<!doctype html>
                   <input id="nssf-url" class="w-full rounded-xl border px-3 py-2" value="https://skiskyting.no/arrangement/terminliste-eq/"/>
                   <button id="btn-nssf" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Hent</button>
                 </div>
-                <p class="text-xs text-slate-600 mt-1">Hvis CORS blokkerer: åpne siden, kopier HTML‑kilden og lim inn her:</p>
-                <textarea id="nssf-html" class="mt-2 h-24 w-full rounded-xl border px-3 py-2" placeholder="(Valgfritt) Lim inn HTML‑kilde fra terminlisten dersom direkte henting feiler"></textarea>
+                <p class="text-xs text-slate-600 mt-1">Hvis CORS blokkerer: åpne siden, kopier HTML-kilden og lim inn her:</p>
+                <textarea id="nssf-html" class="mt-2 h-24 w-full rounded-xl border px-3 py-2" placeholder="(Valgfritt) Lim inn HTML-kilde fra terminlisten dersom direkte henting feiler"></textarea>
                 <div class="mt-2 flex gap-2">
                   <button id="btn-nssf-parse" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer fra limt HTML</button>
                 </div>
@@ -239,7 +237,7 @@ x<!doctype html>
           <p><span class="font-medium">U12:</span> Variasjon/lek, korte økter, enkel liggende.</p>
           <p><span class="font-medium">U14:</span> Mer organisert, fartstider, stående introduseres.</p>
           <p><span class="font-medium">U16:</span> Systematisk progresjon, intensitetsstyring, kombinert.</p>
-          <p><span class="font-medium">JR:</span> Individtilpasning, helhetlig belastning, konk‑spesifikt.</p>
+          <p><span class="font-medium">JR:</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
         </div>
       </div>
       <div class="rounded-2xl border bg-white shadow-sm">
@@ -255,12 +253,12 @@ x<!doctype html>
 
   <!-- Dialog -->
   <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-<div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+    <div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-4">
         <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
         <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
       </div>
-<div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
+      <div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
       <div class="border-t p-4 flex justify-end gap-2">
         <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
         <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
@@ -269,7 +267,7 @@ x<!doctype html>
     </div>
   </div>
 
-  <!-- Tooltip element (én instans) -->
+  <!-- Tooltip element -->
   <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700 max-w-xs"></div>
 
   <script>
@@ -287,36 +285,29 @@ x<!doctype html>
     const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
     const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
 
-
-
-    // LocalStorage keys (cache)
     const KEY = { EVENTS:'lss:events:v1', BANK:'lss:bank:v1', WEEKS:'lss:weeks:v1', YEAR:'lss:year:v1' };
 
-    // Helpers
     const $=(q,el=document)=>el.querySelector(q);
     const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
     const uid=()=> (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));
     const lsGet=(k,d)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch{return d;} };
     const lsSet=(k,v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} };
 
+    function fallbackLogo(){
+      const img=document.createElement('div');
+      img.className='h-14 w-20 rounded-xl bg-white grid place-items-center text-xs text-slate-500';
+      img.textContent='Logo';
+      return img;
+    }
+
     function bindDialogChrome(){
-  const dlg = $('#dialog');
-  const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
-
-  // Koble knappene ( én gang )
-  $('#btn-cancel')?.addEventListener('click', doClose);
-  $('#dlg-close')?.addEventListener('click', doClose);
-
-  // Klikk på bakteppet lukker
-  dlg?.addEventListener('click', (e) => {
-    if (e.target === dlg) closeDialog();
-  });
-
-  // ESC lukker
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog();
-  });
-}
+      const dlg = $('#dialog');
+      const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
+      $('#btn-cancel')?.addEventListener('click', doClose);
+      $('#dlg-close')?.addEventListener('click', doClose);
+      dlg?.addEventListener('click', (e) => { if (e.target === dlg) closeDialog(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog(); });
+    }
 
     // ---------- SUPABASE SETUP ----------
     const SUPA_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -324,81 +315,48 @@ x<!doctype html>
     const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
 
     // Tabellenavn
-    const TBL = {
-      events: 'events',
-      bank: 'bank_templates',
-      weeks: 'weeks',
-      settings: 'settings'
-    };
+    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', settings:'settings' };
 
     // Global state
-let state = {
-  year: lsGet(KEY.YEAR, dayjs().year()),
-  month: dayjs().month() + 1, // 1-12, brukes bare på mobil
-  events: [],
-  bank: [],
-  weeks: {}
-};
+    let state = {
+      year: lsGet(KEY.YEAR, dayjs().year()),
+      month: dayjs().month() + 1, // 1-12, brukes bare på mobil
+      events: [],
+      bank: [],
+      weeks: {}
+    };
+
     // ---- Responsivt oppsett ----
-const MOBILE_BREAKPOINT = 768;
-const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
+    const MOBILE_BREAKPOINT = 768;
+    const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
     // ---------- Supabase I/O ----------
     async function supaLoadAll(year = state.year){
-      // Events
-      const { data: ev, error: evErr } = await supabase
-        .from(TBL.events)
-        .select('*')
-        .eq('year', year)
-        .order('date', { ascending: true });
+      const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
       if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
-      // Bank (maler)
-      const { data: bk, error: bkErr } = await supabase
-        .from(TBL.bank)
-        .select('*')
-        .order('created_at', { ascending: false });
-      if(!bkErr && bk){
-        state.bank = bk.map(mapBankFromDb);
-        if(state.bank.length === 0){ state.bank = getDefaultTemplates(); }
-        lsSet(KEY.BANK, state.bank);
-      } else {
-        state.bank = lsGet(KEY.BANK, getDefaultTemplates());
-      }
+      const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
+      if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
+      else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
 
-      // Weeks
-      const { data: wks, error: wErr } = await supabase
-        .from(TBL.weeks)
-        .select('*')
-        .eq('year', year);
+      const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
       if(!wErr && wks){
-        const dict = {};
-        for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
+        const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
         state.weeks = dict;
       } else {
         state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
       }
 
-
       render();
     }
 
-
     async function supaUpsertEvent(model){
-  const row = mapEventToDb(model);
-  // Hjelpelogg – fjern når du ser riktig verdi på 'type'
-  console.log('UPsert payload:', row);
-
-  const { data, error } = await supabase
-    .from(TBL.events)
-    .upsert(row, { onConflict: 'id' }) // eksplisitt onConflict på pk
-    .select()
-    .single();
-
-  if (error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
-  return data;
-}
+      const row = mapEventToDb(model);
+      const { data, error } = await supabase.from(TBL.events).upsert(row, { onConflict: 'id' }).select().single();
+      if (error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
+      return data;
+    }
     async function supaDeleteEvent(id){
       const { error } = await supabase.from(TBL.events).delete().eq('id', id);
       if(error){ console.warn('Sletting feilet', error); alert('Kunne ikke slette i skyen. Slettet lokalt.'); }
@@ -417,71 +375,56 @@ const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
       if(error){ console.warn('Slett bank feilet', error); }
     }
 
-    // Realtime
     function supaRealtimeInit(){
       supabase.channel('events-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.events }, payload => {
           if(payload.new?.year === state.year || payload.old?.year === state.year){ supaLoadAll(state.year); }
         }).subscribe();
-
       supabase.channel('weeks-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.weeks }, payload => {
           if((payload.new?.year||payload.old?.year) === state.year){ supaLoadAll(state.year); }
         }).subscribe();
-
       supabase.channel('bank-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.bank }, () => supaLoadAll(state.year))
         .subscribe();
     }
 
-   // ---------- DB mappere (ERSTATTER DINE) ----------
-// --- DB mappere: bruk KUN skrivbare kolonner ---
-// NB: IKKE send generated-kolonner (year, event_type) i payloaden.
-
-function mapEventToDb(e){
-  return {
-    id: e.id,
-    date: e.date,
-    title: e.title || null,           // <-- MÅ med
-    type: e.type || null,
-    modality: e.modality || null,
-    intensity: e.intensity || null,
-    duration_min: e.durationMin ?? null,
-    age: e.age || [],
-    shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
-    race_subtype: e.raceSubtype || null,
-    notes: e.notes || null,
-    roles: e.roles || {},
-    eqtiming: e.eqtiming || null
-    // created_at: (IKKE send genererte felt)
-  };
-}
-
-
-
-function mapEventFromDb(r){
-  // Les 'type' direkte. Ikke default til 'Trening' hvis DB faktisk returnerer noe annet enn null.
-  const t = r.type ?? r.event_type ?? 'Trening';
-  return {
-    id: r.id,
-    date: r.date,
-    title: r.title || '',
-    type: t,
-    modality: r.modality || '',
-    intensity: r.intensity || '',
-    durationMin: r.duration_min ?? 60,
-    age: r.age || [],
-    shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
-    raceSubtype: r.race_subtype || '',
-    notes: r.notes || '',
-    roles: r.roles || {},
-    eqtiming: r.eqtiming || ''
-  };
-}
-
-
-
-
+    // ---------- DB mappere ----------
+    function mapEventToDb(e){
+      return {
+        id: e.id,
+        date: e.date,
+        title: e.title || null,
+        type: e.type || null,
+        modality: e.modality || null,
+        intensity: e.intensity || null,
+        duration_min: e.durationMin ?? null,
+        age: e.age || [],
+        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: e.raceSubtype || null,
+        notes: e.notes || null,
+        roles: e.roles || {},
+        eqtiming: e.eqtiming || null
+      };
+    }
+    function mapEventFromDb(r){
+      const t = r.type ?? r.event_type ?? 'Trening';
+      return {
+        id: r.id,
+        date: r.date,
+        title: r.title || '',
+        type: t,
+        modality: r.modality || '',
+        intensity: r.intensity || '',
+        durationMin: r.duration_min ?? 60,
+        age: r.age || [],
+        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
+        raceSubtype: r.race_subtype || '',
+        notes: r.notes || '',
+        roles: r.roles || {},
+        eqtiming: r.eqtiming || ''
+      };
+    }
     function mapBankToDb(t){
       return {
         id: t.id,
@@ -555,104 +498,129 @@ function mapEventFromDb(r){
       tipEl.classList.remove('hidden');
     }
     function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
-    function esc(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+    // Utvidet tooltip: viser "alt"
     function eventTooltipHTML(e){
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
-      const lines = [
-        `<div class="font-semibold mb-1">${title}</div>`,
-        `<div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>`,
-        `<div><span class="font-medium">Modalitet:</span> ${esc(e.modality||'–')}</div>`,
-        `<div><span class="font-medium">Intensitet:</span> ${esc(e.intensity||'–')}</div>`,
-        `<div><span class="font-medium">Skudd:</span> ${(e.shooting&&e.shooting.skudd)||0}</div>`
-      ];
-      if(e.notes){ lines.push(`<div class="mt-1 text-slate-600">${esc(e.notes)}</div>`); }
-      return lines.join('');
+      const rolesList = Object.entries(e.roles||{})
+        .filter(([,v])=> (v||'').trim().length)
+        .map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`)
+        .join('');
+      const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
+      const eqt = (e.eqtiming||'').trim()
+        ? `<div class="mt-1"><span class="font-medium">EQTiming:</span> <span class="break-all">${esc(e.eqtiming)}</span></div>` : '';
+      const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim()
+        ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
+      const notes = (e.notes||'').trim()
+        ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+      const tema = (e.shooting?.tema||[]).length
+        ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
+
+      return `
+        <div class="font-semibold mb-1">${title}</div>
+        <div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>
+        <div><span class="font-medium">Modalitet:</span> ${esc(e.modality||'–')}</div>
+        <div><span class="font-medium">Intensitet:</span> ${esc(e.intensity||'–')}</div>
+        <div><span class="font-medium">Varighet:</span> ${e.durationMin? esc(String(e.durationMin))+' min' : '–'}</div>
+        <div class="mt-1"><span class="font-medium">Aldersklasser:</span> ${ageChips||'–'}</div>
+        <div class="mt-1"><span class="font-medium">Skyting:</span> ${esc(e.shooting?.stilling||'–')}, skudd: ${e.shooting?.skudd||0}</div>
+        ${tema}
+        ${race}
+        ${rolesList? `<div class="mt-1">${rolesList}</div>`:''}
+        ${eqt}
+        ${notes}
+      `;
     }
-// Liten hjelpe‑renderer for kortene i dagvisningen
-function dayViewCard(e){
-  const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
-  const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
-  const meta = [
-    e.type ? `<span class="inline-flex items-center gap-2">${dot}<span>${esc(e.type)}</span></span>` : '',
-    e.modality ? `<span>${esc(e.modality)}</span>` : '',
-    e.intensity ? `<span>${esc(e.intensity)}</span>` : '',
-    e.durationMin ? `<span>${String(e.durationMin)} min</span>` : ''
-  ].filter(Boolean).join(' • ');
 
-  const shoot = (e.shooting && (e.shooting.stilling || e.shooting.skudd))
-      ? `<div class="text-xs text-slate-600">Skyting: ${esc(e.shooting.stilling||'–')}, skudd: ${e.shooting.skudd||0}</div>` : '';
+    // --------- Forhåndsvisningskort (uten "skudd", med årsklasser) ---------
+    function dayViewCard(e){
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
+      const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
 
-  const notes = e.notes ? `<div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+      const meta = [
+        e.type ? `<span class="inline-flex items-center gap-2">${dot}<span>${esc(e.type)}</span></span>` : '',
+        e.modality ? `<span>${esc(e.modality)}</span>` : '',
+        e.intensity ? `<span>${esc(e.intensity)}</span>` : '',
+        e.durationMin ? `<span>${String(e.durationMin)} min</span>` : ''
+      ].filter(Boolean).join(' • ');
 
-  return `
-    <div class="rounded-2xl border bg-white shadow-sm p-4">
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <div class="text-base font-semibold">${title}</div>
-          <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-2">${meta}</div>
-          ${shoot}
-          ${notes}
+      const ages = (e.age||[]).length
+        ? `<div class="mt-1 flex flex-wrap gap-1">${(e.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-[11px]">${esc(a)}</span>`).join('')}</div>`
+        : '';
+
+      const notes = e.notes ? `<div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+
+      return `
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-base font-semibold">${title}</div>
+              <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-2">${meta}</div>
+              ${ages}
+              ${notes}
+            </div>
+            <div class="shrink-0 flex gap-1">
+              <button id="day-view-${e.id}" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
+              <button id="day-edit-${e.id}" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
+              <button id="day-dup-${e.id}"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
+              <button id="day-del-${e.id}"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
+            </div>
+          </div>
         </div>
-        <div class="shrink-0 flex gap-1">
-          <button id="day-edit-${e.id}" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
-          <button id="day-dup-${e.id}"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
-          <button id="day-del-${e.id}"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
+      `;
+    }
 
+    // ---------- Dagoversikt (dialog med kort) ----------
     function openDayView(dateISO, eventsForDay){
-  const d = dayjs(dateISO);
-  // Sorter pr. tittel for konsistent visning (dato er lik for alle)
-  const items = [...eventsForDay].sort((a,b)=> (a.title||'').localeCompare(b.title||''));
+      const d = dayjs(dateISO);
+      const items = [...eventsForDay].sort((a,b)=> (a.title||'').localeCompare(b.title||''));
 
-  const body = $('#dlg-body');
-  $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
-  $('#btn-delete').classList.add('hidden'); // ikke relevant i oversikt
-  body.innerHTML = `
-    <div class="space-y-3">
-      ${items.map(e=> dayViewCard(e)).join('')}
-      <div class="pt-2">
-        <button id="btn-new-on-day" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny hendelse denne dagen</button>
-      </div>
-    </div>
-  `;
+      const body = $('#dlg-body');
+      $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
+      $('#btn-delete').classList.add('hidden');
+      $('#btn-save').classList.remove('hidden'); // behold lagre-knappen i dialogens footer (ikke brukt her)
+      body.innerHTML = `
+        <div class="space-y-3">
+          ${items.map(e=> dayViewCard(e)).join('')}
+          <div class="pt-2">
+            <button id="btn-new-on-day" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny hendelse denne dagen</button>
+          </div>
+        </div>
+      `;
 
-  // Koble knapper for hvert kort
-  items.forEach(e=>{
-    const edit = document.getElementById(`day-edit-${e.id}`);
-    const dup  = document.getElementById(`day-dup-${e.id}`);
-    const del  = document.getElementById(`day-del-${e.id}`);
+      // Koble knapper for hvert kort
+      items.forEach(e=>{
+        const view = document.getElementById(`day-view-${e.id}`);
+        const edit = document.getElementById(`day-edit-${e.id}`);
+        const dup  = document.getElementById(`day-dup-${e.id}`);
+        const del  = document.getElementById(`day-del-${e.id}`);
 
-    edit?.addEventListener('click', ()=> openDialog({...e}));
-    dup?.addEventListener('click', async ()=>{
-      const copy = { ...e, id: uid(), title: (e.title||e.type)+' (kopi)' };
-      state.events.push(copy);
-      lsSet(KEY.EVENTS, state.events);
-      render();
-      await supaUpsertEvent(copy);
-    });
-    del?.addEventListener('click', async ()=>{
-      if(!confirm('Slette denne hendelsen?')) return;
-      state.events = state.events.filter(x=> x.id !== e.id);
-      lsSet(KEY.EVENTS, state.events);
-      render();
-      await supaDeleteEvent(e.id);
-      // Oppdater dagvisningen uten å lukke
-      openDayView(dateISO, state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')));
-    });
-  });
+        view?.addEventListener('click', ()=> openViewDialog(e));
+        edit?.addEventListener('click', ()=> openDialog({...e}));
+        dup?.addEventListener('click', async ()=>{
+          const copy = { ...e, id: uid(), title: (e.title||e.type)+' (kopi)' };
+          state.events.push(copy);
+          lsSet(KEY.EVENTS, state.events);
+          render();
+          await supaUpsertEvent(copy);
+        });
+        del?.addEventListener('click', async ()=>{
+          if(!confirm('Slette denne hendelsen?')) return;
+          state.events = state.events.filter(x=> x.id !== e.id);
+          lsSet(KEY.EVENTS, state.events);
+          render();
+          await supaDeleteEvent(e.id);
+          openDayView(dateISO, state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')));
+        });
+      });
 
-  // Ny hendelse samme dato
-  $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
+      $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
 
-  // Vis dialog
-  $('#dialog').classList.remove('hidden');
-  $('#dialog').classList.add('flex');
-}
-
+      $('#dialog').classList.remove('hidden');
+      $('#dialog').classList.add('flex');
+    }
 
     // ---------- Render ----------
     function render(){
@@ -676,202 +644,182 @@ function dayViewCard(e){
       });
     }
 
-function renderCalendar(){
-  const grid = $('#calendar-grid');
-  grid.innerHTML = '';
+    function renderCalendar(){
+      const grid = $('#calendar-grid');
+      grid.innerHTML = '';
 
-  if (isMobile()){
-    // Mobil: én måned, egne piler
-    grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
-    return;
-  }
-
-  // Desktop: “rullerende” årsvisning som før
-  const nowMonth = dayjs().month() + 1;
-  const months = [];
-  for(let m = nowMonth; m <= 12; m++) months.push(m);
-  for(let m = 1; m < nowMonth; m++) months.push(m);
-  months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
-}
-
-
-function renderMonth(year, month, opts = { withNav:false }){
-  const wrap=document.createElement('div'); 
-  wrap.className='rounded-2xl border bg-white shadow-sm';
-
-  const header=document.createElement('div'); 
-  header.className='flex items-center justify-between border-b p-4';
-
-  const title = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM');
-
-  if (opts.withNav){
-    // Mobil: egne piler for månedsnavigasjon
-    const left = document.createElement('button');
-    left.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
-    left.textContent = '◀';
-
-    const mid = document.createElement('div');
-    mid.className = 'text-lg font-semibold';
-    mid.textContent = `${title} ${year}`;
-
-    const right = document.createElement('button');
-    right.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
-    right.textContent = '▶';
-
-    left.onclick = () => {
-      let m = state.month - 1, y = state.year;
-      if (m < 1){ m = 12; y--; }
-      state.month = m; state.year = y;
-      render();
-    };
-    right.onclick = () => {
-      let m = state.month + 1, y = state.year;
-      if (m > 12){ m = 1; y++; }
-      state.month = m; state.year = y;
-      render();
-    };
-
-    header.append(left, mid, right);
-  } else {
-    header.innerHTML=`<h3 class="text-lg font-semibold">${title}</h3>`;
-  }
-
-  const body=document.createElement('div'); body.className='p-2';
-  const daysHeader=document.createElement('div'); 
-  daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
-  'man tir ons tor fre lør søn'.split(' ').forEach(w=>{
-    const d=document.createElement('div'); 
-    d.className='px-1 py-1 text-center font-medium uppercase'; 
-    d.textContent=w; 
-    daysHeader.appendChild(d);
-  });
-
-  const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
-  const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
-  const leading=(first.day()+6)%7; const days=first.daysInMonth();
-
-  for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
-  for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
-  const total=leading+days; const trail=(7-(total%7))%7; 
-  for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
-
-  body.appendChild(daysHeader); 
-  body.appendChild(cells); 
-  wrap.appendChild(header); 
-  wrap.appendChild(body); 
-  return wrap;
-}
-
-
-function emptyCell(){ 
-  const d = document.createElement('div'); 
-  d.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; 
-  return d; 
-}
-
-function dayCell(d){
-  const key = d.format('YYYY-MM-DD');
-  const evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
-
-  const box = document.createElement('div');
-  box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
-
-  // Klikk: vis eksisterende hendelser, ellers ny hendelse
-  box.addEventListener('click', (ev) => {
-    hideTooltip();
-    if (evts.length > 0){
-      openDayView(key, evts);   // <-- viser liste over dagens hendelser
-    } else {
-      openDialog({ date: key }); // <-- ny hendelse som før
+      if (isMobile()){
+        grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
+        return;
+      }
+      const nowMonth = dayjs().month() + 1;
+      const months = [];
+      for(let m = nowMonth; m <= 12; m++) months.push(m);
+      for(let m = 1; m < nowMonth; m++) months.push(m);
+      months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
     }
-  });
 
-  // Tooltip for tom dag
-  box.addEventListener('mouseenter', (e) => {
-    if(evts.length === 0){
-      showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY);
+    function renderMonth(year, month, opts = { withNav:false }){
+      const wrap=document.createElement('div'); 
+      wrap.className='rounded-2xl border bg-white shadow-sm';
+
+      const header=document.createElement('div'); 
+      header.className='flex items-center justify-between border-b p-4';
+
+      const title = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM');
+
+      if (opts.withNav){
+        const left = document.createElement('button');
+        left.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
+        left.textContent = '◀';
+
+        const mid = document.createElement('div');
+        mid.className = 'text-lg font-semibold';
+        mid.textContent = `${title} ${year}`;
+
+        const right = document.createElement('button');
+        right.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
+        right.textContent = '▶';
+
+        left.onclick = () => {
+          let m = state.month - 1, y = state.year;
+          if (m < 1){ m = 12; y--; }
+          state.month = m; state.year = y;
+          render();
+        };
+        right.onclick = () => {
+          let m = state.month + 1, y = state.year;
+          if (m > 12){ m = 1; y++; }
+          state.month = m; state.year = y;
+          render();
+        };
+
+        header.append(left, mid, right);
+      } else {
+        header.innerHTML=`<h3 class="text-lg font-semibold">${title}</h3>`;
+      }
+
+      const body=document.createElement('div'); body.className='p-2';
+      const daysHeader=document.createElement('div'); 
+      daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
+      'man tir ons tor fre lør søn'.split(' ').forEach(w=>{
+        const d=document.createElement('div'); 
+        d.className='px-1 py-1 text-center font-medium uppercase'; 
+        d.textContent=w; 
+        daysHeader.appendChild(d);
+      });
+
+      const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
+      const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
+      const leading=(first.day()+6)%7; const days=first.daysInMonth();
+
+      for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
+      for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
+      const total=leading+days; const trail=(7-(total%7))%7; 
+      for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
+
+      body.appendChild(daysHeader); 
+      body.appendChild(cells); 
+      wrap.appendChild(header); 
+      wrap.appendChild(body); 
+      return wrap;
     }
-  });
-  box.addEventListener('mousemove', (e) => { 
-    if(evts.length === 0) 
-      showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY); 
-  });
-  box.addEventListener('mouseleave', hideTooltip);
 
-  // Topp (dato + fargedotter)
-  const top = document.createElement('div'); 
-  top.className = 'flex items-center justify-between text-xs text-slate-600';
-  top.innerHTML = `
-    <span class="font-medium">${d.date()}</span>
-    <span class="flex gap-1">
-      ${evts.slice(0,4).map(e =>
-        `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>`
-      ).join('')}
-    </span>`;
+    function emptyCell(){ 
+      const d = document.createElement('div'); 
+      d.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; 
+      return d; 
+    }
 
-  // Liste med maks 3 hendelser
-  const list = document.createElement('div'); 
-  list.className = 'mt-1 flex flex-col gap-0.5';
+    function dayCell(d){
+      const key = d.format('YYYY-MM-DD');
+      const evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
 
-  evts.slice(0,3).forEach(e => {
-    const row = document.createElement('div'); 
-    row.className = 'truncate text-xs flex items-center gap-1';
+      const box = document.createElement('div');
+      box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
 
-    const dot = document.createElement('span'); 
-    dot.className = 'inline-block h-2 w-2 rounded-full'; 
-    dot.style.background = COLORS[e.type] || '#6b7280';
+      box.addEventListener('click', () => {
+        hideTooltip();
+        if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key });
+      });
 
-    const txt = document.createElement('span'); 
-    txt.className = 'font-medium truncate'; 
-    txt.textContent = e.title || e.type;
+      box.addEventListener('mouseenter', (e) => { if(evts.length===0) showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY); });
+      box.addEventListener('mousemove', (e) => { if(evts.length===0) showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY); });
+      box.addEventListener('mouseleave', hideTooltip);
 
-    // Tooltip pr hendelse
-    const tipHTML = eventTooltipHTML(e);
-    const move = (ev) => showTooltip(tipHTML, ev.clientX, ev.clientY);
-    row.addEventListener('mouseenter', move);
-    row.addEventListener('mousemove', move);
-    row.addEventListener('mouseleave', hideTooltip);
+      const top = document.createElement('div'); 
+      top.className = 'flex items-center justify-between text-xs text-slate-600';
+      top.innerHTML = `
+        <span class="font-medium">${d.date()}</span>
+        <span class="flex gap-1">
+          ${evts.slice(0,4).map(e =>
+            `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>`
+          ).join('')}
+        </span>`;
 
-    row.appendChild(dot); 
-    row.appendChild(txt);
-    list.appendChild(row);
-  });
+      const list = document.createElement('div'); 
+      list.className = 'mt-1 flex flex-col gap-0.5';
 
-  if(evts.length > 3){
-    const more = document.createElement('div'); 
-    more.className = 'text-[10px] text-slate-500';
-    more.textContent = `+${evts.length-3} flere…`;
-    list.appendChild(more);
-  }
+      evts.slice(0,3).forEach(e => {
+        const row = document.createElement('div'); 
+        row.className = 'truncate text-xs flex items-center gap-1';
 
-  box.appendChild(top); 
-  box.appendChild(list); 
-  return box;
-}
+        const dot = document.createElement('span'); 
+        dot.className = 'inline-block h-2 w-2 rounded-full'; 
+        dot.style.background = COLORS[e.type] || '#6b7280';
 
+        const txt = document.createElement('span'); 
+        txt.className = 'font-medium truncate'; 
+        txt.textContent = e.title || e.type;
 
+        const tipHTML = eventTooltipHTML(e);
+        const move = (ev) => showTooltip(tipHTML, ev.clientX, ev.clientY);
+        row.addEventListener('mouseenter', move);
+        row.addEventListener('mousemove', move);
+        row.addEventListener('mouseleave', hideTooltip);
+
+        row.appendChild(dot); 
+        row.appendChild(txt);
+        list.appendChild(row);
+      });
+
+      if(evts.length > 3){
+        const more = document.createElement('div'); 
+        more.className = 'text-[10px] text-slate-500';
+        more.textContent = `+${evts.length-3} flere…`;
+        list.appendChild(more);
+      }
+
+      box.appendChild(top); 
+      box.appendChild(list); 
+      return box;
+    }
 
     function renderList(){
       const tbody=$('#tbl-events'); tbody.innerHTML='';
       const yearEvents=state.events.filter(e=> dayjs(e.date).year()===state.year).sort((a,b)=> dayjs(a.date)-dayjs(b.date));
       yearEvents.forEach(e=>{
         const tr=document.createElement('tr'); tr.className='border-t';
-        const safeTitle = e.title ? esc(e.title) : '<span class="opacity-50">(uten tittel)</span>';
+        const safeTitle = e.title ? escapeHTML(e.title) : '<span class="opacity-50">(uten tittel)</span>';
         tr.innerHTML=`
           <td class='py-1 whitespace-nowrap'>${dayjs(e.date).format('DD.MM.YYYY')}</td>
           <td class='max-w-[280px] truncate'>${safeTitle}</td>
-          <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>${esc(e.type||'')}</span></td>
-          <td>${esc(e.modality||'–')}</td>
-          <td>${esc(e.intensity||'–')}</td>
+          <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>${escapeHTML(e.type||'')}</span></td>
+          <td>${escapeHTML(e.modality||'–')}</td>
+          <td>${escapeHTML(e.intensity||'–')}</td>
           <td>${(e.shooting&&e.shooting.skudd)||0}</td>
-          <td class='text-right'><button class='rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Rediger</button></td>`;
-        tr.querySelector('button').addEventListener('click', ()=> openDialog({...e}));
-        // tooltip på rad
+          <td class='text-right'>
+            <div class="inline-flex gap-1">
+              <button class='btn-view rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Vis</button>
+              <button class='btn-edit rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Rediger</button>
+            </div>
+          </td>`;
+        tr.querySelector('.btn-edit').addEventListener('click', ()=> openDialog({...e}));
+        tr.querySelector('.btn-view').addEventListener('click', ()=> openViewDialog(e));
         const tipHTML = eventTooltipHTML(e);
         tr.addEventListener('mouseenter', (ev)=> showTooltip(tipHTML, ev.clientX, ev.clientY));
         tr.addEventListener('mousemove', (ev)=> showTooltip(tipHTML, ev.clientX, ev.clientY));
         tr.addEventListener('mouseleave', hideTooltip);
-
         tbody.appendChild(tr);
       });
     }
@@ -890,16 +838,16 @@ function dayCell(d){
       const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm';
       c.innerHTML=`
         <div class='border-b p-4 flex items-center justify-between'>
-          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${esc(t.name)}</h4>
-          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${esc(a)}</span>`).join('')}</div>
+          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${escapeHTML(t.name)}</h4>
+          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}</div>
         </div>
         <div class='p-4 text-sm space-y-1'>
-          <div><span class='font-medium'>Modalitet:</span> ${esc(t.modality||'–')}</div>
-          <div><span class='font-medium'>Intensitet:</span> ${esc(t.intensity||'–')}</div>
-          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? esc(String(t.durationMin))+' min':'–'}</div>
+          <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
+          <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
+          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
           <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
-          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${esc(x)}</span>`).join('')}</div>`:''}
-          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${esc(t.notes)}</p>`:''}
+          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}</div>`:''}
+          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${escapeHTML(t.notes)}</p>`:''}
           <div class='pt-2 flex flex-wrap gap-2'>
             <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
             <button class='btn-dup rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
@@ -933,7 +881,7 @@ function dayCell(d){
       };
     }
 
-    // ---------- Dialog ----------
+    // ---------- Rediger-dialog ----------
     function openDialog(data){
       const isEdit=!!state.events.find(x=>x.id===data.id);
       const model=Object.assign(
@@ -944,13 +892,12 @@ function dayCell(d){
       const body=$('#dlg-body'); body.innerHTML='';
       $('#dlg-title').textContent=isEdit?'Rediger hendelse':'Ny hendelse';
       $('#btn-delete').classList.toggle('hidden',!isEdit);
-$('#btn-save')?.classList.remove('hidden');
-$('#btn-save')?.removeAttribute('disabled');
-$('#btn-delete').classList.toggle('hidden', !isEdit);
+      $('#btn-save')?.classList.remove('hidden');
+      $('#btn-save')?.removeAttribute('disabled');
 
       const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
       body.innerHTML=`
-        ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${esc(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
+        ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
         <div class='grid grid-cols-2 gap-3'>
           ${field('Type', select('f-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
           ${field('Dato', `<input id='f-date' type='date' class='mt-1 w-full rounded-xl border px-3 py-2' value='${dayjs(model.date).format('YYYY-MM-DD')}'/>`)}
@@ -981,19 +928,17 @@ $('#btn-delete').classList.toggle('hidden', !isEdit);
         <div>
           <label class='text-sm font-medium'>Roller</label>
           <div class='mt-1 grid grid-cols-2 gap-2'>
-            ${ROLES.map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${esc(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
+            ${ROLES.map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
           </div>
         </div>
         <div class='grid grid-cols-2 gap-3'>
-          ${field('EQTiming‑lenke', `<input id='f-eqt' class='mt-1 w-full rounded-xl border px-3 py-2' value='${esc(model.eqtiming||'')}' placeholder='https://www.eqtiming.com/...'>`)}
+          ${field('EQTiming-lenke', `<input id='f-eqt' class='mt-1 w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.eqtiming||'')}' placeholder='https://www.eqtiming.com/...'>`)}
           <div class='flex items-end'><button id='btn-fetch-eqt' class='rounded-xl border bg-white px-3 py-2 shadow-sm w-full'>Hent tittel fra lenke</button></div>
         </div>
         <div>
           <label class='text-sm font-medium'>Notater</label>
-          <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${esc(model.notes||'')}</textarea>
+          <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${escapeHTML(model.notes||'')}</textarea>
         </div>`;
-
-      
 
       function refreshTema(){
         const holder=$('#tema-tags'); holder.innerHTML='';
@@ -1006,37 +951,34 @@ $('#btn-delete').classList.toggle('hidden', !isEdit);
       refreshTema();
       $('#add-tema').onclick=()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
 
-      // ---- inne i openDialog, i stedet for alle $('#...') under btn-save:
-$('#btn-save').onclick = async () => {
-  const get = (id) => $('#'+id, body); // <-- SCOPE TIL DIALOGEN
+      $('#btn-save').onclick = async () => {
+        const get = (id) => $('#'+id, body);
+        model.title       = get('f-title').value.trim();
+        model.type        = get('f-type').value;
+        model.date        = get('f-date').value;
+        model.modality    = get('f-mod').value;
+        model.intensity   = get('f-int').value;
+        model.durationMin = parseInt(get('f-dur').value) || 60;
+        model.shooting    = {
+          stilling: get('f-still').value,
+          skudd: parseInt(get('f-skudd').value) || 0,
+          tema: model.shooting.tema || []
+        };
+        model.notes       = get('f-notes').value;
+        model.raceSubtype = model.type === 'Konkurranse' ? (model.raceSubtype || '') : '';
+        model.age         = ALDER.map(([id]) => id).filter(id => $('[data-age="'+id+'"]', body).checked);
+        model.roles       = {};
+        ROLES.forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
+        model.eqtiming    = get('f-eqt').value.trim();
 
-  model.title       = get('f-title').value.trim();
-  model.type        = get('f-type').value;          // nå den riktige selecten
-  model.date        = get('f-date').value;
-  model.modality    = get('f-mod').value;
-  model.intensity   = get('f-int').value;
-  model.durationMin = parseInt(get('f-dur').value) || 60;
-  model.shooting    = {
-    stilling: get('f-still').value,
-    skudd: parseInt(get('f-skudd').value) || 0,
-    tema: model.shooting.tema || []
-  };
-  model.notes       = get('f-notes').value;
-  model.raceSubtype = model.type === 'Konkurranse' ? (model.raceSubtype || '') : '';
-  model.age         = ALDER.map(([id]) => id).filter(id => $('[data-age="'+id+'"]', body).checked);
-  model.roles       = {};
-  ROLES.forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
-  model.eqtiming    = get('f-eqt').value.trim();
+        const i = state.events.findIndex(x => x.id === model.id);
+        if (i >= 0) state.events[i] = model; else state.events.push(model);
+        lsSet(KEY.EVENTS, state.events);
+        render();
 
-  const i = state.events.findIndex(x => x.id === model.id);
-  if (i >= 0) state.events[i] = model; else state.events.push(model);
-  lsSet(KEY.EVENTS, state.events);
-  render();
-
-  await supaUpsertEvent(model);
-  closeDialog();
-};
-
+        await supaUpsertEvent(model);
+        closeDialog();
+      };
 
       $('#btn-delete').onclick=async ()=>{
         state.events=state.events.filter(x=>x.id!==model.id);
@@ -1048,17 +990,14 @@ $('#btn-save').onclick = async () => {
 
       $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
 
-      // EQTiming: hent <title>
       $('#btn-fetch-eqt').onclick = async () => {
         const url = $('#f-eqt').value.trim();
-        if (!url) return alert('Lim inn en EQTiming‑lenke først.');
+        if (!url) return alert('Lim inn en EQTiming-lenke først.');
         try {
           const res = await fetch(url, { mode: 'cors' });
           const text = await res.text();
           const m = text.match(/<title>([^<]+)<\/title>/i);
-          if (m) {
-            $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/, '').trim();
-          }
+          if (m) $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/, '').trim();
           alert('Prøvde å lese tittel. Om den ikke endres, er det CORS.');
         } catch (e) {
           alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.');
@@ -1069,17 +1008,60 @@ $('#btn-save').onclick = async () => {
     }
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
-    //function openDayView(events, date){
-  //if(events && events.length > 0){
-    // Hvis flere hendelser denne dagen: vis første i detaljer, 
-    // og bruk piltaster/klikk for å bla senere hvis ønskelig.
-    // Her åpner vi bare den første direkte:
-    //openDialog(events[0]);
-  //} else {
-    // Ingen hendelser => åpne ny
-    //openDialog({ date });
-  //}
-//}
+    // ---------- Lese-dialog (Vis) ----------
+    function openViewDialog(model){
+      const body = $('#dlg-body');
+      $('#dlg-title').textContent = 'Vis hendelse';
+      $('#btn-delete').classList.add('hidden');
+      $('#btn-save').classList.add('hidden');
+
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      const row = (label, value) => `
+        <div class="grid grid-cols-3 gap-3 items-start">
+          <div class="text-sm font-medium text-slate-700 col-span-1">${label}</div>
+          <div class="text-sm col-span-2">${value||'–'}</div>
+        </div>`;
+
+      const ageChips = (model.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(a)}</span>`).join('');
+      const tema = (model.shooting?.tema||[]).map(t=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(t)}</span>`).join('');
+      const roles = Object.entries(model.roles||{}).filter(([,v])=> (v||'').trim().length)
+        .map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
+
+      body.innerHTML = `
+        <div class="space-y-3">
+          ${row('Tittel', esc(model.title||''))}
+          ${row('Dato', dayjs(model.date).format('dddd D. MMMM YYYY'))}
+          ${row('Type', esc(model.type||''))}
+          ${row('Modalitet', esc(model.modality||''))}
+          ${row('Intensitet', esc(model.intensity||''))}
+          ${row('Varighet', model.durationMin? esc(String(model.durationMin))+' min' : '–')}
+          ${row('Aldersklasser', ageChips || '–')}
+          ${row('Konkurranse', model.type==='Konkurranse' ? esc(model.raceSubtype||'') : '–')}
+          ${row('Skyting', `${esc(model.shooting?.stilling||'–')}, skudd: ${model.shooting?.skudd||0}`)}
+          ${row('Tema', tema || '–')}
+          ${row('EQTiming', (model.eqtiming||'').trim() ? `<a class="text-[var(--brand)] underline break-all" href="${esc(model.eqtiming)}" target="_blank" rel="noopener">Åpne lenke</a>` : '–')}
+          ${row('Roller', roles || '–')}
+          <div>
+            <div class="text-sm font-medium text-slate-700 mb-1">Notater</div>
+            <div class="text-sm text-slate-700 whitespace-pre-wrap">${esc(model.notes||'–')}</div>
+          </div>
+        </div>
+      `;
+
+      const cancel = $('#btn-cancel');
+      cancel.textContent = 'Lukk';
+      cancel.onclick = closeDialog;
+      $('#dlg-close').onclick = closeDialog;
+
+      $('#dialog').classList.remove('hidden');
+      $('#dialog').classList.add('flex');
+
+      const reset = () => { cancel.textContent = 'Avbryt'; cancel.onclick = closeDialog; };
+      const obs = new MutationObserver(()=>{
+        if($('#dialog').classList.contains('hidden')){ reset(); obs.disconnect(); }
+      });
+      obs.observe($('#dialog'), { attributes:true, attributeFilter:['class'] });
+    }
 
     function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
@@ -1187,7 +1169,7 @@ $('#btn-save').onclick = async () => {
         if(rows.length===0) return alert('Fant ingen rader (kan være CORS). Prøv å lime inn HTML i feltet under.');
         addNSSFEvents(rows);
       }catch(e){
-        alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML‑kilde i feltet og bruk «Importer fra limt HTML».');
+        alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML-kilde i feltet og bruk «Importer fra limt HTML».');
       }
     }
     function importNSSFFromHTML(){
@@ -1215,8 +1197,6 @@ $('#btn-save').onclick = async () => {
       for(const ev of fresh){ await supaUpsertEvent(ev); }
       alert(`Importert ${fresh.length} konkurranser.`);
     }
-
-   
 
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
@@ -1266,22 +1246,23 @@ $('#btn-save').onclick = async () => {
     // NSSF knapper
     document.addEventListener('click',(e)=>{ if(e.target?.id==='btn-nssf') importNSSFFromURL(); if(e.target?.id==='btn-nssf-parse') importNSSFFromHTML(); });
 
+    // Reflow ved resize (mobil/desktop)
     let __lastIsMobile = isMobile();
-window.addEventListener('resize', () => {
-  const now = isMobile();
-  if (now !== __lastIsMobile){
-    __lastIsMobile = now;
-    render();
-  }
-});
+    window.addEventListener('resize', () => {
+      const now = isMobile();
+      if (now !== __lastIsMobile){
+        __lastIsMobile = now;
+        render();
+      }
+    });
 
     // ---------- Init ----------
-(async function init(){
-  render(); switchTab('calendar');
-  bindDialogChrome();          // <--- LEGG TIL DENNE
-  supaRealtimeInit();
-  await supaLoadAll(state.year);
-})();
+    (async function init(){
+      render(); switchTab('calendar');
+      bindDialogChrome();
+      supaRealtimeInit();
+      await supaLoadAll(state.year);
+    })();
   </script>
 </body>
 </html>
