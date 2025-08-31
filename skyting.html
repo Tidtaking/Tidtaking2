@@ -95,7 +95,7 @@
       <table id="shootingTable" aria-live="polite">
         <thead>
           <tr>
-            <th>&#9733;</th> <!-- stjerne først -->
+            <th>&#9733;</th>
             <th>Startnr</th>
             <th>Navn</th>
             <th>Status</th>
@@ -163,14 +163,13 @@ const participants = {};
 let lastRenderKey = "";
 let compact = false; // hide S2 cols on demand
 
-// Favourites (persist locally per enhet/nettleser)
+// Favourites (persist lokalt)
 let favorites = new Set(JSON.parse(localStorage.getItem("favorites")||"[]"));
 function saveFavorites(){ localStorage.setItem("favorites", JSON.stringify(Array.from(favorites))); }
 function toggleFavorite(snr){
   snr = Number(snr);
   if(favorites.has(snr)) favorites.delete(snr); else favorites.add(snr);
   saveFavorites();
-  // Tving render for å reflektere filter og visuell stjerne umiddelbart
   lastRenderKey = ""; render();
   if(focusedSnr===snr) updateFocusFav();
 }
@@ -298,7 +297,6 @@ function renderShootingSpans(p, shootIdx){
 
 function sortParticipants(list){
   return list.sort(function(a,b){
-    // Favoritter først (tving snr til Number)
     var af = favorites.has(Number(a.snr)) ? 1 : 0;
     var bf = favorites.has(Number(b.snr)) ? 1 : 0;
     if(af !== bf) return bf - af;
@@ -333,7 +331,6 @@ function render(){
 
   var rowsHtml = "";
   filtered.forEach(function(pp){
-    // sørg for Number-snr for favorittlogikk
     const p = {...pp, snr: Number(pp.snr)};
     const s1 = renderShootingSpans(p,0);
     const s2 = renderShootingSpans(p,1);
@@ -369,8 +366,8 @@ function render(){
     const focusBtn = '<button class="btn sticky-right" data-action="focus" data-snr="'+p.snr+'">Åpne</button>';
 
     rowsHtml += '<tr data-snr="'+p.snr+'" id="snr-'+p.snr+'" class="'+(isFav? "fav": "")+'">'+
-      '<td>'+favBtn+'</td>'+                 // ★ først
-      '<td>'+(p.snr ?? "")+'</td>'+         // startnr
+      '<td>'+favBtn+'</td>'+
+      '<td>'+(p.snr ?? "")+'</td>'+
       '<td style="text-align:left">'+(p.name ?? "")+'</td>'+
       '<td>'+(p.status ?? "")+'</td>'+
       '<td><input class="skive-input" inputmode="numeric" pattern="[0-9]*" placeholder="Skive" value="'+(p.skive ?? "")+'" data-action="skive" data-snr="'+p.snr+'" aria-label="Skive for '+(p.name ?? ("startnr "+p.snr))+'"></td>'+
@@ -389,7 +386,7 @@ function render(){
     el.style.display = compact ? "none" : "";
   });
 
-  enableUndoButtons(); // no-op (beholder for struktur)
+  enableUndoButtons();
 }
 
 // ---------------- Events ----------------
@@ -436,6 +433,7 @@ async function sendShootingResult(snr, shootIdx){
   if(shootIdx===0){ updateData.s1sent = true; p.s1sent = true; } else { updateData.s2sent = true; p.s2sent = true; }
   enqueueUpdate("participants", updateData, { snr: snr });
   lastRenderKey = ""; render();
+  if (focusedSnr === snr) refreshFocusUI();
 }
 async function registerShootingTime(snr, shootIdx, btnEl){
   const p = participants[snr]; if(!p) return;
@@ -452,16 +450,19 @@ async function registerShootingTime(snr, shootIdx, btnEl){
       p.shootingtime2 = secs; enqueueUpdate("participants", { shootingtime2: secs }, { snr: snr }); lastRenderKey = ""; render();
     }
   }
+  if (focusedSnr === snr) refreshFocusUI();
 }
 async function undoSend(snr, round){
   const col = round===0? "s1sent":"s2sent";
   const p = participants[snr]; if(!p) return;
   p[col] = false; var o={}; o[col]=false; enqueueUpdate("participants", o, {snr:snr}); lastRenderKey = ""; render();
+  if (focusedSnr === snr) refreshFocusUI();
 }
 async function undoTime(snr, round){
   const col = round===0? "shootingtime1":"shootingtime2";
   const p = participants[snr]; if(!p) return;
   delete p[col]; var o={}; o[col]=null; enqueueUpdate("participants", o, {snr:snr}); lastRenderKey = ""; render();
+  if (focusedSnr === snr) refreshFocusUI();
 }
 function enableUndoButtons(){ /* no-op */ }
 
@@ -490,13 +491,20 @@ function renderTargetsInline(p, shootIdx, container){
     const d = document.createElement("div");
     d.className = "target"; d.setAttribute("role", "button"); d.setAttribute("tabindex", "0");
     d.dataset.action = "toggle-focus"; d.dataset.snr = String(p.snr); d.dataset.round = String(shootIdx); d.dataset.idx = String(i); d.dataset.hit = String(!!hit);
+
+    // Toggle enkeltklikk
     d.addEventListener("click", ()=>{
       const a = participants[p.snr].shootingLocal[shootIdx]; a[i] = !a[i]; d.dataset.hit = String(a[i]); if(navigator.vibrate) navigator.vibrate(10);
     });
+
+    // Langt trykk = nullstill serien
     let t;
     d.addEventListener("pointerdown", ()=>{ t=setTimeout(()=>{ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(false); renderTargetsInline(participants[p.snr], shootIdx, container); }, 450); });
     d.addEventListener("pointerup", ()=>clearTimeout(t)); d.addEventListener("pointerleave", ()=>clearTimeout(t));
-    let last=0; d.addEventListener("click", (e)=>{ const now = Date.now(); if(now-last<300){ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container);} last=now; }, {capture:true});
+
+    // Dobbeltklikk = alle treff
+    d.addEventListener("dblclick", ()=>{ participants[p.snr].shootingLocal[shootIdx] = Array(5).fill(true); renderTargetsInline(participants[p.snr], shootIdx, container); }, {capture:true});
+
     container.appendChild(d);
   });
 }
@@ -504,6 +512,27 @@ function updateFocusFav(){
   const isFav = favorites.has(Number(focusedSnr));
   fsFavBtn.setAttribute("aria-pressed", String(isFav));
   fsStar.innerHTML = isFav ? "&#9733;" : "&#9734;";
+}
+function refreshFocusUI(){
+  if(focusedSnr==null) return;
+  const p = participants[focusedSnr]; if(!p) return;
+
+  // Oppdater toppinfo
+  fsStatus.textContent = p.status ?? "";
+  fsSkive.textContent = p.skive ?? "";
+
+  // Oppdater send-knapper
+  fsSendS1.textContent = p.s1sent ? "Angre S1" : "Send S1";
+  fsSendS2.textContent = p.s2sent ? "Angre S2" : "Send S2";
+
+  // Oppdater tidsknapper
+  fsTimeS1.textContent = p.shootingtime1
+    ? "Angre tid S1"
+    : (p.shootingTimeStart1 ? "Registrer tid S1" : "Start skytetid S1");
+
+  fsTimeS2.textContent = p.shootingtime2
+    ? "Angre tid S2"
+    : (p.shootingTimeStart2 ? "Registrer tid S2" : "Start skytetid S2");
 }
 function openFocusSheet(snr){
   focusedSnr = Number(snr);
@@ -532,12 +561,30 @@ fsCopyLink.addEventListener("click", async ()=>{
   try{ await navigator.clipboard.writeText(url); alert("Lenke kopiert."); }catch(e){ prompt("Kopier lenken:", url); }
 });
 fsSkiveInput.addEventListener("input", ()=>{
-  if(focusedSnr==null) return; const p = participants[focusedSnr]; p.skive = fsSkiveInput.value.trim(); fsSkive.textContent = p.skive; debounce(function(){ saveSkive(focusedSnr, p.skive); }, 400)();
+  if(focusedSnr==null) return; const p = participants[focusedSnr]; p.skive = fsSkiveInput.value.trim(); fsSkive.textContent = p.skive;
+  // enkel debounce lokalt
+  clearTimeout(window.__fsSkiveTimer); window.__fsSkiveTimer = setTimeout(()=>{ saveSkive(focusedSnr, p.skive); }, 400);
 });
-fsSendS1.addEventListener("click", ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s1sent) undoSend(focusedSnr,0); else sendShootingResult(focusedSnr,0); });
-fsSendS2.addEventListener("click", ()=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.s2sent) undoSend(focusedSnr,1); else sendShootingResult(focusedSnr,1); });
-fsTimeS1.addEventListener("click", (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime1) undoTime(focusedSnr,0); else registerShootingTime(focusedSnr,0, e.currentTarget); });
-fsTimeS2.addEventListener("click", (e)=>{ if(focusedSnr==null) return; const p=participants[focusedSnr]; if(p.shootingtime2) undoTime(focusedSnr,1); else registerShootingTime(focusedSnr,1, e.currentTarget); });
+fsSendS1.addEventListener("click", async ()=>{
+  if(focusedSnr==null) return; const p=participants[focusedSnr];
+  if(p.s1sent) await undoSend(focusedSnr,0); else await sendShootingResult(focusedSnr,0);
+  refreshFocusUI();
+});
+fsSendS2.addEventListener("click", async ()=>{
+  if(focusedSnr==null) return; const p=participants[focusedSnr];
+  if(p.s2sent) await undoSend(focusedSnr,1); else await sendShootingResult(focusedSnr,1);
+  refreshFocusUI();
+});
+fsTimeS1.addEventListener("click", async (e)=>{
+  if(focusedSnr==null) return; const p=participants[focusedSnr];
+  if(p.shootingtime1) await undoTime(focusedSnr,0); else await registerShootingTime(focusedSnr,0, e.currentTarget);
+  refreshFocusUI();
+});
+fsTimeS2.addEventListener("click", async (e)=>{
+  if(focusedSnr==null) return; const p=participants[focusedSnr];
+  if(p.shootingtime2) await undoTime(focusedSnr,1); else await registerShootingTime(focusedSnr,1, e.currentTarget);
+  refreshFocusUI();
+});
 
 // ---------------- Live updates ----------------
 async function refreshFromDb(){
@@ -546,6 +593,7 @@ async function refreshFromDb(){
   data.forEach(function(rec){ mergeDbRecord(rec); present[rec.snr]=true; });
   Object.keys(participants).forEach(function(snr){ if(!present[snr]) delete participants[snr]; });
   lastRenderKey = ""; render();
+  if(focusedSnr!=null) refreshFocusUI();
 }
 async function init(){
   await refreshFromDb();
@@ -553,7 +601,12 @@ async function init(){
     sb.channel("participants_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "participants" }, (payload) => {
         const rec = payload.new || payload.old;
-        if(rec){ mergeDbRecord(rec); lastRenderKey = ""; render(); if(focusedSnr && rec.snr===focusedSnr){ openFocusSheet(focusedSnr); } }
+        if(rec){
+          mergeDbRecord(rec);
+          lastRenderKey = ""; render();
+          // Kun oppdater UI i fokus – ikke åpne dialog på nytt
+          if(focusedSnr && rec.snr===focusedSnr){ refreshFocusUI(); }
+        }
       })
       .subscribe();
   }catch(err){
@@ -564,7 +617,7 @@ async function init(){
   netBadge(); setSyncBadge(); processQueue();
 }
 
-// ---------------- UI filter listeners (fix for mobil) ----------------
+// ---------------- UI filter listeners ----------------
 function setupUiFilterListeners(){
   const filterEl = document.getElementById('filter');
   const onlyFavsEl = document.getElementById('onlyFavs');
@@ -573,14 +626,10 @@ function setupUiFilterListeners(){
 
   const triggerRender = () => { lastRenderKey = ""; render(); };
 
-  // Live-søk m/ debounce
   filterEl.addEventListener('input', debounce(triggerRender, 120));
-
-  // Filter-checkboxer
   onlyFavsEl.addEventListener('change', triggerRender);
   onlyRunningEl.addEventListener('change', triggerRender);
 
-  // Kompakt visning (skjuler S2-kolonner)
   toggleCompactEl.addEventListener('click', (e) => {
     compact = !compact;
     e.currentTarget.setAttribute('aria-pressed', String(compact));
