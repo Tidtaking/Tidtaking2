@@ -80,7 +80,7 @@
       <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
       <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
       <button data-tab="pdf" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">PDF-referanse</button>
-      <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin/Import</button>
+      <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
     </nav>
   </div>
 
@@ -159,7 +159,7 @@
       <!-- Admin Tab -->
       <section id="tab-admin" class="tab-section hidden">
         <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin • Import • Verktøy</h3></div>
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin</h3></div>
           <div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div class="space-y-3">
               <div>
@@ -168,24 +168,6 @@
                 <div class="mt-2 flex gap-2">
                   <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
                   <button id="btn-csv-eg" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lim inn eksempel</button>
-                </div>
-              </div>
-              <div>
-                <label class="text-sm font-medium">EQTiming-sjekk (lim inn lenke pr. hendelse i skjemaet)</label>
-                <p class="text-sm text-slate-600">Hent tittel/arrangement-navn fra eqtiming.no direkte i hendelsesdialogen. Merk: CORS kan hindre auto-henting i noen nettlesere.</p>
-              </div>
-
-              <!-- NSSF terminliste -->
-              <div>
-                <label class="text-sm font-medium">Hent terminliste (NSSF/EQ)</label>
-                <div class="mt-1 flex gap-2">
-                  <input id="nssf-url" class="w-full rounded-xl border px-3 py-2" value="https://skiskyting.no/arrangement/terminliste-eq/"/>
-                  <button id="btn-nssf" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Hent</button>
-                </div>
-                <p class="text-xs text-slate-600 mt-1">Hvis CORS blokkerer: åpne siden, kopier HTML-kilden og lim inn her:</p>
-                <textarea id="nssf-html" class="mt-2 h-24 w-full rounded-xl border px-3 py-2" placeholder="(Valgfritt) Lim inn HTML-kilde fra terminlisten dersom direkte henting feiler"></textarea>
-                <div class="mt-2 flex gap-2">
-                  <button id="btn-nssf-parse" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer fra limt HTML</button>
                 </div>
               </div>
 
@@ -400,7 +382,7 @@
         race_subtype: e.raceSubtype || null,
         notes: e.notes || null,
         roles: e.roles || {},
-        eqtiming: e.eqtiming || null
+        eqtiming: e.eqtiming || null // behold i DB, men ikke i UI
       };
     }
     function mapEventFromDb(r){
@@ -495,12 +477,11 @@
     }
     function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
 
-    // Desktop hover + mobil long-press emulert hover
+    // Desktop hover + mobil long-press
     function attachTipHandlers(el, html){
       let pressTimer = null;
       let last = {x:0, y:0};
 
-      // Desktop
       const onEnter = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
       const onMove  = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
       const onLeave = ()=> hideTooltip();
@@ -508,7 +489,6 @@
       el.addEventListener('mousemove', onMove);
       el.addEventListener('mouseleave', onLeave);
 
-      // Mobil: long-press
       const startPress = (ev)=>{
         const t = ev.touches?.[0]; if(!t) return;
         last = { x: t.clientX, y: t.clientY };
@@ -520,17 +500,14 @@
         last = { x: t.clientX, y: t.clientY };
         if(!tipEl.classList.contains('hidden')) showTooltip(html, last.x, last.y);
       };
-      const endPress = ()=>{
-        clearTimeout(pressTimer);
-        setTimeout(hideTooltip, 1200);
-      };
+      const endPress = ()=>{ clearTimeout(pressTimer); setTimeout(hideTooltip, 1200); };
       el.addEventListener('touchstart', startPress, { passive:true });
       el.addEventListener('touchmove',  movePress,  { passive:true });
       el.addEventListener('touchend',   endPress,   { passive:true });
       el.addEventListener('touchcancel',endPress,   { passive:true });
     }
 
-    // Utvidet tooltip med “alt”
+    // Utvidet tooltip uten EQ-linje
     function eventTooltipHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
@@ -539,8 +516,6 @@
         .map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`)
         .join('');
       const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
-      const eqt = (e.eqtiming||'').trim()
-        ? `<div class="mt-1"><span class="font-medium">EQTiming:</span> <span class="break-all">${esc(e.eqtiming)}</span></div>` : '';
       const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim()
         ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
       const notes = (e.notes||'').trim()
@@ -559,7 +534,6 @@
         ${tema}
         ${race}
         ${rolesList? `<div class="mt-1">${rolesList}</div>`:''}
-        ${eqt}
         ${notes}
       `;
     }
@@ -611,7 +585,7 @@
       const body = $('#dlg-body');
       $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
       $('#btn-delete').classList.add('hidden');
-      $('#btn-save').classList.remove('hidden'); // ikke brukt her, men holder layout
+      $('#btn-save').classList.remove('hidden');
       body.innerHTML = `
         <div class="space-y-3">
           ${items.map(e=> dayViewCard(e)).join('')}
@@ -621,7 +595,6 @@
         </div>
       `;
 
-      // Koble kort-knapper
       items.forEach(e=>{
         const view = document.getElementById(`day-view-${e.id}`);
         const edit = document.getElementById(`day-edit-${e.id}`);
@@ -782,13 +755,16 @@
 
       const top = document.createElement('div'); 
       top.className = 'flex items-center justify-between text-xs text-slate-600';
+
+      // --- NYTT: unike fargedotter per type ---
+      const uniqueTypes = Array.from(new Set(evts.map(e => e.type))).slice(0,4);
+      const dotsHTML = uniqueTypes.map(t =>
+        `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[t]||'#6b7280'}'></span>`
+      ).join('');
+
       top.innerHTML = `
         <span class="font-medium">${d.date()}</span>
-        <span class="flex gap-1">
-          ${evts.slice(0,4).map(e =>
-            `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>`
-          ).join('')}
-        </span>`;
+        <span class="flex gap-1">${dotsHTML}</span>`;
 
       const list = document.createElement('div'); 
       list.className = 'mt-1 flex flex-col gap-0.5';
@@ -959,10 +935,6 @@
             ${ROLES.map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
           </div>
         </div>
-        <div class='grid grid-cols-2 gap-3'>
-          ${field('EQTiming-lenke', `<input id='f-eqt' class='mt-1 w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.eqtiming||'')}' placeholder='https://www.eqtiming.com/...'>`)}
-          <div class='flex items-end'><button id='btn-fetch-eqt' class='rounded-xl border bg-white px-3 py-2 shadow-sm w-full'>Hent tittel fra lenke</button></div>
-        </div>
         <div>
           <label class='text-sm font-medium'>Notater</label>
           <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${escapeHTML(model.notes||'')}</textarea>
@@ -997,7 +969,6 @@
         model.age         = ALDER.map(([id]) => id).filter(id => $('[data-age="'+id+'"]', body).checked);
         model.roles       = {};
         ROLES.forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
-        model.eqtiming    = get('f-eqt').value.trim();
 
         const i = state.events.findIndex(x => x.id === model.id);
         if (i >= 0) state.events[i] = model; else state.events.push(model);
@@ -1017,20 +988,6 @@
       };
 
       $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
-
-      $('#btn-fetch-eqt').onclick = async () => {
-        const url = $('#f-eqt').value.trim();
-        if (!url) return alert('Lim inn en EQTiming-lenke først.');
-        try {
-          const res = await fetch(url, { mode: 'cors' });
-          const text = await res.text();
-          const m = text.match(/<title>([^<]+)<\/title>/i);
-          if (m) $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/, '').trim();
-          alert('Prøvde å lese tittel. Om den ikke endres, er det CORS.');
-        } catch {
-          alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.');
-        }
-      };
 
       $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
     }
@@ -1067,8 +1024,6 @@
           ${row('Konkurranse', model.type==='Konkurranse' ? esc(model.raceSubtype||'') : '–')}
           ${row('Skyting', `${esc(model.shooting?.stilling||'–')}, skudd: ${model.shooting?.skudd||0}`)}
           ${row('Tema', tema || '–')}
-          ${row('EQTiming', (model.eqtiming||'').trim() ? `<a class="text-[var(--brand)] underline break-all" href="${esc(model.eqtiming)}" target="_blank" rel="noopener">Åpne lenke</a>` : '–')}
-          ${row('Roller', roles || '–')}
           <div>
             <div class="text-sm font-medium text-slate-700 mb-1">Notater</div>
             <div class="text-sm text-slate-700 whitespace-pre-wrap">${esc(model.notes||'–')}</div>
@@ -1093,7 +1048,6 @@
 
     function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
-    function decodeHTMLEntities(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
 
     // ---------- Weeks ----------
     function renderWeeks(){
@@ -1160,72 +1114,6 @@
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
 
-    // ---------- NSSF import ----------
-    function parseNSSF(html){
-      const tmp = document.createElement('div'); tmp.innerHTML = html;
-      const rows = [];
-      tmp.querySelectorAll('table tr').forEach(tr=>{
-        const tds=tr.querySelectorAll('td');
-        if(tds.length>=2){
-          const dato=(tds[0].textContent||'').trim();
-          const tittel=(tds[1].textContent||'').trim();
-          const linkEl=tds[1].querySelector('a'); const link=linkEl?linkEl.href:'';
-          if(/\d{2}\.\d{2}\.\d{4}/.test(dato) && tittel){ rows.push({ dato, tittel, link }); }
-        }
-      });
-      if(rows.length===0){
-        tmp.querySelectorAll('*').forEach(el=>{
-          const txt=(el.textContent||'').trim();
-          const m=txt.match(/(\d{2}\.\d{2}\.\d{4}).{0,10}([A-Za-zÆØÅæøå0-9].{3,100})/);
-          if(m){
-            const linkEl=el.querySelector && el.querySelector('a');
-            const tittel=linkEl?linkEl.textContent.trim():(m[2]||'').trim();
-            const link=linkEl?linkEl.href:'';
-            if(tittel) rows.push({ dato:m[1], tittel, link });
-          }
-        });
-      }
-      return rows;
-    }
-    async function fetchNSSF(url){ const res=await fetch(url,{mode:'cors'}); return await res.text(); }
-    async function importNSSFFromURL(){
-      const url=$('#nssf-url').value.trim();
-      if(!url) return alert('Skriv inn URL først.');
-      try{
-        const html=await fetchNSSF(url);
-        const rows=parseNSSF(html);
-        if(rows.length===0) return alert('Fant ingen rader (kan være CORS). Prøv å lime inn HTML i feltet under.');
-        addNSSFEvents(rows);
-      }catch(e){
-        alert('Kunne ikke hente – sannsynligvis CORS. Lim inn HTML-kilde i feltet og bruk «Importer fra limt HTML».');
-      }
-    }
-    function importNSSFFromHTML(){
-      const html=$('#nssf-html').value.trim();
-      if(!html) return alert('Lim inn HTML først.');
-      const rows=parseNSSF(html);
-      if(rows.length===0) return alert('Fant ingen rader i teksten.');
-      addNSSFEvents(rows);
-    }
-    async function addNSSFEvents(rows){
-      const events=rows.map(r=>({
-        id: uid(),
-        title: r.tittel, type:'Konkurranse',
-        date: dayjs(r.dato.split('.').reverse().join('-')).format('YYYY-MM-DD'),
-        modality:'Ski skøyting', intensity:'I5', durationMin:60,
-        shooting:{ stilling:'Konk', skudd:(r.tittel.toLowerCase().includes('sprint')?10:20), tema:[] },
-        raceSubtype:(()=>{ for(const k of KONK){ if((r.tittel||'').toLowerCase().includes(k.toLowerCase())) return k; } return ''; })(),
-        age:['U12','U14','U16','JR'], notes:'Importert fra skiskyting.no', roles:{}, eqtiming:r.link||''
-      }));
-      const key=e => `${e.date}__${(e.title||'').toLowerCase()}`;
-      const existing=new Set(state.events.map(key));
-      const fresh=events.filter(e=>!existing.has(key(e)));
-      state.events.push(...fresh); render();
-      lsSet(KEY.EVENTS,state.events);
-      for(const ev of fresh){ await supaUpsertEvent(ev); }
-      alert(`Importert ${fresh.length} konkurranser.`);
-    }
-
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
     $('#btn-export').onclick=()=>{ const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url); };
@@ -1270,9 +1158,6 @@
 
     // PDF local
     $('#file-pdf').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
-
-    // NSSF knapper
-    document.addEventListener('click',(e)=>{ if(e.target?.id==='btn-nssf') importNSSFFromURL(); if(e.target?.id==='btn-nssf-parse') importNSSFFromHTML(); });
 
     // Reflow ved resize
     let __lastIsMobile = isMobile();
