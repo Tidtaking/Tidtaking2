@@ -13,16 +13,16 @@
     html,body{height:100%}
     @media print{ .no-print{display:none!important} }
     /* Tooltip */
-    #lss-tooltip{ position:fixed; z-index:1000; pointer-events:none; transform:translate(-50%,-100%); }
+    #lss-tooltip{ position:fixed; z-index:1000; pointer-events:none; transform:translate(-50%,-100%); max-width: min(88vw, 22rem); }
   </style>
   <style>
   /* --- Mobile tweaks --- */
   @media (max-width: 767px){
-    header h1{ font-size:1.125rem } /* 18px */
+    header h1{ font-size:1.125rem }
     header .no-print button,
     header .no-print label{ padding: .4rem .6rem; border-radius: .75rem; }
 
-    /* Gjør dialog fullskjerm-ish på mobil */
+    /* Dialog: fullskjerm-ish på mobil */
     #dialog .dialog-card{
       width:100%;
       max-width:none;
@@ -37,10 +37,7 @@
       flex:1 1 auto;
     }
   }
-
-  /* Tooltip: unngå at den som oftest legger seg utenfor på trange skjermer */
-  #lss-tooltip{ max-width: min(88vw, 22rem); }
-</style>
+  </style>
 
   <!-- Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
@@ -268,7 +265,7 @@
   </div>
 
   <!-- Tooltip element -->
-  <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700 max-w-xs"></div>
+  <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700"></div>
 
   <script>
     // ---------- Dayjs ----------
@@ -314,19 +311,18 @@
     const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
 
-    // Tabellenavn
     const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', settings:'settings' };
 
     // Global state
     let state = {
       year: lsGet(KEY.YEAR, dayjs().year()),
-      month: dayjs().month() + 1, // 1-12, brukes bare på mobil
+      month: dayjs().month() + 1, // 1-12, mobil
       events: [],
       bank: [],
       weeks: {}
     };
 
-    // ---- Responsivt oppsett ----
+    // ---- Responsivt ----
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
@@ -499,7 +495,42 @@
     }
     function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
 
-    // Utvidet tooltip: viser "alt"
+    // Desktop hover + mobil long-press emulert hover
+    function attachTipHandlers(el, html){
+      let pressTimer = null;
+      let last = {x:0, y:0};
+
+      // Desktop
+      const onEnter = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
+      const onMove  = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
+      const onLeave = ()=> hideTooltip();
+      el.addEventListener('mouseenter', onEnter);
+      el.addEventListener('mousemove', onMove);
+      el.addEventListener('mouseleave', onLeave);
+
+      // Mobil: long-press
+      const startPress = (ev)=>{
+        const t = ev.touches?.[0]; if(!t) return;
+        last = { x: t.clientX, y: t.clientY };
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(()=> showTooltip(html, last.x, last.y), 300);
+      };
+      const movePress = (ev)=>{
+        const t = ev.touches?.[0]; if(!t) return;
+        last = { x: t.clientX, y: t.clientY };
+        if(!tipEl.classList.contains('hidden')) showTooltip(html, last.x, last.y);
+      };
+      const endPress = ()=>{
+        clearTimeout(pressTimer);
+        setTimeout(hideTooltip, 1200);
+      };
+      el.addEventListener('touchstart', startPress, { passive:true });
+      el.addEventListener('touchmove',  movePress,  { passive:true });
+      el.addEventListener('touchend',   endPress,   { passive:true });
+      el.addEventListener('touchcancel',endPress,   { passive:true });
+    }
+
+    // Utvidet tooltip med “alt”
     function eventTooltipHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
@@ -533,7 +564,7 @@
       `;
     }
 
-    // --------- Forhåndsvisningskort (uten "skudd", med årsklasser) ---------
+    // --------- Forhåndsvisningskort (uten “skudd”, med årsklasser) ---------
     function dayViewCard(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
@@ -572,7 +603,7 @@
       `;
     }
 
-    // ---------- Dagoversikt (dialog med kort) ----------
+    // ---------- Dagoversikt (dialog) ----------
     function openDayView(dateISO, eventsForDay){
       const d = dayjs(dateISO);
       const items = [...eventsForDay].sort((a,b)=> (a.title||'').localeCompare(b.title||''));
@@ -580,7 +611,7 @@
       const body = $('#dlg-body');
       $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
       $('#btn-delete').classList.add('hidden');
-      $('#btn-save').classList.remove('hidden'); // behold lagre-knappen i dialogens footer (ikke brukt her)
+      $('#btn-save').classList.remove('hidden'); // ikke brukt her, men holder layout
       body.innerHTML = `
         <div class="space-y-3">
           ${items.map(e=> dayViewCard(e)).join('')}
@@ -590,7 +621,7 @@
         </div>
       `;
 
-      // Koble knapper for hvert kort
+      // Koble kort-knapper
       items.forEach(e=>{
         const view = document.getElementById(`day-view-${e.id}`);
         const edit = document.getElementById(`day-edit-${e.id}`);
@@ -743,9 +774,11 @@
         if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key });
       });
 
-      box.addEventListener('mouseenter', (e) => { if(evts.length===0) showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY); });
-      box.addEventListener('mousemove', (e) => { if(evts.length===0) showTooltip(`<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`, e.clientX, e.clientY); });
-      box.addEventListener('mouseleave', hideTooltip);
+      // Tooltip for tom dag – bruk attachTipHandlers
+      if(evts.length === 0){
+        const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`;
+        attachTipHandlers(box, html);
+      }
 
       const top = document.createElement('div'); 
       top.className = 'flex items-center justify-between text-xs text-slate-600';
@@ -773,10 +806,7 @@
         txt.textContent = e.title || e.type;
 
         const tipHTML = eventTooltipHTML(e);
-        const move = (ev) => showTooltip(tipHTML, ev.clientX, ev.clientY);
-        row.addEventListener('mouseenter', move);
-        row.addEventListener('mousemove', move);
-        row.addEventListener('mouseleave', hideTooltip);
+        attachTipHandlers(row, tipHTML);
 
         row.appendChild(dot); 
         row.appendChild(txt);
@@ -817,9 +847,7 @@
         tr.querySelector('.btn-edit').addEventListener('click', ()=> openDialog({...e}));
         tr.querySelector('.btn-view').addEventListener('click', ()=> openViewDialog(e));
         const tipHTML = eventTooltipHTML(e);
-        tr.addEventListener('mouseenter', (ev)=> showTooltip(tipHTML, ev.clientX, ev.clientY));
-        tr.addEventListener('mousemove', (ev)=> showTooltip(tipHTML, ev.clientX, ev.clientY));
-        tr.addEventListener('mouseleave', hideTooltip);
+        attachTipHandlers(tr, tipHTML);
         tbody.appendChild(tr);
       });
     }
@@ -999,7 +1027,7 @@
           const m = text.match(/<title>([^<]+)<\/title>/i);
           if (m) $('#f-title').value = decodeHTMLEntities(m[1]).replace(/\s+\|.*$/, '').trim();
           alert('Prøvde å lese tittel. Om den ikke endres, er det CORS.');
-        } catch (e) {
+        } catch {
           alert('Kunne ikke hente – sannsynligvis CORS. Lagre lenken uansett.');
         }
       };
@@ -1240,13 +1268,13 @@
     $$('.tab-btn').forEach(b=> b.onclick=()=> switchTab(b.getAttribute('data-tab')) );
     function switchTab(id){ $$('.tab-section').forEach(s=> s.classList.add('hidden')); $('#tab-'+id).classList.remove('hidden'); }
 
-    // PDF upload local
+    // PDF local
     $('#file-pdf').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
 
     // NSSF knapper
     document.addEventListener('click',(e)=>{ if(e.target?.id==='btn-nssf') importNSSFFromURL(); if(e.target?.id==='btn-nssf-parse') importNSSFFromHTML(); });
 
-    // Reflow ved resize (mobil/desktop)
+    // Reflow ved resize
     let __lastIsMobile = isMobile();
     window.addEventListener('resize', () => {
       const now = isMobile();
