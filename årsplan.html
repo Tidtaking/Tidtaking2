@@ -59,7 +59,7 @@
       <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
       <div>
         <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
-        <p class="text-sm opacity-80">Årsplan • Øktbank • Terminliste</p>
+        <p class="text-sm opacity-80">Årsplan • Øktbank</p>
       </div>
     </div>
     <div class="mb-4 flex flex-wrap items-center justify-between gap-2 no-print md:sticky md:top-2 md:z-40">
@@ -268,7 +268,7 @@
     const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
     const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
 
-    const KEY = { EVENTS:'lss:events:v1', BANK:'lss:bank:v1', WEEKS:'lss:weeks:v1', YEAR:'lss:year:v1' };
+    const KEY = { EVENTS:'lss:events:v1', BANK:'lss:bank:v3', WEEKS:'lss:weeks:v1', YEAR:'lss:year:v1' };
 
     const $=(q,el=document)=>el.querySelector(q);
     const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
@@ -297,7 +297,7 @@
     const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
 
-    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', settings:'settings' };
+    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks' };
 
     // Global state
     let state = {
@@ -448,24 +448,48 @@
       return weeks;
     }
 
+    // Flere standard-økter (U12, U14, U16, JR + noen «alle»)
     function getDefaultTemplates(){
-      const T=[];
-      const add=(o)=>T.push({id:uid(),...o});
-      add({name:'U12 Lekpreget I2 (45–60) + 30 skudd ligg',type:'Trening',modality:'Løp',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12'],notes:'Lett terrenglek. Standplass: 3×10 liggende, fokus ro og siktebilde.'});
-      add({name:'U14 Rulleski I3 5×4 min + stående',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:40,tema:['Grunnstilling stående','Avtrekkstid/trigger']},age:['U14'],notes:'Oppvarming 20 min, 5×4 min I3 (2 min pause). Skyting mellom drag.'});
-      add({name:'U16 VO2 I4 6×3 min + kombinert',type:'Trening',modality:'Løp',intensity:'I4',durationMin:80,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'6×3 min I4 i slak motbakke. 5×5 skudd (L/S varier).'});
-      add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'Rolig langtur. 6×10 teknikkserier.'});
-      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde & avtrekk','Pust & rytme']},age:['U12','U14','U16','JR'],notes:'Fokus på balanse, fraskyv og tyngdeoverføring. Korte teknikkstasjoner på standplass.'});
-      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR'],notes:'Standard sprintoppsett.'});
-      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR'],notes:'Standard normaldistanse.'});
-      add({name:'Basistrening + styrke (sirkel)',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Sirkel: kjernestyrke, stabilitet, hofte/ankel. 8–10 stasjoner × 30–40 sek.'});
-      add({name:'Skyting – presisjon liggende 5×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:50,shooting:{stilling:'Liggende',skudd:25,tema:['Grunnstilling liggende','Siktebilde & avtrekk']},age:['U12','U14','U16'],notes:'Rolig bevegelse mellom serier. Fokus på avtrekkskontroll og etterhold.'});
-      add({name:'Skyting – presisjon stående 6×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:55,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Pust & rytme']},age:['U14','U16','JR'],notes:'Holdtid og nullpunkt. Minutters rolig bevegelse mellom serier.'});
-      add({name:'Komb – inn/ut + I3 drag 4×6 min',type:'Trening',modality:'Løp',intensity:'I3',durationMin:85,shooting:{stilling:'Kombinert',skudd:40,tema:['Overganger (inn/ut)','Repetisjonsrytme']},age:['U16','JR'],notes:'4×6 min I3. Skyting etter hvert drag (L/S annenhver). Fokus på inngang/utgang.'});
-      add({name:'Test – 3000 m + 2×5 skudd',type:'Trening',modality:'Løp',intensity:'I5',durationMin:60,shooting:{stilling:'Variert',skudd:10,tema:['Avtrekkstid/trigger']},age:['U16','JR'],notes:'Oppvarming 20 min, test 3000 m, deretter 2×5 skudd stå/ligg med puls.'});
-      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Rolig bevegelse i pratetempo. 10–15 min mobilitet.'});
-      add({name:'Stafett – vekslinger + skyterutiner',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Repetisjonsrytme']},age:['U14','U16','JR'],notes:'Vekslinger, inn/ut, standplassdisiplin. 8×5 skudd (L/S).'});
-      add({name:'HL/NC forberedelse – sprintsim',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Overganger (inn/ut)','Avtrekkstid/trigger']},age:['U16','JR'],notes:'Prolog + en omgang jaktstart med handicaptid.'});
+      const T=[]; const add=(o)=>T.push({id:uid(),...o});
+
+      // --- U12 (10–12) ---
+      add({name:'U12 Lek & løp I1 (40) + 20 skudd ligg',type:'Trening',modality:'Løp',intensity:'I1',durationMin:40,shooting:{stilling:'Liggende',skudd:20,tema:['Grunnstilling liggende','Siktebilde']},age:['U12'],notes:'Stafettleker, enkle balanseøvelser.'});
+      add({name:'U12 Stasjonslek I2 (55) + 30 skudd',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Avtrekk','Etterhold']},age:['U12'],notes:'4–6 stasjoner, 6–8 min per stasjon.'});
+      add({name:'U12 Skøyting grunnteknikk (60) + 20 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:60,shooting:{stilling:'Liggende',skudd:20,tema:['Balansereise','Tyngdeoverføring']},age:['U12'],notes:'Kjegler, korte baner, fokus trygghet.'});
+      add({name:'U12 Langrenn lek klassisk (50) uten skyting',type:'Trening',modality:'Ski klassisk',intensity:'I1',durationMin:50,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12'],notes:'Stiv heks, haleleik, kupert lett terreng.'});
+
+      // --- U14 (13–14) ---
+      add({name:'U14 Intervall I3 5×4 min + stående 30',type:'Trening',modality:'Løp',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Triggerkontroll']},age:['U14'],notes:'2 min pause. Skyting mellom drag.'});
+      add({name:'U14 Rulleski skøyting teknikk (70) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Pust/rytme','Siktebilde']},age:['U14'],notes:'Teknikkstasjoner, lav intensitet.'});
+      add({name:'U14 Kombinert overgang (I2) + 35 skudd',type:'Trening',modality:'Løp',intensity:'I2',durationMin:65,shooting:{stilling:'Kombinert',skudd:35,tema:['Overganger (inn/ut)','Standplassdisiplin']},age:['U14'],notes:'Korte rundløp rundt standplass.'});
+      add({name:'U14 Styrke/basis sirkel (55) uten skyting',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:55,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U14'],notes:'8–10 stasjoner, 30–40 sek arbeid.'});
+
+      // --- U16 (15–16) ---
+      add({name:'U16 VO2 I4 6×3 min + 50 skudd komb',type:'Trening',modality:'Løp',intensity:'I4',durationMin:85,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'Slak motbakke. L/S varier.'});
+      add({name:'U16 Tempo I3 4×8 min + stå/ligg 40',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:90,shooting:{stilling:'Variert',skudd:40,tema:['Avtrekkstid','Nullpunkt']},age:['U16'],notes:'4×8 min med 3 min pause. Skyting etter drag.'});
+      add({name:'U16 Sprintsim + 30 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Start/utgang','Høypuls-skyting']},age:['U16'],notes:'Prolog + 1–2 heat. Enkel gjennomføring.'});
+      add({name:'U16 Restitusjon I1 (45) + mobilitet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U16'],notes:'Pratetempo, 10–15 min mobilitet.'});
+
+      // --- JR (17–20) ---
+      add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'6×10 teknikkserier fordelt i økta.'});
+      add({name:'JR I3 terskel 3×12 min + komb 40',type:'Trening',modality:'Rulleski klassisk',intensity:'I3',durationMin:100,shooting:{stilling:'Kombinert',skudd:40,tema:['Kapasitetsstyring','Overganger']},age:['JR'],notes:'3×12 min, 3–4 min pause.'});
+      add({name:'JR I5 5×3 min + stående 25',type:'Trening',modality:'Løp',intensity:'I5',durationMin:80,shooting:{stilling:'Stående',skudd:25,tema:['Holdtid','Avtrekkstid']},age:['JR'],notes:'Tydelige pauser, full innsats.'});
+      add({name:'JR Styrke maks + presisjon 30',type:'Trening',modality:'Styrke',intensity:'I3',durationMin:70,shooting:{stilling:'Variert',skudd:30,tema:['Finjustering','Konsentrasjon']},age:['JR'],notes:'Tung styrke øvre/nedre, 3–5 rep.'});
+
+      // --- Alle ---
+      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde','Pust & rytme']},age:['U12','U14','U16','JR'],notes:'Balanse, fraskyv, tyngdeoverføring.'});
+      add({name:'Basistrening + styrke sirkel',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Kjerne/stabilitet/hofte/ankel.'});
+      add({name:'Stafett – vekslinger + standplass',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Rytme']},age:['U14','U16','JR'],notes:'Vekslinger, disiplin, 8×5 skudd.'});
+      add({name:'Komb I3: 4×6 min + 40 skudd',type:'Trening',modality:'Løp',intensity:'I3',durationMin:85,shooting:{stilling:'Kombinert',skudd:40,tema:['Inn/ut','Rytme']},age:['U16','JR'],notes:'Skyting etter hvert drag.'});
+      add({name:'Presisjon liggende 5×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:50,shooting:{stilling:'Liggende',skudd:25,tema:['Avtrekk','Etterhold']},age:['U12','U14','U16'],notes:'Rolig mellom serier.'});
+      add({name:'Presisjon stående 6×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:55,shooting:{stilling:'Stående',skudd:30,tema:['Nullpunkt','Pust']},age:['U14','U16','JR'],notes:'Holdtid/ro.'});
+      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Rolig + mobilitet.'});
+      add({name:'HL/NC forberedelse – sprintsim',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Overganger','Avtrekkstid']},age:['U16','JR'],notes:'Prolog + jaktstart.'});
+
+      // Konk-maler
+      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR'],notes:'Standard sprint.'});
+      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR'],notes:'Standard normal.'});
+      add({name:'Konk – Fellesstart',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:70,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Fellesstart',age:['U16','JR'],notes:'Vanlig oppsett.'});
       return T;
     }
 
@@ -1115,16 +1139,34 @@
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
 
-    // ---------- Excel-eksport (ALLE ÅR) ----------
+    // ---------- Excel-eksport (ALLE ÅR + Øktbank) ----------
     // Paginert henting fra Supabase (1000 av gangen)
+    async function fetchAllFromSupabase(table){
+      const pageSize = 1000;
+      let from = 0, to = pageSize - 1;
+      let all = [];
+      while(true){
+        const { data, error } = await supabase
+          .from(table)
+          .select('*')
+          .order('created_at', { ascending: true })
+          .range(from, to);
+        if(error){ throw error; }
+        all = all.concat(data || []);
+        if(!data || data.length < pageSize) break;
+        from += pageSize; to += pageSize;
+      }
+      return all;
+    }
+
     async function fetchAllEventsFromSupabase(){
       const pageSize = 1000;
       let from = 0, to = pageSize - 1;
       let all = [];
       while(true){
-        const { data, error, count } = await supabase
+        const { data, error } = await supabase
           .from(TBL.events)
-          .select('*', { count:'exact' })
+          .select('*')
           .order('date', { ascending: true })
           .range(from, to);
         if(error){ throw error; }
@@ -1135,8 +1177,7 @@
       return all;
     }
 
-    function rowsForExcel(rawRows){
-      // Bruk «rå» rader slik at vi også får med eventuelle DB-kolonner (som created_at)
+    function rowsForEventsExcel(rawRows){
       return (rawRows||[]).map(r=>{
         const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
         const shooting = r.shooting || {};
@@ -1147,7 +1188,7 @@
           ID: r.id || '',
           Dato: r.date || '',
           Ukedag: d.isValid()? d.format('dddd') : '',
-          Ukenr: d.isValid()? d.isoWeek?.() || '' : '',
+          Ukenr: d.isValid()? (d.isoWeek?.() || '') : '',
           År: d.isValid()? d.year() : '',
           Tittel: r.title || '',
           Type: r.type || r.event_type || '',
@@ -1161,51 +1202,90 @@
           Aldersklasser: age,
           Roller: roles,
           Notater: r.notes || '',
-          EQTiming: r.eqtiming || '',
           Opprettet: r.created_at || '',
           Oppdatert: r.updated_at || ''
         };
       });
     }
 
-    function downloadXlsx(rows, filename){
+    function rowsForBankExcel(rawRows){
+      return (rawRows||[]).map(r=>{
+        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
+        const shooting = r.shooting || {};
+        const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
+        return {
+          ID: r.id || '',
+          Navn: r.name || '',
+          Type: r.type || '',
+          Modalitet: r.modality || '',
+          Intensitet: r.intensity || '',
+          Varighet_min: r.duration_min ?? '',
+          Aldersklasser: age,
+          Skytestilling: shooting.stilling || '',
+          Skudd: shooting.skudd ?? '',
+          Tema: tema,
+          Konkurranse: r.race_subtype || '',
+          Notater: r.notes || '',
+          Opprettet: r.created_at || '',
+          Oppdatert: r.updated_at || ''
+        };
+      });
+    }
+
+    function downloadXlsxMultiple(sheets){
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
-      // Auto-bredde (enkel)
-      const cols = Object.keys(rows[0] || {A:''}).map(k=>({wch: Math.min(40, Math.max(10, String(k).length+2))}));
-      ws['!cols'] = cols;
-      XLSX.utils.book_append_sheet(wb, ws, 'Årsplan');
-      XLSX.writeFile(wb, filename);
+      for(const {name, rows} of sheets){
+        const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
+        // Auto-bredde: enkel heuristikk på header-lengde
+        const cols = Object.keys(rows[0] || {A:''}).map(k=>({wch: Math.min(50, Math.max(10, String(k).length+2))}));
+        ws['!cols'] = cols;
+        XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31)); // Excel sheet-navn maks 31 tegn
+      }
+      const stamp = dayjs().format('YYYYMMDD_HHmm');
+      XLSX.writeFile(wb, `lss_arsplan_og_oktbank_${stamp}.xlsx`);
     }
 
     async function exportExcelAll(){
       try{
-        let raw = await fetchAllEventsFromSupabase();
-        // Fallback: om tomt eller feil, bruk lokale events som nødløsning
-        if(!raw || raw.length===0){
-          console.warn('Ingen rader fra supabase, faller tilbake til lokal state');
-          alert('Fikk ikke hentet historikk fra skyen – eksporterer det som er lastet nå.');
-          raw = state.events.map(e=> mapEventToDb(e)); // tilnærming
+        let rawEvents = await fetchAllEventsFromSupabase();
+        let rawBank   = await fetchAllFromSupabase(TBL.bank);
+
+        if(!rawEvents || rawEvents.length===0){
+          console.warn('Ingen events fra supabase, bruker lokal state');
+          rawEvents = state.events.map(e=> ({...mapEventToDb(e)}));
         }
-        const rows = rowsForExcel(raw);
-        if(rows.length===0){ alert('Ingen data å eksportere.'); return; }
-        const stamp = dayjs().format('YYYYMMDD_HHmm');
-        downloadXlsx(rows, `lss_arsplan_historikk_${stamp}.xlsx`);
+        if(!rawBank || rawBank.length===0){
+          console.warn('Ingen bank fra supabase, bruker lokal state');
+          rawBank = state.bank.map(t=> ({...mapBankToDb(t)}));
+        }
+
+        const rowsEvents = rowsForEventsExcel(rawEvents);
+        const rowsBank   = rowsForBankExcel(rawBank);
+
+        if(rowsEvents.length===0 && rowsBank.length===0){ alert('Ingen data å eksportere.'); return; }
+
+        downloadXlsxMultiple([
+          { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
+          { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
+        ]);
       }catch(err){
         console.error('Excel-eksport feilet:', err);
         alert('Kunne ikke hente fra skyen. Eksporterer det som er lastet nå.');
-        const raw = state.events.map(e=> mapEventToDb(e));
-        const rows = rowsForExcel(raw);
-        if(rows.length===0){ alert('Ingen data å eksportere.'); return; }
-        const stamp = dayjs().format('YYYYMMDD_HHmm');
-        downloadXlsx(rows, `lss_arsplan_lokalt_${stamp}.xlsx`);
+
+        const rowsEvents = rowsForEventsExcel(state.events.map(e=> ({...mapEventToDb(e)})));
+        const rowsBank   = rowsForBankExcel(state.bank.map(t=> ({...mapBankToDb(t)})));
+        if(rowsEvents.length===0 && rowsBank.length===0){ alert('Ingen data å eksportere.'); return; }
+        downloadXlsxMultiple([
+          { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
+          { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
+        ]);
       }
     }
 
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
 
-    // JSON-eksport (som før)
+    // JSON-eksport
     $('#btn-export').onclick=()=>{
       const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year},null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url);
