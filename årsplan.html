@@ -47,6 +47,9 @@
 
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- SheetJS (XLSX) for Excel-eksport -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -59,10 +62,11 @@
         <p class="text-sm opacity-80">Årsplan • Øktbank • Terminliste</p>
       </div>
     </div>
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print md:sticky md:top-2 md:z-40">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2 no-print md:sticky md:top-2 md:z-40">
       <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
       <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
-      <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter</button>
+      <button id="btn-export-xlsx" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter Excel</button>
+      <button id="btn-export" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter JSON</button>
       <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm cursor-pointer">
         <input id="file-import" type="file" accept="application/json" class="hidden" />Importer
       </label>
@@ -246,7 +250,7 @@
     </div>
   </div>
 
-  <!-- Tooltip element -->
+  <!-- Tooltip -->
   <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700"></div>
 
   <script>
@@ -304,7 +308,6 @@
       weeks: {}
     };
 
-    // ---- Responsivt ----
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
@@ -382,7 +385,7 @@
         race_subtype: e.raceSubtype || null,
         notes: e.notes || null,
         roles: e.roles || {},
-        eqtiming: e.eqtiming || null // behold i DB, men ikke i UI
+        eqtiming: e.eqtiming || null
       };
     }
     function mapEventFromDb(r){
@@ -403,18 +406,18 @@
         eqtiming: r.eqtiming || ''
       };
     }
-    function mapBankToDb(t){
+    function mapBankToDb(r){
       return {
-        id: t.id,
-        name: t.name,
-        type: t.type,
-        modality: t.modality,
-        intensity: t.intensity,
-        duration_min: t.durationMin ?? null,
-        age: t.age || [],
-        shooting: t.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: t.raceSubtype || null,
-        notes: t.notes || null
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        modality: r.modality,
+        intensity: r.intensity,
+        duration_min: r.durationMin ?? null,
+        age: r.age || [],
+        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: r.raceSubtype || null,
+        notes: r.notes || null
       };
     }
     function mapBankFromDb(r){
@@ -507,7 +510,6 @@
       el.addEventListener('touchcancel',endPress,   { passive:true });
     }
 
-    // Utvidet tooltip uten EQ-linje
     function eventTooltipHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
@@ -538,7 +540,7 @@
       `;
     }
 
-    // --------- Forhåndsvisningskort (uten “skudd”, med årsklasser) ---------
+    // Forhåndsvisningskort
     function dayViewCard(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
@@ -577,7 +579,7 @@
       `;
     }
 
-    // ---------- Dagoversikt (dialog) ----------
+    // ---------- Dagoversikt ----------
     function openDayView(dateISO, eventsForDay){
       const d = dayjs(dateISO);
       const items = [...eventsForDay].sort((a,b)=> (a.title||'').localeCompare(b.title||''));
@@ -747,7 +749,6 @@
         if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key });
       });
 
-      // Tooltip for tom dag – bruk attachTipHandlers
       if(evts.length === 0){
         const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`;
         attachTipHandlers(box, html);
@@ -756,7 +757,7 @@
       const top = document.createElement('div'); 
       top.className = 'flex items-center justify-between text-xs text-slate-600';
 
-      // --- NYTT: unike fargedotter per type ---
+      // Unike fargedotter per type (maks 4)
       const uniqueTypes = Array.from(new Set(evts.map(e => e.type))).slice(0,4);
       const dotsHTML = uniqueTypes.map(t =>
         `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[t]||'#6b7280'}'></span>`
@@ -1114,9 +1115,105 @@
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
 
+    // ---------- Excel-eksport (ALLE ÅR) ----------
+    // Paginert henting fra Supabase (1000 av gangen)
+    async function fetchAllEventsFromSupabase(){
+      const pageSize = 1000;
+      let from = 0, to = pageSize - 1;
+      let all = [];
+      while(true){
+        const { data, error, count } = await supabase
+          .from(TBL.events)
+          .select('*', { count:'exact' })
+          .order('date', { ascending: true })
+          .range(from, to);
+        if(error){ throw error; }
+        all = all.concat(data || []);
+        if(!data || data.length < pageSize) break;
+        from += pageSize; to += pageSize;
+      }
+      return all;
+    }
+
+    function rowsForExcel(rawRows){
+      // Bruk «rå» rader slik at vi også får med eventuelle DB-kolonner (som created_at)
+      return (rawRows||[]).map(r=>{
+        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
+        const shooting = r.shooting || {};
+        const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
+        const roles = r.roles ? Object.entries(r.roles).filter(([k,v])=>(v||'').trim().length).map(([k,v])=>`${k}: ${v}`).join(' | ') : '';
+        const d = dayjs(r.date);
+        return {
+          ID: r.id || '',
+          Dato: r.date || '',
+          Ukedag: d.isValid()? d.format('dddd') : '',
+          Ukenr: d.isValid()? d.isoWeek?.() || '' : '',
+          År: d.isValid()? d.year() : '',
+          Tittel: r.title || '',
+          Type: r.type || r.event_type || '',
+          Konkurranse: r.race_subtype || '',
+          Modalitet: r.modality || '',
+          Intensitet: r.intensity || '',
+          Varighet_min: r.duration_min ?? '',
+          Skytestilling: shooting.stilling || '',
+          Skudd: shooting.skudd ?? '',
+          Tema: tema,
+          Aldersklasser: age,
+          Roller: roles,
+          Notater: r.notes || '',
+          EQTiming: r.eqtiming || '',
+          Opprettet: r.created_at || '',
+          Oppdatert: r.updated_at || ''
+        };
+      });
+    }
+
+    function downloadXlsx(rows, filename){
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
+      // Auto-bredde (enkel)
+      const cols = Object.keys(rows[0] || {A:''}).map(k=>({wch: Math.min(40, Math.max(10, String(k).length+2))}));
+      ws['!cols'] = cols;
+      XLSX.utils.book_append_sheet(wb, ws, 'Årsplan');
+      XLSX.writeFile(wb, filename);
+    }
+
+    async function exportExcelAll(){
+      try{
+        let raw = await fetchAllEventsFromSupabase();
+        // Fallback: om tomt eller feil, bruk lokale events som nødløsning
+        if(!raw || raw.length===0){
+          console.warn('Ingen rader fra supabase, faller tilbake til lokal state');
+          alert('Fikk ikke hentet historikk fra skyen – eksporterer det som er lastet nå.');
+          raw = state.events.map(e=> mapEventToDb(e)); // tilnærming
+        }
+        const rows = rowsForExcel(raw);
+        if(rows.length===0){ alert('Ingen data å eksportere.'); return; }
+        const stamp = dayjs().format('YYYYMMDD_HHmm');
+        downloadXlsx(rows, `lss_arsplan_historikk_${stamp}.xlsx`);
+      }catch(err){
+        console.error('Excel-eksport feilet:', err);
+        alert('Kunne ikke hente fra skyen. Eksporterer det som er lastet nå.');
+        const raw = state.events.map(e=> mapEventToDb(e));
+        const rows = rowsForExcel(raw);
+        if(rows.length===0){ alert('Ingen data å eksportere.'); return; }
+        const stamp = dayjs().format('YYYYMMDD_HHmm');
+        downloadXlsx(rows, `lss_arsplan_lokalt_${stamp}.xlsx`);
+      }
+    }
+
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
-    $('#btn-export').onclick=()=>{ const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year},null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url); };
+
+    // JSON-eksport (som før)
+    $('#btn-export').onclick=()=>{
+      const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year},null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url);
+    };
+
+    // Excel-eksport (ny)
+    $('#btn-export-xlsx').onclick=exportExcelAll;
+
     $('#file-import').onchange=async(e)=>{
       const f=e.target.files[0]; if(!f) return;
       const text=await f.text(); try{
