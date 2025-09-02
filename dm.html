@@ -511,49 +511,82 @@
 
       const avisMap = entry.avis || new Map();
 
-      // --- VIKTIG: filer uten avis/frekvens-detaljer (typisk Anbud/Brukt) ---
-      if (avisMap.size === 0) {
-        const c = Number(entry.count) || 0;
-        sumCount += c;
-        // Duplikater-raden: én per valgt dag hvis det er valgt dager, ellers én gang
-        sumAlleDager += (frekvensSok.size === 0) ? c : c * frekvensSok.size;
-        return;
+      // Når dataset har avis/frekvens-detaljer -> bruk direkte (samme som Innenfor/Utenfor)
+      if (avisMap.size > 0) {
+        for (const [avisId, avisData] of avisMap.entries()) {
+          const navn = avisNavnMap[avisId] || avisId;
+
+          // Navne-/ID-match
+          const avisMatch = (avisSok.length === 0) ||
+            avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr));
+          if (!avisMatch) continue;
+
+          // Hvor mange faktiske dager matcher?
+          let matchedDaysCount = 0;
+          if (frekvensSok.size === 0) {
+            matchedDaysCount = Math.max(avisData.frekvenser?.size || 0, 1);
+            avisData.frekvenser.forEach(f => {
+              const fs = f.toString();
+              samletFrekvenser.add(fs); samletFrekvenserTotal.add(fs);
+            });
+          } else {
+            avisData.frekvenser.forEach(f => {
+              const fs = f.toString();
+              if (frekvensSok.has(fs)) { matchedDaysCount += 1; samletFrekvenser.add(fs); samletFrekvenserTotal.add(fs); }
+            });
+          }
+
+          // Duplikater
+          sumAlleDager += avisData.count * matchedDaysCount;
+
+          // Unik sum (én per avis som har minst én matchet dag, eller alle dager hvis ingen filter)
+          if (matchedDaysCount > 0) {
+            sumCount += avisData.count;
+            samletAviserTotal.add(navn);
+          }
+        }
+        return; // ferdig med dette postnr
       }
 
-      // Med avis/frekvens-detaljer
-      for (const [avisId, avisData] of avisMap.entries()) {
-        const navn = avisNavnMap[avisId] || avisId;
+      // -----------------------------
+      // NYTT: dataset UTEN dagsoppløsning (typisk Anbud/Brukt)
+      // Bruk dagsdetaljene fra referanse-datasett for samme postnummer,
+      // slik at duplikater beregnes likt som Innenfor/Utenfor.
+      // - For Anbud og Brukt: bruk dInnenfor[p] som referanse
+      // - For Utenfor: bruk dUtenfor[p] (de har allerede dagsoppløsning uansett)
+      // -----------------------------
+      const c = Number(entry.count) || 0;
+      sumCount += c; // unik sum = det faktiske antallet i dette datasettet
 
-        // Navne-/ID-match
-        const avisMatch = (avisSok.length === 0) ||
-          avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr));
-        if (!avisMatch) continue;
+      let refAvisMap = new Map();
+      if (filterKey === 'Anbud' || filterKey === 'Brukt' || filterKey === 'Innenfor') {
+        refAvisMap = (dInnenfor[p]?.avis) || new Map();
+      } else if (filterKey === 'Utenfor') {
+        refAvisMap = (dUtenfor[p]?.avis) || new Map();
+      }
 
-        // Duplikater-raden:
+      // Beregn duplikater basert på faktiske avis-dager fra referansen
+      let dupForP = 0;
+      refAvisMap.forEach((avisData) => {
         if (frekvensSok.size === 0) {
-          // Ingen dagfilter: teller alle dager = count * antall frekvensdager (min 1)
-          const mult = Math.max((avisData.frekvenser?.size || 0), 1);
-          sumAlleDager += avisData.count * mult;
-        } else {
-          // Med dagfilter: +count for hver matchet dag
-          avisData.frekvenser.forEach(f => {
-            if (frekvensSok.has(f.toString())) sumAlleDager += avisData.count;
-          });
-        }
-
-        // Unik sum (én per avis som matcher dagfilteret)
-        const frekMatch = (frekvensSok.size === 0) ||
-          Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
-        if (frekMatch) {
-          sumCount += avisData.count;
+          const mult = Math.max(avisData.frekvenser?.size || 0, 1);
+          dupForP += avisData.count * mult;
           avisData.frekvenser.forEach(f => {
             const fs = f.toString();
-            samletFrekvenser.add(fs);
-            samletFrekvenserTotal.add(fs);
+            samletFrekvenser.add(fs); samletFrekvenserTotal.add(fs);
           });
-          samletAviserTotal.add(navn);
+        } else {
+          let m = 0;
+          avisData.frekvenser.forEach(f => {
+            const fs = f.toString();
+            if (frekvensSok.has(fs)) { m += 1; samletFrekvenser.add(fs); samletFrekvenserTotal.add(fs); }
+          });
+          dupForP += avisData.count * m;
         }
-      }
+      });
+      sumAlleDager += dupForP;
+      // NB: vi legger IKKE til ref-avisenes navn i samletAviserTotal her, siden unik-sum for dette datasettet
+      // ikke er pr avis, men pr postnummer. (Visningen av "Aviser:" nederst bygger uansett på faktiske avis-treff ovenfor.)
     });
 
     if (filterKey !== 'Brukt') totalSum += sumCount;
@@ -589,7 +622,7 @@
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  // CSV-data (uendret logikk, men Brukt/Anbud uten avis-detaljer får med antall)
+  // CSV-data (uendret – Brukt/Anbud uten avis-detaljer får postnummer-antallet sitt)
   lastMatches = [];
   matches.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
