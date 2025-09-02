@@ -589,7 +589,7 @@
       // ikke er pr avis, men pr postnummer. (Visningen av "Aviser:" nederst bygger uansett på faktiske avis-treff ovenfor.)
     });
 
-    if (filterKey !== 'Brukt') totalSum += sumCount;
+if (filterKey === 'Innenfor' || filterKey === 'Utenfor') totalSum += sumCount;
 
     const color = filterColors[filterKey] || '#000';
     html += `<tr>
@@ -608,7 +608,7 @@
   });
 
   html += `<tr style="font-weight:bold; background:#eef;">
-    <td colspan="3">Totalt abonnenter</td>
+<td colspan="3">Totalt abonnenter (ekskl. Anbud & Brukt)</td>
     <td>${totalSum.toLocaleString()}</td>
     <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
   </tr>`;
