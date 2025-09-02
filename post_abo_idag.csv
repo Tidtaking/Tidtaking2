@@ -4950,7 +4950,6 @@ Nordlys,9915,1,123456
 Nordlys,9935,1,123456
 Nordlys,9990,1,123456
 Nordlys,9991,2,123456
-Nordlys Totalt,,1921,
 Nordstrands Blad,0026,1,4
 Nordstrands Blad,0214,1,4
 Nordstrands Blad,0679,1,4
@@ -5262,8 +5261,6 @@ Ringerikes Blad,5355,1,245
 Ringerikes Blad,5902,1,245
 Ringerikes Blad,8070,1,245
 Ringerikes Blad,8607,1,245
-Ringerikes Blad,,1,245
-Ringerikes Blad Totalt,,709,
 Ringsaker Blad,0214,1,25
 Ringsaker Blad,0902,1,25
 Ringsaker Blad,1470,1,25
@@ -6780,7 +6777,6 @@ Vestby Avis,8607,1,4
 Østlandets Blad,6480,1,135
 Østlandets Blad,7041,1,135
 Østlandets Blad,8607,1,135
-Østlandets Blad Totalt,,38,
 Østlands-Posten,0026,1,246
 Østlands-Posten,0214,1,246
 Østlands-Posten,1470,1,246
@@ -7020,3 +7016,4 @@ Vestby Avis,8607,1,4
 Åsane Tidende,0255,1,4
 Åsane Tidende,5131,1,4
 Åsane Tidende,8624,1,4
+
