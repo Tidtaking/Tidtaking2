@@ -840,7 +840,7 @@
       for(const r of rows){
         const navn = r.navn || r.name || '';
         const adr  = r.adresse || r.address || '';
-        the pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
         const ps   = r.poststed || r.sted || '';
 
         let lat = parseFloat(r.lat || r.latitude);
