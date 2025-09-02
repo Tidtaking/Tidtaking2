@@ -291,7 +291,7 @@
     ['Anbud','Brukt','Innenfor','Utenfor'].forEach((k,i)=>{
       const mapData = [dC,dD,dInnenfor,dUtenfor][i];
       if(!mapData) return;
-      const postnummerer = Object.keys(mapData);
+      const postnummerer = Object.keys(mapData); // unike postnumre fra CSV (via group())
       const antallSum = postnummerer.reduce((s,p) => s + (mapData[p]?.count || 0), 0);
       document.getElementById('postCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${postnummerer.length.toLocaleString()} postnumre`;
       document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
@@ -336,7 +336,7 @@
   function frekvensMatcher(avisMap, frekvensSok) {
     if(frekvensSok.size === 0) return true;
     for(const avisData of avisMap.values()) {
-      for(const f of avisData.frekvenser || []) {
+      for(const f of (avisData.frekvenser || [])) {
         if(typeof f === 'string' && frekvensSok.has(f)) return true;
         if(typeof f === 'number' && frekvensSok.has(f.toString())) return true;
       }
@@ -506,7 +506,7 @@
     // -------------------------
     let totalSum = 0; // KUN Innenfor + Utenfor
     let samletFrekvenserTotal = new Set(); // speiler bare det som inngår i totalen
-    let samletAviserTotal = new Set();
+    let samletAviserTotal = new Set();     // UNIKE aviser – kun Innenfor/Utenfor
 
     let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
@@ -553,10 +553,12 @@
             // Duplikater-raden
             sumAlleDager += avisData.count * matchedDaysCount;
 
-            // Unik sum
+            // Unik sum og UNIKE AVISER (kun Innenfor/Utenfor)
             if (matchedDaysCount > 0) {
               sumCount += avisData.count;
-              samletAviserTotal.add(navn);
+              if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
+                samletAviserTotal.add(navn);
+              }
             }
           }
           return; // ferdig med dette postnr
@@ -635,7 +637,7 @@
     document.getElementById('search-summary').innerHTML = html;
 
     // -------------------------
-    // CSV-data (Brukt/Anbud uten avis-detaljer får postnummer-antallet sitt)
+    // CSV-data
     // -------------------------
     lastMatches = [];
     matches.forEach(f => {
@@ -716,7 +718,7 @@
     document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
   }
 
-  // Eksakt «N dag frekvens»-søk (uendret – kun Innenfor/Utenfor)
+  // Eksakt «N dag frekvens»-søk (Innenfor/Utenfor)
   function searchExactDayFrequency(antallDager) {
     const startTime = performance.now();
 
@@ -800,7 +802,8 @@
     if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; }
 
-    searchLayer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#0077cc', fillOpacity: 0.4, weight: 2 }) }).addTo(map);
+    const layer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#0077cc', fillOpacity: 0.4, weight: 2 }) });
+    searchLayer = layer.addTo(map);
     searchLayer.eachLayer(l => {
       const p = l.feature.properties;
       l.bindPopup(`<strong>Postnummer: ${p.postnummer}</strong><br>Totalt antall: ${p.antall}<br>Detaljer pr avis: ${p.avis || 'Ingen'}`);
@@ -837,7 +840,7 @@
       for(const r of rows){
         const navn = r.navn || r.name || '';
         const adr  = r.adresse || r.address || '';
-        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+        the pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
         const ps   = r.poststed || r.sted || '';
 
         let lat = parseFloat(r.lat || r.latitude);
@@ -962,7 +965,7 @@
       const cb = document.getElementById('toggleButikk2');
       if(cb?.checked) map.addLayer(butikkLayer);
       oppdaterButikkTellere();
-      if(added){ try { map.fitBounds(butikker2.getBounds().pad(0.05)); } catch {} }
+      if(added){ try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {} }  <!-- BUGFIX: bruk butikkLayer -->
 
     } catch(err){
       console.warn('Feil ved lasting av butikker2:', err);
