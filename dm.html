@@ -413,35 +413,26 @@ function parseSearchInput(input) {
       `);
     }));
 
-    function oppdaterLag(){
-      Object.entries(layers).forEach(([k,lyr])=>{
-        const cb = document.getElementById('toggle'+k);
-        if(!cb) return;
-        cb.checked ? map.addLayer(lyr) : map.removeLayer(lyr);
-      });
-      const vis = Object.values(layers).flatMap(l=>map.hasLayer(l)?(l.getLayers?l.getLayers():[]):[]);
-      if(vis.length) map.fitBounds(L.featureGroup(vis).getBounds().pad(0.05));
-    }
-    ;['Anbud','Brukt','Innenfor','Utenfor','Butikk','Butikk2'].forEach(k=>
-      document.getElementById('toggle'+k)?.addEventListener('change',oppdaterLag)
-    );
     oppdaterLag();
 
-    searchBtn.addEventListener('click', );
-    document.getElementById('searchInput').addEventListener('keyup', e=>e.key==='Enter' && ());
+searchBtn.addEventListener('click', searchMap);
+document.getElementById('searchInput').addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') searchMap();
+});
 
-    exportBtn.addEventListener('click', () => {
-      if(!lastMatches.length) return;
-      const csv = Papa.unparse(lastMatches);
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'sokeresultater.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
+exportBtn.addEventListener('click', () => {
+  if(!lastMatches.length) return;
+  const csv = Papa.unparse(lastMatches);
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sokeresultater.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
 
     // Butikk-lag
     initButikker();
