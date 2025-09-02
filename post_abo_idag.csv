@@ -38,7 +38,6 @@ Akershus Amtstidende,3840,1,135
 Akershus Amtstidende,6392,1,135
 Akershus Amtstidende,7560,1,135
 Akershus Amtstidende,8607,1,135
-Akershus Amtstidende Totalt,,48,
 Arbeidets Rett,0121,1,24
 Arbeidets Rett,0171,1,24
 Arbeidets Rett,0272,1,24
@@ -282,7 +281,6 @@ Arbeidets Rett,9692,1,24
 Arbeidets Rett,9700,1,24
 Arbeidets Rett,9800,1,24
 Arbeidets Rett,,2,24
-Arbeidets Rett Totalt,,1781,
 Aura Avis,0121,1,24
 Aura Avis,0363,1,24
 Aura Avis,0494,1,24
@@ -386,7 +384,6 @@ Aura Avis,8607,1,24
 Aura Avis,8820,1,24
 Aura Avis,9403,1,24
 Aura Avis,,2,24
-Aura Avis Totalt,,1015,
 Aust Agder Blad,0212,1,24
 Aust Agder Blad,0267,1,24
 Aust Agder Blad,0315,1,24
@@ -439,7 +436,6 @@ Aust Agder Blad,7340,1,24
 Aust Agder Blad,8607,1,24
 Aust Agder Blad,8766,1,24
 Aust Agder Blad,9143,1,24
-Aust Agder Blad Totalt,,125,
 Avisa Nordland,0107,1,246
 Avisa Nordland,0121,1,246
 Avisa Nordland,0130,1,246
@@ -617,7 +613,6 @@ Avisa Nordland,9037,1,246
 Avisa Nordland,9299,1,246
 Avisa Nordland,9710,1,246
 Avisa Nordland,9730,1,246
-Avisa Nordland Totalt,,1936,
 Avisen Agder,0026,2,235
 Avisen Agder,0121,1,235
 Avisen Agder,0167,1,235
@@ -791,8 +786,6 @@ Avisen Agder,6893,1,235
 Avisen Agder,7500,1,235
 Avisen Agder,8607,1,235
 Avisen Agder,8850,1,235
-Avisen Agder,,1,235
-Avisen Agder Totalt,,2828,
 Bergensavisen,0121,1,123456
 Bergensavisen,0133,1,123456
 Bergensavisen,0214,2,123456
@@ -884,7 +877,6 @@ Bergensavisen,6995,2,123456
 Bergensavisen,6996,2,123456
 Bergensavisen,7491,1,123456
 Bergensavisen,8607,1,123456
-Bergensavisen Totalt,,133,
 Budstikka,0105,1,246
 Budstikka,0212,1,246
 Budstikka,0280,1,246
@@ -932,7 +924,6 @@ Budstikka,7030,1,246
 Budstikka,8408,1,246
 Budstikka,8607,1,246
 Budstikka,9603,1,246
-Budstikka Totalt,,56,
 Bygdebladet Randaberg,0121,1,4
 Bygdebladet Randaberg,2323,1,4
 Bygdebladet Randaberg,3825,1,4
@@ -953,7 +944,6 @@ Bygdebladet Randaberg,5039,1,4
 Bygdebladet Randaberg,5519,1,4
 Bygdebladet Randaberg,5550,1,4
 Bygdebladet Randaberg,8607,1,4
-Bygdebladet Randaberg Totalt,,57,
 Bygdeposten,0375,1,24
 Bygdeposten,0712,1,24
 Bygdeposten,0969,1,24
@@ -1027,7 +1017,6 @@ Bygdeposten,8056,1,24
 Bygdeposten,8607,1,24
 Bygdeposten,9334,1,24
 Bygdeposten,9404,1,24
-Bygdeposten Totalt,,1094,
 Dalane Tidende,0121,1,25
 Dalane Tidende,0212,1,25
 Dalane Tidende,0250,1,25
@@ -1107,8 +1096,6 @@ Dalane Tidende,7260,1,25
 Dalane Tidende,8607,1,25
 Dalane Tidende,8742,1,25
 Dalane Tidende,9404,1,25
-Dalane Tidende,,1,25
-Dalane Tidende Totalt,,315,
 Drammens Tidende,0026,2,246
 Drammens Tidende,0214,1,246
 Drammens Tidende,1470,1,246
@@ -1191,7 +1178,6 @@ Drammens Tidende,7985,1,246
 Drammens Tidende,8521,1,246
 Drammens Tidende,8607,1,246
 Drammens Tidende,8976,1,246
-Drammens Tidende Totalt,,373,
 Eikerbladet,1470,1,4
 Eikerbladet,2890,1,4
 Eikerbladet,3050,3,4
@@ -1213,7 +1199,6 @@ Eikerbladet,5743,1,4
 Eikerbladet,6777,1,4
 Eikerbladet,8607,1,4
 Eikerbladet,9357,1,4
-Eikerbladet Totalt,,55,
 Enebakk Avis,0490,1,4
 Enebakk Avis,0566,1,4
 Enebakk Avis,0592,1,4
@@ -1248,7 +1233,6 @@ Enebakk Avis,7584,1,4
 Enebakk Avis,8150,1,4
 Enebakk Avis,8607,1,4
 Enebakk Avis,9602,1,4
-Enebakk Avis Totalt,,99,
 Fanaposten,0026,1,25
 Fanaposten,0101,1,25
 Fanaposten,0107,1,25
@@ -1288,7 +1272,6 @@ Fanaposten,7105,1,25
 Fanaposten,7246,1,25
 Fanaposten,8607,1,25
 Fanaposten,9700,1,25
-Fanaposten Totalt,,53,
 Finnmark Dagblad,0121,1,24
 Finnmark Dagblad,0203,1,24
 Finnmark Dagblad,0214,2,24
@@ -1410,7 +1393,6 @@ Finnmark Dagblad,9840,1,24
 Finnmark Dagblad,9845,3,24
 Finnmark Dagblad,9900,1,24
 Finnmark Dagblad,9991,1,24
-Finnmark Dagblad Totalt,,794,
 Finnmarken,0030,2,24
 Finnmarken,0121,1,24
 Finnmarken,0175,1,24
@@ -1539,7 +1521,6 @@ Finnmarken,9981,11,24
 Finnmarken,9982,1,24
 Finnmarken,9990,40,24
 Finnmarken,9991,30,24
-Finnmarken Totalt,,1067,
 Finnmarksposten,0121,1,4
 Finnmarksposten,0686,1,4
 Finnmarksposten,0691,1,4
@@ -1631,7 +1612,6 @@ Finnmarksposten,9790,3,4
 Finnmarksposten,9801,1,4
 Finnmarksposten,9900,2,4
 Finnmarksposten,9910,1,4
-Finnmarksposten Totalt,,276,
 Firda,0121,1,24
 Firda,0214,1,24
 Firda,0268,1,24
@@ -1822,8 +1802,6 @@ Firda,7520,1,24
 Firda,7590,1,24
 Firda,8607,1,24
 Firda,9900,1,24
-Firda,,1,24
-Firda Totalt,,2225,
 Firdaposten,0121,1,4
 Firdaposten,0214,1,4
 Firdaposten,0287,1,4
@@ -1994,8 +1972,6 @@ Firdaposten,8607,1,4
 Firdaposten,9020,1,4
 Firdaposten,9049,1,4
 Firdaposten,9517,1,4
-Firdaposten,,1,4
-Firdaposten Totalt,,1248,
 Fredriksstad Blad,0118,1,246
 Fredriksstad Blad,0214,1,246
 Fredriksstad Blad,0607,1,246
@@ -2037,8 +2013,6 @@ Fredriksstad Blad,6698,1,246
 Fredriksstad Blad,6996,1,246
 Fredriksstad Blad,7263,1,246
 Fredriksstad Blad,8607,1,246
-Fredriksstad Blad,,2,246
-Fredriksstad Blad Totalt,,159,
 Fremover,0028,1,24
 Fremover,0121,1,24
 Fremover,0181,1,24
@@ -2122,7 +2096,6 @@ Fremover,9483,1,24
 Fremover,9488,1,24
 Fremover,9520,1,24
 Fremover,9730,1,24
-Fremover Totalt,,982,
 Gaula,0203,1,4
 Gaula,0283,1,4
 Gaula,0284,1,4
@@ -2165,8 +2138,6 @@ Gaula,7491,1,4
 Gaula,7501,1,4
 Gaula,8530,1,4
 Gaula,8607,1,4
-Gaula,,1,4
-Gaula Totalt,,70,
 Gjengangeren,0214,1,246
 Gjengangeren,1470,1,246
 Gjengangeren,1894,1,246
@@ -2192,8 +2163,6 @@ Gjengangeren,3622,1,246
 Gjengangeren,5174,1,246
 Gjengangeren,6906,1,246
 Gjengangeren,8607,1,246
-Gjengangeren,,1,246
-Gjengangeren Totalt,,27,
 Gjesdalbuen,0121,1,4
 Gjesdalbuen,0187,1,4
 Gjesdalbuen,0273,1,4
@@ -2224,7 +2193,6 @@ Gjesdalbuen,7670,1,4
 Gjesdalbuen,7718,1,4
 Gjesdalbuen,8607,1,4
 Gjesdalbuen,9046,1,4
-Gjesdalbuen Totalt,,254,
 Glåmdalen,0650,1,245
 Glåmdalen,0658,1,245
 Glåmdalen,0669,1,245
@@ -2326,8 +2294,6 @@ Glåmdalen,8450,1,245
 Glåmdalen,8607,1,245
 Glåmdalen,9415,1,245
 Glåmdalen,9700,1,245
-Glåmdalen,,3,245
-Glåmdalen Totalt,,2279,
 Hadeland,0485,1,25
 Hadeland,0489,1,25
 Hadeland,0670,1,25
@@ -2383,7 +2349,6 @@ Hadeland,8607,1,25
 Hadeland,9022,1,25
 Hadeland,9310,1,25
 Hadeland,9321,1,25
-Hadeland Totalt,,545,
 Halden Arbeiderblad,0214,1,246
 Halden Arbeiderblad,1470,1,246
 Halden Arbeiderblad,1601,1,246
@@ -2417,8 +2382,6 @@ Halden Arbeiderblad,5710,1,246
 Halden Arbeiderblad,7092,1,246
 Halden Arbeiderblad,7503,1,246
 Halden Arbeiderblad,8607,1,246
-Halden Arbeiderblad,,1,246
-Halden Arbeiderblad Totalt,,291,
 Hammerfestingen,0121,1,3
 Hammerfestingen,0153,1,3
 Hammerfestingen,0265,1,3
@@ -2459,7 +2422,6 @@ Hammerfestingen,9650,4,3
 Hammerfestingen,9690,1,3
 Hammerfestingen,9713,1,3
 Hammerfestingen,9750,1,3
-Hammerfestingen Totalt,,274,
 Hardanger Folkeblad,0121,1,25
 Hardanger Folkeblad,0214,1,25
 Hardanger Folkeblad,0323,1,25
@@ -2707,7 +2669,6 @@ Hardanger Folkeblad,8607,1,25
 Hardanger Folkeblad,9019,1,25
 Hardanger Folkeblad,9050,1,25
 Hardanger Folkeblad,9440,1,25
-Hardanger Folkeblad Totalt,,1758,
 Haugesunds Avis,0107,1,245
 Haugesunds Avis,0121,1,245
 Haugesunds Avis,0214,1,245
@@ -2806,7 +2767,6 @@ Haugesunds Avis,6016,1,245
 Haugesunds Avis,6843,1,245
 Haugesunds Avis,8475,1,245
 Haugesunds Avis,8607,1,245
-Haugesunds Avis Totalt,,1538,
 Helgelendingen,0121,1,24
 Helgelendingen,0214,1,24
 Helgelendingen,1389,1,24
@@ -2921,7 +2881,6 @@ Helgelendingen,9406,1,24
 Helgelendingen,9415,1,24
 Helgelendingen,9522,1,24
 Helgelendingen,9750,1,24
-Helgelendingen Totalt,,1703,
 Hordaland,0026,1,25
 Hordaland,0121,1,25
 Hordaland,0176,1,25
@@ -3118,7 +3077,6 @@ Hordaland,8607,1,25
 Hordaland,8624,1,25
 Hordaland,8800,1,25
 Hordaland,9350,1,25
-Hordaland Totalt,,1091,
 Indre Akershus Blad,0479,1,24
 Indre Akershus Blad,0586,1,24
 Indre Akershus Blad,0686,1,24
@@ -3166,7 +3124,6 @@ Indre Akershus Blad,7142,1,24
 Indre Akershus Blad,8289,1,24
 Indre Akershus Blad,8450,1,24
 Indre Akershus Blad,8607,1,24
-Indre Akershus Blad Totalt,,987,
 Jarlsberg Avis,1470,1,24
 Jarlsberg Avis,1473,1,24
 Jarlsberg Avis,2016,1,24
@@ -3198,7 +3155,6 @@ Jarlsberg Avis,5590,1,24
 Jarlsberg Avis,6993,1,24
 Jarlsberg Avis,8360,1,24
 Jarlsberg Avis,8607,1,24
-Jarlsberg Avis Totalt,,156,
 Jærbladet,0026,1,235
 Jærbladet,0214,1,235
 Jærbladet,0383,1,235
@@ -3295,8 +3251,6 @@ Jærbladet,7290,1,235
 Jærbladet,8607,1,235
 Jærbladet,8664,1,235
 Jærbladet,9411,1,235
-Jærbladet,,2,235
-Jærbladet Totalt,,154,
 Kragerø Blad,0286,1,25
 Kragerø Blad,0350,1,25
 Kragerø Blad,0483,1,25
@@ -3352,8 +3306,6 @@ Kragerø Blad,7074,1,25
 Kragerø Blad,8607,1,25
 Kragerø Blad,9253,1,25
 Kragerø Blad,9414,1,25
-Kragerø Blad,,2,25
-Kragerø Blad Totalt,,372,
 Kvinnheringen,0119,1,25
 Kvinnheringen,0121,1,25
 Kvinnheringen,0172,1,25
@@ -3446,7 +3398,6 @@ Kvinnheringen,7200,1,25
 Kvinnheringen,7716,1,25
 Kvinnheringen,8607,1,25
 Kvinnheringen,9405,1,25
-Kvinnheringen Totalt,,205,
 Lierposten,1470,1,4
 Lierposten,1798,1,4
 Lierposten,2260,1,4
@@ -3480,7 +3431,6 @@ Lierposten,5089,1,4
 Lierposten,5142,1,4
 Lierposten,7046,1,4
 Lierposten,8607,1,4
-Lierposten Totalt,,344,
 Lofot Tidende,0121,1,4
 Lofot Tidende,0282,1,4
 Lofot Tidende,0378,1,4
@@ -3606,7 +3556,6 @@ Lofot Tidende,9512,1,4
 Lofot Tidende,9700,1,4
 Lofot Tidende,9800,1,4
 Lofot Tidende,9935,1,4
-Lofot Tidende Totalt,,747,
 Lofotposten,0121,1,24
 Lofotposten,0158,1,24
 Lofotposten,0214,1,24
@@ -3723,7 +3672,6 @@ Lofotposten,9159,1,24
 Lofotposten,9299,1,24
 Lofotposten,9372,1,24
 Lofotposten,9511,1,24
-Lofotposten Totalt,,1159,
 Laagendalsposten,0214,1,24
 Laagendalsposten,0765,1,24
 Laagendalsposten,1389,1,24
@@ -3776,7 +3724,6 @@ Laagendalsposten,5730,1,24
 Laagendalsposten,6292,1,24
 Laagendalsposten,8403,1,24
 Laagendalsposten,8607,1,24
-Laagendalsposten Totalt,,618,
 Moss Avis,0214,1,246
 Moss Avis,0401,1,246
 Moss Avis,0489,1,246
@@ -3812,8 +3759,6 @@ Moss Avis,7266,1,246
 Moss Avis,8607,1,246
 Moss Avis,8920,1,246
 Moss Avis,8960,1,246
-Moss Avis,,2,246
-Moss Avis Totalt,,139,
 Nationen,0010,1,123456
 Nationen,0030,1,123456
 Nationen,0150,1,123456
@@ -4717,7 +4662,6 @@ Nationen,9740,1,123456
 Nationen,9840,1,123456
 Nationen,9950,1,123456
 Nationen,9960,1,123456
-Nationen Totalt,,3165,
 Nordhordland,0121,1,36
 Nordhordland,0214,1,36
 Nordhordland,0264,1,36
@@ -4788,7 +4732,6 @@ Nordhordland,6963,1,36
 Nordhordland,7170,1,36
 Nordhordland,8607,1,36
 Nordhordland,8616,1,36
-Nordhordland Totalt,,244,
 Nordlys,0030,1,123456
 Nordlys,0121,1,123456
 Nordlys,0130,1,123456
@@ -5015,7 +4958,6 @@ Nordstrands Blad,0687,1,4
 Nordstrands Blad,1161,2,4
 Nordstrands Blad,1470,1,4
 Nordstrands Blad,8300,1,4
-Nordstrands Blad Totalt,,8,
 Oppland Arbeiderblad,0560,1,245
 Oppland Arbeiderblad,1470,1,245
 Oppland Arbeiderblad,1473,1,245
@@ -5126,8 +5068,6 @@ Oppland Arbeiderblad,7620,1,245
 Oppland Arbeiderblad,8410,1,245
 Oppland Arbeiderblad,8607,1,245
 Oppland Arbeiderblad,9406,1,245
-Oppland Arbeiderblad,,1,245
-Oppland Arbeiderblad Totalt,,1616,
 Porsgrunns Dagblad,1470,1,246
 Porsgrunns Dagblad,2100,1,246
 Porsgrunns Dagblad,3090,1,246
@@ -5152,7 +5092,6 @@ Porsgrunns Dagblad,5683,1,246
 Porsgrunns Dagblad,6884,1,246
 Porsgrunns Dagblad,8590,1,246
 Porsgrunns Dagblad,8607,1,246
-Porsgrunns Dagblad Totalt,,109,
 Rakkestad Avis,0421,1,4
 Rakkestad Avis,1470,1,4
 Rakkestad Avis,1605,1,4
@@ -5184,7 +5123,6 @@ Rakkestad Avis,2870,1,4
 Rakkestad Avis,7822,1,4
 Rakkestad Avis,7971,1,4
 Rakkestad Avis,8607,1,4
-Rakkestad Avis Totalt,,739,
 Rana Blad,0121,2,24
 Rana Blad,0177,1,24
 Rana Blad,0203,1,24
@@ -5281,8 +5219,6 @@ Rana Blad,8909,1,24
 Rana Blad,9011,1,24
 Rana Blad,9299,1,24
 Rana Blad,9406,1,24
-Rana Blad,,1,24
-Rana Blad Totalt,,1459,
 Ringerikes Blad,0450,1,245
 Ringerikes Blad,1470,1,245
 Ringerikes Blad,1894,1,245
@@ -5389,7 +5325,6 @@ Ringsaker Blad,7760,1,25
 Ringsaker Blad,8252,1,25
 Ringsaker Blad,8607,1,25
 Ringsaker Blad,9736,1,25
-Ringsaker Blad Totalt,,410,
 Rjukan Arbeiderblad,0421,1,4
 Rjukan Arbeiderblad,1284,1,4
 Rjukan Arbeiderblad,1470,1,4
@@ -5436,7 +5371,6 @@ Rjukan Arbeiderblad,6423,1,4
 Rjukan Arbeiderblad,6906,1,4
 Rjukan Arbeiderblad,7200,1,4
 Rjukan Arbeiderblad,8607,1,4
-Rjukan Arbeiderblad Totalt,,648,
 Romerikes Blad,0001,1,246
 Romerikes Blad,0107,1,246
 Romerikes Blad,0130,1,246
@@ -5521,7 +5455,6 @@ Romerikes Blad,7194,1,246
 Romerikes Blad,8607,1,246
 Romerikes Blad,9302,1,246
 Romerikes Blad,9380,1,246
-Romerikes Blad Totalt,,233,
 Røyken og Hurums Avis,0026,1,24
 Røyken og Hurums Avis,0165,1,24
 Røyken og Hurums Avis,0214,1,24
@@ -5567,7 +5500,6 @@ Røyken og Hurums Avis,7025,1,24
 Røyken og Hurums Avis,7300,1,24
 Røyken og Hurums Avis,8607,1,24
 Røyken og Hurums Avis,8800,1,24
-Røyken og Hurums Avis Totalt,,446,
 Sande Avis,1470,1,4
 Sande Avis,1793,1,4
 Sande Avis,3024,1,4
@@ -5596,7 +5528,6 @@ Sande Avis,6423,1,4
 Sande Avis,7600,1,4
 Sande Avis,7985,1,4
 Sande Avis,8607,1,4
-Sande Avis Totalt,,105,
 Sandefjords Blad,0026,1,246
 Sandefjords Blad,0214,1,246
 Sandefjords Blad,0280,1,246
@@ -5635,7 +5566,6 @@ Sandefjords Blad,7900,1,246
 Sandefjords Blad,8607,1,246
 Sandefjords Blad,9450,1,246
 Sandefjords Blad,,1,246
-Sandefjords Blad Totalt,,170,
 Sandnesposten,0121,1,24
 Sandnesposten,0175,1,24
 Sandnesposten,0203,1,24
@@ -5691,7 +5621,6 @@ Sandnesposten,6906,1,24
 Sandnesposten,7015,1,24
 Sandnesposten,8607,1,24
 Sandnesposten,9022,1,24
-Sandnesposten Totalt,,70,
 Sarpsborg Arbeiderblad,0026,1,245
 Sarpsborg Arbeiderblad,0214,1,245
 Sarpsborg Arbeiderblad,1410,1,245
@@ -5734,7 +5663,6 @@ Sarpsborg Arbeiderblad,6065,1,245
 Sarpsborg Arbeiderblad,6686,1,245
 Sarpsborg Arbeiderblad,6899,1,245
 Sarpsborg Arbeiderblad,8607,1,245
-Sarpsborg Arbeiderblad Totalt,,298,
 Smaalenenes Avis,0214,1,245
 Smaalenenes Avis,1160,1,245
 Smaalenenes Avis,1401,1,245
@@ -5790,7 +5718,6 @@ Smaalenenes Avis,6154,1,245
 Smaalenenes Avis,6419,1,245
 Smaalenenes Avis,6857,1,245
 Smaalenenes Avis,8607,1,245
-Smaalenenes Avis Totalt,,874,
 Sogn Avis,0121,1,24
 Sogn Avis,0214,1,24
 Sogn Avis,0260,1,24
@@ -6035,7 +5962,6 @@ Sogn Avis,7860,1,24
 Sogn Avis,7980,1,24
 Sogn Avis,8607,1,24
 Sogn Avis,8646,1,24
-Sogn Avis Totalt,,2314,
 Solabladet,0121,1,4
 Solabladet,0469,1,4
 Solabladet,2033,1,4
@@ -6058,7 +5984,6 @@ Solabladet,4517,1,4
 Solabladet,4610,1,4
 Solabladet,5550,1,4
 Solabladet,8607,1,4
-Solabladet Totalt,,47,
 Strandbuen,0121,1,35
 Strandbuen,0203,1,35
 Strandbuen,0492,1,35
@@ -6115,7 +6040,6 @@ Strandbuen,7026,1,35
 Strandbuen,7105,1,35
 Strandbuen,8607,1,35
 Strandbuen,9488,1,35
-Strandbuen Totalt,,144,
 Svelviksposten,0264,1,4
 Svelviksposten,0376,1,4
 Svelviksposten,0751,1,4
@@ -6143,8 +6067,6 @@ Svelviksposten,8475,1,4
 Svelviksposten,8607,1,4
 Svelviksposten,9020,1,4
 Svelviksposten,9350,1,4
-Svelviksposten,,1,4
-Svelviksposten Totalt,,110,
 Sør-Varanger Avis,0107,1,24
 Sør-Varanger Avis,0121,1,24
 Sør-Varanger Avis,0154,1,24
@@ -6235,7 +6157,6 @@ Sør-Varanger Avis,9925,38,24
 Sør-Varanger Avis,9926,24,24
 Sør-Varanger Avis,9930,29,24
 Sør-Varanger Avis,9935,5,24
-Sør-Varanger Avis Totalt,,745,
 Telemarksavisa,0214,1,123456
 Telemarksavisa,0277,1,123456
 Telemarksavisa,0461,1,123456
@@ -6351,7 +6272,6 @@ Telemarksavisa,5713,1,123456
 Telemarksavisa,7023,1,123456
 Telemarksavisa,7491,1,123456
 Telemarksavisa,8607,1,123456
-Telemarksavisa Totalt,,1089,
 Telen,0214,1,245
 Telen,0421,1,245
 Telen,1470,1,245
@@ -6395,7 +6315,6 @@ Telen,4362,1,245
 Telen,4404,1,245
 Telen,4520,1,245
 Telen,8607,1,245
-Telen Totalt,,476,
 Tidens Krav,0121,1,24
 Tidens Krav,0181,1,24
 Tidens Krav,0214,1,24
@@ -6504,7 +6423,6 @@ Tidens Krav,7491,1,24
 Tidens Krav,7501,1,24
 Tidens Krav,7517,1,24
 Tidens Krav,8607,1,24
-Tidens Krav Totalt,,2093,
 Tvedestrandsposten,0208,1,24
 Tvedestrandsposten,0270,1,24
 Tvedestrandsposten,0369,1,24
@@ -6574,7 +6492,6 @@ Tvedestrandsposten,8370,1,24
 Tvedestrandsposten,8607,1,24
 Tvedestrandsposten,9440,1,24
 Tvedestrandsposten,9901,1,24
-Tvedestrandsposten Totalt,,190,
 Tønsbergs Blad,0026,1,246
 Tønsbergs Blad,0214,1,246
 Tønsbergs Blad,1470,1,246
@@ -6624,7 +6541,6 @@ Tønsbergs Blad,8360,1,246
 Tønsbergs Blad,8607,1,246
 Tønsbergs Blad,8820,1,246
 Tønsbergs Blad,,1,246
-Tønsbergs Blad Totalt,,175,
 Vaksdal Posten,0026,1,4
 Vaksdal Posten,0121,1,4
 Vaksdal Posten,0123,1,4
@@ -6769,7 +6685,6 @@ Vaksdal Posten,9180,1,4
 Vaksdal Posten,9514,1,4
 Vaksdal Posten,9770,1,4
 Vaksdal Posten,,4,4
-Vaksdal Posten Totalt,,356,
 Varingen,0263,1,24
 Varingen,0380,1,24
 Varingen,0511,1,24
@@ -6810,7 +6725,6 @@ Varingen,7052,1,24
 Varingen,8607,1,24
 Varingen,8646,1,24
 Varingen,9310,1,24
-Varingen Totalt,,75,
 Vestby Avis,0107,1,4
 Vestby Avis,0350,1,4
 Vestby Avis,0457,1,4
@@ -6834,7 +6748,6 @@ Vestby Avis,1890,1,4
 Vestby Avis,3850,1,4
 Vestby Avis,7224,1,4
 Vestby Avis,8607,1,4
-Vestby Avis Totalt,,32,
 Østlandets Blad,0026,1,135
 Østlandets Blad,0187,1,135
 Østlandets Blad,0214,1,135
@@ -6908,8 +6821,6 @@ Vestby Avis Totalt,,32,
 Østlands-Posten,7507,1,246
 Østlands-Posten,8607,1,246
 Østlands-Posten,9419,1,246
-Østlands-Posten,,1,246
-Østlands-Posten Totalt,,310,
 Østlendingen,0259,1,245
 Østlendingen,0354,1,245
 Østlendingen,0902,1,245
@@ -7024,7 +6935,6 @@ Vestby Avis Totalt,,32,
 Østlendingen,8960,1,245
 Østlendingen,9325,1,245
 Østlendingen,9511,1,245
-Østlendingen Totalt,,2151,
 Øyene,0010,1,4
 Øyene,0110,1,4
 Øyene,0259,1,4
@@ -7082,8 +6992,6 @@ Vestby Avis Totalt,,32,
 Øyene,7485,1,4
 Øyene,8607,1,4
 Øyene,9600,1,4
-Øyene,,2,4
-Øyene Totalt,,67,
 Ås Avis,0153,1,4
 Ås Avis,0196,1,4
 Ås Avis,0214,1,4
@@ -7109,9 +7017,6 @@ Vestby Avis Totalt,,32,
 Ås Avis,8050,1,4
 Ås Avis,8607,1,4
 Ås Avis,9750,1,4
-Ås Avis Totalt,,56,
 Åsane Tidende,0255,1,4
 Åsane Tidende,5131,1,4
 Åsane Tidende,8624,1,4
-Åsane Tidende Totalt,,3,
-Totalsum,,55125,
