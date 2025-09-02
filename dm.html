@@ -233,12 +233,13 @@
   let lastMatches = [];
 
   // Farger (Utenfor lik Innenfor)
-  const filterColors = {
-    Anbud: '#ff3333',
-    Brukt: '#ffff00',
-    Innenfor: '#663399',
+const filterColors = {
+  Anbud: '#ff3333',
+  Brukt: '#ffff00',
+  Innenfor: '#663399',
   Utenfor: '#ff9800' // oransje
-  };
+};
+
   const butikkFarge = '#0066cc';
   const butikk2Farge = '#00aa88';
 
@@ -481,7 +482,7 @@ function parseSearchInput(input) {
   if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
   if (heatLayer)   { map.removeLayer(heatLayer);   heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; heatmapBtn.disabled = true; }
 
-  // NB: parseSearchInput returnerer { postnumreSok, avisSok, frekvensSok }
+  // Viktig: parseSearchInput returnerer { postnumreSok, avisSok, frekvensSok }
   const { postnumreSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
 
   // Finn postnummer som matcher input (AND-logikk)
@@ -508,10 +509,10 @@ function parseSearchInput(input) {
     return;
   }
 
-  // Oppsummeringstabell
-  let totalSum = 0; // KUN Innenfor + Utenfor
-  let samletFrekvenserTotal = new Set(); // speiler bare det som inngår i totalen
-  let samletAviserTotal = new Set();     // UNIKE aviser – kun Innenfor/Utenfor
+  // Oppsummeringstabell (totalt = kun Innenfor + Utenfor)
+  let totalSum = 0;
+  const samletFrekvenserTotal = new Set();
+  const samletAviserTotal = new Set();
 
   let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
@@ -519,15 +520,12 @@ function parseSearchInput(input) {
     const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
     let sumCount = 0;
     let sumAlleDager = 0;
-    let samletFrekvenser = new Set();
+    const samletFrekvenser = new Set();
 
     keys.forEach(p => {
-      const entry = mapData[p];
-      if (!entry) return;
-
+      const entry = mapData[p]; if (!entry) return;
       const avisMap = entry.avis || new Map();
 
-      // Har avis/frekvens-detaljer: bruk direkte
       if (avisMap.size > 0) {
         for (const [avisId, avisData] of avisMap.entries()) {
           const navn = avisNavnMap?.[avisId] || avisId;
@@ -555,30 +553,25 @@ function parseSearchInput(input) {
             });
           }
 
-          // Duplikater
           sumAlleDager += avisData.count * matchedDaysCount;
 
-          // Unik sum og UNIKE AVISER (kun Innenfor/Utenfor)
           if (matchedDaysCount > 0) {
             sumCount += avisData.count;
-            if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
-              samletAviserTotal.add(navn);
-            }
+            if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletAviserTotal.add(navn);
           }
         }
-        return; // ferdig med dette postnr
+        return;
       }
 
-      // Dataset UTEN dagsoppløsning (Anbud eller Brukt-basic)
+      // Uten dagsoppløsning (Anbud / Brukt-basic) – bruk referanse fra Innenfor/Utenfor for duplikater
       const c = Number(entry.count) || 0;
-      sumCount += c; // unik sum = postnummer-nivå count
+      sumCount += c;
 
-      // Bruk referanse-dager fra Innenfor/Utenfor for å beregne duplikater likt
       let refAvisMap = new Map();
       if (filterKey === 'Anbud' || filterKey === 'Brukt' || filterKey === 'Innenfor') {
-        refAvisMap = (dInnenfor[p]?.avis) || new Map();
+        refAvisMap = dInnenfor[p]?.avis || new Map();
       } else if (filterKey === 'Utenfor') {
-        refAvisMap = (dUtenfor[p]?.avis) || new Map();
+        refAvisMap = dUtenfor[p]?.avis || new Map();
       }
 
       let dupForP = 0;
@@ -607,7 +600,6 @@ function parseSearchInput(input) {
       sumAlleDager += dupForP;
     });
 
-    // Totalen skal kun være Innenfor + Utenfor
     if (filterKey === 'Innenfor' || filterKey === 'Utenfor') totalSum += sumCount;
 
     const color = filterColors[filterKey] || '#000';
