@@ -458,7 +458,7 @@
     return;
   }
 
-  // Vanlig søk: nullstill lag og heatmap
+  // Nullstill lag/heatmap
   Object.values(layers).forEach(l => map.removeLayer(l));
   if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
   if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; heatmapBtn.disabled = true; }
@@ -495,7 +495,7 @@
   // -------------------------
   // Oppsummeringstabell
   // -------------------------
-  let totalSum = 0; // NB: ekskluderer "Brukt" i grand total
+  let totalSum = 0; // ekskl. Brukt
   let samletFrekvenserTotal = new Set();
   let samletAviserTotal = new Set();
 
@@ -513,37 +513,38 @@
 
       const avisMap = entry.avis || new Map();
 
-      // Hvis ingen avis/frekvens-detaljer (typisk Brukt-filen): bruk postnummer-nivå count
+      // Brukt uten avis/frekvens-detaljer
       if (avisMap.size === 0) {
         const c = Number(entry.count) || 0;
         sumCount += c;
-        sumAlleDager += c; // uten frekvens-detaljer behandler vi dette som "alle dager"
+        sumAlleDager += c; // ingen dagsoppløsning tilgjengelig
         return;
       }
 
-      // Ellers: eksisterende logikk med avis/frekvens-filtrering
+      // Med avis/frekvens-detaljer
       for (const [avisId, avisData] of avisMap.entries()) {
         const navn = avisNavnMap[avisId] || avisId;
 
-        // Navne-/ID-match – tillat navn-søk (som før med "FIX")
+        // Navne-/ID-match
         const avisMatch = (avisSok.length === 0) ||
           avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr));
-
         if (!avisMatch) continue;
 
-        // Sum alle dager (duplikater)
+        // --- Duplikater-raden ---
         if (frekvensSok.size === 0) {
-          sumAlleDager += avisData.count;
+          // Når ingen spesifikke dager er valgt, teller vi alle dager: count * antall frekvensdager
+          const mult = Math.max((avisData.frekvenser?.size || 0), 1);
+          sumAlleDager += avisData.count * mult;
         } else {
+          // Med dagfilter: +count for hver matchet dag (duplikater synliggjøres)
           avisData.frekvenser.forEach(f => {
             if (frekvensSok.has(f.toString())) sumAlleDager += avisData.count;
           });
         }
 
-        // Filtrert sum (unik)
+        // --- Unik sum (per avis) ---
         const frekMatch = (frekvensSok.size === 0) ||
           Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
-
         if (frekMatch) {
           sumCount += avisData.count;
           avisData.frekvenser.forEach(f => {
@@ -556,7 +557,6 @@
       }
     });
 
-    // Ikke ta med "Brukt" i totalsummen nederst
     if (filterKey !== 'Brukt') {
       totalSum += sumCount;
     }
@@ -673,7 +673,6 @@
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
 }
-
 
   // Eksakt «N dag frekvens»-søk
   function searchExactDayFrequency(antallDager) {
