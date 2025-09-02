@@ -466,7 +466,7 @@
   const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
   const matchedPostnr = new Set();
 
-  // Finn postnummer som matcher input (postnr, avis, frekvens)
+  // Finn postnummer som matcher input
   Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([_, mapData]) => {
     Object.entries(mapData).forEach(([pRaw, info]) => {
       const p = pRaw.padStart(4, '0');
@@ -492,9 +492,7 @@
     return;
   }
 
-  // -------------------------
   // Oppsummeringstabell
-  // -------------------------
   let totalSum = 0; // ekskl. Brukt
   let samletFrekvenserTotal = new Set();
   let samletAviserTotal = new Set();
@@ -513,11 +511,12 @@
 
       const avisMap = entry.avis || new Map();
 
-      // Brukt uten avis/frekvens-detaljer
+      // --- VIKTIG: filer uten avis/frekvens-detaljer (typisk Anbud/Brukt) ---
       if (avisMap.size === 0) {
         const c = Number(entry.count) || 0;
         sumCount += c;
-        sumAlleDager += c; // ingen dagsoppløsning tilgjengelig
+        // Duplikater-raden: én per valgt dag hvis det er valgt dager, ellers én gang
+        sumAlleDager += (frekvensSok.size === 0) ? c : c * frekvensSok.size;
         return;
       }
 
@@ -530,19 +529,19 @@
           avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr));
         if (!avisMatch) continue;
 
-        // --- Duplikater-raden ---
+        // Duplikater-raden:
         if (frekvensSok.size === 0) {
-          // Når ingen spesifikke dager er valgt, teller vi alle dager: count * antall frekvensdager
+          // Ingen dagfilter: teller alle dager = count * antall frekvensdager (min 1)
           const mult = Math.max((avisData.frekvenser?.size || 0), 1);
           sumAlleDager += avisData.count * mult;
         } else {
-          // Med dagfilter: +count for hver matchet dag (duplikater synliggjøres)
+          // Med dagfilter: +count for hver matchet dag
           avisData.frekvenser.forEach(f => {
             if (frekvensSok.has(f.toString())) sumAlleDager += avisData.count;
           });
         }
 
-        // --- Unik sum (per avis) ---
+        // Unik sum (én per avis som matcher dagfilteret)
         const frekMatch = (frekvensSok.size === 0) ||
           Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
         if (frekMatch) {
@@ -557,9 +556,7 @@
       }
     });
 
-    if (filterKey !== 'Brukt') {
-      totalSum += sumCount;
-    }
+    if (filterKey !== 'Brukt') totalSum += sumCount;
 
     const color = filterColors[filterKey] || '#000';
     html += `<tr>
@@ -592,9 +589,7 @@
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  // -------------------------
-  // CSV-data (inkl. Brukt uten avis-detaljer)
-  // -------------------------
+  // CSV-data (uendret logikk, men Brukt/Anbud uten avis-detaljer får med antall)
   lastMatches = [];
   matches.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
@@ -622,9 +617,7 @@
 
   exportBtn.disabled = false;
 
-  // -------------------------
   // Heatmap
-  // -------------------------
   const intensitetFaktor = 5;
   const heatPointsRaw = matches.map(f => {
     const [lat, lng] = getPolygonCentroid(f);
@@ -653,9 +646,7 @@
     }
   };
 
-  // -------------------------
   // Treff som polygon
-  // -------------------------
   searchLayer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 }) }).addTo(map);
   searchLayer.eachLayer(l => {
     const p = l.feature.properties;
@@ -673,6 +664,7 @@
   const elapsed = endTime - startTime;
   document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
 }
+
 
   // Eksakt «N dag frekvens»-søk
   function searchExactDayFrequency(antallDager) {
