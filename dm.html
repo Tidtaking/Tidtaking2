@@ -994,7 +994,7 @@
         if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
         const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikk2Farge, fillOpacity: 0.85});
         const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
-        m.bindPopup(`<strong>${p.navn eller 'Butikk'}</strong><br>${adrTxt}`);
+m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
         butikkLayer.addLayer(m);
         added++;
       });
