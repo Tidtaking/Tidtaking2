@@ -72,8 +72,8 @@
     </div>
   </label>
 
-  <!-- Butikker -->
-  <label><input type="checkbox" id="toggleButikk" checked />
+  <!-- Butikker (LAZY) – start AV -->
+  <label><input type="checkbox" id="toggleButikk" />
     <div class="label-content">
       <span class="label-text">Sport1</span>
       <div class="counts">
@@ -81,8 +81,8 @@
       </div>
     </div>
   </label>
-  <!-- Butikker 2 -->
-  <label><input type="checkbox" id="toggleButikk2" checked />
+  <!-- Butikker 2 (LAZY) – start AV -->
+  <label><input type="checkbox" id="toggleButikk2" />
     <div class="label-content">
       <span class="label-text">Power</span>
       <div class="counts">
@@ -121,6 +121,7 @@
   const exportBtn = document.getElementById('exportBtn');
   const heatmapBtn = document.getElementById('toggleHeatmapBtn');
   const butikkerStatus = document.getElementById('butikker-status');
+  const butikker2Status = document.getElementById('butikker2-status');
 
   const map = L.map('map').setView([60,10],5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -232,6 +233,10 @@
   let showingHeatmap = false;
   let lastMatches = [];
 
+  // Lazy-load flagg for butikker
+  let butikkLoaded = false;
+  let butikk2Loaded = false;
+
   // Farger
   const filterColors = {
     Anbud: '#ff3333',
@@ -297,6 +302,7 @@
       document.getElementById('sumCount'+k).innerHTML = `<span class="color-box" style="background:${filterColors[k]}"></span> ${antallSum.toLocaleString()} antall`;
     });
   }
+
   function oppdaterButikkTellere(){
     const n1 = layers.Butikk ? layers.Butikk.getLayers().length : 0;
     const n2 = layers.Butikk2 ? layers.Butikk2.getLayers().length : 0;
@@ -306,7 +312,7 @@
     if(el2) el2.innerHTML = `<span class="color-box" style="background:${butikk2Farge}"></span> ${n2} stk`;
   }
 
-  // Global funksjon: toggler lag basert på avhuking
+  // Toggler lag basert på avhuking (for geo-lag som er lastet)
   function oppdaterLag() {
     Object.entries(layers).forEach(([k, lyr]) => {
       const cb = document.getElementById('toggle' + k);
@@ -326,7 +332,7 @@
     }
   }
 
-  // Parsing av søk: støtter flere postnumre (komma), avis (tekst/id) og frekvensdager (1-7)
+  // Parsing av søk
   function parseSearchInput(input) {
     const dagMap = { 'man':'1','tir':'2','ons':'3','tor':'4','fre':'5','lør':'6','lor':'6','søn':'7','son':'7' };
     const parts = input.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
@@ -378,7 +384,7 @@
     return dager.join(', ');
   }
 
-  // Last data (Brukt henter detaljfil hvis finnes)
+  // Last data (Brukt tar detaljfil hvis finnes)
   Promise.all([
     lesCSVRows('anbud_postnummer.csv'),     // cRows (Anbud)
     lesCSVRows('abo_bruktidag_anbud.csv'),  // dRowsBasic (fallback)
@@ -431,11 +437,39 @@
       `);
     }));
 
-    // Koble brytere til global oppdaterLag
-    ['Anbud','Brukt','Innenfor','Utenfor','Butikk','Butikk2'].forEach(k=>{
+    // Koble brytere: geo-lag direkte, butikk-lag lazy
+    ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>{
       const el = document.getElementById('toggle'+k);
       if (el) el.addEventListener('change', oppdaterLag);
     });
+
+    const toggleButikkEl = document.getElementById('toggleButikk');
+    if (toggleButikkEl) {
+      toggleButikkEl.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+          if (!butikkLoaded) { await initButikker(); }
+          if (layers.Butikk && !map.hasLayer(layers.Butikk)) map.addLayer(layers.Butikk);
+        } else {
+          if (layers.Butikk && map.hasLayer(layers.Butikk)) map.removeLayer(layers.Butikk);
+        }
+        oppdaterButikkTellere();
+      });
+    }
+
+    const toggleButikk2El = document.getElementById('toggleButikk2');
+    if (toggleButikk2El) {
+      toggleButikk2El.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+          if (!butikk2Loaded) { await initButikker2(); }
+          if (layers.Butikk2 && !map.hasLayer(layers.Butikk2)) map.addLayer(layers.Butikk2);
+        } else {
+          if (layers.Butikk2 && map.hasLayer(layers.Butikk2)) map.removeLayer(layers.Butikk2);
+        }
+        oppdaterButikkTellere();
+      });
+    }
+
+    // Start med geo-lagene på
     oppdaterLag();
 
     // Søk-knapper
@@ -457,10 +491,6 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
-
-    // Butikk-lag
-    initButikker();
-    initButikker2();
   });
 
   function getPolygonCentroid(feature){
@@ -822,11 +852,12 @@
     document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
   }
 
-  // === Butikker: les CSV, bruk lat/lon eller x3035/y3035, ellers geokodér adresse ===
+  // === Butikker: LAZY – les CSV/geokode først når slått PÅ ===
   async function initButikker(){
+    if (butikkLoaded) return;
     try {
       const rows = await lesCSVRows('butikker.csv');
-      if(!rows.length){ if(butikkerStatus) butikkerStatus.textContent = ''; return; }
+      if(!rows.length){ if(butikkerStatus) butikkerStatus.textContent = ''; butikkLoaded = true; return; }
 
       const butikkLayer = L.layerGroup();
       layers.Butikk = butikkLayer;
@@ -890,23 +921,22 @@
         added++;
       });
 
-      const cb = document.getElementById('toggleButikk');
-      if(cb?.checked) map.addLayer(butikkLayer);
+      butikkLoaded = true;
       oppdaterButikkTellere();
-      if(added){ try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {} }
-
+      // Ikke fitBounds automatisk for butikker for å unngå hopp i kartet
     } catch(err){
+      butikkLoaded = false;
       console.warn('Feil ved lasting av butikker:', err);
       if(butikkerStatus) butikkerStatus.textContent = '';
     }
   }
 
-  // === Butikker 2 ===
+  // === Butikker 2: LAZY ===
   async function initButikker2(){
+    if (butikk2Loaded) return;
     try {
       const rows = await lesCSVRows('butikker2.csv');
-      const butikker2Status = document.getElementById('butikker2-status');
-      if(!rows.length){ if(butikker2Status) butikker2Status.textContent = ''; return; }
+      if(!rows.length){ if(butikker2Status) butikker2Status.textContent = ''; butikk2Loaded = true; return; }
 
       const butikkLayer = L.layerGroup();
       layers.Butikk2 = butikkLayer;
@@ -964,19 +994,16 @@
         if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
         const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikk2Farge, fillOpacity: 0.85});
         const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
-        m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
+        m.bindPopup(`<strong>${p.navn eller 'Butikk'}</strong><br>${adrTxt}`);
         butikkLayer.addLayer(m);
         added++;
       });
 
-      const cb = document.getElementById('toggleButikk2');
-      if(cb?.checked) map.addLayer(butikkLayer);
+      butikk2Loaded = true;
       oppdaterButikkTellere();
-      if(added){ try { map.fitBounds(butikkLayer.getBounds().pad(0.05)); } catch {} }
-
     } catch(err){
+      butikk2Loaded = false;
       console.warn('Feil ved lasting av butikker2:', err);
-      const butikker2Status = document.getElementById('butikker2-status');
       if(butikker2Status) butikker2Status.textContent = '';
     }
   }
