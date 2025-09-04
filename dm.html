@@ -128,7 +128,7 @@
   <div id="butikker2-status"></div>
 </div>
 <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
@@ -259,7 +259,7 @@
     Anbud: '#ff3333',
     Brukt: '#ffff00',
     Innenfor: '#663399',
-    Utenfor: '#ff9800' // oransje
+    Utenfor: '#ff9800'
   };
   const butikkFarge = '#0066cc';
   const butikk2Farge = '#00aa88';
@@ -271,15 +271,15 @@
     Utenfor: 'Utenfor anbud'
   };
 
-  // === NYTT: kildevalg/visning for butikk-lagene ===
+  // === Kildevalg/visning for butikk-lagene ===
   let butikkFilnavn = 'butikker.csv';
   let butikk2Filnavn = 'butikker2.csv';
-  let butikkLocalText = null;   // hvis lastet fra lokal fil
-  let butikk2LocalText = null;  // hvis lastet fra lokal fil
+  let butikkLocalText = null;
+  let butikk2LocalText = null;
 
-  // Cache for geokodede punkter per kilde (filnavn eller lokal-hash)
-  const butikkCache = new Map();   // key -> { rows, points }
-  const butikk2Cache = new Map();  // key -> { rows, points }
+  // Cache per kilde (i minnet, for å slippe rebuild i samme økt)
+  const butikkCache = new Map();   // key -> { points }
+  const butikk2Cache = new Map();
   let lastButikkKey = null;
   let lastButikk2Key = null;
 
@@ -295,17 +295,15 @@
     if (el) el.textContent = nice;
   }
 
-  // === NYTT: hjelpefunksjoner for å oppdatere label ved toggles ===
+  // === Hjelpere for toggle-labels ===
   function basenameNoExt(name) {
     if (!name) return '';
     const base = name.split('/').pop();
     return base.replace(/\.[^/.]+$/, '');
   }
   function setToggleLabel(toggleId, preferredSpanId, text) {
-    // 1) Foretrukket: egen <span id="...">
     let span = document.getElementById(preferredSpanId);
     if (span) { span.textContent = text; return; }
-    // 2) Label knyttet til checkbox
     const lbl = document.querySelector(`label[for="${toggleId}"]`);
     if (lbl) {
       const nameEl = lbl.querySelector('.layer-name');
@@ -313,11 +311,120 @@
       else lbl.textContent = text;
       return;
     }
-    // 3) Fallback: tekstnoden etter checkbox
     const cb = document.getElementById(toggleId);
     if (cb && cb.nextSibling && cb.nextSibling.nodeType === 3) {
       cb.nextSibling.textContent = ' ' + text + ' ';
     }
+  }
+
+  // === Geokoding: hurtigmodus + localStorage-cache ===
+  const USE_POSTNR_CENTROID_IF_NO_COORDS = true;
+  const GEOCODE_DELAY_MS = 200;
+  const GEOCODE_CACHE_KEY = 'geoCache_v1';
+
+  const geoCache = (() => {
+    try { return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}'); }
+    catch { return {}; }
+  })();
+  const saveGeoCache = (() => {
+    let t=null;
+    return () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(geoCache)); } catch {}
+      }, 300);
+    };
+  })();
+  function normalizeKey(adr, pn, ps) {
+    const norm = (s) => (s||'').toString().trim().toLowerCase().replace(/\s+/g,' ');
+    return [norm(adr), norm(pn), norm(ps), 'norge'].join('|');
+  }
+  async function geocodeAdresseNominatim(q) {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    return null;
+  }
+  const pnCentroid = {}; // { '0001': {lat, lon} }
+
+  async function buildPointsFromRows(rows, statusEl) {
+    const points = [];
+    const pendingByKey = {};
+    for (const r of rows) {
+      const navn = r.navn || r.name || '';
+      const adr  = r.adresse || r.address || '';
+      const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+      const ps   = r.poststed || r.sted || '';
+
+      // WGS84 rett i fil
+      let lat = parseFloat(r.lat || r.latitude);
+      let lon = parseFloat(r.lon || r.lng || r.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        points.push({ lat, lon, navn, adr, pn, ps });
+        continue;
+      }
+
+      // EPSG:3035
+      const x = parseFloat(r.x3035 || r.x);
+      const y = parseFloat(r.y3035 || r.y);
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        const [lonW, latW] = proj4('EPSG:3035', 'WGS84', [x, y]);
+        points.push({ lat: latW, lon: lonW, navn, adr, pn, ps });
+        continue;
+      }
+
+      // Postnr-sentroid
+      if (USE_POSTNR_CENTROID_IF_NO_COORDS && pnCentroid[pn]) {
+        const { lat: clat, lon: clon } = pnCentroid[pn];
+        points.push({ lat: clat, lon: clon, navn, adr, pn, ps });
+        continue;
+      }
+
+      // Nett-geokoding (dedup + cache)
+      const key = normalizeKey(adr, pn, ps);
+      const idx = points.push({ lat: null, lon: null, navn, adr, pn, ps }) - 1;
+
+      if (geoCache[key]) {
+        const { lat: cl, lon: cn } = geoCache[key];
+        points[idx].lat = cl; points[idx].lon = cn;
+        continue;
+      }
+      if (!pendingByKey[key]) pendingByKey[key] = [];
+      pendingByKey[key].push(idx);
+    }
+
+    const keys = Object.keys(pendingByKey);
+    if (keys.length && statusEl) statusEl.textContent = `Geokoder ${keys.length} adresser …`;
+
+    let done = 0;
+    for (const key of keys) {
+      if (geoCache[key]) {
+        const { lat, lon } = geoCache[key];
+        for (const i of pendingByKey[key]) { points[i].lat = lat; points[i].lon = lon; }
+        done++; if (statusEl) statusEl.textContent = `Geokoder ${done}/${keys.length} …`;
+        continue;
+      }
+      const [adr, pn, ps] = key.split('|');
+      const query = [adr, pn, ps, 'Norge'].filter(Boolean).join(', ');
+      let res = null;
+      try { res = await geocodeAdresseNominatim(query); } catch {}
+      if (!res && pnCentroid[pn]) res = pnCentroid[pn];
+
+      if (res && Number.isFinite(res.lat) && Number.isFinite(res.lon)) {
+        geoCache[key] = { lat: res.lat, lon: res.lon };
+        saveGeoCache();
+        for (const i of pendingByKey[key]) { points[i].lat = res.lat; points[i].lon = res.lon; }
+      } else {
+        for (const i of pendingByKey[key]) { points[i].lat = null; points[i].lon = null; }
+      }
+      done++; if (statusEl) statusEl.textContent = `Geokoder ${done}/${keys.length} …`;
+      await new Promise(r => setTimeout(r, GEOCODE_DELAY_MS));
+    }
+
+    if (statusEl) statusEl.textContent = '';
+    return points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
   }
 
   function enrich(arr,mapData){
@@ -378,7 +485,6 @@
     if(el2) el2.innerHTML = `<span class="color-box" style="background:${butikk2Farge}"></span> ${n2} stk`;
   }
 
-  // Toggler lag basert på avhuking (for geo-lag som er lastet)
   function oppdaterLag() {
     Object.entries(layers).forEach(([k, lyr]) => {
       const cb = document.getElementById('toggle' + k);
@@ -398,7 +504,6 @@
     }
   }
 
-  // Parsing av søk
   function parseSearchInput(input) {
     const dagMap = { 'man':'1','tir':'2','ons':'3','tor':'4','fre':'5','lør':'6','lor':'6','søn':'7','son':'7' };
     const parts = input.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
@@ -452,11 +557,11 @@
 
   // Last data (Brukt tar detaljfil hvis finnes)
   Promise.all([
-    lesCSVRows('anbud_postnummer.csv'),     // cRows (Anbud)
-    lesCSVRows('abo_bruktidag_anbud.csv'),  // dRowsBasic (fallback)
-    lesCSVRows('post_abo_idag.csv'),        // dRowsDetalj (NY)
-    lesCSVRows('innenforanbud.csv'),        // eRows
-    lesCSVRows('utenforanbud.csv'),         // fRows
+    lesCSVRows('anbud_postnummer.csv'),
+    lesCSVRows('abo_bruktidag_anbud.csv'),
+    lesCSVRows('post_abo_idag.csv'),
+    lesCSVRows('innenforanbud.csv'),
+    lesCSVRows('utenforanbud.csv'),
     lesAvisnavn('avisid.csv'),
     fetch('postnummer_part01.geojson').then(r=>r.json()),
     fetch('postnummer_part02.geojson').then(r=>r.json()),
@@ -464,7 +569,6 @@
     fetch('filtrert_anbud.geojson').then(r=>r.json())
   ]).then(([cRows,dRowsBasic,dRowsDetalj,eRows,fRows, avisMap, g1,g2,g3,geoAnb])=>{
     dC = group(cRows, 'Anbud');
-
     const dD_detalj = group(dRowsDetalj, 'Brukt_detalj');
     const dD_basic  = group(dRowsBasic,  'Brukt_basic');
     dD = Object.keys(dD_detalj).length ? dD_detalj : dD_basic;
@@ -480,6 +584,14 @@
 
     const base = [...g1.features,...g2.features,...g3.features];
     const geoBase = {type:'FeatureCollection',features:base};
+
+    // Bygg sentroider for alle postnummer (hurtig fallback for geokoding)
+    base.forEach(f => {
+      const pn = (f.properties.postnummer || '').toString().trim().padStart(4,'0');
+      if (!/^\d{4}$/.test(pn)) return;
+      const [lat, lon] = getPolygonCentroid(f);
+      pnCentroid[pn] = { lat, lon };
+    });
 
     fC = geoAnb.features.filter(f=>nC.includes(f.properties.postnummer.trim().padStart(4,'0')));
     fD = geoAnb.features.filter(f=>nD.includes(f.properties.postnummer.trim().padStart(4,'0')));
@@ -503,7 +615,6 @@
       `);
     }));
 
-    // Koble brytere: geo-lag direkte, butikk-lag lazy
     ['Anbud','Brukt','Innenfor','Utenfor'].forEach(k=>{
       const el = document.getElementById('toggle'+k);
       if (el) el.addEventListener('change', oppdaterLag);
@@ -535,16 +646,13 @@
       });
     }
 
-    // Start med geo-lagene på
     oppdaterLag();
 
-    // Søk-knapper
     searchBtn.addEventListener('click', searchMap);
     document.getElementById('searchInput').addEventListener('keyup', (e) => {
       if (e.key === 'Enter') searchMap();
     });
 
-    // Eksport
     exportBtn.addEventListener('click', () => {
       if(!lastMatches.length) return;
       const csv = Papa.unparse(lastMatches);
@@ -580,7 +688,6 @@
     const qRawInput = document.getElementById('searchInput').value.trim();
     if (!qRawInput) return;
 
-    // Eksakt "N dag frekvens"
     const dagFreqMatch = qRawInput.match(/^(\d) dag frekvens$/i);
     if (dagFreqMatch) {
       const ønsketDager = Number(dagFreqMatch[1]);
@@ -588,14 +695,12 @@
       return;
     }
 
-    // Nullstill lag/heatmap
     Object.values(layers).forEach(l => map.removeLayer(l));
     if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
     if (heatLayer)   { map.removeLayer(heatLayer);   heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; heatmapBtn.disabled = true; }
 
     const { postnumreSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
 
-    // Finn postnummer som matcher input (AND-logikk)
     const matchedPostnr = new Set();
     Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([_, mapData]) => {
       Object.entries(mapData).forEach(([pRaw, info]) => {
@@ -619,7 +724,6 @@
       return;
     }
 
-    // Oppsummeringstabell (totalt = kun Innenfor + Utenfor)
     let totalSum = 0;
     const samletFrekvenserTotal = new Set();
     const samletAviserTotal = new Set();
@@ -663,10 +767,8 @@
               });
             }
 
-            // Duplikater
             sumAlleDager += avisData.count * matchedDaysCount;
 
-            // Unik sum + unike aviser (kun Innenfor/Utenfor)
             if (matchedDaysCount > 0) {
               sumCount += avisData.count;
               if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletAviserTotal.add(navn);
@@ -675,7 +777,6 @@
           return;
         }
 
-        // Uten dagsoppløsning (Anbud/Brukt-basic): bruk referanse fra Innenfor/Utenfor
         const c = Number(entry.count) || 0;
         sumCount += c;
 
@@ -745,7 +846,6 @@
     html += '</tbody></table>';
     document.getElementById('search-summary').innerHTML = html;
 
-    // CSV-data
     lastMatches = [];
     matches.forEach(f => {
       const p = f.properties.postnummer.trim().padStart(4, '0');
@@ -773,7 +873,6 @@
 
     exportBtn.disabled = false;
 
-    // Heatmap
     const intensitetFaktor = 5;
     const heatPointsRaw = matches.map(f => {
       const [lat, lng] = getPolygonCentroid(f);
@@ -802,7 +901,6 @@
       }
     };
 
-    // Treff som polygon
     searchLayer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 }) }).addTo(map);
     searchLayer.eachLayer(l => {
       const p = l.feature.properties;
@@ -821,7 +919,6 @@
     document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
   }
 
-  // Eksakt «N dag frekvens»-søk (Innenfor/Utenfor)
   function searchExactDayFrequency(antallDager) {
     const startTime = performance.now();
 
@@ -917,7 +1014,7 @@
     document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
   }
 
-  // === Butikker: LAZY – les CSV/geokode først når slått PÅ ===
+  // === Butikker: LAZY – bruker rask geokoding + cache ===
   async function initButikker(){
     if (butikkLoaded) return;
     try {
@@ -927,62 +1024,13 @@
       if(!rows.length){ if(butikkerStatus) butikkerStatus.textContent = ''; butikkLoaded = true; return; }
 
       const key = sourceKeyFrom(butikkFilnavn, butikkLocalText);
-
       let points;
       const cached = butikkCache.get(key);
-      if (cached && cached.rows?.length === rows.length) {
+      if (cached) {
         points = cached.points;
       } else {
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-        async function geocodeAdresse(q){
-          const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
-          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          if(!res.ok) return null;
-          const data = await res.json();
-          if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-          return null;
-        }
-
-        points = [];
-        let toGeocode = 0, doneGeocode = 0;
-
-        for(const r of rows){
-          const navn = r.navn || r.name || '';
-const adr  = r.adresse || r.address || '';
-          const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-          const ps   = r.poststed || r.sted || '';
-
-          let lat = parseFloat(r.lat || r.latitude);
-          let lon = parseFloat(r.lon || r.lng || r.longitude);
-          if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
-
-          const x = parseFloat(r.x3035 || r.x);
-          const y = parseFloat(r.y3035 || r.y);
-          if (Number.isFinite(x) && Number.isFinite(y)) {
-            const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
-            points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
-            continue;
-          }
-
-          toGeocode++;
-          points.push({lat: null, lon: null, navn, adr, pn, ps});
-        }
-
-        if(toGeocode){
-          if(butikkerStatus) butikkerStatus.textContent = `Geokoder ${toGeocode} adresser …`;
-          for(const p of points){
-            if(p.lat != null && p.lon != null) continue;
-            const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
-            const res = await geocodeAdresse(query);
-            if(res){ p.lat = res.lat; p.lon = res.lon; }
-            doneGeocode++;
-            if(butikkerStatus && doneGeocode % 1 === 0){ butikkerStatus.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
-            await sleep(300);
-          }
-          if(butikkerStatus) butikkerStatus.textContent = '';
-        }
-
-        butikkCache.set(key, { rows, points });
+        points = await buildPointsFromRows(rows, butikkerStatus);
+        butikkCache.set(key, { points });
       }
 
       const butikkLayer = L.layerGroup();
@@ -1005,7 +1053,7 @@ const adr  = r.adresse || r.address || '';
     }
   }
 
-  // === Butikker 2: LAZY ===
+  // === Butikker 2 ===
   async function initButikker2(){
     if (butikk2Loaded) return;
     try {
@@ -1015,60 +1063,13 @@ const adr  = r.adresse || r.address || '';
       if(!rows.length){ if(butikker2Status) butikker2Status.textContent = ''; butikk2Loaded = true; return; }
 
       const key = sourceKeyFrom(butikk2Filnavn, butikk2LocalText);
-
       let points;
       const cached = butikk2Cache.get(key);
-      if (cached && cached.rows?.length === rows.length) {
+      if (cached) {
         points = cached.points;
       } else {
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-        async function geocodeAdresse(q){
-          const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
-          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          if(!res.ok) return null;
-          const data = await res.json();
-          if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-          return null;
-        }
-
-        points = [];
-        let toGeocode = 0, doneGeocode = 0;
-
-        for(const r of rows){
-          const navn = r.navn || r.name || '';
-          const adr  = r.adresse || r.address || '';
-          const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-const ps   = r.poststed || r.sted || '';
-          let lat = parseFloat(r.lat || r.latitude);
-          let lon = parseFloat(r.lon || r.lng || r.longitude);
-          if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
-
-          const x = parseFloat(r.x3035 || r.x);
-          const y = parseFloat(r.y3035 || r.y);
-          if (Number.isFinite(x) && Number.isFinite(y)) {
-            const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
-            points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
-            continue;
-          }
-          toGeocode++;
-          points.push({lat: null, lon: null, navn, adr, pn, ps});
-        }
-
-        if(toGeocode){
-          if(butikker2Status) butikker2Status.textContent = `Geokoder ${toGeocode} adresser …`;
-          for(const p of points){
-            if(p.lat != null && p.lon != null) continue;
-            const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
-            const res = await geocodeAdresse(query);
-            if(res){ p.lat = res.lat; p.lon = res.lon; }
-            doneGeocode++;
-            if(butikker2Status && doneGeocode % 1 === 0){ butikker2Status.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
-            await sleep(300);
-          }
-          if(butikker2Status) butikker2Status.textContent = '';
-        }
-
-        butikk2Cache.set(key, { rows, points });
+        points = await buildPointsFromRows(rows, butikker2Status);
+        butikk2Cache.set(key, { points });
       }
 
       const butikkLayer = L.layerGroup();
@@ -1106,20 +1107,17 @@ const ps   = r.poststed || r.sted || '';
     }
   });
 
-  // === Knapper for å laste butikker/butikker2 (lokal fil eller serverfilnavn) ===
+  // Last-inn-knapper (filnavn eller lokal fil)
   document.getElementById('btnButikkLoad')?.addEventListener('click', async () => {
     const nameInput = (document.getElementById('butikkCsvInput')?.value || '').trim();
     const fileInput = document.getElementById('butikkFileInput');
     const file = fileInput && fileInput.files && fileInput.files[0];
 
-    let newLocalText = null;
-    let newName = null;
-
     if (file) {
       const reader = new FileReader();
       reader.onload = async () => {
-        newLocalText = reader.result;
-        newName = file.name || 'lokal.csv';
+        const newLocalText = reader.result;
+        const newName = file.name || 'lokal.csv';
         const newKey = sourceKeyFrom(newName, newLocalText);
         if (newKey !== lastButikkKey) {
           butikkLocalText = newLocalText;
@@ -1137,7 +1135,7 @@ const ps   = r.poststed || r.sted || '';
       };
       reader.readAsText(file, 'utf-8');
     } else {
-      newName = nameInput || 'butikker.csv';
+      let newName = nameInput || 'butikker.csv';
       if (!/\.csv$/i.test(newName)) newName += '.csv';
       const newKey = sourceKeyFrom(newName, null);
       if (newKey !== lastButikkKey) {
@@ -1160,14 +1158,11 @@ const ps   = r.poststed || r.sted || '';
     const fileInput = document.getElementById('butikk2FileInput');
     const file = fileInput && fileInput.files && fileInput.files[0];
 
-    let newLocalText = null;
-    let newName = null;
-
     if (file) {
       const reader = new FileReader();
       reader.onload = async () => {
-        newLocalText = reader.result;
-        newName = file.name || 'lokal2.csv';
+        const newLocalText = reader.result;
+        const newName = file.name || 'lokal2.csv';
         const newKey = sourceKeyFrom(newName, newLocalText);
         if (newKey !== lastButikk2Key) {
           butikk2LocalText = newLocalText;
@@ -1185,7 +1180,7 @@ const ps   = r.poststed || r.sted || '';
       };
       reader.readAsText(file, 'utf-8');
     } else {
-      newName = nameInput || 'butikker2.csv';
+      let newName = nameInput || 'butikker2.csv';
       if (!/\.csv$/i.test(newName)) newName += '.csv';
       const newKey = sourceKeyFrom(newName, null);
       if (newKey !== lastButikk2Key) {
@@ -1203,7 +1198,7 @@ const ps   = r.poststed || r.sted || '';
     }
   });
 
-  // Sett initial etiketter
+  // Startetiketter
   setActiveFilter('activeFilterButikk', butikkFilnavn);
   setActiveFilter('activeFilterButikk2', butikk2Filnavn);
   setToggleLabel('toggleButikk','butikkName', basenameNoExt(butikkFilnavn));
