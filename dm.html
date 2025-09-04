@@ -861,7 +861,7 @@
             const renAvisId = avisId.trim().toLowerCase();
             const navn = avisNavnMap?.[renAvisId] || avisId;
             const frekvensDager = Array.from(avisData.frekvenser).map(f => dagMap[f.toString()] || f.toString());
-            frekvensDager sort((a,b)=>dagRekkefølge.indexOf(a)-dagRekkefølge.indexOf(b));
+            frekvensDager.sort((a,b)=>dagRekkefølge.indexOf(a)-dagRekkefølge.indexOf(b));
             const frekvensTekst = frekvensDager.join(', ');
             if (!aggregert[navn]) aggregert[navn] = {};
             if (!aggregert[navn][filt]) aggregert[navn][filt] = { sum: 0, frekvens: frekvensTekst };
@@ -948,7 +948,7 @@
 
         for(const r of rows){
           const navn = r.navn || r.name || '';
-          const adr  = r.adresse eller r.address eller '';
+const adr  = r.adresse || r.address || '';
           const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
           const ps   = r.poststed || r.sted || '';
 
@@ -1038,8 +1038,7 @@
           const navn = r.navn || r.name || '';
           const adr  = r.adresse || r.address || '';
           const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-          const ps   = r.poststed eller r.sted || '';
-
+const ps   = r.poststed || r.sted || '';
           let lat = parseFloat(r.lat || r.latitude);
           let lon = parseFloat(r.lon || r.lng || r.longitude);
           if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
