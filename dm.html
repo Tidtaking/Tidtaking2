@@ -128,7 +128,6 @@
   <div id="butikker2-status"></div>
 </div>
 <div id="map"></div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -277,6 +276,18 @@
   let butikk2Filnavn = 'butikker2.csv';
   let butikkLocalText = null;   // hvis lastet fra lokal fil
   let butikk2LocalText = null;  // hvis lastet fra lokal fil
+
+  // Cache for geokodede punkter per kilde (filnavn eller lokal-hash)
+  const butikkCache = new Map();   // key -> { rows, points }
+  const butikk2Cache = new Map();  // key -> { rows, points }
+  let lastButikkKey = null;
+  let lastButikk2Key = null;
+
+  function sourceKeyFrom(name, text){
+    if (name) return `name:${name}`;
+    if (text) return `mem:${text.length}:${(text.charCodeAt(0)||0)}:${(text.charCodeAt(text.length-1)||0)}`;
+    return 'unknown';
+  }
 
   function setActiveFilter(elId, label){
     const nice = (label || '').replace(/\.csv$/i,'') || 'ingen';
@@ -886,63 +897,73 @@
   async function initButikker(){
     if (butikkLoaded) return;
     try {
-      // ---- ENDRING: støtt lokal filtekst ELLER filnavn fra input ----
+      // ---- støtte lokal filtekst ELLER filnavn fra input ----
       const rows = butikkLocalText
         ? Papa.parse(butikkLocalText, {header:true, skipEmptyLines:true, delimiter: ','}).data
         : await lesCSVRows(butikkFilnavn);
       if(!rows.length){ if(butikkerStatus) butikkerStatus.textContent = ''; butikkLoaded = true; return; }
 
+      const key = sourceKeyFrom(butikkFilnavn, butikkLocalText);
+
+      let points;
+      const cached = butikkCache.get(key);
+      if (cached && cached.rows?.length === rows.length) {
+        points = cached.points;
+      } else {
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        async function geocodeAdresse(q){
+          const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if(!res.ok) return null;
+          const data = await res.json();
+          if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          return null;
+        }
+
+        points = [];
+        let toGeocode = 0, doneGeocode = 0;
+
+        for(const r of rows){
+          const navn = r.navn || r.name || '';
+          const adr  = r.adresse || r.address || '';
+          const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+          const ps   = r.poststed || r.sted || '';
+
+          let lat = parseFloat(r.lat || r.latitude);
+          let lon = parseFloat(r.lon || r.lng || r.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
+
+          const x = parseFloat(r.x3035 || r.x);
+          const y = parseFloat(r.y3035 || r.y);
+          if (Number.isFinite(x) && Number.isFinite(y)) {
+            const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
+            points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
+            continue;
+          }
+
+          toGeocode++;
+          points.push({lat: null, lon: null, navn, adr, pn, ps});
+        }
+
+        if(toGeocode){
+          if(butikkerStatus) butikkerStatus.textContent = `Geokoder ${toGeocode} adresser …`;
+          for(const p of points){
+            if(p.lat != null && p.lon != null) continue;
+            const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
+            const res = await geocodeAdresse(query);
+            if(res){ p.lat = res.lat; p.lon = res.lon; }
+            doneGeocode++;
+            if(butikkerStatus && doneGeocode % 1 === 0){ butikkerStatus.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
+            await sleep(300);
+          }
+          if(butikkerStatus) butikkerStatus.textContent = '';
+        }
+
+        butikkCache.set(key, { rows, points });
+      }
+
       const butikkLayer = L.layerGroup();
       layers.Butikk = butikkLayer;
-
-      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-      async function geocodeAdresse(q){
-        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if(!res.ok) return null;
-        const data = await res.json();
-        if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-        return null;
-      }
-
-      const points = [];
-      let toGeocode = 0, doneGeocode = 0;
-
-      for(const r of rows){
-        const navn = r.navn || r.name || '';
-        const adr  = r.adresse || r.address || '';
-        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-        const ps   = r.poststed || r.sted || '';
-
-        let lat = parseFloat(r.lat || r.latitude);
-        let lon = parseFloat(r.lon || r.lng || r.longitude);
-        if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
-
-        const x = parseFloat(r.x3035 || r.x);
-        const y = parseFloat(r.y3035 || r.y);
-        if (Number.isFinite(x) && Number.isFinite(y)) {
-          const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
-          points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
-          continue;
-        }
-
-        toGeocode++;
-        points.push({lat: null, lon: null, navn, adr, pn, ps});
-      }
-
-      if(toGeocode){
-        if(butikkerStatus) butikkerStatus.textContent = `Geokoder ${toGeocode} adresser …`;
-        for(const p of points){
-          if(p.lat != null && p.lon != null) continue;
-          const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
-          const res = await geocodeAdresse(query);
-          if(res){ p.lat = res.lat; p.lon = res.lon; }
-          doneGeocode++;
-          if(butikkerStatus && doneGeocode % 1 === 0){ butikkerStatus.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
-          await sleep(300);
-        }
-        if(butikkerStatus) butikkerStatus.textContent = '';
-      }
 
       let added = 0;
       points.forEach(p => {
@@ -968,62 +989,72 @@
   async function initButikker2(){
     if (butikk2Loaded) return;
     try {
-      // ---- ENDRING: støtt lokal filtekst ELLER filnavn fra input ----
+      // ---- støtte lokal filtekst ELLER filnavn fra input ----
       const rows = butikk2LocalText
         ? Papa.parse(butikk2LocalText, {header:true, skipEmptyLines:true, delimiter: ','}).data
         : await lesCSVRows(butikk2Filnavn);
       if(!rows.length){ if(butikker2Status) butikker2Status.textContent = ''; butikk2Loaded = true; return; }
 
+      const key = sourceKeyFrom(butikk2Filnavn, butikk2LocalText);
+
+      let points;
+      const cached = butikk2Cache.get(key);
+      if (cached && cached.rows?.length === rows.length) {
+        points = cached.points;
+      } else {
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        async function geocodeAdresse(q){
+          const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
+          const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if(!res.ok) return null;
+          const data = await res.json();
+          if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          return null;
+        }
+
+        points = [];
+        let toGeocode = 0, doneGeocode = 0;
+
+        for(const r of rows){
+          const navn = r.navn || r.name || '';
+          const adr  = r.adresse || r.address || '';
+          const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
+          const ps   = r.poststed || r.sted || '';
+
+          let lat = parseFloat(r.lat || r.latitude);
+          let lon = parseFloat(r.lon || r.lng || r.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
+
+          const x = parseFloat(r.x3035 || r.x);
+          const y = parseFloat(r.y3035 || r.y);
+          if (Number.isFinite(x) && Number.isFinite(y)) {
+            const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
+            points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
+            continue;
+          }
+          toGeocode++;
+          points.push({lat: null, lon: null, navn, adr, pn, ps});
+        }
+
+        if(toGeocode){
+          if(butikker2Status) butikker2Status.textContent = `Geokoder ${toGeocode} adresser …`;
+          for(const p of points){
+            if(p.lat != null && p.lon != null) continue;
+            const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
+            const res = await geocodeAdresse(query);
+            if(res){ p.lat = res.lat; p.lon = res.lon; }
+            doneGeocode++;
+            if(butikker2Status && doneGeocode % 1 === 0){ butikker2Status.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
+            await sleep(300);
+          }
+          if(butikker2Status) butikker2Status.textContent = '';
+        }
+
+        butikk2Cache.set(key, { rows, points });
+      }
+
       const butikkLayer = L.layerGroup();
       layers.Butikk2 = butikkLayer;
-
-      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-      async function geocodeAdresse(q){
-        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=0&countrycodes=no&q=${encodeURIComponent(q)}`;
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if(!res.ok) return null;
-        const data = await res.json();
-        if(Array.isArray(data) && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-        return null;
-      }
-
-      const points = [];
-      let toGeocode = 0, doneGeocode = 0;
-
-      for(const r of rows){
-        const navn = r.navn || r.name || '';
-        const adr  = r.adresse || r.address || '';
-        const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-        const ps   = r.poststed || r.sted || '';
-
-        let lat = parseFloat(r.lat || r.latitude);
-        let lon = parseFloat(r.lon || r.lng || r.longitude);
-        if (Number.isFinite(lat) && Number.isFinite(lon)) { points.push({lat, lon, navn, adr, pn, ps}); continue; }
-
-        const x = parseFloat(r.x3035 || r.x);
-        const y = parseFloat(r.y3035 || r.y);
-        if (Number.isFinite(x) && Number.isFinite(y)) {
-          const [lonW, latW] = proj4('EPSG:3035','WGS84',[x,y]);
-          points.push({lat: latW, lon: lonW, navn, adr, pn, ps});
-          continue;
-        }
-        toGeocode++;
-        points.push({lat: null, lon: null, navn, adr, pn, ps});
-      }
-
-      if(toGeocode){
-        if(butikker2Status) butikker2Status.textContent = `Geokoder ${toGeocode} adresser …`;
-        for(const p of points){
-          if(p.lat != null && p.lon != null) continue;
-          const query = [p.adr, p.pn, p.ps, 'Norge'].filter(Boolean).join(', ');
-          const res = await geocodeAdresse(query);
-          if(res){ p.lat = res.lat; p.lon = res.lon; }
-          doneGeocode++;
-          if(butikker2Status && doneGeocode % 1 === 0){ butikker2Status.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
-          await sleep(300);
-        }
-        if(butikker2Status) butikk2Status.textContent = '';
-      }
 
       let added = 0;
       points.forEach(p => {
@@ -1059,69 +1090,98 @@
     }
   });
 
-  // === NYTT: knapper for å laste butikker/butikker2 (lokal fil eller serverfilnavn) ===
+  // === Knapper for å laste butikker/butikker2 (lokal fil eller serverfilnavn) ===
   document.getElementById('btnButikkLoad')?.addEventListener('click', async () => {
     const nameInput = (document.getElementById('butikkCsvInput')?.value || '').trim();
     const fileInput = document.getElementById('butikkFileInput');
     const file = fileInput && fileInput.files && fileInput.files[0];
-    butikkLocalText = null;
+
+    let newLocalText = null;
+    let newName = null;
 
     if (file) {
       const reader = new FileReader();
       reader.onload = async () => {
-        butikkLocalText = reader.result;
-        butikkFilnavn = file.name || 'lokal.csv';
+        newLocalText = reader.result;
+        newName = file.name || 'lokal.csv';
+        const newKey = sourceKeyFrom(newName, newLocalText);
+        if (newKey !== lastButikkKey) {
+          // oppdater kilde + rebuild
+          butikkLocalText = newLocalText;
+          butikkFilnavn = newName;
+          lastButikkKey = newKey;
+          setActiveFilter('activeFilterButikk', butikkFilnavn);
+          if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
+          butikkLoaded = false;
+          await initButikker();
+          if (document.getElementById('toggleButikk')?.checked && layers.Butikk) map.addLayer(layers.Butikk);
+          oppdaterButikkTellere();
+        }
+        fileInput.value = '';
+      };
+      reader.readAsText(file, 'utf-8');
+    } else {
+      newName = nameInput || 'butikker.csv';
+      if (!/\.csv$/i.test(newName)) newName += '.csv';
+      const newKey = sourceKeyFrom(newName, null);
+      if (newKey !== lastButikkKey) {
+        butikkLocalText = null;
+        butikkFilnavn = newName;
+        lastButikkKey = newKey;
         setActiveFilter('activeFilterButikk', butikkFilnavn);
         if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
         butikkLoaded = false;
         await initButikker();
         if (document.getElementById('toggleButikk')?.checked && layers.Butikk) map.addLayer(layers.Butikk);
         oppdaterButikkTellere();
-      };
-      reader.readAsText(file, 'utf-8');
-    } else {
-      butikkFilnavn = nameInput || 'butikker.csv';
-      if (!/\.csv$/i.test(butikkFilnavn)) butikkFilnavn += '.csv';
-      setActiveFilter('activeFilterButikk', butikkFilnavn);
-      if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
-      butikkLoaded = false;
-      await initButikker();
-      if (document.getElementById('toggleButikk')?.checked && layers.Butikk) map.addLayer(layers.Butikk);
-      oppdaterButikkTellere();
+      }
     }
-    if (fileInput) fileInput.value = '';
   });
 
   document.getElementById('btnButikk2Load')?.addEventListener('click', async () => {
     const nameInput = (document.getElementById('butikk2CsvInput')?.value || '').trim();
     const fileInput = document.getElementById('butikk2FileInput');
     const file = fileInput && fileInput.files && fileInput.files[0];
-    butikk2LocalText = null;
+
+    let newLocalText = null;
+    let newName = null;
 
     if (file) {
       const reader = new FileReader();
       reader.onload = async () => {
-        butikk2LocalText = reader.result;
-        butikk2Filnavn = file.name || 'lokal2.csv';
+        newLocalText = reader.result;
+        newName = file.name || 'lokal2.csv';
+        const newKey = sourceKeyFrom(newName, newLocalText);
+        if (newKey !== lastButikk2Key) {
+          butikk2LocalText = newLocalText;
+          butikk2Filnavn = newName;
+          lastButikk2Key = newKey;
+          setActiveFilter('activeFilterButikk2', butikk2Filnavn);
+          if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
+          butikk2Loaded = false;
+          await initButikker2();
+          if (document.getElementById('toggleButikk2')?.checked && layers.Butikk2) map.addLayer(layers.Butikk2);
+          oppdaterButikkTellere();
+        }
+        fileInput.value = '';
+      };
+      reader.readAsText(file, 'utf-8');
+    } else {
+      newName = nameInput || 'butikker2.csv';
+      if (!/\.csv$/i.test(newName)) newName += '.csv';
+      const newKey = sourceKeyFrom(newName, null);
+      if (newKey !== lastButikk2Key) {
+        butikk2LocalText = null;
+        butikk2Filnavn = newName;
+        lastButikk2Key = newKey;
         setActiveFilter('activeFilterButikk2', butikk2Filnavn);
         if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
         butikk2Loaded = false;
         await initButikker2();
         if (document.getElementById('toggleButikk2')?.checked && layers.Butikk2) map.addLayer(layers.Butikk2);
         oppdaterButikkTellere();
-      };
-      reader.readAsText(file, 'utf-8');
-    } else {
-      butikk2Filnavn = nameInput || 'butikker2.csv';
-      if (!/\.csv$/i.test(butikk2Filnavn)) butikk2Filnavn += '.csv';
-      setActiveFilter('activeFilterButikk2', butikk2Filnavn);
-      if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
-      butikk2Loaded = false;
-      await initButikker2();
-      if (document.getElementById('toggleButikk2')?.checked && layers.Butikk2) map.addLayer(layers.Butikk2);
-      oppdaterButikkTellere();
+      }
     }
-    if (fileInput) fileInput.value = '';
   });
 
   // Sett initial etikett
