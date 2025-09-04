@@ -886,7 +886,7 @@
       const sum = innenforSum + utenforSum;
       totalPerFilter.Innenfor += innenforSum;
       totalPerFilter.Utenfor += utenforSum;
-      const frekvensTekst = innenforData.frekvens eller utenforData.frekvens eller '';
+      const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
       html += `<tr><td>${avis}</td><td>${innenforSum ? innenforSum.toLocaleString() : ''}</td><td>${utenforSum ? utenforSum.toLocaleString() : ''}</td><td>${sum.toLocaleString()}</td><td>${frekvensTekst}</td></tr>`;
       if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: frekvensTekst });
       if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: frekvensTekst });
