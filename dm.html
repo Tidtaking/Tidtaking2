@@ -250,6 +250,10 @@
   let showingHeatmap = false;
   let lastMatches = [];
 
+  // NYTT: Brukt-detalj status for post_abo_idag.csv
+  let bruktHarDetalj = false;
+  let dBruktDetalj = null;
+
   // Lazy-load flagg for butikker
   let butikkLoaded = false;
   let butikk2Loaded = false;
@@ -277,7 +281,7 @@
   let butikkLocalText = null;
   let butikk2LocalText = null;
 
-  // Cache per kilde (i minnet, for å slippe rebuild i samme økt)
+  // Cache per kilde (i minnet)
   const butikkCache = new Map();   // key -> { points }
   const butikk2Cache = new Map();
   let lastButikkKey = null;
@@ -569,9 +573,12 @@
     fetch('filtrert_anbud.geojson').then(r=>r.json())
   ]).then(([cRows,dRowsBasic,dRowsDetalj,eRows,fRows, avisMap, g1,g2,g3,geoAnb])=>{
     dC = group(cRows, 'Anbud');
-    const dD_detalj = group(dRowsDetalj, 'Brukt_detalj');
-    const dD_basic  = group(dRowsBasic,  'Brukt_basic');
-    dD = Object.keys(dD_detalj).length ? dD_detalj : dD_basic;
+
+    const dD_detalj = group(dRowsDetalj, 'Brukt_detalj'); // post_abo_idag.csv
+    const dD_basic  = group(dRowsBasic,  'Brukt_basic');  // abo_bruktidag_anbud.csv
+    bruktHarDetalj  = Object.keys(dD_detalj).length > 0;
+    dD              = bruktHarDetalj ? dD_detalj : dD_basic;
+    dBruktDetalj    = bruktHarDetalj ? dD_detalj : null;
 
     dInnenfor = group(eRows, 'Innenfor');
     dUtenfor  = group(fRows, 'Utenfor');
@@ -585,7 +592,7 @@
     const base = [...g1.features,...g2.features,...g3.features];
     const geoBase = {type:'FeatureCollection',features:base};
 
-    // Bygg sentroider for alle postnummer (hurtig fallback for geokoding)
+    // Centroider for alle postnummer (hurtig fallback for geokoding)
     base.forEach(f => {
       const pn = (f.properties.postnummer || '').toString().trim().padStart(4,'0');
       if (!/^\d{4}$/.test(pn)) return;
@@ -829,6 +836,49 @@
         <td>${sumAlleDager.toLocaleString()}</td>
         <td></td>
       </tr>`;
+
+      // --- EKSTRA OPPSUMMERING: post_abo_idag (Brukt-detalj) ---
+      if (filterKey === 'Brukt' && bruktHarDetalj && dBruktDetalj) {
+        const keysDetalj = keys.filter(p => dBruktDetalj[p]);
+        const agg = new Map(); // navn -> sum
+
+        keysDetalj.forEach(p => {
+          const avisMap = dBruktDetalj[p]?.avis || new Map();
+          for (const [avisId, avisData] of avisMap.entries()) {
+            const visNavn = kanSokeNavn ? (avisNavnMap?.[avisId] || avisId) : avisId;
+
+            const avisMatch = (avisSok.length === 0) ||
+              avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
+            if (!avisMatch) continue;
+
+            let tarMed = false;
+            if (frekvensSok.size === 0) {
+              tarMed = true;
+            } else {
+              for (const f of (avisData.frekvenser || [])) {
+                const fs = f.toString();
+                if (frekvensSok.has(fs)) { tarMed = true; break; }
+              }
+            }
+            if (!tarMed) continue;
+
+            agg.set(visNavn, (agg.get(visNavn) || 0) + (Number(avisData.count) || 0));
+          }
+        });
+
+        if (agg.size > 0) {
+          const sortert = Array.from(agg.entries())
+            .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+          const antAviser = sortert.length;
+          const liste = sortert.map(([navn, sum]) => `${navn} (${sum.toLocaleString()})`).join(', ');
+
+          html += `<tr class="brukt-detalj-sum" style="font-size:12px;background:#fffbe6;">
+            <td colspan="5">
+              <strong>post_abo_idag:</strong> ${antAviser} aviser – ${liste}
+            </td>
+          </tr>`;
+        }
+      }
     });
 
     html += `<tr style="font-weight:bold; background:#eef;">
@@ -1204,4 +1254,3 @@
   setToggleLabel('toggleButikk','butikkName', basenameNoExt(butikkFilnavn));
   setToggleLabel('toggleButikk2','butikk2Name', basenameNoExt(butikk2Filnavn));
 </script>
-
