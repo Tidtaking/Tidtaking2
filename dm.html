@@ -71,6 +71,24 @@
       </div>
     </div>
   </label>
+<!-- Kontroller for valg av CSV-kilde til butikk-lagene -->
+<div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.5rem 0;">
+  <strong>Butikker 1:</strong>
+  <input type="text" id="butikkCsvInput" placeholder="butikker.csv" value="butikker.csv" />
+  <input type="file" id="butikkFileInput" accept=".csv" />
+  <button id="btnButikkLoad" type="button">Last inn</button>
+  <span>Aktivt filter: <span id="activeFilterButikk" style="padding:.1rem .5rem;border-radius:9999px;background:#f2f2f2;">ingen</span></span>
+  <span id="butikker-status" style="color:#666;"></span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.5rem 0;">
+  <strong>Butikker 2:</strong>
+  <input type="text" id="butikk2CsvInput" placeholder="butikker2.csv" value="butikker2.csv" />
+  <input type="file" id="butikk2FileInput" accept=".csv" />
+  <button id="btnButikk2Load" type="button">Last inn</button>
+  <span>Aktivt filter: <span id="activeFilterButikk2" style="padding:.1rem .5rem;border-radius:9999px;background:#f2f2f2;">ingen</span></span>
+  <span id="butikker2-status" style="color:#666;"></span>
+</div>
 
   <!-- Butikker (LAZY) – start AV -->
   <label><input type="checkbox" id="toggleButikk" />
@@ -253,6 +271,18 @@
     Innenfor: 'Innenfor anbud',
     Utenfor: 'Utenfor anbud'
   };
+
+  // === NYTT: kildevalg/visning for butikk-lagene ===
+  let butikkFilnavn = 'butikker.csv';
+  let butikk2Filnavn = 'butikker2.csv';
+  let butikkLocalText = null;   // hvis lastet fra lokal fil
+  let butikk2LocalText = null;  // hvis lastet fra lokal fil
+
+  function setActiveFilter(elId, label){
+    const nice = (label || '').replace(/\.csv$/i,'') || 'ingen';
+    const el = document.getElementById(elId);
+    if (el) el.textContent = nice;
+  }
 
   function enrich(arr,mapData){
     arr.forEach(f=>{
@@ -856,7 +886,10 @@
   async function initButikker(){
     if (butikkLoaded) return;
     try {
-      const rows = await lesCSVRows('butikker.csv');
+      // ---- ENDRING: støtt lokal filtekst ELLER filnavn fra input ----
+      const rows = butikkLocalText
+        ? Papa.parse(butikkLocalText, {header:true, skipEmptyLines:true, delimiter: ','}).data
+        : await lesCSVRows(butikkFilnavn);
       if(!rows.length){ if(butikkerStatus) butikkerStatus.textContent = ''; butikkLoaded = true; return; }
 
       const butikkLayer = L.layerGroup();
@@ -935,7 +968,10 @@
   async function initButikker2(){
     if (butikk2Loaded) return;
     try {
-      const rows = await lesCSVRows('butikker2.csv');
+      // ---- ENDRING: støtt lokal filtekst ELLER filnavn fra input ----
+      const rows = butikk2LocalText
+        ? Papa.parse(butikk2LocalText, {header:true, skipEmptyLines:true, delimiter: ','}).data
+        : await lesCSVRows(butikk2Filnavn);
       if(!rows.length){ if(butikker2Status) butikker2Status.textContent = ''; butikk2Loaded = true; return; }
 
       const butikkLayer = L.layerGroup();
@@ -986,7 +1022,7 @@
           if(butikker2Status && doneGeocode % 1 === 0){ butikker2Status.textContent = `Geokoder ${doneGeocode}/${toGeocode} …`; }
           await sleep(300);
         }
-        if(butikker2Status) butikker2Status.textContent = '';
+        if(butikker2Status) butikk2Status.textContent = '';
       }
 
       let added = 0;
@@ -994,7 +1030,7 @@
         if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
         const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikk2Farge, fillOpacity: 0.85});
         const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
-m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
+        m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
         butikkLayer.addLayer(m);
         added++;
       });
@@ -1022,6 +1058,74 @@ m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
       document.getElementById('loginStatus').innerText = "Feil passord";
     }
   });
+
+  // === NYTT: knapper for å laste butikker/butikker2 (lokal fil eller serverfilnavn) ===
+  document.getElementById('btnButikkLoad')?.addEventListener('click', async () => {
+    const nameInput = (document.getElementById('butikkCsvInput')?.value || '').trim();
+    const fileInput = document.getElementById('butikkFileInput');
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    butikkLocalText = null;
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        butikkLocalText = reader.result;
+        butikkFilnavn = file.name || 'lokal.csv';
+        setActiveFilter('activeFilterButikk', butikkFilnavn);
+        if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
+        butikkLoaded = false;
+        await initButikker();
+        if (document.getElementById('toggleButikk')?.checked && layers.Butikk) map.addLayer(layers.Butikk);
+        oppdaterButikkTellere();
+      };
+      reader.readAsText(file, 'utf-8');
+    } else {
+      butikkFilnavn = nameInput || 'butikker.csv';
+      if (!/\.csv$/i.test(butikkFilnavn)) butikkFilnavn += '.csv';
+      setActiveFilter('activeFilterButikk', butikkFilnavn);
+      if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
+      butikkLoaded = false;
+      await initButikker();
+      if (document.getElementById('toggleButikk')?.checked && layers.Butikk) map.addLayer(layers.Butikk);
+      oppdaterButikkTellere();
+    }
+    if (fileInput) fileInput.value = '';
+  });
+
+  document.getElementById('btnButikk2Load')?.addEventListener('click', async () => {
+    const nameInput = (document.getElementById('butikk2CsvInput')?.value || '').trim();
+    const fileInput = document.getElementById('butikk2FileInput');
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    butikk2LocalText = null;
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        butikk2LocalText = reader.result;
+        butikk2Filnavn = file.name || 'lokal2.csv';
+        setActiveFilter('activeFilterButikk2', butikk2Filnavn);
+        if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
+        butikk2Loaded = false;
+        await initButikker2();
+        if (document.getElementById('toggleButikk2')?.checked && layers.Butikk2) map.addLayer(layers.Butikk2);
+        oppdaterButikkTellere();
+      };
+      reader.readAsText(file, 'utf-8');
+    } else {
+      butikk2Filnavn = nameInput || 'butikker2.csv';
+      if (!/\.csv$/i.test(butikk2Filnavn)) butikk2Filnavn += '.csv';
+      setActiveFilter('activeFilterButikk2', butikk2Filnavn);
+      if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
+      butikk2Loaded = false;
+      await initButikker2();
+      if (document.getElementById('toggleButikk2')?.checked && layers.Butikk2) map.addLayer(layers.Butikk2);
+      oppdaterButikkTellere();
+    }
+    if (fileInput) fileInput.value = '';
+  });
+
+  // Sett initial etikett
+  setActiveFilter('activeFilterButikk', butikkFilnavn);
+  setActiveFilter('activeFilterButikk2', butikk2Filnavn);
 </script>
-</body>
-</html>
+
