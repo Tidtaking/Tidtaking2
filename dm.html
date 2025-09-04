@@ -734,6 +734,7 @@
     let totalSum = 0;
     const samletFrekvenserTotal = new Set();
     const samletAviserTotal = new Set();
+    const aggAvisTotal = new Map(); // navn -> sum (kun Innenfor/Utenfor)
 
     let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
@@ -778,12 +779,16 @@
 
             if (matchedDaysCount > 0) {
               sumCount += avisData.count;
-              if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletAviserTotal.add(navn);
+              if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
+                samletAviserTotal.add(navn);
+                aggAvisTotal.set(navn, (aggAvisTotal.get(navn) || 0) + (Number(avisData.count) || 0));
+              }
             }
           }
           return;
         }
 
+        // Uten dagsoppløsning: bruk referanse fra Innenfor/Utenfor
         const c = Number(entry.count) || 0;
         sumCount += c;
 
@@ -795,7 +800,7 @@
         }
 
         let dupForP = 0;
-        refAvisMap.forEach((avisData) => {
+        refAvisMap.forEach((avisData, avisId) => {
           if (frekvensSok.size === 0) {
             const mult = Math.max(avisData.frekvenser?.size || 0, 1);
             dupForP += avisData.count * mult;
@@ -804,6 +809,12 @@
               samletFrekvenser.add(fs);
               if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
             });
+            // Aggreger per tittel til bunnoppsummering (kun Innenfor/Utenfor)
+            if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
+              const navn = avisNavnMap?.[avisId] || avisId;
+              samletAviserTotal.add(navn);
+              aggAvisTotal.set(navn, (aggAvisTotal.get(navn) || 0) + (Number(avisData.count) || 0));
+            }
           } else {
             let m = 0;
             (avisData.frekvenser || []).forEach(f => {
@@ -815,6 +826,13 @@
               }
             });
             dupForP += avisData.count * m;
+
+            // Aggreger per tittel når frekvens matcher
+            if (m > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
+              const navn = avisNavnMap?.[avisId] || avisId;
+              samletAviserTotal.add(navn);
+              aggAvisTotal.set(navn, (aggAvisTotal.get(navn) || 0) + (Number(avisData.count) || 0));
+            }
           }
         });
         sumAlleDager += dupForP;
@@ -887,7 +905,15 @@
       <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
     </tr>`;
 
-    if (samletAviserTotal.size > 0) {
+    // Nederst: vis titler med antall i parentes
+    if (aggAvisTotal.size > 0) {
+      const sortert = Array.from(aggAvisTotal.entries())
+        .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      const liste = sortert.map(([navn, sum]) => `${navn} (${sum.toLocaleString()})`).join(', ');
+      html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
+        <td colspan="5">Antall aviser som matcher søket: ${sortert.length}. Aviser: ${liste}</td>
+      </tr>`;
+    } else if (samletAviserTotal.size > 0) {
       html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
         <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
       </tr>`;
@@ -896,6 +922,7 @@
     html += '</tbody></table>';
     document.getElementById('search-summary').innerHTML = html;
 
+    // CSV-data
     lastMatches = [];
     matches.forEach(f => {
       const p = f.properties.postnummer.trim().padStart(4, '0');
@@ -923,6 +950,7 @@
 
     exportBtn.disabled = false;
 
+    // Heatmap
     const intensitetFaktor = 5;
     const heatPointsRaw = matches.map(f => {
       const [lat, lng] = getPolygonCentroid(f);
@@ -951,6 +979,7 @@
       }
     };
 
+    // Treff som polygon
     searchLayer = L.geoJSON(matches, { coordsToLatLng: coords3035tilLatLng, style: () => ({ color: '#555', fillOpacity: 0.3, weight: 2 }) }).addTo(map);
     searchLayer.eachLayer(l => {
       const p = l.feature.properties;
@@ -1042,7 +1071,17 @@
     const grandTotal = totalPerFilter.Innenfor + totalPerFilter.Utenfor;
     html += `<tr style="font-weight:bold; background:#eef;"><td>Totalt abonnenter</td><td>${totalPerFilter.Innenfor.toLocaleString()}</td><td>${totalPerFilter.Utenfor.toLocaleString()}</td><td>${grandTotal.toLocaleString()}</td><td></td></tr>`;
     html += `</tbody></table>`;
-    html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;"><strong>Antall aviser som matcher søket: ${samletAviser.length}.</strong> Aviser: ${samletAviser.join(', ')}</p>`;
+
+    // Nederst: titler med antall i parentes
+    const navnlisteMedSum = samletAviser.map(avis => {
+      const i = (aggregert[avis].Innenfor?.sum || 0);
+      const u = (aggregert[avis].Utenfor?.sum || 0);
+      return `${avis} (${(i+u).toLocaleString()})`;
+    });
+    html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
+      <strong>Antall aviser som matcher søket: ${samletAviser.length}.</strong>
+      Aviser: ${navnlisteMedSum.join(', ')}
+    </p>`;
 
     document.getElementById('search-summary').innerHTML = html;
     exportBtn.disabled = false; heatmapBtn.disabled = false;
