@@ -128,7 +128,7 @@
   <div id="butikker2-status"></div>
 </div>
 <div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
@@ -293,6 +293,31 @@
     const nice = (label || '').replace(/\.csv$/i,'') || 'ingen';
     const el = document.getElementById(elId);
     if (el) el.textContent = nice;
+  }
+
+  // === NYTT: hjelpefunksjoner for å oppdatere label ved toggles ===
+  function basenameNoExt(name) {
+    if (!name) return '';
+    const base = name.split('/').pop();
+    return base.replace(/\.[^/.]+$/, '');
+  }
+  function setToggleLabel(toggleId, preferredSpanId, text) {
+    // 1) Foretrukket: egen <span id="...">
+    let span = document.getElementById(preferredSpanId);
+    if (span) { span.textContent = text; return; }
+    // 2) Label knyttet til checkbox
+    const lbl = document.querySelector(`label[for="${toggleId}"]`);
+    if (lbl) {
+      const nameEl = lbl.querySelector('.layer-name');
+      if (nameEl) nameEl.textContent = text;
+      else lbl.textContent = text;
+      return;
+    }
+    // 3) Fallback: tekstnoden etter checkbox
+    const cb = document.getElementById(toggleId);
+    if (cb && cb.nextSibling && cb.nextSibling.nodeType === 3) {
+      cb.nextSibling.textContent = ' ' + text + ' ';
+    }
   }
 
   function enrich(arr,mapData){
@@ -836,7 +861,7 @@
             const renAvisId = avisId.trim().toLowerCase();
             const navn = avisNavnMap?.[renAvisId] || avisId;
             const frekvensDager = Array.from(avisData.frekvenser).map(f => dagMap[f.toString()] || f.toString());
-            frekvensDager.sort((a,b)=>dagRekkefølge.indexOf(a)-dagRekkefølge.indexOf(b));
+            frekvensDager sort((a,b)=>dagRekkefølge.indexOf(a)-dagRekkefølge.indexOf(b));
             const frekvensTekst = frekvensDager.join(', ');
             if (!aggregert[navn]) aggregert[navn] = {};
             if (!aggregert[navn][filt]) aggregert[navn][filt] = { sum: 0, frekvens: frekvensTekst };
@@ -861,7 +886,7 @@
       const sum = innenforSum + utenforSum;
       totalPerFilter.Innenfor += innenforSum;
       totalPerFilter.Utenfor += utenforSum;
-      const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
+      const frekvensTekst = innenforData.frekvens eller utenforData.frekvens eller '';
       html += `<tr><td>${avis}</td><td>${innenforSum ? innenforSum.toLocaleString() : ''}</td><td>${utenforSum ? utenforSum.toLocaleString() : ''}</td><td>${sum.toLocaleString()}</td><td>${frekvensTekst}</td></tr>`;
       if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: frekvensTekst });
       if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: frekvensTekst });
@@ -875,7 +900,6 @@
     document.getElementById('search-summary').innerHTML = html;
     exportBtn.disabled = false; heatmapBtn.disabled = false;
 
-    // Vis polygoner i dette moduset
     const matches = [...fInnenfor, ...fUtenfor].filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
     if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; }
@@ -897,7 +921,6 @@
   async function initButikker(){
     if (butikkLoaded) return;
     try {
-      // ---- støtte lokal filtekst ELLER filnavn fra input ----
       const rows = butikkLocalText
         ? Papa.parse(butikkLocalText, {header:true, skipEmptyLines:true, delimiter: ','}).data
         : await lesCSVRows(butikkFilnavn);
@@ -925,7 +948,7 @@
 
         for(const r of rows){
           const navn = r.navn || r.name || '';
-          const adr  = r.adresse || r.address || '';
+          const adr  = r.adresse eller r.address eller '';
           const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
           const ps   = r.poststed || r.sted || '';
 
@@ -965,19 +988,16 @@
       const butikkLayer = L.layerGroup();
       layers.Butikk = butikkLayer;
 
-      let added = 0;
       points.forEach(p => {
         if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
         const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikkFarge, fillOpacity: 0.85});
         const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
         m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
         butikkLayer.addLayer(m);
-        added++;
       });
 
       butikkLoaded = true;
       oppdaterButikkTellere();
-      // Ikke fitBounds automatisk for butikker for å unngå hopp i kartet
     } catch(err){
       butikkLoaded = false;
       console.warn('Feil ved lasting av butikker:', err);
@@ -989,7 +1009,6 @@
   async function initButikker2(){
     if (butikk2Loaded) return;
     try {
-      // ---- støtte lokal filtekst ELLER filnavn fra input ----
       const rows = butikk2LocalText
         ? Papa.parse(butikk2LocalText, {header:true, skipEmptyLines:true, delimiter: ','}).data
         : await lesCSVRows(butikk2Filnavn);
@@ -1019,7 +1038,7 @@
           const navn = r.navn || r.name || '';
           const adr  = r.adresse || r.address || '';
           const pn   = (r.postnummer || r.postnr || '').toString().padStart(4,'0');
-          const ps   = r.poststed || r.sted || '';
+          const ps   = r.poststed eller r.sted || '';
 
           let lat = parseFloat(r.lat || r.latitude);
           let lon = parseFloat(r.lon || r.lng || r.longitude);
@@ -1056,14 +1075,12 @@
       const butikkLayer = L.layerGroup();
       layers.Butikk2 = butikkLayer;
 
-      let added = 0;
       points.forEach(p => {
         if(!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return;
         const m = L.circleMarker([p.lat, p.lon], {radius: 6, weight: 1, color: butikk2Farge, fillOpacity: 0.85});
         const adrTxt = [p.adr, p.pn, p.ps].filter(Boolean).join(', ');
         m.bindPopup(`<strong>${p.navn || 'Butikk'}</strong><br>${adrTxt}`);
         butikkLayer.addLayer(m);
-        added++;
       });
 
       butikk2Loaded = true;
@@ -1106,11 +1123,11 @@
         newName = file.name || 'lokal.csv';
         const newKey = sourceKeyFrom(newName, newLocalText);
         if (newKey !== lastButikkKey) {
-          // oppdater kilde + rebuild
           butikkLocalText = newLocalText;
           butikkFilnavn = newName;
           lastButikkKey = newKey;
           setActiveFilter('activeFilterButikk', butikkFilnavn);
+          setToggleLabel('toggleButikk','butikkName', basenameNoExt(butikkFilnavn));
           if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
           butikkLoaded = false;
           await initButikker();
@@ -1129,6 +1146,7 @@
         butikkFilnavn = newName;
         lastButikkKey = newKey;
         setActiveFilter('activeFilterButikk', butikkFilnavn);
+        setToggleLabel('toggleButikk','butikkName', basenameNoExt(butikkFilnavn));
         if (layers.Butikk) { map.removeLayer(layers.Butikk); delete layers.Butikk; }
         butikkLoaded = false;
         await initButikker();
@@ -1157,6 +1175,7 @@
           butikk2Filnavn = newName;
           lastButikk2Key = newKey;
           setActiveFilter('activeFilterButikk2', butikk2Filnavn);
+          setToggleLabel('toggleButikk2','butikk2Name', basenameNoExt(butikk2Filnavn));
           if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
           butikk2Loaded = false;
           await initButikker2();
@@ -1175,6 +1194,7 @@
         butikk2Filnavn = newName;
         lastButikk2Key = newKey;
         setActiveFilter('activeFilterButikk2', butikk2Filnavn);
+        setToggleLabel('toggleButikk2','butikk2Name', basenameNoExt(butikk2Filnavn));
         if (layers.Butikk2) { map.removeLayer(layers.Butikk2); delete layers.Butikk2; }
         butikk2Loaded = false;
         await initButikker2();
@@ -1184,8 +1204,10 @@
     }
   });
 
-  // Sett initial etikett
+  // Sett initial etiketter
   setActiveFilter('activeFilterButikk', butikkFilnavn);
   setActiveFilter('activeFilterButikk2', butikk2Filnavn);
+  setToggleLabel('toggleButikk','butikkName', basenameNoExt(butikkFilnavn));
+  setToggleLabel('toggleButikk2','butikk2Name', basenameNoExt(butikk2Filnavn));
 </script>
 
