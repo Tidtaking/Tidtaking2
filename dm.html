@@ -31,6 +31,30 @@
   #search-summary tr:nth-child(odd) td { background-color: rgba(0,0,0,0.02); }
   .color-box { display: inline-block; width: 18px; height: 18px; border: 1px solid #999; border-radius: 3px; }
   #butikker-status, #butikker2-status { margin-top: 6px; font-size: 12px; color: #333; font-style: italic; }
+      /* --- Mobilforbedringer (LIM INN HER) --- */
+    #controls{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;transition:transform .25s ease,opacity .2s ease;}
+    #controls.closed{transform:translateY(calc(100% + 12px));opacity:.98;}
+    .fab-toggle{position:absolute;right:12px;bottom:12px;z-index:1001;border:0;border-radius:9999px;padding:10px 14px;font:600 14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.25);background:#0b74d1;color:#fff;cursor:pointer;}
+    @supports (padding: env(safe-area-inset-bottom)){
+      .fab-toggle{bottom:calc(12px + env(safe-area-inset-bottom));}
+      #controls{padding-bottom:calc(10px + env(safe-area-inset-bottom));}
+    }
+    @media (max-width:900px){
+      #controls{left:8px;right:8px;bottom:8px;top:auto;width:auto;max-height:60vh;}
+      #controls label{margin-bottom:6px;}
+      #controls .counts{min-width:100px;font-size:12px;}
+      #controls button,#controls input[type='text'],#controls input[type='password']{padding:10px 12px;font-size:16px;}
+      #search-summary{overflow-x:auto;}
+      #search-summary table{width:max-content;min-width:100%;}
+    }
+    @media (pointer:coarse){
+      #controls input[type='checkbox']{width:22px;height:22px;}
+      .color-box{width:16px;height:16px;}
+    }
+    /* Sticky tabellhode */
+    #search-summary thead th{position:sticky;top:0;z-index:1;}
+  </style>
+</head>
 </style>
 </head>
 <body>
@@ -134,9 +158,19 @@
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
 // === APP-VERSJON ===
-const APP_VERSION = 'v2025.09.05-5';
+const APP_VERSION = 'v2025.09.05-6';
 
 // ----- INIT UI -----
+// Mobil: riktig tastatur/skriving for søkefelt
+const si = document.getElementById('searchInput');
+if (si) {
+  si.setAttribute('inputmode', 'numeric');  // tall/komma-tastatur
+  si.setAttribute('autocomplete', 'off');
+  si.setAttribute('autocapitalize', 'off');
+  si.setAttribute('autocorrect', 'off');
+  // si.setAttribute('pattern', '[0-9, ]*'); // valgfritt: begrens til tall/komma
+}
+  
 const searchBtn    = document.getElementById('searchBtn');
 const exportBtn    = document.getElementById('exportBtn');
 const heatmapBtn   = document.getElementById('toggleHeatmapBtn');
@@ -148,6 +182,12 @@ const map = L.map('map').setView([60,10],5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'© OpenStreetMap contributors', maxZoom:18
 }).addTo(map);
+  // Mobil: bedre kartinteraksjon
+if (window.matchMedia('(pointer: coarse)').matches) {
+  map.scrollWheelZoom.disable();
+  map.keyboard.disable();
+}
+
 
 // Versjonsbadge
 function addVersionBadge() {
@@ -171,6 +211,33 @@ function addVersionBadge() {
   console.log('Kartapp versjon:', APP_VERSION);
 }
 addVersionBadge();
+
+  // --- Mobil: FAB for å åpne/lukke kontrollpanelet ---
+(function () {
+  const panel = document.getElementById('controls');
+  if (!panel) return;
+
+  const fab = document.createElement('button');
+  fab.className = 'fab-toggle';
+  fab.type = 'button';
+  fab.setAttribute('aria-controls', 'controls');
+  fab.textContent = 'Filter';
+  document.body.appendChild(fab);
+
+  const small = window.matchMedia('(max-width: 900px)');
+  function applyInitial() {
+    panel.classList.toggle('closed', small.matches);
+    fab.setAttribute('aria-expanded', (!small.matches).toString());
+  }
+  applyInitial();
+  small.addEventListener?.('change', applyInitial);
+
+  fab.addEventListener('click', () => {
+    const closed = panel.classList.toggle('closed');
+    fab.setAttribute('aria-expanded', (!closed).toString());
+  });
+})();
+
 
 // ----- PROJ -----
 proj4.defs('EPSG:3035', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs');
