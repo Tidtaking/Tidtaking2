@@ -250,7 +250,7 @@
   let showingHeatmap = false;
   let lastMatches = [];
 
-  // NYTT: Brukt-detalj status for post_abo_idag.csv
+  // Brukt-detalj status (post_abo_idag.csv)
   let bruktHarDetalj = false;
   let dBruktDetalj = null;
 
@@ -734,7 +734,10 @@
     let totalSum = 0;
     const samletFrekvenserTotal = new Set();
     const samletAviserTotal = new Set();
-    const aggAvisTotal = new Map(); // navn -> sum (kun Innenfor/Utenfor)
+
+    // Aggregeringer til bunnoppsummeringer
+    const aggAvisTotal  = new Map(); // Innenfor+Utenfor summer per tittel
+    const aggBruktTotal = new Map(); // post_abo_idag summer per tittel (dersom detalj finnes)
 
     let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
@@ -809,7 +812,6 @@
               samletFrekvenser.add(fs);
               if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
             });
-            // Aggreger per tittel til bunnoppsummering (kun Innenfor/Utenfor)
             if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
               const navn = avisNavnMap?.[avisId] || avisId;
               samletAviserTotal.add(navn);
@@ -827,7 +829,6 @@
             });
             dupForP += avisData.count * m;
 
-            // Aggreger per tittel når frekvens matcher
             if (m > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
               const navn = avisNavnMap?.[avisId] || avisId;
               samletAviserTotal.add(navn);
@@ -855,10 +856,10 @@
         <td></td>
       </tr>`;
 
-      // --- EKSTRA OPPSUMMERING: post_abo_idag (Brukt-detalj) ---
+      // --- EKSTRA OPPSUMMERING: post_abo_idag (Brukt-detalj) + akkumulér til aggBruktTotal ---
       if (filterKey === 'Brukt' && bruktHarDetalj && dBruktDetalj) {
         const keysDetalj = keys.filter(p => dBruktDetalj[p]);
-        const agg = new Map(); // navn -> sum
+        const agg = new Map(); // navn -> sum (gjelder søket)
 
         keysDetalj.forEach(p => {
           const avisMap = dBruktDetalj[p]?.avis || new Map();
@@ -880,11 +881,13 @@
             }
             if (!tarMed) continue;
 
-            agg.set(visNavn, (agg.get(visNavn) || 0) + (Number(avisData.count) || 0));
+            const cnt = Number(avisData.count) || 0;
+            agg.set(visNavn, (agg.get(visNavn) || 0) + cnt);
           }
         });
 
         if (agg.size > 0) {
+          // legg til tabellrad
           const sortert = Array.from(agg.entries())
             .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
           const antAviser = sortert.length;
@@ -895,6 +898,11 @@
               <strong>post_abo_idag:</strong> ${antAviser} aviser – ${liste}
             </td>
           </tr>`;
+
+          // akkumulér til total brukt-detalj for bunnoppsummering
+          sortert.forEach(([navn, sum]) => {
+            aggBruktTotal.set(navn, (aggBruktTotal.get(navn) || 0) + sum);
+          });
         }
       }
     });
@@ -905,7 +913,7 @@
       <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
     </tr>`;
 
-    // Nederst: vis titler med antall i parentes
+    // Nederst: titler med antall i parentes (Innenfor+Utenfor)
     if (aggAvisTotal.size > 0) {
       const sortert = Array.from(aggAvisTotal.entries())
         .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
@@ -913,6 +921,22 @@
       html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
         <td colspan="5">Antall aviser som matcher søket: ${sortert.length}. Aviser: ${liste}</td>
       </tr>`;
+
+      // --- NYTT: Oppsummering budleverte = (Innenfor+Utenfor) - post_abo_idag ---
+      const budMap = new Map();
+      sortert.forEach(([navn, sumTot]) => {
+        const brukt = aggBruktTotal.get(navn) || 0;
+        const v = sumTot - brukt;
+        if (v > 0) budMap.set(navn, v);
+      });
+      if (budMap.size > 0) {
+        const sortBud = Array.from(budMap.entries())
+          .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
+        const listeBud = sortBud.map(([navn,sum])=> `${navn} (${sum.toLocaleString()})`).join(', ');
+        html += `<tr style="font-style: italic; font-size: 12px; background:#eaffea;">
+          <td colspan="5"><strong>Oppsummering budleverte:</strong> ${sortBud.length} aviser – ${listeBud}</td>
+        </tr>`;
+      }
     } else if (samletAviserTotal.size > 0) {
       html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
         <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
@@ -1047,6 +1071,20 @@
       });
     });
 
+    // Aggreger post_abo_idag for samme dag-antall (til budleverte)
+    const aggBruktDetaljN = new Map();
+    if (bruktHarDetalj && dBruktDetalj) {
+      matchedPostnr.forEach(p => {
+        const avisMap = dBruktDetalj[p]?.avis || new Map();
+        avisMap.forEach((avisData, avisId) => {
+          if (avisData.frekvenser.size === antallDager) {
+            const navn = avisNavnMap?.[avisId] || avisId;
+            aggBruktDetaljN.set(navn, (aggBruktDetaljN.get(navn) || 0) + (Number(avisData.count) || 0));
+          }
+        });
+      });
+    }
+
     let totalPerFilter = { Innenfor: 0, Utenfor: 0 };
     let samletAviser = Object.keys(aggregert).sort();
 
@@ -1083,6 +1121,23 @@
       Aviser: ${navnlisteMedSum.join(', ')}
     </p>`;
 
+    // --- NYTT: Oppsummering budleverte for N-dagers søk ---
+    if (samletAviser.length > 0) {
+      const budPairs = samletAviser.map(avis => {
+        const tot = (aggregert[avis].Innenfor?.sum || 0) + (aggregert[avis].Utenfor?.sum || 0);
+        const brukt = aggBruktDetaljN.get(avis) || 0;
+        const v = tot - brukt;
+        return [avis, v];
+      }).filter(([_,v]) => v > 0)
+        .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
+      if (budPairs.length > 0) {
+        const budListe = budPairs.map(([avis,v])=> `${avis} (${v.toLocaleString()})`).join(', ');
+        html += `<p style="font-style: italic; font-size: 12px; margin-top: 4px;">
+          <strong>Oppsummering budleverte:</strong> ${budPairs.length} aviser – ${budListe}
+        </p>`;
+      }
+    }
+
     document.getElementById('search-summary').innerHTML = html;
     exportBtn.disabled = false; heatmapBtn.disabled = false;
 
@@ -1103,7 +1158,7 @@
     document.getElementById('search-timer').innerText = `Søket brukte ${(elapsed / 1000).toFixed(2)} sekunder`;
   }
 
-  // === Butikker: LAZY – bruker rask geokoding + cache ===
+  // === Butikker: LAZY – rask geokoding + cache ===
   async function initButikker(){
     if (butikkLoaded) return;
     try {
@@ -1138,7 +1193,7 @@
     } catch(err){
       butikkLoaded = false;
       console.warn('Feil ved lasting av butikker:', err);
-      if(butikkerStatus) butikkerStatus.textContent = '';
+      if(butikkerStatus) butikkersStatus.textContent = '';
     }
   }
 
