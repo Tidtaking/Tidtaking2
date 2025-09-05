@@ -727,6 +727,7 @@ function searchMap() {
   const qRawInput = document.getElementById('searchInput').value.trim();
   if (!qRawInput) return;
 
+  // Eksakt "N dag frekvens"
   const dagFreqMatch = qRawInput.match(/^(\d) dag frekvens$/i);
   if (dagFreqMatch) {
     const ønsketDager = Number(dagFreqMatch[1]);
@@ -734,12 +735,14 @@ function searchMap() {
     return;
   }
 
+  // Nullstill lag/heatmap
   Object.values(layers).forEach(l => map.removeLayer(l));
   if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
   if (heatLayer)   { map.removeLayer(heatLayer);   heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; heatmapBtn.disabled = true; }
 
   const { postnumreSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
 
+  // Finn postnummer som matcher input (AND-logikk)
   const matchedPostnr = new Set();
   Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([_, mapData]) => {
     Object.entries(mapData).forEach(([pRaw, info]) => {
@@ -763,31 +766,19 @@ function searchMap() {
     return;
   }
 
-  let totalSum = 0;
+  let totalSum = 0;                        // <- totalen vi skal vise til slutt (Innenfor + Utenfor)
   const samletFrekvenserTotal = new Set();
 
-  // Aggreger per VISNINGSNAVN (stabil "pretty key")
-  const aggTotByPretty   = new Map(); // (Innenfor+Utenfor) per navn
-  const nameTot          = new Map(); // prettyKey -> display name
-  const aggBruktByPretty = new Map(); // post_abo_idag per navn (i søket)
+  // Aggreger for oppsummeringslinjene nederst
+  const aggTotByPretty   = new Map();  // (Innenfor+Utenfor) per navn
+  const nameTot          = new Map();  // prettyKey -> display name
+  const aggBruktByPretty = new Map();  // post_abo_idag per navn (i søket)
   const nameBrukt        = new Map();
 
   let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
-// NYTT: eksplisitte summer til slutt-raden
-let sumInnenfor = 0;
-let sumUtenfor  = 0;
-  
+
   Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
     const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
-    // rett før vi bygger total-raden:
-const totalSum = sumInnenfor + sumUtenfor;
-
-html += `<tr style="font-weight:bold; background:#eef;">
-  <td colspan="3">Totalt abonnenter (ekskl. Anbud & Brukt)</td>
-  <td>${totalSum.toLocaleString()}</td>
-  <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
-</tr>`;
-
     let sumCount = 0;
     let sumAlleDager = 0;
     const samletFrekvenser = new Set();
@@ -825,6 +816,7 @@ html += `<tr style="font-weight:bold; background:#eef;">
 
           sumAlleDager += avisData.count * matchedDaysCount;
 
+          // bygg “titler i søket”-lister
           if (matchedDaysCount > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
             aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
           }
@@ -867,7 +859,6 @@ html += `<tr style="font-weight:bold; background:#eef;">
             }
           });
           dupForP += avisData.count * m;
-
           if (m > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
             aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
           }
@@ -876,8 +867,9 @@ html += `<tr style="font-weight:bold; background:#eef;">
       sumAlleDager += dupForP;
     });
 
-if (filterKey === 'Innenfor')      sumInnenfor = sumCount;
-else if (filterKey === 'Utenfor')  sumUtenfor  = sumCount;
+    // legg til total kun for Innenfor/Utenfor
+    if (filterKey === 'Innenfor' || filterKey === 'Utenfor') totalSum += sumCount;
+
     const color = filterColors[filterKey] || '#000';
     html += `<tr>
       <td>${filterKeys[filterKey]}</td>
@@ -942,13 +934,14 @@ else if (filterKey === 'Utenfor')  sumUtenfor  = sumCount;
     }
   });
 
+  // ÉN totalrad – samme sted som før (etter løkka)
   html += `<tr style="font-weight:bold; background:#eef;">
     <td colspan="3">Totalt abonnenter (ekskl. Anbud & Brukt)</td>
     <td>${totalSum.toLocaleString()}</td>
     <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
   </tr>`;
 
-  // Nederst: titler (Innenfor+Utenfor) m/antall, samt Oppsummering budleverte
+  // Nederste oppsummeringer
   if (aggTotByPretty.size > 0) {
     const sortTot = Array.from(aggTotByPretty.entries())
       .sort((a,b) => b[1] - a[1] || (nameTot.get(a[0])||'').localeCompare(nameTot.get(b[0])||''));
@@ -957,7 +950,6 @@ else if (filterKey === 'Utenfor')  sumUtenfor  = sumCount;
       <td colspan="5">Antall aviser som matcher søket: ${sortTot.length}. Aviser: ${listeTot}</td>
     </tr>`;
 
-    // Budleverte = (Innenfor+Utenfor) - post_abo_idag (per visningsnavn)
     const budPairs = sortTot.map(([key, sumTot]) => {
       const brukt = aggBruktByPretty.get(key) || 0;
       return [key, sumTot - brukt];
@@ -1041,7 +1033,7 @@ else if (filterKey === 'Utenfor')  sumUtenfor  = sumCount;
   map.fitBounds(searchLayer.getBounds().pad(0.05));
 
   const endTime = performance.now();
-  document.getElementById('search-timer').innerText = `Søket brukte ${(endTime - startTime)/1000 % 1 === 0 ? ((endTime-startTime)/1000).toFixed(0) : ((endTime-startTime)/1000).toFixed(2)} sekunder`;
+  document.getElementById('search-timer').innerText = `Søket brukte ${((endTime-startTime)/1000).toFixed(2)} sekunder`;
 }
 
 // Eksakt «N dag frekvens»
