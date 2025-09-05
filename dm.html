@@ -279,7 +279,18 @@ async function lesAvisnavn(url) {
     return {};
   }
 }
+/* --- FREKVENS BITMASKER (MÅ stå før group()) --- */
+const DAY_BITS = { '1':1<<0, '2':1<<1, '3':1<<2, '4':1<<3, '5':1<<4, '6':1<<5, '7':1<<6 };
 
+function bitCount(n){ let c=0; for(; n; n&=n-1) c++; return c; }
+function setToMask(set){ let m=0; for (const d of set) m |= DAY_BITS[d] || 0; return m; }
+function addMaskToSet(mask, target){
+  for (let d=1; d<=7; d++){
+    if (mask & (1<<(d-1))) target.add(String(d));
+  }
+}
+
+// Støtter: postnummer/postnr, antall, avis/avistittel/avisid, frekvens (135 eller 1,3,5)
 // Støtter: postnummer/postnr, antall, avis/avistittel/avisid, frekvens (135 eller 1,3,5)
 function group(rows, label = '') {
   const m = {};
@@ -312,27 +323,34 @@ function group(rows, label = '') {
 
     if(avisRaw || frekRaw){
       const avisKey = avisRaw ? avisRaw.toString().toLowerCase() : '(ukjent)'; // kanonisk ID
-const prev = m[p].avis.get(avisKey) || {count:0, frekvenser:new Set(), mask:0};
+      const prev = m[p].avis.get(avisKey) || {count:0, frekvenser:new Set(), mask:0};
       prev.count += num;
 
-if (frekRaw){
-  const s = frekRaw.toString().trim();
-  const pushDay = (t) => { if(/^[1-7]$/.test(t)){ prev.frekvenser.add(t); prev.mask |= DAY_BITS[t]; } };
-  if(s.includes(',')){
-    s.split(',').forEach(x=>{
-      const t=x.trim();
-      if(/^\d+$/.test(t)) [...t].forEach(pushDay); else pushDay(t);
-    });
-  } else {
-    [...s].forEach(pushDay);
-  }
-}
+      if(frekRaw){
+        const s = frekRaw.toString().trim();
+        const pushDay = (t) => {
+          if(/^[1-7]$/.test(t)){
+            prev.frekvenser.add(t);
+            prev.mask |= DAY_BITS[t];
+          }
+        };
+        if(s.includes(',')){
+          s.split(',').forEach(x=>{
+            const t=x.trim();
+            if(/^\d+$/.test(t)) [...t].forEach(pushDay);
+            else pushDay(t);
+          });
+        } else {
+          [...s].forEach(pushDay);
+        }
+      }
 
       m[p].avis.set(avisKey, prev);
     }
   });
   return m;
 }
+
 
 // ----- STATE -----
 let kanSokeNavn = false;
