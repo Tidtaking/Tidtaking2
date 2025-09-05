@@ -215,7 +215,7 @@
       m[p].count += num;
 
       if(avisRaw || frekRaw){
-        const avisKey = avisRaw ? avisRaw.toString().toLowerCase() : '(ukjent)';
+        const avisKey = avisRaw ? avisRaw.toString().toLowerCase() : '(ukjent)'; // <- CANONICAL ID
         const prev = m[p].avis.get(avisKey) || {count:0, frekvenser:new Set()};
         prev.count += num;
 
@@ -297,6 +297,14 @@
     const nice = (label || '').replace(/\.csv$/i,'') || 'ingen';
     const el = document.getElementById(elId);
     if (el) el.textContent = nice;
+  }
+
+  // Hjelper: visningsnavn for en ID
+  function displayName(id) {
+    const key = (id || '').toString().trim().toLowerCase();
+    const pretty = avisNavnMap?.[key];
+    // Vi viser alltid pent navn hvis vi har det (selv om navnesøk ikke er aktivt)
+    return pretty || key;
   }
 
   // === Hjelpere for toggle-labels ===
@@ -439,7 +447,7 @@
       f.properties.avisMap = info.avis;
       if(kanSokeNavn){
         f.properties.avis = Array.from(info.avis.entries())
-                                .map(([avisId,ant]) => `${avisNavnMap?.[avisId] || avisId}: ${ant.count}`)
+                                .map(([avisId,ant]) => `${displayName(avisId)}: ${ant.count}`)
                                 .join(', ');
       } else {
         f.properties.avis = Array.from(info.avis.entries())
@@ -531,13 +539,10 @@
     return { postnumreSok, avisSok, frekvensSok };
   }
 
-  function avisMatcher(avisMap, avisSok, kanSokeNavn, avisNavnMap) {
+  function avisMatcher(avisMap, avisSok) {
     if(avisSok.length === 0) return true;
-    if(!kanSokeNavn) {
-      return avisSok.some(sokStr => Array.from(avisMap.keys()).some(avisId => avisId === sokStr));
-    }
     return avisSok.some(sokStr => Array.from(avisMap.keys()).some(avisId => {
-      const navn = avisNavnMap?.[avisId] ? avisNavnMap[avisId].toLowerCase() : avisId.toLowerCase();
+      const navn = displayName(avisId).toLowerCase();
       return avisId === sokStr || navn.includes(sokStr);
     }));
   }
@@ -592,7 +597,7 @@
     const base = [...g1.features,...g2.features,...g3.features];
     const geoBase = {type:'FeatureCollection',features:base};
 
-    // Centroider for alle postnummer (hurtig fallback for geokoding)
+    // Centroider (fallback geokoding)
     base.forEach(f => {
       const pn = (f.properties.postnummer || '').toString().trim().padStart(4,'0');
       if (!/^\d{4}$/.test(pn)) return;
@@ -713,7 +718,7 @@
       Object.entries(mapData).forEach(([pRaw, info]) => {
         const p = pRaw.padStart(4, '0');
         const passesPN   = (postnumreSok.size === 0) || postnumreSok.has(p);
-        const passesAvis = avisMatcher(info.avis, avisSok, kanSokeNavn, avisNavnMap);
+        const passesAvis = avisMatcher(info.avis, avisSok);
         const passesFrek = frekvensMatcher(info.avis, frekvensSok);
         if (passesPN && passesAvis && passesFrek) matchedPostnr.add(p);
       });
@@ -733,11 +738,10 @@
 
     let totalSum = 0;
     const samletFrekvenserTotal = new Set();
-    const samletAviserTotal = new Set();
 
-    // Aggregeringer til bunnoppsummeringer
-    const aggAvisTotal  = new Map(); // Innenfor+Utenfor summer per tittel
-    const aggBruktTotal = new Map(); // post_abo_idag summer per tittel (dersom detalj finnes)
+    // Aggregeringer per AVIS-ID til bunnoppsummeringer
+    const aggTotById   = new Map(); // Innenfor+Utenfor per id
+    const aggBruktById = new Map(); // post_abo_idag per id (i søket)
 
     let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
@@ -753,10 +757,10 @@
 
         if (avisMap.size > 0) {
           for (const [avisId, avisData] of avisMap.entries()) {
-            const navn = avisNavnMap?.[avisId] || avisId;
+            const visNavn = displayName(avisId);
 
             const avisMatch = (avisSok.length === 0) ||
-              avisSok.some(sokStr => (avisId === sokStr) || navn.toLowerCase().includes(sokStr));
+              avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
             if (!avisMatch) continue;
 
             let matchedDaysCount = 0;
@@ -783,8 +787,7 @@
             if (matchedDaysCount > 0) {
               sumCount += avisData.count;
               if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
-                samletAviserTotal.add(navn);
-                aggAvisTotal.set(navn, (aggAvisTotal.get(navn) || 0) + (Number(avisData.count) || 0));
+                aggTotById.set(avisId, (aggTotById.get(avisId) || 0) + (Number(avisData.count) || 0));
               }
             }
           }
@@ -813,9 +816,7 @@
               if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
             });
             if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
-              const navn = avisNavnMap?.[avisId] || avisId;
-              samletAviserTotal.add(navn);
-              aggAvisTotal.set(navn, (aggAvisTotal.get(navn) || 0) + (Number(avisData.count) || 0));
+              aggTotById.set(avisId, (aggTotById.get(avisId) || 0) + (Number(avisData.count) || 0));
             }
           } else {
             let m = 0;
@@ -830,9 +831,7 @@
             dupForP += avisData.count * m;
 
             if (m > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
-              const navn = avisNavnMap?.[avisId] || avisId;
-              samletAviserTotal.add(navn);
-              aggAvisTotal.set(navn, (aggAvisTotal.get(navn) || 0) + (Number(avisData.count) || 0));
+              aggTotById.set(avisId, (aggTotById.get(avisId) || 0) + (Number(avisData.count) || 0));
             }
           }
         });
@@ -856,24 +855,25 @@
         <td></td>
       </tr>`;
 
-      // --- EKSTRA OPPSUMMERING: post_abo_idag (Brukt-detalj) + akkumulér til aggBruktTotal ---
+      // --- EKSTRA OPPSUMMERING: post_abo_idag (Brukt-detalj) + akkumulér til aggBruktById ---
       if (filterKey === 'Brukt' && bruktHarDetalj && dBruktDetalj) {
         const keysDetalj = keys.filter(p => dBruktDetalj[p]);
-        const agg = new Map(); // navn -> sum (gjelder søket)
+        const aggDetById = new Map(); // id -> sum (i søket)
 
         keysDetalj.forEach(p => {
           const avisMap = dBruktDetalj[p]?.avis || new Map();
           for (const [avisId, avisData] of avisMap.entries()) {
-            const visNavn = kanSokeNavn ? (avisNavnMap?.[avisId] || avisId) : avisId;
+            // Synlig navn for rad-teksten:
+            const cnt = Number(avisData.count) || 0;
 
-            const avisMatch = (avisSok.length === 0) ||
-              avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
-            if (!avisMatch) continue;
+            // Filtrer mot søkekriterier:
+            const navMatch = (avisSok.length === 0) ||
+              avisSok.some(sokStr => (avisId === sokStr) || displayName(avisId).toLowerCase().includes(sokStr));
+            if (!navMatch) continue;
 
             let tarMed = false;
-            if (frekvensSok.size === 0) {
-              tarMed = true;
-            } else {
+            if (frekvensSok.size === 0) tarMed = true;
+            else {
               for (const f of (avisData.frekvenser || [])) {
                 const fs = f.toString();
                 if (frekvensSok.has(fs)) { tarMed = true; break; }
@@ -881,17 +881,15 @@
             }
             if (!tarMed) continue;
 
-            const cnt = Number(avisData.count) || 0;
-            agg.set(visNavn, (agg.get(visNavn) || 0) + cnt);
+            aggDetById.set(avisId, (aggDetById.get(avisId) || 0) + cnt);
           }
         });
 
-        if (agg.size > 0) {
-          // legg til tabellrad
-          const sortert = Array.from(agg.entries())
-            .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        if (aggDetById.size > 0) {
+          const sortert = Array.from(aggDetById.entries())
+            .sort((a,b) => b[1] - a[1] || displayName(a[0]).localeCompare(displayName(b[0])));
           const antAviser = sortert.length;
-          const liste = sortert.map(([navn, sum]) => `${navn} (${sum.toLocaleString()})`).join(', ');
+          const liste = sortert.map(([id, sum]) => `${displayName(id)} (${sum.toLocaleString()})`).join(', ');
 
           html += `<tr class="brukt-detalj-sum" style="font-size:12px;background:#fffbe6;">
             <td colspan="5">
@@ -899,9 +897,9 @@
             </td>
           </tr>`;
 
-          // akkumulér til total brukt-detalj for bunnoppsummering
-          sortert.forEach(([navn, sum]) => {
-            aggBruktTotal.set(navn, (aggBruktTotal.get(navn) || 0) + sum);
+          // akkumulér til total brukt-detalj for bunnoppsummering (per ID)
+          sortert.forEach(([id, sum]) => {
+            aggBruktById.set(id, (aggBruktById.get(id) || 0) + sum);
           });
         }
       }
@@ -913,34 +911,27 @@
       <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
     </tr>`;
 
-    // Nederst: titler med antall i parentes (Innenfor+Utenfor)
-    if (aggAvisTotal.size > 0) {
-      const sortert = Array.from(aggAvisTotal.entries())
-        .sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-      const liste = sortert.map(([navn, sum]) => `${navn} (${sum.toLocaleString()})`).join(', ');
+    // Nederst: titler med antall i parentes (Innenfor+Utenfor), basert på ID
+    if (aggTotById.size > 0) {
+      const sortTot = Array.from(aggTotById.entries())
+        .sort((a,b) => b[1] - a[1] || displayName(a[0]).localeCompare(displayName(b[0])));
+      const listeTot = sortTot.map(([id, sum]) => `${displayName(id)} (${sum.toLocaleString()})`).join(', ');
       html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
-        <td colspan="5">Antall aviser som matcher søket: ${sortert.length}. Aviser: ${liste}</td>
+        <td colspan="5">Antall aviser som matcher søket: ${sortTot.length}. Aviser: ${listeTot}</td>
       </tr>`;
 
-      // --- NYTT: Oppsummering budleverte = (Innenfor+Utenfor) - post_abo_idag ---
-      const budMap = new Map();
-      sortert.forEach(([navn, sumTot]) => {
-        const brukt = aggBruktTotal.get(navn) || 0;
-        const v = sumTot - brukt;
-        if (v > 0) budMap.set(navn, v);
-      });
-      if (budMap.size > 0) {
-        const sortBud = Array.from(budMap.entries())
-          .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
-        const listeBud = sortBud.map(([navn,sum])=> `${navn} (${sum.toLocaleString()})`).join(', ');
+      // --- Oppsummering budleverte = (Innenfor+Utenfor) - post_abo_idag ---
+      const budPairs = sortTot.map(([id, sumTot]) => {
+        const brukt = aggBruktById.get(id) || 0;
+        return [id, sumTot - brukt];
+      }).filter(([_, v]) => v > 0)
+        .sort((a,b)=> b[1]-a[1] || displayName(a[0]).localeCompare(displayName(b[0])));
+      if (budPairs.length > 0) {
+        const listeBud = budPairs.map(([id,sum])=> `${displayName(id)} (${sum.toLocaleString()})`).join(', ');
         html += `<tr style="font-style: italic; font-size: 12px; background:#eaffea;">
-          <td colspan="5"><strong>Oppsummering budleverte:</strong> ${sortBud.length} aviser – ${listeBud}</td>
+          <td colspan="5"><strong>Oppsummering budleverte:</strong> ${budPairs.length} aviser – ${listeBud}</td>
         </tr>`;
       }
-    } else if (samletAviserTotal.size > 0) {
-      html += `<tr style="font-style: italic; font-size: 12px; background:#f9f9f9;">
-        <td colspan="5">Antall aviser som matcher søket: ${samletAviserTotal.size}. Aviser: ${Array.from(samletAviserTotal).sort().join(', ')}</td>
-      </tr>`;
     }
 
     html += '</tbody></table>';
@@ -964,9 +955,7 @@
           lastMatches.push({ filter: filterNavn, postnummer: p, antall_total: antallTotal, avis: '(ukjent/ikke spesifisert)', antall_avis: c });
         } else {
           avisMap.forEach((avisData, avisId) => {
-            const renAvisId = avisId.trim().toLowerCase();
-            const navn = avisNavnMap?.[renAvisId] || avisId;
-            lastMatches.push({ filter: filterNavn, postnummer: p, antall_total: antallTotal, avis: navn, antall_avis: avisData.count });
+            lastMatches.push({ filter: filterNavn, postnummer: p, antall_total: antallTotal, avis: displayName(avisId), antall_avis: avisData.count });
           });
         }
       });
@@ -1050,7 +1039,8 @@
     const dagMap = { '1': 'Man', '2': 'Tir', '3': 'Ons', '4': 'Tor', '5': 'Fre', '6': 'Lør', '7': 'Søn' };
     const dagRekkefølge = ['Man','Tir','Ons','Tor','Fre','Lør','Søn'];
 
-    const aggregert = {};
+    // Aggregér per AVIS-ID
+    const aggregert = {}; // id -> { Innenfor:{sum,frekvens}, Utenfor:{...} }
     matchedPostnr.forEach(p => {
       ['Innenfor', 'Utenfor'].forEach(filt => {
         const mapData = { Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
@@ -1058,52 +1048,50 @@
         const avisMap = mapData[p]?.avis || new Map();
         avisMap.forEach((avisData, avisId) => {
           if (avisData.frekvenser.size === antallDager) {
-            const renAvisId = avisId.trim().toLowerCase();
-            const navn = avisNavnMap?.[renAvisId] || avisId;
             const frekvensDager = Array.from(avisData.frekvenser).map(f => dagMap[f.toString()] || f.toString());
             frekvensDager.sort((a,b)=>dagRekkefølge.indexOf(a)-dagRekkefølge.indexOf(b));
             const frekvensTekst = frekvensDager.join(', ');
-            if (!aggregert[navn]) aggregert[navn] = {};
-            if (!aggregert[navn][filt]) aggregert[navn][filt] = { sum: 0, frekvens: frekvensTekst };
-            aggregert[navn][filt].sum += avisData.count;
+            if (!aggregert[avisId]) aggregert[avisId] = {};
+            if (!aggregert[avisId][filt]) aggregert[avisId][filt] = { sum: 0, frekvens: frekvensTekst };
+            aggregert[avisId][filt].sum += avisData.count;
           }
         });
       });
     });
 
-    // Aggreger post_abo_idag for samme dag-antall (til budleverte)
+    // Aggreger post_abo_idag for samme dag-antall (per ID) – til budleverte
     const aggBruktDetaljN = new Map();
     if (bruktHarDetalj && dBruktDetalj) {
       matchedPostnr.forEach(p => {
         const avisMap = dBruktDetalj[p]?.avis || new Map();
         avisMap.forEach((avisData, avisId) => {
           if (avisData.frekvenser.size === antallDager) {
-            const navn = avisNavnMap?.[avisId] || avisId;
-            aggBruktDetaljN.set(navn, (aggBruktDetaljN.get(navn) || 0) + (Number(avisData.count) || 0));
+            aggBruktDetaljN.set(avisId, (aggBruktDetaljN.get(avisId) || 0) + (Number(avisData.count) || 0));
           }
         });
       });
     }
 
+    const ids = Object.keys(aggregert).sort((a,b)=> displayName(a).localeCompare(displayName(b)));
+
     let totalPerFilter = { Innenfor: 0, Utenfor: 0 };
-    let samletAviser = Object.keys(aggregert).sort();
 
     let html = `<table>
       <thead><tr><th>Avis</th><th>Innenfor</th><th>Utenfor</th><th>Totalt</th><th>Frekvensdager</th></tr></thead><tbody>`;
 
     lastMatches = [];
-    samletAviser.forEach(avis => {
-      const innenforData = aggregert[avis].Innenfor || { sum: 0, frekvens: '' };
-      const utenforData = aggregert[avis].Utenfor || { sum: 0, frekvens: '' };
+    ids.forEach(id => {
+      const innenforData = aggregert[id].Innenfor || { sum: 0, frekvens: '' };
+      const utenforData = aggregert[id].Utenfor || { sum: 0, frekvens: '' };
       const innenforSum = innenforData.sum || 0;
       const utenforSum = utenforData.sum || 0;
       const sum = innenforSum + utenforSum;
       totalPerFilter.Innenfor += innenforSum;
       totalPerFilter.Utenfor += utenforSum;
       const frekvensTekst = innenforData.frekvens || utenforData.frekvens || '';
-      html += `<tr><td>${avis}</td><td>${innenforSum ? innenforSum.toLocaleString() : ''}</td><td>${utenforSum ? utenforSum.toLocaleString() : ''}</td><td>${sum.toLocaleString()}</td><td>${frekvensTekst}</td></tr>`;
-      if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis, antall_avis: innenforSum, frekvens: frekvensTekst });
-      if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis, antall_avis: utenforSum, frekvens: frekvensTekst });
+      html += `<tr><td>${displayName(id)}</td><td>${innenforSum ? innenforSum.toLocaleString() : ''}</td><td>${utenforSum ? utenforSum.toLocaleString() : ''}</td><td>${sum.toLocaleString()}</td><td>${frekvensTekst}</td></tr>`;
+      if (innenforSum) lastMatches.push({ filter: 'Innenfor', postnummer: '', antall_total: innenforSum, avis: displayName(id), antall_avis: innenforSum, frekvens: frekvensTekst });
+      if (utenforSum) lastMatches.push({ filter: 'Utenfor', postnummer: '', antall_total: utenforSum, avis: displayName(id), antall_avis: utenforSum, frekvens: frekvensTekst });
     });
 
     const grandTotal = totalPerFilter.Innenfor + totalPerFilter.Utenfor;
@@ -1111,27 +1099,27 @@
     html += `</tbody></table>`;
 
     // Nederst: titler med antall i parentes
-    const navnlisteMedSum = samletAviser.map(avis => {
-      const i = (aggregert[avis].Innenfor?.sum || 0);
-      const u = (aggregert[avis].Utenfor?.sum || 0);
-      return `${avis} (${(i+u).toLocaleString()})`;
+    const navnlisteMedSum = ids.map(id => {
+      const i = (aggregert[id].Innenfor?.sum || 0);
+      const u = (aggregert[id].Utenfor?.sum || 0);
+      return `${displayName(id)} (${(i+u).toLocaleString()})`;
     });
     html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
-      <strong>Antall aviser som matcher søket: ${samletAviser.length}.</strong>
+      <strong>Antall aviser som matcher søket: ${ids.length}.</strong>
       Aviser: ${navnlisteMedSum.join(', ')}
     </p>`;
 
-    // --- NYTT: Oppsummering budleverte for N-dagers søk ---
-    if (samletAviser.length > 0) {
-      const budPairs = samletAviser.map(avis => {
-        const tot = (aggregert[avis].Innenfor?.sum || 0) + (aggregert[avis].Utenfor?.sum || 0);
-        const brukt = aggBruktDetaljN.get(avis) || 0;
+    // --- Oppsummering budleverte for N-dagers søk ---
+    if (ids.length > 0) {
+      const budPairs = ids.map(id => {
+        const tot = (aggregert[id].Innenfor?.sum || 0) + (aggregert[id].Utenfor?.sum || 0);
+        const brukt = aggBruktDetaljN.get(id) || 0;
         const v = tot - brukt;
-        return [avis, v];
+        return [id, v];
       }).filter(([_,v]) => v > 0)
-        .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
+        .sort((a,b)=> b[1]-a[1] || displayName(a[0]).localeCompare(displayName(b[0])));
       if (budPairs.length > 0) {
-        const budListe = budPairs.map(([avis,v])=> `${avis} (${v.toLocaleString()})`).join(', ');
+        const budListe = budPairs.map(([id,v])=> `${displayName(id)} (${v.toLocaleString()})`).join(', ');
         html += `<p style="font-style: italic; font-size: 12px; margin-top: 4px;">
           <strong>Oppsummering budleverte:</strong> ${budPairs.length} aviser – ${budListe}
         </p>`;
@@ -1193,7 +1181,7 @@
     } catch(err){
       butikkLoaded = false;
       console.warn('Feil ved lasting av butikker:', err);
-      if(butikkerStatus) butikkersStatus.textContent = '';
+      if(butikkerStatus) butikkerStatus.textContent = '';
     }
   }
 
