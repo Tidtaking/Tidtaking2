@@ -787,41 +787,47 @@ function searchMap() {
       const entry = mapData[p]; if (!entry) return;
       const avisMap = entry.avis || new Map();
 
-      if (avisMap.size > 0) {
-        for (const [avisId, avisData] of avisMap.entries()) {
-          const visNavn = displayName(avisId);
+     if (avisMap.size > 0) {
+  for (const [avisId, avisData] of avisMap.entries()) {
+    const visNavn = displayName(avisId);
 
-          const avisMatch = (avisSok.length === 0) ||
-            avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
-          if (!avisMatch) continue;
+    const avisMatch = (avisSok.length === 0) ||
+      avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
+    if (!avisMatch) continue;
 
-          let matchedDaysCount = 0;
-          if (frekvensSok.size === 0) {
-            matchedDaysCount = Math.max(avisData.frekvenser?.size || 0, 1);
-            (avisData.frekvenser || []).forEach(f => {
-              const fs = f.toString();
-              samletFrekvenser.add(fs);
-              if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
-            });
-          } else {
-            (avisData.frekvenser || []).forEach(f => {
-              const fs = f.toString();
-              if (frekvensSok.has(fs)) {
-                matchedDaysCount += 1;
-                samletFrekvenser.add(fs);
-                if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
-              }
-            });
-          }
-
-          sumAlleDager += avisData.count * matchedDaysCount;
-
-          if (matchedDaysCount > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
-            aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
-          }
+    let matchedDaysCount = 0;
+    if (frekvensSok.size === 0) {
+      matchedDaysCount = Math.max(avisData.frekvenser?.size || 0, 1);
+      (avisData.frekvenser || []).forEach(f => {
+        const fs = f.toString();
+        samletFrekvenser.add(fs);
+        if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
+      });
+    } else {
+      (avisData.frekvenser || []).forEach(f => {
+        const fs = f.toString();
+        if (frekvensSok.has(fs)) {
+          matchedDaysCount += 1;
+          samletFrekvenser.add(fs);
+          if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
         }
-        return;
+      });
+    }
+
+    // <- NYTT: tell UNIKT antall for filteret når avisen matcher
+    if (matchedDaysCount > 0) {
+      sumCount += avisData.count;  // <— denne linja manglet
+      if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
+        aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
       }
+    }
+
+    // duplikat-sum (alle dager)
+    sumAlleDager += avisData.count * matchedDaysCount;
+  }
+  return;
+}
+
 
       // Uten dagsoppløsning: bruk referanse fra Innenfor/Utenfor
       const c = Number(entry.count) || 0;
