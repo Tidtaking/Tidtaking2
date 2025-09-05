@@ -158,7 +158,7 @@
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <script>
 // === APP-VERSJON ===
-const APP_VERSION = 'v2025.09.05-6';
+const APP_VERSION = 'v2025.09.05-7';
 
 // ----- INIT UI -----
 // Mobil: riktig tastatur/skriving for søkefelt
@@ -312,21 +312,22 @@ function group(rows, label = '') {
 
     if(avisRaw || frekRaw){
       const avisKey = avisRaw ? avisRaw.toString().toLowerCase() : '(ukjent)'; // kanonisk ID
-      const prev = m[p].avis.get(avisKey) || {count:0, frekvenser:new Set()};
+const prev = m[p].avis.get(avisKey) || {count:0, frekvenser:new Set(), mask:0};
       prev.count += num;
 
-      if(frekRaw){
-        const s = frekRaw.toString().trim();
-        if(s.includes(',')){
-          s.split(',').forEach(x=>{
-            const t=x.trim();
-            if(/^[1-7]$/.test(t)) prev.frekvenser.add(t);
-            else [...t].forEach(c=>/^[1-7]$/.test(c)&&prev.frekvenser.add(c));
-          });
-        } else {
-          [...s].forEach(c=>/^[1-7]$/.test(c)&&prev.frekvenser.add(c));
-        }
-      }
+if (frekRaw){
+  const s = frekRaw.toString().trim();
+  const pushDay = (t) => { if(/^[1-7]$/.test(t)){ prev.frekvenser.add(t); prev.mask |= DAY_BITS[t]; } };
+  if(s.includes(',')){
+    s.split(',').forEach(x=>{
+      const t=x.trim();
+      if(/^\d+$/.test(t)) [...t].forEach(pushDay); else pushDay(t);
+    });
+  } else {
+    [...s].forEach(pushDay);
+  }
+}
+
       m[p].avis.set(avisKey, prev);
     }
   });
@@ -611,19 +612,24 @@ function oppdaterLag() {
 
 // ----- Søk helpers -----
 function parseSearchInput(input) {
-  const dagMap = { 'man':'1','tir':'2','ons':'3','tor':'4','fre':'5','lør':'6','lor':'6','søn':'7','son':'7' };
+  const dagMap = { man:'1', tir:'2', ons:'3', tor:'4', fre:'5', lør:'6', lor:'6', søn:'7', son:'7' };
   const parts = input.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+
   const frekvensSok = new Set();
   const avisSok = [];
   const postnumreSok = new Set();
+  let frekMask = 0;
+
   parts.forEach(p => {
-    if (/^\d{4}$/.test(p))       postnumreSok.add(p);
-    else if (/^[1-7]$/.test(p))  frekvensSok.add(p);
-    else if (dagMap[p])          frekvensSok.add(dagMap[p]);
-    else                         avisSok.push(p);
+    if (/^\d{4}$/.test(p))         { postnumreSok.add(p); }
+    else if (/^[1-7]$/.test(p))    { frekvensSok.add(p); frekMask |= DAY_BITS[p]; }
+    else if (dagMap[p])            { const d=dagMap[p]; frekvensSok.add(d); frekMask |= DAY_BITS[d]; }
+    else                           { avisSok.push(p); }
   });
-  return { postnumreSok, avisSok, frekvensSok };
+
+  return { postnumreSok, avisSok, frekvensSok, frekMask };
 }
+
 function avisMatcher(avisMap, avisSok) {
   if(avisSok.length === 0) return true;
   return avisSok.some(sokStr => Array.from(avisMap.keys()).some(avisId => {
@@ -631,17 +637,24 @@ function avisMatcher(avisMap, avisSok) {
     return avisId === sokStr || navn.includes(sokStr);
   }));
 }
-function frekvensMatcher(avisMap, frekvensSok) {
-  if(frekvensSok.size === 0) return true;
-  for(const avisData of avisMap.values()) {
-    for(const f of (avisData.frekvenser || [])) {
-      if(typeof f === 'string' && frekvensSok.has(f)) return true;
-      if(typeof f === 'number' && frekvensSok.has(f.toString())) return true;
-    }
+function frekvensMatcher(avisMap, frekMask) {
+  if (!frekMask) return true; // ingen dagfilter
+  for (const a of avisMap.values()) {
+    const m = a.mask || setToMask(a.frekvenser || new Set());
+    if (m & frekMask) return true; // overlapper minst én dag
   }
   return false;
 }
+
 function formatFrekvenser(frekvenserSet) {
+  // --- Raskere frekvenshåndtering (bitmasker) ---
+const DAY_BITS = { '1':1<<0, '2':1<<1, '3':1<<2, '4':1<<3, '5':1<<4, '6':1<<5, '7':1<<6 };
+function bitCount(n){ let c=0; for(; n; n&=n-1) c++; return c; }
+function setToMask(set){ let m=0; for(const d of set) m |= DAY_BITS[d]||0; return m; }
+function addMaskToSet(mask, target){
+  for(let d=1; d<=7; d++){ if(mask & (1<<(d-1))) target.add(String(d)); }
+}
+
   const dagMap = { '1':'Man','2':'Tir','3':'Ons','4':'Tor','5':'Fre','6':'Lør','7':'Søn' };
   const dager = Array.from(frekvenserSet).filter(c => dagMap[c]).sort((a,b) => a-b).map(c => dagMap[c]);
   return dager.join(', ');
@@ -807,7 +820,7 @@ function searchMap() {
   if (searchLayer) { map.removeLayer(searchLayer); searchLayer = null; }
   if (heatLayer)   { map.removeLayer(heatLayer);   heatLayer = null; showingHeatmap = false; heatmapBtn.innerText = 'Vis heatmap'; heatmapBtn.disabled = true; }
 
-  const { postnumreSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
+const { postnumreSok, avisSok, frekvensSok, frekMask } = parseSearchInput(qRawInput);
 
   // Finn postnummer som matcher input (AND-logikk)
   const matchedPostnr = new Set();
@@ -816,7 +829,7 @@ function searchMap() {
       const p = pRaw.padStart(4, '0');
       const passesPN   = (postnumreSok.size === 0) || postnumreSok.has(p);
       const passesAvis = avisMatcher(info.avis, avisSok);
-      const passesFrek = frekvensMatcher(info.avis, frekvensSok);
+const passesFrek = frekvensMatcher(info.avis, frekMask);
       if (passesPN && passesAvis && passesFrek) matchedPostnr.add(p);
     });
   });
@@ -862,24 +875,22 @@ function searchMap() {
       avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
     if (!avisMatch) continue;
 
-    let matchedDaysCount = 0;
-    if (frekvensSok.size === 0) {
-      matchedDaysCount = Math.max(avisData.frekvenser?.size || 0, 1);
-      (avisData.frekvenser || []).forEach(f => {
-        const fs = f.toString();
-        samletFrekvenser.add(fs);
-        if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
-      });
-    } else {
-      (avisData.frekvenser || []).forEach(f => {
-        const fs = f.toString();
-        if (frekvensSok.has(fs)) {
-          matchedDaysCount += 1;
-          samletFrekvenser.add(fs);
-          if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
-        }
-      });
-    }
+let matchedDaysCount = 0;
+const mask = avisData.mask || setToMask(avisData.frekvenser || new Set());
+
+if (frekMask === 0) {
+  matchedDaysCount = Math.max(avisData.frekvenser?.size || 0, 1);
+  addMaskToSet(mask, samletFrekvenser);
+  if (filterKey === 'Innenfor' || filterKey === 'Utenfor') addMaskToSet(mask, samletFrekvenserTotal);
+} else {
+  const overlap = mask & frekMask;
+  matchedDaysCount = bitCount(overlap);
+  if (overlap) {
+    addMaskToSet(overlap, samletFrekvenser);
+    if (filterKey === 'Innenfor' || filterKey === 'Utenfor') addMaskToSet(overlap, samletFrekvenserTotal);
+  }
+}
+
 
     // <- NYTT: tell UNIKT antall for filteret når avisen matcher
     if (matchedDaysCount > 0) {
@@ -909,34 +920,28 @@ function searchMap() {
 
       let dupForP = 0;
       refAvisMap.forEach((avisData, avisId) => {
-        if (frekvensSok.size === 0) {
-          const mult = Math.max(avisData.frekvenser?.size || 0, 1);
-          dupForP += avisData.count * mult;
-          (avisData.frekvenser || []).forEach(f => {
-            const fs = f.toString();
-            samletFrekvenser.add(fs);
-            if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
-          });
-          if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
-            aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
-          }
-        } else {
-          let m = 0;
-          (avisData.frekvenser || []).forEach(f => {
-            const fs = f.toString();
-            if (frekvensSok.has(fs)) {
-              m += 1;
-              samletFrekvenser.add(fs);
-              if (filterKey === 'Innenfor' || filterKey === 'Utenfor') samletFrekvenserTotal.add(fs);
-            }
-          });
-          dupForP += avisData.count * m;
+        const mask = avisData.mask || setToMask(avisData.frekvenser || new Set());
+if (frekMask === 0) {
+  const mult = Math.max(avisData.frekvenser?.size || 0, 1);
+  dupForP += avisData.count * mult;
+  addMaskToSet(mask, samletFrekvenser);
+  if (filterKey === 'Innenfor' || filterKey === 'Utenfor') addMaskToSet(mask, samletFrekvenserTotal);
+  if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
+    aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
+  }
+} else {
+  const overlap = mask & frekMask;
+  const mult = bitCount(overlap);
+  dupForP += avisData.count * mult;
+  if (overlap) {
+    addMaskToSet(overlap, samletFrekvenser);
+    if (filterKey === 'Innenfor' || filterKey === 'Utenfor') addMaskToSet(overlap, samletFrekvenserTotal);
+    if (filterKey === 'Innenfor' || filterKey === 'Utenfor') {
+      aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
+    }
+  }
+}
 
-          if (m > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
-            aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
-          }
-        }
-      });
       sumAlleDager += dupForP;
     });
 
@@ -972,15 +977,11 @@ function searchMap() {
             avisSok.some(sokStr => (avisId === sokStr) || visNavn.toLowerCase().includes(sokStr));
           if (!navMatch) continue;
 
-          let tarMed = false;
-          if (frekvensSok.size === 0) tarMed = true;
-          else {
-            for (const f of (avisData.frekvenser || [])) {
-              const fs = f.toString();
-              if (frekvensSok.has(fs)) { tarMed = true; break; }
-            }
-          }
-          if (!tarMed) continue;
+let tarMed = false;
+const mask = avisData.mask || setToMask(avisData.frekvenser || new Set());
+tarMed = (frekMask === 0) || (mask & frekMask);
+if (!tarMed) continue;
+
 
           aggAddByPretty(aggDetPretty, nameDet, avisId, avisData.count);
         }
@@ -1066,9 +1067,11 @@ function searchMap() {
   // Heatmap
   const intensitetFaktor = 5;
   const heatPointsRaw = matches.map(f => {
-    const [lat, lng] = getPolygonCentroid(f);
-    return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
-  });
+  const p = f.properties.postnummer.trim().padStart(4,'0');
+  const c = pnCentroid[p];
+  return [c.lat, c.lon, (f.properties.antall || 1) * intensitetFaktor];
+});
+
   const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
   const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
 
