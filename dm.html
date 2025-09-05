@@ -773,9 +773,21 @@ function searchMap() {
   const nameBrukt        = new Map();
 
   let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
-
+// NYTT: eksplisitte summer til slutt-raden
+let sumInnenfor = 0;
+let sumUtenfor  = 0;
+  
   Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
     const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
+    // rett før vi bygger total-raden:
+const totalSum = sumInnenfor + sumUtenfor;
+
+html += `<tr style="font-weight:bold; background:#eef;">
+  <td colspan="3">Totalt abonnenter (ekskl. Anbud & Brukt)</td>
+  <td>${totalSum.toLocaleString()}</td>
+  <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
+</tr>`;
+
     let sumCount = 0;
     let sumAlleDager = 0;
     const samletFrekvenser = new Set();
@@ -864,8 +876,8 @@ function searchMap() {
       sumAlleDager += dupForP;
     });
 
-    if (filterKey === 'Innenfor' || filterKey === 'Utenfor') totalSum += sumCount;
-
+if (filterKey === 'Innenfor')      sumInnenfor = sumCount;
+else if (filterKey === 'Utenfor')  sumUtenfor  = sumCount;
     const color = filterColors[filterKey] || '#000';
     html += `<tr>
       <td>${filterKeys[filterKey]}</td>
