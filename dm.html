@@ -766,7 +766,7 @@ function searchMap() {
     return;
   }
 
-  let totalSum = 0;                        // <- totalen vi skal vise til slutt (Innenfor + Utenfor)
+  let totalSum = 0; // <- Summer KUN Innenfor + Utenfor
   const samletFrekvenserTotal = new Set();
 
   // Aggreger for oppsummeringslinjene nederst
@@ -816,7 +816,6 @@ function searchMap() {
 
           sumAlleDager += avisData.count * matchedDaysCount;
 
-          // bygg “titler i søket”-lister
           if (matchedDaysCount > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
             aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
           }
@@ -859,6 +858,7 @@ function searchMap() {
             }
           });
           dupForP += avisData.count * m;
+
           if (m > 0 && (filterKey === 'Innenfor' || filterKey === 'Utenfor')) {
             aggAddByPretty(aggTotByPretty, nameTot, avisId, avisData.count);
           }
@@ -867,7 +867,7 @@ function searchMap() {
       sumAlleDager += dupForP;
     });
 
-    // legg til total kun for Innenfor/Utenfor
+    // Akkumuler total for de to relevante radene
     if (filterKey === 'Innenfor' || filterKey === 'Utenfor') totalSum += sumCount;
 
     const color = filterColors[filterKey] || '#000';
@@ -885,7 +885,7 @@ function searchMap() {
       <td></td>
     </tr>`;
 
-    // post_abo_idag-oppv + samle til budleverte (per visningsnavn)
+    // post_abo_idag-oppv + samle til budleverte
     if (filterKey === 'Brukt' && bruktHarDetalj && dBruktDetalj) {
       const keysDetalj = keys.filter(p => dBruktDetalj[p]);
       const aggDetPretty = new Map();
@@ -934,14 +934,14 @@ function searchMap() {
     }
   });
 
-  // ÉN totalrad – samme sted som før (etter løkka)
+  // ÉN totalrad – etter løkka
   html += `<tr style="font-weight:bold; background:#eef;">
     <td colspan="3">Totalt abonnenter (ekskl. Anbud & Brukt)</td>
     <td>${totalSum.toLocaleString()}</td>
     <td>${formatFrekvenser(samletFrekvenserTotal)}</td>
   </tr>`;
 
-  // Nederste oppsummeringer
+  // Nederst: titler og Oppsummering budleverte
   if (aggTotByPretty.size > 0) {
     const sortTot = Array.from(aggTotByPretty.entries())
       .sort((a,b) => b[1] - a[1] || (nameTot.get(a[0])||'').localeCompare(nameTot.get(b[0])||''));
@@ -1035,6 +1035,7 @@ function searchMap() {
   const endTime = performance.now();
   document.getElementById('search-timer').innerText = `Søket brukte ${((endTime-startTime)/1000).toFixed(2)} sekunder`;
 }
+
 
 // Eksakt «N dag frekvens»
 function searchExactDayFrequency(antallDager) {
