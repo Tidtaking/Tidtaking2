@@ -265,7 +265,6 @@
     const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
     const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
     const INTENS = ['I1','I2','I3','I4','I5'];
-    const KONK = ['Sprint','Normal','Jaktstart','Fellesstart','Stafett','Mix-stafett','KM','HL/NC','Kretsrenn','Lokalt renn'];
 
     // --- Nye aldersgrupper ---
     const ALDER = [
@@ -281,7 +280,13 @@
     const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
     const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
 
-    const KEY = { EVENTS:'lss:events:v1', BANK:'lss:bank:v3', WEEKS:'lss:weeks:v1', YEAR:'lss:year:v1' };
+    const KEY = {
+      EVENTS:'lss:events:v1',
+      BANK:'lss:bank:v3',
+      WEEKS:'lss:weeks:v1',
+      YEAR:'lss:year:v1',
+      DAYORDER:'lss:dayorder:v2' // lokal cache for day order (sky-sync)
+    };
 
     const $=(q,el=document)=>el.querySelector(q);
     const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
@@ -310,7 +315,7 @@
     const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
 
-    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks' };
+    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order' };
 
     // Global state
     let state = {
@@ -318,7 +323,8 @@
       month: dayjs().month() + 1, // 1-12, mobil
       events: [],
       bank: [],
-      weeks: {}
+      weeks: {},
+      dayOrder: lsGet(KEY.DAYORDER, {}) // { 'YYYY-MM-DD': ['id1','id2',...] }
     };
 
     const MOBILE_BREAKPOINT = 768;
@@ -326,17 +332,17 @@
 
     // ---------- Supabase I/O ----------
     async function supaLoadAll(year = state.year){
-      // Events
+      // Events (for valgt år)
       const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
       if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
-      // Bank
+      // Bank (alle)
       const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
       if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
       else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
 
-      // Weeks
+      // Weeks (for år)
       const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
       if(!wErr && wks){
         const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
@@ -345,7 +351,10 @@
         state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
       }
 
-      // ---- Migrer gamle alderstags (U12/U14/U16/JR) til nye grupper ----
+      // Day Order (for år)
+      await supaLoadDayOrderForYear(year);
+
+      // Migrer alderstags
       migrateAllAgesInState();
 
       render();
@@ -375,17 +384,57 @@
       if(error){ console.warn('Slett bank feilet', error); }
     }
 
+    // ---- Day Order sky-sync ----
+    async function supaLoadDayOrderForYear(year){
+      const from = `${year}-01-01`;
+      const to   = `${year+1}-01-01`;
+      const { data, error } = await supabase
+        .from(TBL.dayOrder)
+        .select('*')
+        .gte('date', from)
+        .lt('date', to);
+      if(error){ console.warn('Henting day_order feilet', error); return; }
+      const map = {};
+      for(const r of data||[]){ map[r.date] = Array.isArray(r.ids) ? r.ids : []; }
+      state.dayOrder = { ...state.dayOrder, ...map };
+      lsSet(KEY.DAYORDER, state.dayOrder);
+    }
+
+    async function supaUpsertDayOrder(dateISO, ids){
+      const { error } = await supabase.from(TBL.dayOrder).upsert({ date: dateISO, ids });
+      if(error){ console.warn('Upsert day_order feilet', error); }
+    }
+
     function supaRealtimeInit(){
       supabase.channel('events-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.events }, payload => {
           if(payload.new?.year === state.year || payload.old?.year === state.year){ supaLoadAll(state.year); }
         }).subscribe();
+
       supabase.channel('weeks-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.weeks }, payload => {
           if((payload.new?.year||payload.old?.year) === state.year){ supaLoadAll(state.year); }
         }).subscribe();
+
       supabase.channel('bank-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.bank }, () => supaLoadAll(state.year))
+        .subscribe();
+
+      supabase.channel('dayorder-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.dayOrder }, payload => {
+          const d = (payload.new?.date || payload.old?.date);
+          if(!d) return;
+          const y = dayjs(d).year();
+          if(y !== state.year) return;
+          // Oppdater lokal state fra sky
+          if(payload.eventType === 'DELETE'){
+            delete state.dayOrder[d];
+          }else{
+            state.dayOrder[d] = payload.new?.ids || [];
+          }
+          lsSet(KEY.DAYORDER, state.dayOrder);
+          render();
+        })
         .subscribe();
     }
 
@@ -477,7 +526,7 @@
       state.bank   = (state.bank   || []).map(t => ({ ...t, age: migrateAgeTagsInArray(t.age) }));
     }
 
-    // Flere standard-økter – inkludert nye for 9–10 og Skiskytterskolen
+    // Flere standard-økter – inkl. 9–10 og Skiskytterskolen
     function getDefaultTemplates(){
       const T=[]; const add=(o)=>T.push({id:uid(),...o});
 
@@ -585,90 +634,159 @@
       `;
     }
 
-    // Forhåndsvisningskort
-    function dayViewCard(e){
+    // ---------- Day Order helpers ----------
+    function getOrderForDate(dateISO){
+      return state.dayOrder[dateISO] || [];
+    }
+    function setOrderForDate(dateISO, ids){
+      state.dayOrder[dateISO] = ids;
+      lsSet(KEY.DAYORDER, state.dayOrder);
+      // Sky-sync
+      supaUpsertDayOrder(dateISO, ids);
+    }
+    function sortEventsByDayOrder(dateISO, events){
+      const order = getOrderForDate(dateISO);
+      const idx = new Map(order.map((id, i)=>[id, i]));
+      return [...events].sort((a,b)=>{
+        const ai = idx.has(a.id) ? idx.get(a.id) : Number.MAX_SAFE_INTEGER;
+        const bi = idx.has(b.id) ? idx.get(b.id) : Number.MAX_SAFE_INTEGER;
+        if (ai !== bi) return ai - bi;
+        return (a.title||'').localeCompare(b.title||'');
+      });
+    }
+
+    // Forhåndsvisningskort (brukes også i DnD-listen)
+    function previewCardHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
       const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
-
       const meta = [
         e.type ? `<span class="inline-flex items-center gap-2">${dot}<span>${esc(e.type)}</span></span>` : '',
         e.modality ? `<span>${esc(e.modality)}</span>` : '',
         e.intensity ? `<span>${esc(e.intensity)}</span>` : '',
         e.durationMin ? `<span>${String(e.durationMin)} min</span>` : ''
       ].filter(Boolean).join(' • ');
-
       const ages = (e.age||[]).length
         ? `<div class="mt-1 flex flex-wrap gap-1">${(e.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-[11px]">${esc(a)}</span>`).join('')}</div>`
         : '';
-
       const notes = e.notes ? `<div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
-
       return `
-        <div class="rounded-2xl border bg-white shadow-sm p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-base font-semibold">${title}</div>
-              <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-2">${meta}</div>
-              ${ages}
-              ${notes}
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1">
+            <div class="text-base font-semibold flex items-center gap-2">
+              <span class="cursor-grab select-none text-slate-400" title="Dra for å flytte">≡</span>
+              ${title}
             </div>
-            <div class="shrink-0 flex gap-1">
-              <button id="day-view-${e.id}" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
-              <button id="day-edit-${e.id}" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
-              <button id="day-dup-${e.id}"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
-              <button id="day-del-${e.id}"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
-            </div>
+            <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-2">${meta}</div>
+            ${ages}
+            ${notes}
+          </div>
+          <div class="shrink-0 flex gap-1">
+            <button data-act="view" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
+            <button data-act="edit" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
+            <button data-act="dup"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
+            <button data-act="del"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
           </div>
         </div>
       `;
     }
 
-    // ---------- Dagoversikt ----------
+    // ---------- Dagoversikt med DnD ----------
     function openDayView(dateISO, eventsForDay){
       const d = dayjs(dateISO);
-      const items = [...eventsForDay].sort((a,b)=> (a.title||'').localeCompare(b.title||''));
+      const items = sortEventsByDayOrder(dateISO, eventsForDay);
 
       const body = $('#dlg-body');
       $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
       $('#btn-delete').classList.add('hidden');
       $('#btn-save').classList.remove('hidden');
+
       body.innerHTML = `
         <div class="space-y-3">
-          ${items.map(e=> dayViewCard(e)).join('')}
+          <div id="dnd-list" class="space-y-3">
+            ${items.map(e=> `
+              <div class="rounded-2xl border bg-white shadow-sm p-4 dnd-item" draggable="true" data-id="${e.id}">
+                ${previewCardHTML(e)}
+              </div>
+            `).join('')}
+          </div>
           <div class="pt-2">
             <button id="btn-new-on-day" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny hendelse denne dagen</button>
           </div>
         </div>
       `;
 
-      items.forEach(e=>{
-        const view = document.getElementById(`day-view-${e.id}`);
-        const edit = document.getElementById(`day-edit-${e.id}`);
-        const dup  = document.getElementById(`day-dup-${e.id}`);
-        const del  = document.getElementById(`day-del-${e.id}`);
+      // --- Drag & Drop logikk ---
+      const list = $('#dnd-list');
+      let dragEl = null;
 
-        view?.addEventListener('click', ()=> openViewDialog(e));
-        edit?.addEventListener('click', ()=> openDialog({...e}));
-        dup?.addEventListener('click', async ()=>{
-          const copy = { ...e, id: uid(), title: (e.title||e.type)+' (kopi)' };
+      list.addEventListener('dragstart', (ev)=>{
+        const item = ev.target.closest('.dnd-item');
+        if(!item) return;
+        dragEl = item;
+        item.classList.add('opacity-60');
+        ev.dataTransfer.effectAllowed = 'move';
+        try { ev.dataTransfer.setData('text/plain', item.dataset.id || ''); } catch {}
+      });
+
+      list.addEventListener('dragover', (ev)=>{
+        ev.preventDefault();
+        const over = ev.target.closest('.dnd-item');
+        if(!over || over === dragEl) return;
+        const rect = over.getBoundingClientRect();
+        const before = (ev.clientY - rect.top) < rect.height / 2;
+        if (before) list.insertBefore(dragEl, over);
+        else list.insertBefore(dragEl, over.nextSibling);
+      });
+
+      list.addEventListener('drop', ()=>{
+        const ids = Array.from(list.querySelectorAll('.dnd-item')).map(el => el.dataset.id);
+        setOrderForDate(dateISO, ids); // lagre lokalt + sky
+        render();
+      });
+
+      list.addEventListener('dragend', ()=>{
+        if(dragEl){ dragEl.classList.remove('opacity-60'); dragEl = null; }
+      });
+
+      // --- Knapper (Vis/Rediger/Dupliser/Slett) ---
+      list.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-act]');
+        if(!btn) return;
+        const item = e.target.closest('.dnd-item');
+        const id = item?.dataset.id;
+        const evObj = state.events.find(x=>x.id===id);
+        if(!evObj) return;
+
+        if(btn.dataset.act === 'view') return openViewDialog(evObj);
+        if(btn.dataset.act === 'edit') return openDialog({...evObj});
+        if(btn.dataset.act === 'dup'){
+          const copy = { ...evObj, id: uid(), title: (evObj.title||evObj.type)+' (kopi)' };
           state.events.push(copy);
           lsSet(KEY.EVENTS, state.events);
           render();
           await supaUpsertEvent(copy);
-        });
-        del?.addEventListener('click', async ()=>{
+          const order = getOrderForDate(dateISO);
+          setOrderForDate(dateISO, [...order, copy.id]);
+          return;
+        }
+        if(btn.dataset.act === 'del'){
           if(!confirm('Slette denne hendelsen?')) return;
-          state.events = state.events.filter(x=> x.id !== e.id);
+          state.events = state.events.filter(x=> x.id !== evObj.id);
           lsSet(KEY.EVENTS, state.events);
           render();
-          await supaDeleteEvent(e.id);
-          openDayView(dateISO, state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')));
-        });
+          await supaDeleteEvent(evObj.id);
+          const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id);
+          setOrderForDate(dateISO, ids);
+          const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day'));
+          return openDayView(dateISO, remaining);
+        }
       });
 
+      // Ny hendelse samme dato
       $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
 
+      // Vis dialog
       $('#dialog').classList.remove('hidden');
       $('#dialog').classList.add('flex');
     }
@@ -683,6 +801,7 @@
       lsSet(KEY.EVENTS,state.events);
       lsSet(KEY.BANK,state.bank);
       lsSet(KEY.WEEKS,state.weeks);
+      lsSet(KEY.DAYORDER,state.dayOrder);
     }
 
     function renderLegend(){
@@ -784,7 +903,8 @@
 
     function dayCell(d){
       const key = d.format('YYYY-MM-DD');
-      const evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
+      let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
+      evts = sortEventsByDayOrder(key, evts);  // sortér etter lagret rekkefølge
 
       const box = document.createElement('div');
       box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
@@ -849,7 +969,19 @@
 
     function renderList(){
       const tbody=$('#tbl-events'); tbody.innerHTML='';
-      const yearEvents=state.events.filter(e=> dayjs(e.date).year()===state.year).sort((a,b)=> dayjs(a.date)-dayjs(b.date));
+      const yearEvents = state.events
+        .filter(e => dayjs(e.date).year() === state.year)
+        .sort((a,b)=>{
+          const da = dayjs(a.date), db = dayjs(b.date);
+          if (!da.isSame(db, 'day')) return da - db;
+          const order = getOrderForDate(da.format('YYYY-MM-DD'));
+          const ia = order.indexOf(a.id); const ib = order.indexOf(b.id);
+          const A = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
+          const B = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
+          if (A !== B) return A - B;
+          return (a.title||'').localeCompare(b.title||'');
+        });
+
       yearEvents.forEach(e=>{
         const tr=document.createElement('tr'); tr.className='border-t';
         const safeTitle = e.title ? escapeHTML(e.title) : '<span class="opacity-50">(uten tittel)</span>';
@@ -933,7 +1065,10 @@
 
     // ---------- Rediger-dialog ----------
     function openDialog(data){
-      const isEdit=!!state.events.find(x=>x.id===data.id);
+      const existing = state.events.find(x=>x.id===data.id);
+      const isEdit = !!existing;
+      const prevDate = existing ? existing.date : null;
+
       const model=Object.assign(
         { id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, eqtiming:'' },
         data
@@ -999,6 +1134,10 @@
 
       $('#btn-save').onclick = async () => {
         const get = (id) => $('#'+id, body);
+        const wasNew = state.events.findIndex(x => x.id === model.id) < 0;
+
+        const oldDate = prevDate || model.date;
+
         model.title       = get('f-title').value.trim();
         model.type        = get('f-type').value;
         model.date        = get('f-date').value;
@@ -1022,6 +1161,19 @@
         render();
 
         await supaUpsertEvent(model);
+
+        // Day order oppdatering:
+        if (wasNew){
+          const ids = getOrderForDate(model.date);
+          setOrderForDate(model.date, [...ids, model.id]);
+        } else if (oldDate !== model.date){
+          // flyttet dato: fjern fra gammel dato, legg til på ny
+          const oldIds = getOrderForDate(oldDate).filter(x=> x !== model.id);
+          setOrderForDate(oldDate, oldIds);
+          const newIds = getOrderForDate(model.date);
+          setOrderForDate(model.date, [...newIds, model.id]);
+        }
+
         closeDialog();
       };
 
@@ -1030,6 +1182,8 @@
         lsSet(KEY.EVENTS,state.events);
         render();
         await supaDeleteEvent(model.id);
+        const ids = getOrderForDate(model.date).filter(x=> x !== model.id);
+        setOrderForDate(model.date, ids);
         closeDialog();
       };
 
@@ -1305,7 +1459,7 @@
 
     // JSON-eksport
     $('#btn-export').onclick=()=>{
-      const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year},null,2)],{type:'application/json'});
+      const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year,dayOrder:state.dayOrder},null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url);
     };
 
@@ -1319,8 +1473,8 @@
         if(data.events){ state.events=data.events; for(const ev of data.events){ await supaUpsertEvent(ev); } }
         if(data.bank){ state.bank=data.bank; for(const t of data.bank){ await supaUpsertBankTemplate(t); } }
         if(data.weeks){ state.weeks=data.weeks; for(const [wk,val] of Object.entries(state.weeks)){ await supaUpsertWeek(state.year, +wk, val.code||'BAS', val.note||''); } }
+        if(data.dayOrder){ state.dayOrder=data.dayOrder; for(const [d,ids] of Object.entries(state.dayOrder)){ await supaUpsertDayOrder(d, ids); } }
         if(data.year){ state.year=data.year; }
-        // Migrer dersom JSON hadde gamle alderskoder
         migrateAllAgesInState();
         render(); alert('Import fullført');
       }catch{ alert('Kunne ikke lese filen (må være JSON).'); }
@@ -1343,7 +1497,14 @@
 07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; 13-14|HL`; };
     $('#btn-csv-import').onclick=async ()=>{
       const rows=parseCSV($('#csv-text').value);
-      state.events.push(...rows); render(); alert(`Importert ${rows.length} hendelser.`);
+      state.events.push(...rows);
+      // Legg nye nederst i day_order pr dato
+      const grouped = rows.reduce((acc,ev)=>{ acc[ev.date]=acc[ev.date]||[]; acc[ev.date].push(ev.id); return acc; }, {});
+      for(const [d,ids] of Object.entries(grouped)){
+        const current = getOrderForDate(d);
+        setOrderForDate(d, [...current, ...ids]);
+      }
+      render(); alert(`Importert ${rows.length} hendelser.`);
       for(const ev of rows){ await supaUpsertEvent(ev); }
     };
 
