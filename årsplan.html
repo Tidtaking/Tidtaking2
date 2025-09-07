@@ -123,10 +123,11 @@
               <label class="text-sm font-medium">Målgruppe</label>
               <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2">
                 <option value="">Alle</option>
-                <option value="U12">10–12 år</option>
-                <option value="U14">13–14 år</option>
-                <option value="U16">15–16 år</option>
-                <option value="JR">Junior (17–20)</option>
+                <option value="HL">HL gruppe (15+)</option>
+                <option value="13-14">13–14 år</option>
+                <option value="11-12">11–12 år</option>
+                <option value="9-10">9–10 år</option>
+                <option value="Skiskytterskolen">Skiskytterskolen</option>
               </select>
             </div>
             <div>
@@ -168,7 +169,7 @@
             <div class="space-y-3">
               <div>
                 <label class="text-sm font-medium">CSV-import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
-                <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; bevegelighet|balanse; U12|U14"></textarea>
+                <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; bevegelighet|balanse; 13-14|HL"></textarea>
                 <div class="mt-2 flex gap-2">
                   <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
                   <button id="btn-csv-eg" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lim inn eksempel</button>
@@ -217,10 +218,11 @@
       <div class="rounded-2xl border bg-white shadow-sm">
         <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
         <div class="p-4 text-sm text-slate-700 space-y-1">
-          <p><span class="font-medium">U12:</span> Variasjon/lek, korte økter, enkel liggende.</p>
-          <p><span class="font-medium">U14:</span> Mer organisert, fartstider, stående introduseres.</p>
-          <p><span class="font-medium">U16:</span> Systematisk progresjon, intensitetsstyring, kombinert.</p>
-          <p><span class="font-medium">JR:</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
+          <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
+          <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
+          <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
+          <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles, enkel fartstyring.</p>
+          <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konkurransespesifikke økter.</p>
         </div>
       </div>
       <div class="rounded-2xl border bg-white shadow-sm">
@@ -264,7 +266,18 @@
     const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
     const INTENS = ['I1','I2','I3','I4','I5'];
     const KONK = ['Sprint','Normal','Jaktstart','Fellesstart','Stafett','Mix-stafett','KM','HL/NC','Kretsrenn','Lokalt renn'];
-    const ALDER = [ ['U12','10–12'], ['U14','13–14'], ['U16','15–16'], ['JR','17–20'] ];
+
+    // --- Nye aldersgrupper ---
+    const ALDER = [
+      ['HL', 'HL gruppe (15+)'],
+      ['13-14', '13–14 år'],
+      ['11-12', '11–12 år'],
+      ['9-10', '9–10 år'],
+      ['Skiskytterskolen', 'Skiskytterskolen']
+    ];
+    // Migrering gamle -> nye
+    const AGE_MAP = { 'U12':'11-12', 'U14':'13-14', 'U16':'HL', 'JR':'HL' };
+
     const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
     const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
 
@@ -313,14 +326,17 @@
 
     // ---------- Supabase I/O ----------
     async function supaLoadAll(year = state.year){
+      // Events
       const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
       if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
+      // Bank
       const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
       if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
       else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
 
+      // Weeks
       const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
       if(!wErr && wks){
         const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
@@ -328,6 +344,9 @@
       } else {
         state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
       }
+
+      // ---- Migrer gamle alderstags (U12/U14/U16/JR) til nye grupper ----
+      migrateAllAgesInState();
 
       render();
     }
@@ -448,48 +467,50 @@
       return weeks;
     }
 
-    // Flere standard-økter (U12, U14, U16, JR + noen «alle»)
+    // Migrering av alders-tagger (U12/U14/U16/JR -> nye)
+    function migrateAgeTagsInArray(arr){
+      if(!Array.isArray(arr)) return [];
+      return arr.map(a => AGE_MAP[a] || a);
+    }
+    function migrateAllAgesInState(){
+      state.events = (state.events || []).map(e => ({ ...e, age: migrateAgeTagsInArray(e.age) }));
+      state.bank   = (state.bank   || []).map(t => ({ ...t, age: migrateAgeTagsInArray(t.age) }));
+    }
+
+    // Flere standard-økter – inkludert nye for 9–10 og Skiskytterskolen
     function getDefaultTemplates(){
       const T=[]; const add=(o)=>T.push({id:uid(),...o});
 
-      // --- U12 (10–12) ---
-      add({name:'U12 Lek & løp I1 (40) + 20 skudd ligg',type:'Trening',modality:'Løp',intensity:'I1',durationMin:40,shooting:{stilling:'Liggende',skudd:20,tema:['Grunnstilling liggende','Siktebilde']},age:['U12'],notes:'Stafettleker, enkle balanseøvelser.'});
-      add({name:'U12 Stasjonslek I2 (55) + 30 skudd',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:55,shooting:{stilling:'Liggende',skudd:30,tema:['Avtrekk','Etterhold']},age:['U12'],notes:'4–6 stasjoner, 6–8 min per stasjon.'});
-      add({name:'U12 Skøyting grunnteknikk (60) + 20 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:60,shooting:{stilling:'Liggende',skudd:20,tema:['Balansereise','Tyngdeoverføring']},age:['U12'],notes:'Kjegler, korte baner, fokus trygghet.'});
-      add({name:'U12 Langrenn lek klassisk (50) uten skyting',type:'Trening',modality:'Ski klassisk',intensity:'I1',durationMin:50,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12'],notes:'Stiv heks, haleleik, kupert lett terreng.'});
+      // Skiskytterskolen
+      add({name:'Skiskytterskolen – introduksjon (40) + 10 skudd ligg',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:40,shooting:{stilling:'Liggende',skudd:10,tema:['Sikkerhet','Grunnstilling liggende']},age:['Skiskytterskolen'],notes:'Trygghet på bane, rolig tempo. Lekbasert.'});
 
-      // --- U14 (13–14) ---
-      add({name:'U14 Intervall I3 5×4 min + stående 30',type:'Trening',modality:'Løp',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Triggerkontroll']},age:['U14'],notes:'2 min pause. Skyting mellom drag.'});
-      add({name:'U14 Rulleski skøyting teknikk (70) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Pust/rytme','Siktebilde']},age:['U14'],notes:'Teknikkstasjoner, lav intensitet.'});
-      add({name:'U14 Kombinert overgang (I2) + 35 skudd',type:'Trening',modality:'Løp',intensity:'I2',durationMin:65,shooting:{stilling:'Kombinert',skudd:35,tema:['Overganger (inn/ut)','Standplassdisiplin']},age:['U14'],notes:'Korte rundløp rundt standplass.'});
-      add({name:'U14 Styrke/basis sirkel (55) uten skyting',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:55,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U14'],notes:'8–10 stasjoner, 30–40 sek arbeid.'});
+      // 9–10 år
+      add({name:'9–10 år – lek & løp (35) + 10 skudd',type:'Trening',modality:'Løp',intensity:'I1',durationMin:35,shooting:{stilling:'Liggende',skudd:10,tema:['Siktebilde','Ro i avtrekk']},age:['9-10'],notes:'Stafettleker, koordinasjon, korte stasjoner.'});
 
-      // --- U16 (15–16) ---
-      add({name:'U16 VO2 I4 6×3 min + 50 skudd komb',type:'Trening',modality:'Løp',intensity:'I4',durationMin:85,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['U16'],notes:'Slak motbakke. L/S varier.'});
-      add({name:'U16 Tempo I3 4×8 min + stå/ligg 40',type:'Trening',modality:'Rulleski skøyting',intensity:'I3',durationMin:90,shooting:{stilling:'Variert',skudd:40,tema:['Avtrekkstid','Nullpunkt']},age:['U16'],notes:'4×8 min med 3 min pause. Skyting etter drag.'});
-      add({name:'U16 Sprintsim + 30 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Start/utgang','Høypuls-skyting']},age:['U16'],notes:'Prolog + 1–2 heat. Enkel gjennomføring.'});
-      add({name:'U16 Restitusjon I1 (45) + mobilitet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U16'],notes:'Pratetempo, 10–15 min mobilitet.'});
+      // 11–12 år
+      add({name:'11–12 år – teknikk rulleski (50) + 20 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:50,shooting:{stilling:'Liggende',skudd:20,tema:['Etterhold','Pust & rytme']},age:['11-12'],notes:'Kjeglebaner, balanse og tyngdeoverføring.'});
 
-      // --- JR (17–20) ---
-      add({name:'JR Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['JR'],notes:'6×10 teknikkserier fordelt i økta.'});
-      add({name:'JR I3 terskel 3×12 min + komb 40',type:'Trening',modality:'Rulleski klassisk',intensity:'I3',durationMin:100,shooting:{stilling:'Kombinert',skudd:40,tema:['Kapasitetsstyring','Overganger']},age:['JR'],notes:'3×12 min, 3–4 min pause.'});
-      add({name:'JR I5 5×3 min + stående 25',type:'Trening',modality:'Løp',intensity:'I5',durationMin:80,shooting:{stilling:'Stående',skudd:25,tema:['Holdtid','Avtrekkstid']},age:['JR'],notes:'Tydelige pauser, full innsats.'});
-      add({name:'JR Styrke maks + presisjon 30',type:'Trening',modality:'Styrke',intensity:'I3',durationMin:70,shooting:{stilling:'Variert',skudd:30,tema:['Finjustering','Konsentrasjon']},age:['JR'],notes:'Tung styrke øvre/nedre, 3–5 rep.'});
+      // 13–14 år
+      add({name:'13–14 Intervall I3 5×4 min + stående 30',type:'Trening',modality:'Løp',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Triggerkontroll']},age:['13-14'],notes:'2 min pause. Skyting mellom drag.'});
+      add({name:'13–14 Rulleski skøyting teknikk (70) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Pust/rytme','Siktebilde']},age:['13-14'],notes:'Teknikkstasjoner, lav intensitet.'});
 
-      // --- Alle ---
-      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde','Pust & rytme']},age:['U12','U14','U16','JR'],notes:'Balanse, fraskyv, tyngdeoverføring.'});
-      add({name:'Basistrening + styrke sirkel',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Kjerne/stabilitet/hofte/ankel.'});
-      add({name:'Stafett – vekslinger + standplass',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Rytme']},age:['U14','U16','JR'],notes:'Vekslinger, disiplin, 8×5 skudd.'});
-      add({name:'Komb I3: 4×6 min + 40 skudd',type:'Trening',modality:'Løp',intensity:'I3',durationMin:85,shooting:{stilling:'Kombinert',skudd:40,tema:['Inn/ut','Rytme']},age:['U16','JR'],notes:'Skyting etter hvert drag.'});
-      add({name:'Presisjon liggende 5×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:50,shooting:{stilling:'Liggende',skudd:25,tema:['Avtrekk','Etterhold']},age:['U12','U14','U16'],notes:'Rolig mellom serier.'});
-      add({name:'Presisjon stående 6×5',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:55,shooting:{stilling:'Stående',skudd:30,tema:['Nullpunkt','Pust']},age:['U14','U16','JR'],notes:'Holdtid/ro.'});
-      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['U12','U14','U16','JR'],notes:'Rolig + mobilitet.'});
-      add({name:'HL/NC forberedelse – sprintsim',type:'Trening',modality:'Ski skøyting',intensity:'I4',durationMin:70,shooting:{stilling:'Kombinert',skudd:30,tema:['Overganger','Avtrekkstid']},age:['U16','JR'],notes:'Prolog + jaktstart.'});
+      // HL (15+)
+      add({name:'HL VO2 I4 6×3 min + 50 skudd komb',type:'Trening',modality:'Løp',intensity:'I4',durationMin:85,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['HL'],notes:'Slak motbakke. L/S varier.'});
+      add({name:'HL I3 terskel 3×12 min + komb 40',type:'Trening',modality:'Rulleski klassisk',intensity:'I3',durationMin:100,shooting:{stilling:'Kombinert',skudd:40,tema:['Kapasitetsstyring','Overganger']},age:['HL'],notes:'3×12 min, 3–4 min pause.'});
+      add({name:'HL I5 5×3 min + stående 25',type:'Trening',modality:'Løp',intensity:'I5',durationMin:80,shooting:{stilling:'Stående',skudd:25,tema:['Holdtid','Avtrekkstid']},age:['HL'],notes:'Tydelige pauser, full innsats.'});
+      add({name:'HL Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['HL'],notes:'6×10 teknikkserier fordelt i økta.'});
 
-      // Konk-maler
-      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['U12','U14','U16','JR'],notes:'Standard sprint.'});
-      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['U14','U16','JR'],notes:'Standard normal.'});
-      add({name:'Konk – Fellesstart',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:70,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Fellesstart',age:['U16','JR'],notes:'Vanlig oppsett.'});
+      // Alle
+      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde','Pust & rytme']},age:['9-10','11-12','13-14','HL','Skiskytterskolen'],notes:'Balanse, fraskyv, tyngdeoverføring.'});
+      add({name:'Basistrening + styrke sirkel',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['9-10','11-12','13-14','HL','Skiskytterskolen'],notes:'Kjerne/stabilitet/hofte/ankel.'});
+      add({name:'Stafett – vekslinger + standplass',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Rytme']},age:['13-14','HL'],notes:'Vekslinger, disiplin, 8×5 skudd.'});
+      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['9-10','11-12','13-14','HL','Skiskytterskolen'],notes:'Rolig + mobilitet.'});
+
+      // Konkurranse-maler
+      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['11-12','13-14','HL'],notes:'Standard sprint.'});
+      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['13-14','HL'],notes:'Standard normal.'});
+      add({name:'Konk – Fellesstart',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:70,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Fellesstart',age:['HL'],notes:'Vanlig oppsett.'});
+
       return T;
     }
 
@@ -1115,7 +1136,7 @@
         return {
           id:uid(), title, type:type||'Trening', date:dayjs(dd).format('YYYY-MM-DD'), modality:modality||'',
           intensity:intensity||'', durationMin:parseInt(duration)||60,
-          age:(age||'').split('|').filter(Boolean),
+          age:migrateAgeTagsInArray((age||'').split('|').filter(Boolean)),
           shooting:{ stilling:stilling||'', skudd:parseInt(skudd)||0, tema:(tema||'').split('|').filter(Boolean) },
           notes:'', roles:{}, eqtiming:''
         };
@@ -1140,7 +1161,6 @@
     }
 
     // ---------- Excel-eksport (ALLE ÅR + Øktbank) ----------
-    // Paginert henting fra Supabase (1000 av gangen)
     async function fetchAllFromSupabase(table){
       const pageSize = 1000;
       let from = 0, to = pageSize - 1;
@@ -1158,7 +1178,6 @@
       }
       return all;
     }
-
     async function fetchAllEventsFromSupabase(){
       const pageSize = 1000;
       let from = 0, to = pageSize - 1;
@@ -1236,10 +1255,9 @@
       const wb = XLSX.utils.book_new();
       for(const {name, rows} of sheets){
         const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
-        // Auto-bredde: enkel heuristikk på header-lengde
         const cols = Object.keys(rows[0] || {A:''}).map(k=>({wch: Math.min(50, Math.max(10, String(k).length+2))}));
         ws['!cols'] = cols;
-        XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31)); // Excel sheet-navn maks 31 tegn
+        XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31));
       }
       const stamp = dayjs().format('YYYYMMDD_HHmm');
       XLSX.writeFile(wb, `lss_arsplan_og_oktbank_${stamp}.xlsx`);
@@ -1302,6 +1320,8 @@
         if(data.bank){ state.bank=data.bank; for(const t of data.bank){ await supaUpsertBankTemplate(t); } }
         if(data.weeks){ state.weeks=data.weeks; for(const [wk,val] of Object.entries(state.weeks)){ await supaUpsertWeek(state.year, +wk, val.code||'BAS', val.note||''); } }
         if(data.year){ state.year=data.year; }
+        // Migrer dersom JSON hadde gamle alderskoder
+        migrateAllAgesInState();
         render(); alert('Import fullført');
       }catch{ alert('Kunne ikke lese filen (må være JSON).'); }
     };
@@ -1318,9 +1338,9 @@
 
     $('#q-bank').oninput=renderBank; $('#f-age').onchange=renderBank; $('#f-type').onchange=renderBank;
 
-    $('#btn-csv-eg').onclick=()=>{ $('#csv-text').value=`01.09.${state.year}; Basistrening + bevegelighet; Trening; Løp; I1; 45; 0; Variert; bevegelighet|balanse; U12|U14
-03.09.${state.year}; Komb – I3 drag 4×6 + skyting; Trening; Løp; I3; 85; 40; Kombinert; overganger (inn/ut)|repetisjonsrytme; U16|JR
-07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; U14|U16|JR`; };
+    $('#btn-csv-eg').onclick=()=>{ $('#csv-text').value=`01.09.${state.year}; Basistrening + bevegelighet; Trening; Løp; I1; 45; 0; Variert; bevegelighet|balanse; 11-12|13-14
+03.09.${state.year}; Komb – I3 drag 4×6 + skyting; Trening; Løp; I3; 85; 40; Kombinert; overganger (inn/ut)|repetisjonsrytme; HL
+07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; 13-14|HL`; };
     $('#btn-csv-import').onclick=async ()=>{
       const rows=parseCSV($('#csv-text').value);
       state.events.push(...rows); render(); alert(`Importert ${rows.length} hendelser.`);
