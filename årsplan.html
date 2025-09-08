@@ -295,10 +295,17 @@
       </aside>
     </div>
   <script>
-    // ---------- Dayjs ----------
-    dayjs.extend(dayjs_plugin_isoWeek);
-    dayjs.extend(dayjs_plugin_weekday);
-    dayjs.extend(dayjs_plugin_localizedFormat);
+// ---------- Dayjs (robust init) ----------
+(function () {
+  const ex = (p, name) => {
+    if (p) dayjs.extend(p);
+    else console.warn(`Dayjs plugin missing: ${name}`);
+  };
+  ex(window.dayjs_plugin_isoWeek, 'isoWeek');
+  ex(window.dayjs_plugin_weekday, 'weekday');
+  ex(window.dayjs_plugin_localizedFormat, 'localizedFormat');
+})();
+
 
     // ---------- Konstanter ----------
     const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
