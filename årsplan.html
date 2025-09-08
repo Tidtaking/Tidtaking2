@@ -20,6 +20,14 @@
       #dialog .dialog-card{ width:100%; max-width:none; height:92vh; border-radius:0; display:flex; flex-direction:column; }
       #dialog .dialog-body{ overflow:auto; -webkit-overflow-scrolling: touch; flex:1 1 auto; }
     }
+
+    /* Polish */
+    .card{ border:1px solid rgb(226 232 240); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .daycell{ transition: background-color .15s ease; }
+    @media print{
+      aside, nav, .no-print { display:none!important; }
+      body { background:white; }
+    }
   </style>
 
   <!-- Dayjs -->
@@ -55,250 +63,251 @@
     </div>
   </header>
 
-  <!-- Toolbar -->
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
-    <div class="flex items-center gap-2">
-      <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
-      <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
-      <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
-    </div>
-    <nav class="flex gap-2">
-      <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
-      <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
-      <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
-      <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
-         class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-        Selvanviser
-      </a>
-      <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
-         class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-        Tidtaking
-      </a>
-    </nav>
-  </div>
+  <!-- ========= PAGE CONTAINER ========= -->
+  <div class="mx-auto max-w-7xl px-3">
 
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
-    <!-- Main -->
-    <main class="lg:col-span-3 space-y-4">
-      <!-- Calendar Tab -->
-      <section id="tab-calendar" class="tab-section">
-        <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
-        <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="flex items-center justify-between border-b p-4">
-            <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
-            <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm no-print">Vis/skjul liste</button>
+    <!-- Toolbar -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+      <div class="flex items-center gap-2">
+        <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
+        <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
+        <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
+      </div>
+      <nav class="flex gap-2">
+        <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
+        <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
+        <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+        <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+          Selvanviser
+        </a>
+        <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+          Tidtaking
+        </a>
+      </nav>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <!-- Main -->
+      <main class="lg:col-span-3 space-y-4">
+        <!-- Calendar Tab -->
+        <section id="tab-calendar" class="tab-section">
+          <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+          <div class="rounded-2xl border bg-white shadow-sm card">
+            <div class="flex items-center justify-between border-b p-4">
+              <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
+              <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm no-print">Vis/skjul liste</button>
+            </div>
+            <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+              <table class="w-full table-fixed text-sm">
+                <thead>
+                  <tr class="text-left text-slate-500">
+                    <th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th>
+                  </tr>
+                </thead>
+                <tbody id="tbl-events"></tbody>
+              </table>
+            </div>
           </div>
-          <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+        </section>
+
+        <!-- Bank Tab -->
+        <section id="tab-bank" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm card">
+            <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
+            <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label class="text-sm font-medium">Søk</label>
+                <input id="q-bank" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Søk i øktbank…"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium">Målgruppe</label>
+                <select id="f-age" class="mt-1 w-full h-10 rounded-xl border px-3"></select>
+              </div>
+              <div>
+                <label class="text-sm font-medium">Type</label>
+                <select id="f-type" class="mt-1 w-full h-10 rounded-xl border px-3">
+                  <option value="">Alle</option>
+                  <option>Trening</option>
+                  <option>Konkurranse</option>
+                  <option>Restitusjon</option>
+                </select>
+              </div>
+            </div>
+            <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+          </div>
+        </section>
+
+        <!-- Admin Tab -->
+        <section id="tab-admin" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm card">
+            <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin</h3></div>
+            <div class="p-4 grid grid-cols-1 gap-6">
+              <!-- A: Rediger hendelser -->
+              <div class="rounded-2xl border bg-white shadow-sm card p-4">
+                <h4 class="font-semibold mb-2">Rediger hendelser</h4>
+                <div class="flex flex-wrap items-end gap-2">
+                  <div>
+                    <label class="text-sm font-medium">Søk</label>
+                    <input id="admin-q" class="mt-1 w-64 h-10 rounded-xl border px-3" placeholder="Søk i tittel, type, sted…">
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Fra dato</label>
+                    <input id="admin-from" type="date" class="mt-1 h-10 rounded-xl border px-3">
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Til dato</label>
+                    <input id="admin-to" type="date" class="mt-1 h-10 rounded-xl border px-3">
+                  </div>
+                  <button id="admin-search" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Filtrer</button>
+                </div>
+                <div class="mt-3 max-h-[360px] overflow-auto rounded-xl border">
+                  <table class="w-full table-fixed text-sm">
+                    <thead class="bg-slate-50 sticky top-0">
+                      <tr class="text-left text-slate-600">
+                        <th class="p-2">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Int</th><th class="text-right pr-2">…</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-events"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- B: Årsklasser -->
+              <div class="rounded-2xl border bg-white shadow-sm card p-4">
+                <h4 class="font-semibold mb-2">Årsklasser (målgrupper)</h4>
+                <p class="text-xs text-slate-600 mb-2">Endre etikett/ID eller legg til nye.</p>
+                <div id="age-editor" class="space-y-2"></div>
+                <div class="mt-2 flex gap-2">
+                  <button id="age-add" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Legg til gruppe</button>
+                  <button id="age-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre grupper</button>
+                </div>
+              </div>
+
+              <!-- C: Ukekoder -->
+              <div class="rounded-2xl border bg-white shadow-sm card p-4">
+                <h4 class="font-semibold mb-2">Ukekoder (BAS/OPP/KONK/RES/EKS)</h4>
+                <div class="max-h-72 overflow-auto rounded-xl border">
+                  <table class="w-full text-sm">
+                    <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
+                    <tbody id="tbl-weeks"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- D: ICS -->
+              <div class="rounded-2xl border bg-white shadow-sm card p-4">
+                <h4 class="font-semibold mb-2">Kalender</h4>
+                <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
+              </div>
+
+              <!-- E: Øktbank (seed) -->
+              <div class="rounded-2xl border bg-white shadow-sm card p-4">
+                <h4 class="font-semibold mb-2">Øktbank</h4>
+                <button id="btn-seed-bank" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">
+                  Legg inn 25 standardøkter i Øktbank
+                </button>
+                <p class="text-xs text-slate-500 mt-1">Trygg å kjøre flere ganger – hopper over maler som allerede finnes (matcher på navn).</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Sidepanel -->
+      <aside class="space-y-4">
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
+          <div id="legend" class="p-4 space-y-1 text-sm"></div>
+        </div>
+
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
+          <div class="p-4 text-sm text-slate-700 space-y-1">
+            <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
+            <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
+            <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
+            <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles.</p>
+            <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
+          </div>
+        </div>
+
+        <!-- Intensitetssoner -->
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4">
+            <h3 class="text-lg font-semibold">Intensitetssoner (I1–I5) for barn</h3>
+          </div>
+          <div class="p-4">
             <table class="w-full text-sm">
               <thead>
-                <tr class="text-left text-slate-500"><th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th></tr>
+                <tr class="text-left text-slate-500">
+                  <th class="py-1">Sone</th>
+                  <th class="py-1">Følelse</th>
+                </tr>
               </thead>
-              <tbody id="tbl-events"></tbody>
+              <tbody class="align-top">
+                <tr>
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#22c55e"></span>
+                      <span>I1 Svært lett</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Helt rolig, kan prate og le hele tiden</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#eab308"></span>
+                      <span>I2 Lett</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Puster litt mer, men kan snakke i setninger</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>
+                      <span>I3 Middels</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Blir varm og andpusten, kan snakke i korte setninger</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span>
+                      <span>I4 Hardt</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Ordentlig sliten, kan bare si noen få ord</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span>⚡</span>
+                      <span>I5 Maks</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Alt du har! Klarer bare noen sekunder–minutter</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
-      </section>
 
-      <!-- Bank Tab -->
-      <section id="tab-bank" class="tab-section hidden">
-        <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
-          <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div>
-              <label class="text-sm font-medium">Søk</label>
-              <input id="q-bank" class="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Søk i øktbank…"/>
-            </div>
-            <div>
-              <label class="text-sm font-medium">Målgruppe</label>
-              <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2"></select>
-            </div>
-            <div>
-              <label class="text-sm font-medium">Type</label>
-              <select id="f-type" class="mt-1 w-full rounded-xl border px-3 py-2">
-                <option value="">Alle</option>
-                <option>Trening</option>
-                <option>Konkurranse</option>
-                <option>Restitusjon</option>
-              </select>
-            </div>
-          </div>
-          <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
-        </div>
-      </section>
-
-      <!-- Admin Tab -->
-      <section id="tab-admin" class="tab-section hidden">
-        <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin</h3></div>
-          <div class="p-4 grid grid-cols-1 gap-6">
-            <!-- A: Rediger hendelser -->
-            <div>
-              <h4 class="font-semibold mb-2">Rediger hendelser</h4>
-              <div class="flex flex-wrap items-end gap-2">
-                <div>
-                  <label class="text-sm font-medium">Søk</label>
-                  <input id="admin-q" class="mt-1 w-64 rounded-xl border px-3 py-2" placeholder="Søk i tittel, type, sted…">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Fra dato</label>
-                  <input id="admin-from" type="date" class="mt-1 rounded-xl border px-3 py-2">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Til dato</label>
-                  <input id="admin-to" type="date" class="mt-1 rounded-xl border px-3 py-2">
-                </div>
-                <button id="admin-search" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Filtrer</button>
-              </div>
-              <div class="mt-3 max-h-[360px] overflow-auto rounded-xl border">
-                <table class="w-full text-sm">
-                  <thead class="bg-slate-50 sticky top-0">
-                    <tr class="text-left text-slate-600">
-                      <th class="p-2">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Int</th><th class="text-right pr-2">…</th>
-                    </tr>
-                  </thead>
-                  <tbody id="admin-events"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- B: Årsklasser -->
-            <div>
-              <h4 class="font-semibold mb-2">Årsklasser (målgrupper)</h4>
-              <p class="text-xs text-slate-600 mb-2">Endre etikett/ID eller legg til nye.</p>
-              <div id="age-editor" class="space-y-2"></div>
-              <div class="mt-2 flex gap-2">
-                <button id="age-add" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Legg til gruppe</button>
-                <button id="age-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre grupper</button>
-              </div>
-            </div>
-
-            <!-- C: Ukekoder -->
-            <div>
-              <h4 class="font-semibold mb-2">Ukekoder (BAS/OPP/KONK/RES/EKS)</h4>
-              <div class="max-h-72 overflow-auto rounded-xl border">
-                <table class="w-full text-sm">
-                  <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
-                  <tbody id="tbl-weeks"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- D: ICS -->
-            <div>
-              <h4 class="font-semibold mb-2">Kalender</h4>
-              <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
-            </div>
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Hurtigverktøy</h3></div>
+          <div class="p-4 flex flex-col gap-2 no-print">
+            <button id="quick-trening" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny trening</button>
+            <button id="quick-skyting" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny skyteøkt</button>
+            <button id="quick-konk" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny konkurranse</button>
           </div>
         </div>
-      </section>
-    </main>
-<!-- D: ICS -->
-<div>
-  <h4 class="font-semibold mb-2">Kalender</h4>
-  <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
-</div>
-
-<!-- E: Øktbank (seed) -->
-<div>
-  <h4 class="font-semibold mb-2">Øktbank</h4>
-  <button id="btn-seed-bank" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">
-    Legg inn 25 standardøkter i Øktbank
-  </button>
-  <p class="text-xs text-slate-500 mt-1">Trygg å kjøre flere ganger – hopper over maler som allerede finnes (matcher på navn).</p>
-</div>
-
-    <!-- Sidepanel -->
-    <aside class="space-y-4">
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
-        <div id="legend" class="p-4 space-y-1 text-sm"></div>
-      </div>
-
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
-        <div class="p-4 text-sm text-slate-700 space-y-1">
-          <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
-          <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
-          <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
-          <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles.</p>
-          <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
-        </div>
-      </div>
-
-      <!-- Intensitetssoner -->
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4">
-          <h3 class="text-lg font-semibold">Intensitetssoner (I1–I5) for barn</h3>
-        </div>
-        <div class="p-4">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-left text-slate-500">
-                <th class="py-1">Sone</th>
-                <th class="py-1">Følelse</th>
-              </tr>
-            </thead>
-            <tbody class="align-top">
-              <tr>
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#22c55e"></span>
-                    <span>I1 Svært lett</span>
-                  </span>
-                </td>
-                <td class="py-2">Helt rolig, kan prate og le hele tiden</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#eab308"></span>
-                    <span>I2 Lett</span>
-                  </span>
-                </td>
-                <td class="py-2">Puster litt mer, men kan snakke i setninger</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>
-                    <span>I3 Middels</span>
-                  </span>
-                </td>
-                <td class="py-2">Blir varm og andpusten, kan snakke i korte setninger</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span>
-                    <span>I4 Hardt</span>
-                  </span>
-                </td>
-                <td class="py-2">Ordentlig sliten, kan bare si noen få ord</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span>⚡</span>
-                    <span>I5 Maks</span>
-                  </span>
-                </td>
-                <td class="py-2">Alt du har! Klarer bare noen sekunder–minutter</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4"><h3 class="text-lg font-semibold">Hurtigverktøy</h3></div>
-        <div class="p-4 flex flex-col gap-2 no-print">
-          <button id="quick-trening" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny trening</button>
-          <button id="quick-skyting" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny skyteøkt</button>
-          <button id="quick-konk" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny konkurranse</button>
-        </div>
-      </div>
-    </aside>
-  </div>
+      </aside>
+    </div>
+  </div><!-- /container -->
 
   <!-- Dialog -->
   <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
