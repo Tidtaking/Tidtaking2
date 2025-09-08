@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lørenskog Skiskyting – Årsplan & Øktbank (View Only)</title>
+
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root{ --brand:#18469a; --brand2:#dbe723; }
+    html,body{height:100%}
+    @media print{ .no-print{display:none!important} }
+    #lss-tooltip{ position:fixed; z-index:1000; pointer-events:none; transform:translate(-50%,-100%); max-width: min(88vw, 22rem); }
+    @media (max-width: 767px){
+      header h1{ font-size:1.125rem }
+      header .no-print button,
+      header .no-print label{ padding: .4rem .6rem; border-radius: .75rem; }
+      #dialog .dialog-card{ width:100%; max-width:none; height:92vh; border-radius:0; display:flex; flex-direction:column; }
+      #dialog .dialog-body{ overflow:auto; -webkit-overflow-scrolling: touch; flex:1 1 auto; }
+    }
+    .card{ border:1px solid rgb(226 232 240); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .daycell{ transition: background-color .15s ease; }
+    @media print{
+      aside, nav, .no-print { display:none!important; }
+      body { background:white; }
+    }
+  </style>
+
+  <!-- Dayjs -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/nb.min.js"></script>
+
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- SheetJS (XLSX) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- ========= HEADER ========= -->
+  <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
+    <div class="flex items-center gap-3">
+      <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
+      <div>
+        <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
+        <p class="text-sm opacity-80">Årsplan • Øktbank</p>
+      </div>
+    </div>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2 no-print md:sticky md:top-2 md:z-40">
+      <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
+      <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
+      <button id="btn-export-xlsx" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter Excel</button>
+      <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm cursor-pointer">
+        <input id="file-import" type="file" accept="application/json" class="hidden" />Importer
+      </label>
+    </div>
+  </header>
+
+  <!-- ========= PAGE CONTAINER ========= -->
+  <div class="mx-auto max-w-[96rem] px-3" id="page-grid">
+
+    <!-- Toolbar -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+      <div class="flex items-center gap-2">
+        <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
+        <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
+        <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
+      </div>
+      <nav class="flex flex-wrap gap-2">
+        <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
+        <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
+        <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+        <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Sidepanel</button>
+        <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Selvanviser</a>
+        <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Tidtaking</a>
+      </nav>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <main id="main-content" class="space-y-4">
+        <!-- Kalender, Øktbank og Admin-seksjoner -->
+        <!-- ... (samme som før, uendret) ... -->
+      </main>
+
+      <!-- Sidepanel -->
+      <aside id="sidebar" class="space-y-4 hidden lg:block">
+        <!-- ... (samme som før, fargekode, utviklingstrapp, intensitetssoner, hurtigverktøy) ... -->
+      </aside>
+    </div>
+  </div><!-- /container -->
+
+  <!-- Dialog -->
+  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-4">
+        <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
+        <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
+      </div>
+      <div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
+      <div class="border-t p-4 flex justify-end gap-2">
+        <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
+        <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
+        <button id="btn-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700"></div>
+
+  <script>
+    // ---------- Dayjs ----------
+    dayjs.extend(dayjs_plugin_isoWeek);
+    dayjs.extend(dayjs_plugin_weekday);
+    dayjs.extend(dayjs_plugin_localizedFormat);
+    dayjs.locale('nb');
+
+    // ---------- VIEW-ONLY FLAG ----------
+    const VIEW_ONLY = new URLSearchParams(location.search).get('view') === '1';
+    function applyViewOnly() {
+      if (!VIEW_ONLY) return;
+      document.body.classList.add('view-only');
+
+      // Skjul redigeringsknapper
+      document.getElementById('btn-new')?.classList.add('hidden');
+      document.getElementById('file-import')?.closest('label')?.classList.add('hidden');
+      document.querySelector('[data-tab="admin"]')?.classList.add('hidden');
+      document.querySelector('#sidebar .no-print')?.classList.add('hidden');
+
+      // Overstyr openDialog → bruk view
+      const _openDialog = window.openDialog;
+      window.openDialog = function(data) {
+        return window.openViewDialog?.(data) ?? _openDialog?.(data);
+      };
+
+      // Skjul lagre/slett
+      const style = document.createElement('style');
+      style.textContent = `
+        .view-only #btn-save,
+        .view-only #btn-delete,
+        .view-only .dnd-item [data-act],
+        .view-only #btn-new-on-day { display:none!important }
+        .view-only .dnd-item { cursor:default; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // ---------- Sidebar toggle ----------
+    function setSidebarButtonStyle(isVisible){
+      const btn = document.getElementById('btn-toggle-sidebar');
+      if(!btn) return;
+      const isHidden = !isVisible;
+      btn.classList.toggle('bg-blue-50', isHidden);
+      btn.classList.toggle('border-blue-300', isHidden);
+      btn.textContent = isHidden ? 'Sidepanel (skjult)' : 'Sidepanel';
+    }
+    function applySidebarLayout(visible){
+      const grid = document.getElementById('page-grid');
+      const aside = document.getElementById('sidebar');
+      if(!grid || !aside) return;
+      if(visible){
+        aside.classList.remove('hidden');
+        grid.classList.remove('lg:grid-cols-1');
+        grid.classList.add('lg:grid-cols-[minmax(0,1fr)_360px]');
+      } else {
+        aside.classList.add('hidden');
+        grid.classList.remove('lg:grid-cols-[minmax(0,1fr)_360px]');
+        grid.classList.add('lg:grid-cols-1');
+      }
+      setSidebarButtonStyle(visible);
+    }
+    function setupSidebarToggle(){
+      const btn = document.getElementById('btn-toggle-sidebar');
+      if(!btn) return;
+      const saved = localStorage.getItem('lss:sidebar:visible');
+      const visible = saved === null ? true : (saved === 'true');
+      applySidebarLayout(visible);
+      btn.addEventListener('click', () => {
+        const aside = document.getElementById('sidebar');
+        const nowVisible = aside.classList.contains('hidden');
+        applySidebarLayout(nowVisible);
+        localStorage.setItem('lss:sidebar:visible', String(nowVisible));
+      });
+    }
+
+    // ---------- init ----------
+    function init(){
+      bindDialogChrome?.();
+      bindUiHandlers?.();
+      setupSidebarToggle();
+      applyViewOnly();
+      switchTab?.('calendar');
+      supaLoadAll?.(state.year);
+      supaRealtimeInit?.();
+    }
+    window.addEventListener('DOMContentLoaded', init);
+
+    // ---------- Kortslutt skrivende kall i view-only ----------
+    async function supaUpsertEvent(model){ if(VIEW_ONLY) return; /* ... */ }
+    async function supaDeleteEvent(id){ if(VIEW_ONLY) return; /* ... */ }
+    async function supaUpsertWeek(y,w,c,n){ if(VIEW_ONLY) return; /* ... */ }
+    async function supaUpsertBankTemplate(t){ if(VIEW_ONLY) return; /* ... */ }
+    async function supaDeleteBankTemplate(id){ if(VIEW_ONLY) return; /* ... */ }
+    async function supaUpsertDayOrder(d,ids){ if(VIEW_ONLY) return; /* ... */ }
+  </script>
+</body>
+</html>
