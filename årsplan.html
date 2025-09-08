@@ -62,21 +62,20 @@
       <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
       <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
     </div>
-<nav class="flex gap-2">
-  <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
-  <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
-  <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
-  <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
-     class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-    Selvanviser
-  </a>
-  <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
-     class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-    Tidtaking
-  </a>
-</nav>
-
-
+    <nav class="flex gap-2">
+      <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
+      <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
+      <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+      <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
+         class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+        Selvanviser
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
+         class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+        Tidtaking
+      </a>
+    </nav>
+  </div>
 
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
     <!-- Main -->
@@ -919,7 +918,6 @@
     function openDialog(data){
       const existing = state.events.find(x=>x.id===data.id);
       const isEdit = !!existing;
-      const prevDate = existing ? existing.date : null;
 
       const model=Object.assign(
         { id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, location:'' },
@@ -988,7 +986,6 @@
       $('#btn-save').onclick = async () => {
         const get = (id) => $('#'+id, body);
         const wasNew = state.events.findIndex(x => x.id === model.id) < 0;
-        const oldDate = model.date;
 
         model.title       = get('f-title').value.trim();
         model.type        = get('f-type').value;
@@ -1099,7 +1096,7 @@
       alert('Årsklasser lagret.');
     });
 
-        // ---------- Admin: hendelser-oversikt ----------
+    // ---------- Admin: hendelser-oversikt ----------
     function renderAdminEvents(){
       const tb = $('#admin-events'); if(!tb) return;
       const q = ($('#admin-q')?.value||'').toLowerCase().trim();
@@ -1260,6 +1257,7 @@
           Varighet_min: r.duration_min ?? '',
           Aldersklasser: age,
           Skytestilling: shooting.stilling || '',
+          Skudd: shooting.skudd
           Skudd: shooting.skudd ?? '',
           Tema: tema,
           Konkurranse: r.race_subtype || '',
