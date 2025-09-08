@@ -34,6 +34,8 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
+  <!-- Norsk locale for Dayjs -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/nb.min.js"></script>
 
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -41,7 +43,9 @@
   <!-- SheetJS (XLSX) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+
+<!-- Endret til hvit bakgrunn -->
+<body class="bg-white min-h-screen">
 
   <!-- ========= HEADER ========= -->
   <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
@@ -63,7 +67,8 @@
   </header>
 
   <!-- ========= PAGE CONTAINER ========= -->
-  <div class="mx-auto max-w-7xl px-3">
+  <!-- Litt bredere totalbredde enn før -->
+  <div class="mx-auto max-w-[96rem] px-3">
 
     <!-- Toolbar -->
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
@@ -72,10 +77,14 @@
         <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
         <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
       </div>
-      <nav class="flex gap-2">
+      <nav class="flex flex-wrap gap-2">
         <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
         <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
         <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+
+        <!-- Ny knapp for å vise/skjule sidepanel -->
+        <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Sidepanel</button>
+
         <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
            class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
           Selvanviser
@@ -87,12 +96,15 @@
       </nav>
     </div>
 
-<div class="grid grid-cols-1 gap-4">
+    <!-- To-kolonne layout: hovedinnhold + valgfritt sidepanel -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <!-- Main -->
-      <main class="lg:col-span-3 space-y-4">
+      <main id="main-content" class="space-y-4">
         <!-- Calendar Tab -->
         <section id="tab-calendar" class="tab-section">
-          <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+          <!-- Kalendergrid beholder egen responsive oppdeling -->
+          <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
+
           <div class="rounded-2xl border bg-white shadow-sm card">
             <div class="flex items-center justify-between border-b p-4">
               <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
@@ -134,7 +146,7 @@
                 </select>
               </div>
             </div>
-            <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+            <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
           </div>
         </section>
 
@@ -214,8 +226,8 @@
         </section>
       </main>
 
-      <!-- Sidepanel -->
-      <aside class="space-y-4">
+      <!-- Sidepanel (kan skjules/vises) -->
+      <aside id="sidebar" class="space-y-4 hidden lg:block">
         <div class="rounded-2xl border bg-white shadow-sm card">
           <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
           <div id="legend" class="p-4 space-y-1 text-sm"></div>
@@ -332,7 +344,24 @@
     dayjs.extend(dayjs_plugin_isoWeek);
     dayjs.extend(dayjs_plugin_weekday);
     dayjs.extend(dayjs_plugin_localizedFormat);
+    dayjs.locale('nb'); // <-- Norsk språk for måneder/ukedager
 
+    // ---------- Liten, ny JS for sidepanel-knappen ----------
+    // LEGGES HER, rett etter dayjs.locale('nb'), før resten av app-logikken din.
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-toggle-sidebar');
+      const aside = document.getElementById('sidebar');
+
+      // Husk siste valg mellom økter
+      const saved = localStorage.getItem('lss:sidebar:visible');
+      if (saved === 'true') aside?.classList.remove('hidden');
+      if (saved === 'false') aside?.classList.add('hidden');
+
+      btn?.addEventListener('click', () => {
+        aside.classList.toggle('hidden');
+        localStorage.setItem('lss:sidebar:visible', !aside.classList.contains('hidden'));
+      });
+    });
     // ---------- Konstanter ----------
     const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
     const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
@@ -1509,6 +1538,7 @@
       $('#btn-new').onclick=()=> openDialog({date:dayjs().format('YYYY-MM-DD')});
       $('#btn-print').onclick=()=> window.print();
     }
+
 
     window.addEventListener('DOMContentLoaded', init);
   </script>
