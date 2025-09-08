@@ -1244,7 +1244,7 @@ function searchExactDayFrequency(antallDager) {
     if (budPairs.length > 0) {
       const budListe = budPairs.map(([key,v])=> `${aggregert[key].name} (${v.toLocaleString()})`).join(', ');
       html += `<p style="font-style: italic; font-size: 12px; margin-top: 4px;">
-        <strong>Oppsummering budleverte:</strong> ${budPairs.length} aviser – ${budListe}
+        <strong>Oppsummering budleverte idag:</strong> ${budPairs.length} aviser – ${budListe}
       </p>`;
     }
   }
