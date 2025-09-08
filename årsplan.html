@@ -1090,9 +1090,7 @@
       alert('Årsklasser lagret.');
     });
 
-    // ---------- Admin: hendelser-oversikt ----------
-    function renderAdminEvents(){
-      const tb = $('#admin-events'); if(!tb)
+        // ---------- Admin: hendelser-oversikt ----------
     function renderAdminEvents(){
       const tb = $('#admin-events'); if(!tb) return;
       const q = ($('#admin-q')?.value||'').toLowerCase().trim();
@@ -1143,9 +1141,20 @@
         tbody.appendChild(tr);
       });
       $$('select[data-wk]').forEach(el=> el.onchange=async ()=>{
-        const wk=+el.getAttribute('data-wk'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].code=el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||''); });
+        const wk=+el.getAttribute('data-wk');
+        state.weeks[wk]=state.weeks[wk]||{};
+        state.weeks[wk].code=el.value;
+        lsSet(KEY.WEEKS,state.weeks);
+        renderCalendar();
+        await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||'');
+      });
       $$('input[data-wkn]').forEach(el=> el.oninput=async ()=>{
-        const wk=+el.getAttribute('data-wkn'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].note=el.value; lsSet(KEY.WEEKS,state.weeks); await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value); });
+        const wk=+el.getAttribute('data-wkn');
+        state.weeks[wk]=state.weeks[wk]||{};
+        state.weeks[wk].note=el.value;
+        lsSet(KEY.WEEKS,state.weeks);
+        await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value);
+      });
     }
 
     // ---------- ICS ----------
@@ -1155,16 +1164,24 @@
       const escIcs=s=> (s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/[,;]/g, m=> '\\'+m);
       const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO'];
       state.events.forEach(e=>{
-        const start=new Date(e.date+'T17:00:00'); const end=new Date(start.getTime()+((e.durationMin||60)*60000));
-        lines.push('BEGIN:VEVENT'); lines.push('UID:'+e.id); lines.push('DTSTAMP:'+fmt(new Date())); lines.push('DTSTART:'+fmt(start)); lines.push('DTEND:'+fmt(end));
-        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+escIcs(title));
+        const start=new Date(e.date+'T17:00:00');
+        const end=new Date(start.getTime()+((e.durationMin||60)*60000));
+        lines.push('BEGIN:VEVENT');
+        lines.push('UID:'+e.id);
+        lines.push('DTSTAMP:'+fmt(new Date()));
+        lines.push('DTSTART:'+fmt(start));
+        lines.push('DTEND:'+fmt(end));
+        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):''));
+        lines.push('SUMMARY:'+escIcs(title));
         if(e.location) lines.push('LOCATION:'+escIcs(e.location));
         if(e.notes)    lines.push('DESCRIPTION:'+escIcs(e.notes));
         lines.push('END:VEVENT');
       });
       lines.push('END:VCALENDAR');
       const blob=new Blob([lines.join('\n')],{type:'text/calendar'});
-      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click();
+      URL.revokeObjectURL(url);
     }
 
     // ---------- Excel (alle år + bank) ----------
@@ -1172,7 +1189,10 @@
       const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
       while(true){
         const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: true }).range(from, to);
-        if(error){ throw error; } all = all.concat(data || []); if(!data || data.length < pageSize) break; from += pageSize; to += pageSize;
+        if(error){ throw error; }
+        all = all.concat(data || []);
+        if(!data || data.length < pageSize) break;
+        from += pageSize; to += pageSize;
       }
       return all;
     }
@@ -1180,7 +1200,10 @@
       const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
       while(true){
         const { data, error } = await supabase.from(TBL.events).select('*').order('date', { ascending: true }).range(from, to);
-        if(error){ throw error; } all = all.concat(data || []); if(!data || data.length < pageSize) break; from += pageSize; to += pageSize;
+        if(error){ throw error; }
+        all = all.concat(data || []);
+        if(!data || data.length < pageSize) break;
+        from += pageSize; to += pageSize;
       }
       return all;
     }
@@ -1194,7 +1217,7 @@
           ID: r.id || '',
           Dato: r.date || '',
           Ukedag: d.isValid()? d.format('dddd') : '',
-          Ukenr: d.isValid()? (d.isoWeek?.() || '') : '',
+          Ukenr: d.isValid()? (typeof d.isoWeek==='function' ? d.isoWeek() : '') : '',
           År: d.isValid()? d.year() : '',
           Tittel: r.title || '',
           Type: r.type || r.event_type || '',
@@ -1276,7 +1299,6 @@
 
     // ---------- Øktbank defaults ----------
     function getDefaultTemplates(){
-      const A = ['Skiskytterskolen','9-10','11-12','13-14','HL'];
       return [
         { id:uid(), name:'Basistrening + bevegelighet', type:'Trening', modality:'Løp', intensity:'I1', durationMin:45, age:['9-10','11-12'], shooting:{stilling:'Variert',skudd:0,tema:['bevegelighet','balanse']}, notes:'Lekpreget økt.' },
         { id:uid(), name:'Komb – I3 drag 4×6 + skyting', type:'Trening', modality:'Løp', intensity:'I3', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'Kombinert',skudd:40,tema:['pustekontroll','overganger']}, notes:'' },
@@ -1292,10 +1314,10 @@
     $('#btn-export-xlsx').onclick=exportExcelAll;
     $('#btn-ics').onclick=exportICS;
 
-    // Import (JSON – beholdes)
     $('#file-import').onchange=async(e)=>{
       const f=e.target.files[0]; if(!f) return;
-      const text=await f.text(); try{
+      const text=await f.text();
+      try{
         const data=JSON.parse(text);
         if(data.events){ state.events=data.events; for(const ev of data.events){ await supaUpsertEvent(ev); } }
         if(data.bank){ state.bank=data.bank; for(const t of data.bank){ await supaUpsertBankTemplate(t); } }
