@@ -434,7 +434,13 @@ function setupSidebarToggle(){
       const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
       $('#btn-cancel')?.addEventListener('click', doClose);
       $('#dlg-close')?.addEventListener('click', doClose);
-      dlg?.addEventListener('click', (e) => { if (e.target === dlg) closeDialog(); });
+dlg?.addEventListener('click', (e) => { 
+  if (e.target === dlg) {
+    if (confirm("Vil du lukke uten å lagre endringer?")) {
+      closeDialog();
+    }
+  }
+});
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog(); });
     }
 
