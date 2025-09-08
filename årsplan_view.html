@@ -411,13 +411,7 @@ function getDefaultTemplates(){
       migrateAllAgesInState();
       render();
     }
-function getDefaultTemplates(){
-  return [
-    { id: uid(), name:"Basisøkt", type:"Trening", modality:"Løp", intensity:"I2", durationMin:60, age:["Alle"], shooting:{stilling:"",skudd:0,tema:[]} },
-    { id: uid(), name:"Skyteøkt enkel", type:"Trening", modality:"Ski skøyting", intensity:"I1", durationMin:45, age:["11-12"], shooting:{stilling:"Liggende",skudd:40,tema:["Treffsikkerhet"]} },
-    { id: uid(), name:"Hard intervall", type:"Trening", modality:"Rulleski klassisk", intensity:"I4", durationMin:30, age:["HL"], shooting:{stilling:"Stående",skudd:20,tema:["Belastning"]} }
-  ];
-}
+
 
     async function supaLoadAgeGroups(){
       const { data, error } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
@@ -714,23 +708,31 @@ function getDefaultTemplates(){
 
     /* ========== Kalender-rendering (lik original, men uten redigering) ========== */
     function render(){
-      $('#year-label').textContent = state.year;
-      $('#event-year').textContent = state.year;
-      renderLegend(); 
-      renderCalendar(); 
-      renderList();
+  $('#year-label').textContent = state.year;
+  $('#event-year').textContent = state.year;
 
-      // oppdatér filter for bank (aldersvalg)
-      const fAge = $('#f-age'); 
-      if(fAge){ fAge.innerHTML = `<option value="">Alle</option>` + (state.ageGroups||[]).map(g=>`<option value="${g.id}">${g.label}</option>`).join(''); }
+  renderLegend(); 
+  renderCalendar(); 
+  renderList();
 
-      lsSet(KEY.YEAR,state.year);
-      lsSet(KEY.EVENTS,state.events);
-      lsSet(KEY.BANK,state.bank);
-      lsSet(KEY.WEEKS,state.weeks);
-      lsSet(KEY.DAYORDER,state.dayOrder);
-      lsSet(KEY.AGES,state.ageGroups);
-    }
+  // oppdatér filter for bank (aldersvalg)
+  const fAge = $('#f-age'); 
+  if(fAge){
+    fAge.innerHTML = `<option value="">Alle</option>` + (state.ageGroups||[])
+      .map(g=>`<option value="${g.id}">${g.label}</option>`).join('');
+  }
+
+  // ⬅️ Viktig: tegn Øktbank-kortene
+  renderBank();
+
+  lsSet(KEY.YEAR,state.year);
+  lsSet(KEY.EVENTS,state.events);
+  lsSet(KEY.BANK,state.bank);
+  lsSet(KEY.WEEKS,state.weeks);
+  lsSet(KEY.DAYORDER,state.dayOrder);
+  lsSet(KEY.AGES,state.ageGroups);
+}
+
 
     function renderLegend(){
       const el=$('#legend'); if(!el) return;
