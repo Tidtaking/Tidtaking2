@@ -12,31 +12,14 @@
     :root{ --brand:#18469a; --brand2:#dbe723; }
     html,body{height:100%}
     @media print{ .no-print{display:none!important} }
-    /* Tooltip */
     #lss-tooltip{ position:fixed; z-index:1000; pointer-events:none; transform:translate(-50%,-100%); max-width: min(88vw, 22rem); }
-  </style>
-  <style>
-  /* --- Mobile tweaks --- */
-  @media (max-width: 767px){
-    header h1{ font-size:1.125rem }
-    header .no-print button,
-    header .no-print label{ padding: .4rem .6rem; border-radius: .75rem; }
-
-    /* Dialog: fullskjerm-ish på mobil */
-    #dialog .dialog-card{
-      width:100%;
-      max-width:none;
-      height:92vh;
-      border-radius:0;
-      display:flex;
-      flex-direction:column;
+    @media (max-width: 767px){
+      header h1{ font-size:1.125rem }
+      header .no-print button,
+      header .no-print label{ padding: .4rem .6rem; border-radius: .75rem; }
+      #dialog .dialog-card{ width:100%; max-width:none; height:92vh; border-radius:0; display:flex; flex-direction:column; }
+      #dialog .dialog-body{ overflow:auto; -webkit-overflow-scrolling: touch; flex:1 1 auto; }
     }
-    #dialog .dialog-body{
-      overflow:auto;
-      -webkit-overflow-scrolling: touch;
-      flex:1 1 auto;
-    }
-  }
   </style>
 
   <!-- Dayjs -->
@@ -48,7 +31,7 @@
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- SheetJS (XLSX) for Excel-eksport -->
+  <!-- SheetJS (XLSX) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -102,7 +85,7 @@
           <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
             <table class="w-full text-sm">
               <thead>
-                <tr class="text-left text-slate-500"><th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th></tr>
+                <tr class="text-left text-slate-500"><th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th></tr>
               </thead>
               <tbody id="tbl-events"></tbody>
             </table>
@@ -121,14 +104,7 @@
             </div>
             <div>
               <label class="text-sm font-medium">Målgruppe</label>
-              <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2">
-                <option value="">Alle</option>
-                <option value="HL">HL gruppe (15+)</option>
-                <option value="13-14">13–14 år</option>
-                <option value="11-12">11–12 år</option>
-                <option value="9-10">9–10 år</option>
-                <option value="Skiskytterskolen">Skiskytterskolen</option>
-              </select>
+              <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2"></select>
             </div>
             <div>
               <label class="text-sm font-medium">Type</label>
@@ -156,7 +132,7 @@
             <div id="pdf-embed" class="mt-4 h-[70vh] w-full overflow-hidden rounded-2xl border hidden">
               <embed id="pdf-el" src="" type="application/pdf" class="h-full w-full" />
             </div>
-            <p id="pdf-empty" class="mt-2 text-sm text-slate-600">Ingen PDF valgt ennå. Tips: Last opp «Utviklingstrapp_v01_2018-3.pdf» eller «Tanker skyteteknikk.pptx.pdf».</p>
+            <p id="pdf-empty" class="mt-2 text-sm text-slate-600">Ingen PDF valgt ennå.</p>
           </div>
         </div>
       </section>
@@ -165,44 +141,63 @@
       <section id="tab-admin" class="tab-section hidden">
         <div class="rounded-2xl border bg-white shadow-sm">
           <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin</h3></div>
-          <div class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div class="space-y-3">
-              <div>
-                <label class="text-sm font-medium">CSV-import (dato; tittel; type; modality; intensity; duration; skudd; stilling; tema; age)</label>
-                <textarea id="csv-text" class="mt-1 h-40 w-full rounded-xl border px-3 py-2" placeholder="DD.MM.YYYY; Basistrening; Trening; Løp; I2; 60; 0; Variert; bevegelighet|balanse; 13-14|HL"></textarea>
-                <div class="mt-2 flex gap-2">
-                  <button id="btn-csv-import" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Importer CSV</button>
-                  <button id="btn-csv-eg" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lim inn eksempel</button>
+          <div class="p-4 grid grid-cols-1 gap-6">
+            <!-- A: Rediger hendelser -->
+            <div>
+              <h4 class="font-semibold mb-2">Rediger hendelser</h4>
+              <div class="flex flex-wrap items-end gap-2">
+                <div>
+                  <label class="text-sm font-medium">Søk</label>
+                  <input id="admin-q" class="mt-1 w-64 rounded-xl border px-3 py-2" placeholder="Søk i tittel, type, sted…">
                 </div>
+                <div>
+                  <label class="text-sm font-medium">Fra dato</label>
+                  <input id="admin-from" type="date" class="mt-1 rounded-xl border px-3 py-2">
+                </div>
+                <div>
+                  <label class="text-sm font-medium">Til dato</label>
+                  <input id="admin-to" type="date" class="mt-1 rounded-xl border px-3 py-2">
+                </div>
+                <button id="admin-search" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Filtrer</button>
               </div>
-
-              <!-- Logo bytte -->
-              <div>
-                <label class="text-sm font-medium">Bytt logo (valgfritt)</label>
-                <div class="mt-1 flex items-center gap-2">
-                  <input id="file-logo" type="file" accept="image/*" class="hidden"/>
-                  <label for="file-logo" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm cursor-pointer">Velg bilde</label>
-                  <button id="btn-logo-reset" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Tilbakestill</button>
-                </div>
+              <div class="mt-3 max-h-[360px] overflow-auto rounded-xl border">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 sticky top-0">
+                    <tr class="text-left text-slate-600">
+                      <th class="p-2">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Int</th><th class="text-right pr-2">…</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-events"></tbody>
+                </table>
               </div>
             </div>
 
-            <div class="space-y-3">
-              <div>
-                <label class="text-sm font-medium">Ukekoder (BAS/OPP/KONK/RES/EKS)</label>
-                <div class="mt-2 max-h-72 overflow-auto rounded-xl border">
-                  <table class="w-full text-sm">
-                    <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
-                    <tbody id="tbl-weeks"></tbody>
-                  </table>
-                </div>
+            <!-- B: Årsklasser -->
+            <div>
+              <h4 class="font-semibold mb-2">Årsklasser (målgrupper)</h4>
+              <p class="text-xs text-slate-600 mb-2">Endre etikett/ID eller legg til nye. NB: Dersom du endrer ID, vil eksisterende hendelser som bruker gammel ID ikke oppdateres automatisk.</p>
+              <div id="age-editor" class="space-y-2"></div>
+              <div class="mt-2 flex gap-2">
+                <button id="age-add" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Legg til gruppe</button>
+                <button id="age-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre grupper</button>
               </div>
-              <div>
-                <label class="text-sm font-medium">Eksporter ICS (kalender)</label>
-                <div class="mt-2 flex gap-2">
-                  <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
-                </div>
+            </div>
+
+            <!-- C: Ukekoder -->
+            <div>
+              <h4 class="font-semibold mb-2">Ukekoder (BAS/OPP/KONK/RES/EKS)</h4>
+              <div class="max-h-72 overflow-auto rounded-xl border">
+                <table class="w-full text-sm">
+                  <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
+                  <tbody id="tbl-weeks"></tbody>
+                </table>
               </div>
+            </div>
+
+            <!-- D: ICS -->
+            <div>
+              <h4 class="font-semibold mb-2">Kalender</h4>
+              <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
             </div>
           </div>
         </div>
@@ -221,8 +216,8 @@
           <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
           <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
           <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
-          <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles, enkel fartstyring.</p>
-          <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konkurransespesifikke økter.</p>
+          <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles.</p>
+          <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
         </div>
       </div>
       <div class="rounded-2xl border bg-white shadow-sm">
@@ -265,27 +260,24 @@
     const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
     const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
     const INTENS = ['I1','I2','I3','I4','I5'];
-
-    // --- Nye aldersgrupper ---
-    const ALDER = [
-      ['HL', 'HL gruppe (15+)'],
-      ['13-14', '13–14 år'],
-      ['11-12', '11–12 år'],
-      ['9-10', '9–10 år'],
-      ['Skiskytterskolen', 'Skiskytterskolen']
-    ];
-    // Migrering gamle -> nye
-    const AGE_MAP = { 'U12':'11-12', 'U14':'13-14', 'U16':'HL', 'JR':'HL' };
-
-    const ROLES = ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'];
     const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
+
+    const DEFAULT_AGE_GROUPS = [
+      { id:'HL', label:'HL gruppe (15+)' },
+      { id:'13-14', label:'13–14 år' },
+      { id:'11-12', label:'11–12 år' },
+      { id:'9-10', label:'9–10 år' },
+      { id:'Skiskytterskolen', label:'Skiskytterskolen' }
+    ];
+    const AGE_MAP = { 'U12':'11-12', 'U14':'13-14', 'U16':'HL', 'JR':'HL' };
 
     const KEY = {
       EVENTS:'lss:events:v1',
       BANK:'lss:bank:v3',
       WEEKS:'lss:weeks:v1',
       YEAR:'lss:year:v1',
-      DAYORDER:'lss:dayorder:v2' // lokal cache for day order (sky-sync)
+      DAYORDER:'lss:dayorder:v2',
+      AGES:'lss:ages:v1'
     };
 
     const $=(q,el=document)=>el.querySelector(q);
@@ -300,7 +292,6 @@
       img.textContent='Logo';
       return img;
     }
-
     function bindDialogChrome(){
       const dlg = $('#dialog');
       const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
@@ -310,39 +301,38 @@
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog(); });
     }
 
-    // ---------- SUPABASE SETUP ----------
+    // ---------- Supabase ----------
     const SUPA_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order', settings:'settings' };
 
-    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order' };
-
-    // Global state
+    // ---------- State ----------
     let state = {
       year: lsGet(KEY.YEAR, dayjs().year()),
-      month: dayjs().month() + 1, // 1-12, mobil
+      month: dayjs().month() + 1,
       events: [],
       bank: [],
       weeks: {},
-      dayOrder: lsGet(KEY.DAYORDER, {}) // { 'YYYY-MM-DD': ['id1','id2',...] }
+      dayOrder: lsGet(KEY.DAYORDER, {}),
+      ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS) // [{id,label}]
     };
-
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
-    // ---------- Supabase I/O ----------
+    // ---------- I/O ----------
     async function supaLoadAll(year = state.year){
-      // Events (for valgt år)
+      // Events
       const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
       if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
-      // Bank (alle)
+      // Bank
       const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
       if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
       else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
 
-      // Weeks (for år)
+      // Weeks
       const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
       if(!wErr && wks){
         const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
@@ -351,20 +341,37 @@
         state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
       }
 
-      // Day Order (for år)
+      // Age groups settings
+      await supaLoadAgeGroups();
+
+      // Day order
       await supaLoadDayOrderForYear(year);
 
-      // Migrer alderstags
       migrateAllAgesInState();
-
       render();
+    }
+
+    async function supaLoadAgeGroups(){
+      const { data, error } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      if(error){ console.warn('Hent age_groups feilet', error); }
+      if(data && data.value && Array.isArray(data.value)){
+        state.ageGroups = data.value;
+      } else {
+        // Opprett default i skyen (engang)
+        state.ageGroups = DEFAULT_AGE_GROUPS;
+        await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups });
+      }
+      lsSet(KEY.AGES, state.ageGroups);
+    }
+    async function supaSaveAgeGroups(){
+      const { error } = await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups });
+      if(error){ console.warn('Lagre age_groups feilet', error); alert('Kunne ikke lagre grupper til skyen.'); }
     }
 
     async function supaUpsertEvent(model){
       const row = mapEventToDb(model);
-      const { data, error } = await supabase.from(TBL.events).upsert(row, { onConflict: 'id' }).select().single();
+      const { error } = await supabase.from(TBL.events).upsert(row, { onConflict: 'id' });
       if (error){ console.warn('Upsert event feilet', error); alert('Kunne ikke lagre til skyen. Lagret lokalt.'); }
-      return data;
     }
     async function supaDeleteEvent(id){
       const { error } = await supabase.from(TBL.events).delete().eq('id', id);
@@ -384,22 +391,16 @@
       if(error){ console.warn('Slett bank feilet', error); }
     }
 
-    // ---- Day Order sky-sync ----
     async function supaLoadDayOrderForYear(year){
       const from = `${year}-01-01`;
       const to   = `${year+1}-01-01`;
-      const { data, error } = await supabase
-        .from(TBL.dayOrder)
-        .select('*')
-        .gte('date', from)
-        .lt('date', to);
+      const { data, error } = await supabase.from(TBL.dayOrder).select('*').gte('date', from).lt('date', to);
       if(error){ console.warn('Henting day_order feilet', error); return; }
       const map = {};
       for(const r of data||[]){ map[r.date] = Array.isArray(r.ids) ? r.ids : []; }
       state.dayOrder = { ...state.dayOrder, ...map };
       lsSet(KEY.DAYORDER, state.dayOrder);
     }
-
     async function supaUpsertDayOrder(dateISO, ids){
       const { error } = await supabase.from(TBL.dayOrder).upsert({ date: dateISO, ids });
       if(error){ console.warn('Upsert day_order feilet', error); }
@@ -426,19 +427,25 @@
           if(!d) return;
           const y = dayjs(d).year();
           if(y !== state.year) return;
-          // Oppdater lokal state fra sky
-          if(payload.eventType === 'DELETE'){
-            delete state.dayOrder[d];
-          }else{
-            state.dayOrder[d] = payload.new?.ids || [];
-          }
+          if(payload.eventType === 'DELETE'){ delete state.dayOrder[d]; }
+          else { state.dayOrder[d] = payload.new?.ids || []; }
           lsSet(KEY.DAYORDER, state.dayOrder);
           render();
         })
         .subscribe();
+
+      supabase.channel('settings-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.settings }, payload => {
+          if(payload.new?.key === 'age_groups'){
+            state.ageGroups = payload.new?.value || DEFAULT_AGE_GROUPS;
+            lsSet(KEY.AGES, state.ageGroups);
+            render();
+          }
+        })
+        .subscribe();
     }
 
-    // ---------- DB mappere ----------
+    // ---------- Mappers ----------
     function mapEventToDb(e){
       return {
         id: e.id,
@@ -453,7 +460,7 @@
         race_subtype: e.raceSubtype || null,
         notes: e.notes || null,
         roles: e.roles || {},
-        eqtiming: e.eqtiming || null
+        location: e.location || null
       };
     }
     function mapEventFromDb(r){
@@ -471,21 +478,21 @@
         raceSubtype: r.race_subtype || '',
         notes: r.notes || '',
         roles: r.roles || {},
-        eqtiming: r.eqtiming || ''
+        location: r.location || ''
       };
     }
-    function mapBankToDb(r){
+    function mapBankToDb(t){
       return {
-        id: r.id,
-        name: r.name,
-        type: r.type,
-        modality: r.modality,
-        intensity: r.intensity,
-        duration_min: r.durationMin ?? null,
-        age: r.age || [],
-        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: r.raceSubtype || null,
-        notes: r.notes || null
+        id: t.id,
+        name: t.name,
+        type: t.type,
+        modality: t.modality,
+        intensity: t.intensity,
+        duration_min: t.durationMin ?? null,
+        age: t.age || [],
+        shooting: t.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: t.raceSubtype || null,
+        notes: t.notes || null
       };
     }
     function mapBankFromDb(r){
@@ -503,7 +510,7 @@
       };
     }
 
-    // ---------- Defaults ----------
+    // ---------- Defaults / migrering ----------
     function getDefaultWeeks(year){
       const first=dayjs(year+'-01-01');
       const last=dayjs(year+'-12-31');
@@ -515,8 +522,6 @@
       }
       return weeks;
     }
-
-    // Migrering av alders-tagger (U12/U14/U16/JR -> nye)
     function migrateAgeTagsInArray(arr){
       if(!Array.isArray(arr)) return [];
       return arr.map(a => AGE_MAP[a] || a);
@@ -526,44 +531,7 @@
       state.bank   = (state.bank   || []).map(t => ({ ...t, age: migrateAgeTagsInArray(t.age) }));
     }
 
-    // Flere standard-økter – inkl. 9–10 og Skiskytterskolen
-    function getDefaultTemplates(){
-      const T=[]; const add=(o)=>T.push({id:uid(),...o});
-
-      // Skiskytterskolen
-      add({name:'Skiskytterskolen – introduksjon (40) + 10 skudd ligg',type:'Trening',modality:'Basistrening',intensity:'I1',durationMin:40,shooting:{stilling:'Liggende',skudd:10,tema:['Sikkerhet','Grunnstilling liggende']},age:['Skiskytterskolen'],notes:'Trygghet på bane, rolig tempo. Lekbasert.'});
-
-      // 9–10 år
-      add({name:'9–10 år – lek & løp (35) + 10 skudd',type:'Trening',modality:'Løp',intensity:'I1',durationMin:35,shooting:{stilling:'Liggende',skudd:10,tema:['Siktebilde','Ro i avtrekk']},age:['9-10'],notes:'Stafettleker, koordinasjon, korte stasjoner.'});
-
-      // 11–12 år
-      add({name:'11–12 år – teknikk rulleski (50) + 20 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:50,shooting:{stilling:'Liggende',skudd:20,tema:['Etterhold','Pust & rytme']},age:['11-12'],notes:'Kjeglebaner, balanse og tyngdeoverføring.'});
-
-      // 13–14 år
-      add({name:'13–14 Intervall I3 5×4 min + stående 30',type:'Trening',modality:'Løp',intensity:'I3',durationMin:75,shooting:{stilling:'Stående',skudd:30,tema:['Grunnstilling stående','Triggerkontroll']},age:['13-14'],notes:'2 min pause. Skyting mellom drag.'});
-      add({name:'13–14 Rulleski skøyting teknikk (70) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Pust/rytme','Siktebilde']},age:['13-14'],notes:'Teknikkstasjoner, lav intensitet.'});
-
-      // HL (15+)
-      add({name:'HL VO2 I4 6×3 min + 50 skudd komb',type:'Trening',modality:'Løp',intensity:'I4',durationMin:85,shooting:{stilling:'Kombinert',skudd:50,tema:['Repetisjonsrytme','Overganger (inn/ut)']},age:['HL'],notes:'Slak motbakke. L/S varier.'});
-      add({name:'HL I3 terskel 3×12 min + komb 40',type:'Trening',modality:'Rulleski klassisk',intensity:'I3',durationMin:100,shooting:{stilling:'Kombinert',skudd:40,tema:['Kapasitetsstyring','Overganger']},age:['HL'],notes:'3×12 min, 3–4 min pause.'});
-      add({name:'HL I5 5×3 min + stående 25',type:'Trening',modality:'Løp',intensity:'I5',durationMin:80,shooting:{stilling:'Stående',skudd:25,tema:['Holdtid','Avtrekkstid']},age:['HL'],notes:'Tydelige pauser, full innsats.'});
-      add({name:'HL Langtur I1–2 120 + 60 skudd',type:'Trening',modality:'Ski skøyting',intensity:'I2',durationMin:120,shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']},age:['HL'],notes:'6×10 teknikkserier fordelt i økta.'});
-
-      // Alle
-      add({name:'Teknikk skøyting (alle) + 40 skudd',type:'Trening',modality:'Rulleski skøyting',intensity:'I2',durationMin:70,shooting:{stilling:'Variert',skudd:40,tema:['Siktebilde','Pust & rytme']},age:['9-10','11-12','13-14','HL','Skiskytterskolen'],notes:'Balanse, fraskyv, tyngdeoverføring.'});
-      add({name:'Basistrening + styrke sirkel',type:'Trening',modality:'Basistrening',intensity:'I2',durationMin:60,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['9-10','11-12','13-14','HL','Skiskytterskolen'],notes:'Kjerne/stabilitet/hofte/ankel.'});
-      add({name:'Stafett – vekslinger + standplass',type:'Trening',modality:'Løp',intensity:'I2',durationMin:75,shooting:{stilling:'Kombinert',skudd:40,tema:['Magasinbytte','Rytme']},age:['13-14','HL'],notes:'Vekslinger, disiplin, 8×5 skudd.'});
-      add({name:'Restitusjon I1 (45) + bevegelighet',type:'Restitusjon',modality:'Løp',intensity:'I1',durationMin:45,shooting:{stilling:'Variert',skudd:0,tema:[]},age:['9-10','11-12','13-14','HL','Skiskytterskolen'],notes:'Rolig + mobilitet.'});
-
-      // Konkurranse-maler
-      add({name:'Konk – Sprint',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:45,shooting:{stilling:'Konk',skudd:10,tema:[]},raceSubtype:'Sprint',age:['11-12','13-14','HL'],notes:'Standard sprint.'});
-      add({name:'Konk – Normal',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:60,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Normal',age:['13-14','HL'],notes:'Standard normal.'});
-      add({name:'Konk – Fellesstart',type:'Konkurranse',modality:'Ski skøyting',intensity:'I5',durationMin:70,shooting:{stilling:'Konk',skudd:20,tema:[]},raceSubtype:'Fellesstart',age:['HL'],notes:'Vanlig oppsett.'});
-
-      return T;
-    }
-
-    // ---------- Tooltip helpers ----------
+    // ---------- Tooltip ----------
     const tipEl = $('#lss-tooltip');
     function showTooltip(html, x, y){
       if(!tipEl) return;
@@ -574,18 +542,15 @@
     }
     function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
 
-    // Desktop hover + mobil long-press
     function attachTipHandlers(el, html){
       let pressTimer = null;
       let last = {x:0, y:0};
-
       const onEnter = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
       const onMove  = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
       const onLeave = ()=> hideTooltip();
       el.addEventListener('mouseenter', onEnter);
       el.addEventListener('mousemove', onMove);
       el.addEventListener('mouseleave', onLeave);
-
       const startPress = (ev)=>{
         const t = ev.touches?.[0]; if(!t) return;
         last = { x: t.clientX, y: t.clientY };
@@ -607,21 +572,16 @@
     function eventTooltipHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
-      const rolesList = Object.entries(e.roles||{})
-        .filter(([,v])=> (v||'').trim().length)
-        .map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`)
-        .join('');
+      const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
       const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
-      const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim()
-        ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
-      const notes = (e.notes||'').trim()
-        ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
-      const tema = (e.shooting?.tema||[]).length
-        ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
+      const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
+      const notes = (e.notes||'').trim() ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+      const tema = (e.shooting?.tema||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
 
       return `
         <div class="font-semibold mb-1">${title}</div>
         <div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>
+        <div><span class="font-medium">Sted:</span> ${esc(e.location||'–')}</div>
         <div><span class="font-medium">Modalitet:</span> ${esc(e.modality||'–')}</div>
         <div><span class="font-medium">Intensitet:</span> ${esc(e.intensity||'–')}</div>
         <div><span class="font-medium">Varighet:</span> ${e.durationMin? esc(String(e.durationMin))+' min' : '–'}</div>
@@ -634,16 +594,9 @@
       `;
     }
 
-    // ---------- Day Order helpers ----------
-    function getOrderForDate(dateISO){
-      return state.dayOrder[dateISO] || [];
-    }
-    function setOrderForDate(dateISO, ids){
-      state.dayOrder[dateISO] = ids;
-      lsSet(KEY.DAYORDER, state.dayOrder);
-      // Sky-sync
-      supaUpsertDayOrder(dateISO, ids);
-    }
+    // ---------- Day order ----------
+    function getOrderForDate(dateISO){ return state.dayOrder[dateISO] || []; }
+    function setOrderForDate(dateISO, ids){ state.dayOrder[dateISO] = ids; lsSet(KEY.DAYORDER, state.dayOrder); supaUpsertDayOrder(dateISO, ids); }
     function sortEventsByDayOrder(dateISO, events){
       const order = getOrderForDate(dateISO);
       const idx = new Map(order.map((id, i)=>[id, i]));
@@ -655,20 +608,19 @@
       });
     }
 
-    // Forhåndsvisningskort (brukes også i DnD-listen)
+    // ---------- Dagsvisning (DnD) ----------
     function previewCardHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
       const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
       const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
       const meta = [
         e.type ? `<span class="inline-flex items-center gap-2">${dot}<span>${esc(e.type)}</span></span>` : '',
+        e.location ? `<span>${esc(e.location)}</span>` : '',
         e.modality ? `<span>${esc(e.modality)}</span>` : '',
         e.intensity ? `<span>${esc(e.intensity)}</span>` : '',
         e.durationMin ? `<span>${String(e.durationMin)} min</span>` : ''
       ].filter(Boolean).join(' • ');
-      const ages = (e.age||[]).length
-        ? `<div class="mt-1 flex flex-wrap gap-1">${(e.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-[11px]">${esc(a)}</span>`).join('')}</div>`
-        : '';
+      const ages = (e.age||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${(e.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-[11px]">${esc(a)}</span>`).join('')}</div>` : '';
       const notes = e.notes ? `<div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
       return `
         <div class="flex items-start justify-between gap-3">
@@ -690,12 +642,9 @@
         </div>
       `;
     }
-
-    // ---------- Dagoversikt med DnD ----------
     function openDayView(dateISO, eventsForDay){
       const d = dayjs(dateISO);
       const items = sortEventsByDayOrder(dateISO, eventsForDay);
-
       const body = $('#dlg-body');
       $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
       $('#btn-delete').classList.add('hidden');
@@ -704,11 +653,7 @@
       body.innerHTML = `
         <div class="space-y-3">
           <div id="dnd-list" class="space-y-3">
-            ${items.map(e=> `
-              <div class="rounded-2xl border bg-white shadow-sm p-4 dnd-item" draggable="true" data-id="${e.id}">
-                ${previewCardHTML(e)}
-              </div>
-            `).join('')}
+            ${items.map(e=> `<div class="rounded-2xl border bg-white shadow-sm p-4 dnd-item" draggable="true" data-id="${e.id}">${previewCardHTML(e)}</div>`).join('')}
           </div>
           <div class="pt-2">
             <button id="btn-new-on-day" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny hendelse denne dagen</button>
@@ -716,92 +661,41 @@
         </div>
       `;
 
-      // --- Drag & Drop logikk ---
       const list = $('#dnd-list');
       let dragEl = null;
+      list.addEventListener('dragstart', (ev)=>{ const item = ev.target.closest('.dnd-item'); if(!item) return; dragEl = item; item.classList.add('opacity-60'); ev.dataTransfer.effectAllowed = 'move'; try { ev.dataTransfer.setData('text/plain', item.dataset.id || ''); } catch {} });
+      list.addEventListener('dragover', (ev)=>{ ev.preventDefault(); const over = ev.target.closest('.dnd-item'); if(!over || over === dragEl) return; const rect = over.getBoundingClientRect(); const before = (ev.clientY - rect.top) < rect.height / 2; if (before) list.insertBefore(dragEl, over); else list.insertBefore(dragEl, over.nextSibling); });
+      list.addEventListener('drop', ()=>{ const ids = Array.from(list.querySelectorAll('.dnd-item')).map(el => el.dataset.id); setOrderForDate(dateISO, ids); render(); });
+      list.addEventListener('dragend', ()=>{ if(dragEl){ dragEl.classList.remove('opacity-60'); dragEl = null; } });
 
-      list.addEventListener('dragstart', (ev)=>{
-        const item = ev.target.closest('.dnd-item');
-        if(!item) return;
-        dragEl = item;
-        item.classList.add('opacity-60');
-        ev.dataTransfer.effectAllowed = 'move';
-        try { ev.dataTransfer.setData('text/plain', item.dataset.id || ''); } catch {}
-      });
-
-      list.addEventListener('dragover', (ev)=>{
-        ev.preventDefault();
-        const over = ev.target.closest('.dnd-item');
-        if(!over || over === dragEl) return;
-        const rect = over.getBoundingClientRect();
-        const before = (ev.clientY - rect.top) < rect.height / 2;
-        if (before) list.insertBefore(dragEl, over);
-        else list.insertBefore(dragEl, over.nextSibling);
-      });
-
-      list.addEventListener('drop', ()=>{
-        const ids = Array.from(list.querySelectorAll('.dnd-item')).map(el => el.dataset.id);
-        setOrderForDate(dateISO, ids); // lagre lokalt + sky
-        render();
-      });
-
-      list.addEventListener('dragend', ()=>{
-        if(dragEl){ dragEl.classList.remove('opacity-60'); dragEl = null; }
-      });
-
-      // --- Knapper (Vis/Rediger/Dupliser/Slett) ---
       list.addEventListener('click', async (e)=>{
-        const btn = e.target.closest('button[data-act]');
-        if(!btn) return;
-        const item = e.target.closest('.dnd-item');
-        const id = item?.dataset.id;
-        const evObj = state.events.find(x=>x.id===id);
-        if(!evObj) return;
-
+        const btn = e.target.closest('button[data-act]'); if(!btn) return;
+        const item = e.target.closest('.dnd-item'); const id = item?.dataset.id; const evObj = state.events.find(x=>x.id===id); if(!evObj) return;
         if(btn.dataset.act === 'view') return openViewDialog(evObj);
         if(btn.dataset.act === 'edit') return openDialog({...evObj});
-        if(btn.dataset.act === 'dup'){
-          const copy = { ...evObj, id: uid(), title: (evObj.title||evObj.type)+' (kopi)' };
-          state.events.push(copy);
-          lsSet(KEY.EVENTS, state.events);
-          render();
-          await supaUpsertEvent(copy);
-          const order = getOrderForDate(dateISO);
-          setOrderForDate(dateISO, [...order, copy.id]);
-          return;
-        }
-        if(btn.dataset.act === 'del'){
-          if(!confirm('Slette denne hendelsen?')) return;
-          state.events = state.events.filter(x=> x.id !== evObj.id);
-          lsSet(KEY.EVENTS, state.events);
-          render();
-          await supaDeleteEvent(evObj.id);
-          const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id);
-          setOrderForDate(dateISO, ids);
-          const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day'));
-          return openDayView(dateISO, remaining);
-        }
+        if(btn.dataset.act === 'dup'){ const copy = { ...evObj, id: uid(), title: (evObj.title||evObj.type)+' (kopi)' }; state.events.push(copy); lsSet(KEY.EVENTS, state.events); render(); await supaUpsertEvent(copy); const order = getOrderForDate(dateISO); setOrderForDate(dateISO, [...order, copy.id]); return; }
+        if(btn.dataset.act === 'del'){ if(!confirm('Slette denne hendelsen?')) return; state.events = state.events.filter(x=> x.id !== evObj.id); lsSet(KEY.EVENTS, state.events); render(); await supaDeleteEvent(evObj.id); const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id); setOrderForDate(dateISO, ids); const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')); return openDayView(dateISO, remaining); }
       });
 
-      // Ny hendelse samme dato
       $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
-
-      // Vis dialog
-      $('#dialog').classList.remove('hidden');
-      $('#dialog').classList.add('flex');
+      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
     }
 
     // ---------- Render ----------
     function render(){
       $('#year-label').textContent = state.year;
       $('#event-year').textContent = state.year;
-      renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks();
+      renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks(); renderAgeEditor(); renderAdminEvents();
+
+      // oppdatér filter for bank (aldersvalg)
+      const fAge = $('#f-age'); if(fAge){ fAge.innerHTML = `<option value="">Alle</option>` + state.ageGroups.map(g=>`<option value="${g.id}">${g.label}</option>`).join(''); }
 
       lsSet(KEY.YEAR,state.year);
       lsSet(KEY.EVENTS,state.events);
       lsSet(KEY.BANK,state.bank);
       lsSet(KEY.WEEKS,state.weeks);
       lsSet(KEY.DAYORDER,state.dayOrder);
+      lsSet(KEY.AGES,state.ageGroups);
     }
 
     function renderLegend(){
@@ -815,156 +709,69 @@
     }
 
     function renderCalendar(){
-      const grid = $('#calendar-grid');
-      grid.innerHTML = '';
-
-      if (isMobile()){
-        grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
-        return;
-      }
+      const grid = $('#calendar-grid'); grid.innerHTML = '';
+      if (isMobile()){ grid.appendChild(renderMonth(state.year, state.month, { withNav:true })); return; }
       const nowMonth = dayjs().month() + 1;
-      const months = [];
-      for(let m = nowMonth; m <= 12; m++) months.push(m);
-      for(let m = 1; m < nowMonth; m++) months.push(m);
+      const months = []; for(let m = nowMonth; m <= 12; m++) months.push(m); for(let m = 1; m < nowMonth; m++) months.push(m);
       months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
     }
 
     function renderMonth(year, month, opts = { withNav:false }){
-      const wrap=document.createElement('div'); 
-      wrap.className='rounded-2xl border bg-white shadow-sm';
-
-      const header=document.createElement('div'); 
-      header.className='flex items-center justify-between border-b p-4';
-
+      const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm';
+      const header=document.createElement('div'); header.className='flex items-center justify-between border-b p-4';
       const title = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM');
-
       if (opts.withNav){
-        const left = document.createElement('button');
-        left.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
-        left.textContent = '◀';
-
-        const mid = document.createElement('div');
-        mid.className = 'text-lg font-semibold';
-        mid.textContent = `${title} ${year}`;
-
-        const right = document.createElement('button');
-        right.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm';
-        right.textContent = '▶';
-
-        left.onclick = () => {
-          let m = state.month - 1, y = state.year;
-          if (m < 1){ m = 12; y--; }
-          state.month = m; state.year = y;
-          render();
-        };
-        right.onclick = () => {
-          let m = state.month + 1, y = state.year;
-          if (m > 12){ m = 1; y++; }
-          state.month = m; state.year = y;
-          render();
-        };
-
+        const left = document.createElement('button'); left.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm'; left.textContent = '◀';
+        const mid = document.createElement('div'); mid.className = 'text-lg font-semibold'; mid.textContent = `${title} ${year}`;
+        const right = document.createElement('button'); right.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm'; right.textContent = '▶';
+        left.onclick = () => { let m = state.month - 1, y = state.year; if (m < 1){ m = 12; y--; } state.month = m; state.year = y; render(); };
+        right.onclick = () => { let m = state.month + 1, y = state.year; if (m > 12){ m = 1; y++; } state.month = m; state.year = y; render(); };
         header.append(left, mid, right);
       } else {
         header.innerHTML=`<h3 class="text-lg font-semibold">${title}</h3>`;
       }
 
       const body=document.createElement('div'); body.className='p-2';
-      const daysHeader=document.createElement('div'); 
-      daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
-      'man tir ons tor fre lør søn'.split(' ').forEach(w=>{
-        const d=document.createElement('div'); 
-        d.className='px-1 py-1 text-center font-medium uppercase'; 
-        d.textContent=w; 
-        daysHeader.appendChild(d);
-      });
+      const daysHeader=document.createElement('div'); daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
+      'man tir ons tor fre lør søn'.split(' ').forEach(w=>{ const d=document.createElement('div'); d.className='px-1 py-1 text-center font-medium uppercase'; d.textContent=w; daysHeader.appendChild(d); });
 
       const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
       const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
       const leading=(first.day()+6)%7; const days=first.daysInMonth();
-
       for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
       for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
-      const total=leading+days; const trail=(7-(total%7))%7; 
-      for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
+      const total=leading+days; const trail=(7-(total%7))%7; for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
 
-      body.appendChild(daysHeader); 
-      body.appendChild(cells); 
-      wrap.appendChild(header); 
-      wrap.appendChild(body); 
-      return wrap;
+      body.appendChild(daysHeader); body.appendChild(cells); wrap.appendChild(header); wrap.appendChild(body); return wrap;
     }
 
-    function emptyCell(){ 
-      const d = document.createElement('div'); 
-      d.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; 
-      return d; 
-    }
+    function emptyCell(){ const d = document.createElement('div'); d.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
 
     function dayCell(d){
       const key = d.format('YYYY-MM-DD');
       let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
-      evts = sortEventsByDayOrder(key, evts);  // sortér etter lagret rekkefølge
+      evts = sortEventsByDayOrder(key, evts);
 
-      const box = document.createElement('div');
-      box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
+      const box = document.createElement('div'); box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
+      box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key }); });
+      if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
 
-      box.addEventListener('click', () => {
-        hideTooltip();
-        if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key });
-      });
-
-      if(evts.length === 0){
-        const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`;
-        attachTipHandlers(box, html);
-      }
-
-      const top = document.createElement('div'); 
-      top.className = 'flex items-center justify-between text-xs text-slate-600';
-
-      // Unike fargedotter per type (maks 4)
+      const top = document.createElement('div'); top.className = 'flex items-center justify-between text-xs text-slate-600';
       const uniqueTypes = Array.from(new Set(evts.map(e => e.type))).slice(0,4);
-      const dotsHTML = uniqueTypes.map(t =>
-        `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[t]||'#6b7280'}'></span>`
-      ).join('');
+      const dotsHTML = uniqueTypes.map(t => `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[t]||'#6b7280'}'></span>`).join('');
+      top.innerHTML = `<span class="font-medium">${d.date()}</span><span class="flex gap-1">${dotsHTML}</span>`;
 
-      top.innerHTML = `
-        <span class="font-medium">${d.date()}</span>
-        <span class="flex gap-1">${dotsHTML}</span>`;
-
-      const list = document.createElement('div'); 
-      list.className = 'mt-1 flex flex-col gap-0.5';
-
+      const list = document.createElement('div'); list.className = 'mt-1 flex flex-col gap-0.5';
       evts.slice(0,3).forEach(e => {
-        const row = document.createElement('div'); 
-        row.className = 'truncate text-xs flex items-center gap-1';
-
-        const dot = document.createElement('span'); 
-        dot.className = 'inline-block h-2 w-2 rounded-full'; 
-        dot.style.background = COLORS[e.type] || '#6b7280';
-
-        const txt = document.createElement('span'); 
-        txt.className = 'font-medium truncate'; 
-        txt.textContent = e.title || e.type;
-
-        const tipHTML = eventTooltipHTML(e);
-        attachTipHandlers(row, tipHTML);
-
-        row.appendChild(dot); 
-        row.appendChild(txt);
-        list.appendChild(row);
+        const row = document.createElement('div'); row.className = 'truncate text-xs flex items-center gap-1';
+        const dot = document.createElement('span'); dot.className = 'inline-block h-2 w-2 rounded-full'; dot.style.background = COLORS[e.type] || '#6b7280';
+        const txt = document.createElement('span'); txt.className = 'font-medium truncate'; txt.textContent = e.title || e.type;
+        const tipHTML = eventTooltipHTML(e); attachTipHandlers(row, tipHTML);
+        row.appendChild(dot); row.appendChild(txt); list.appendChild(row);
       });
+      if(evts.length > 3){ const more = document.createElement('div'); more.className = 'text-[10px] text-slate-500'; more.textContent = `+${evts.length-3} flere…`; list.appendChild(more); }
 
-      if(evts.length > 3){
-        const more = document.createElement('div'); 
-        more.className = 'text-[10px] text-slate-500';
-        more.textContent = `+${evts.length-3} flere…`;
-        list.appendChild(more);
-      }
-
-      box.appendChild(top); 
-      box.appendChild(list); 
-      return box;
+      box.appendChild(top); box.appendChild(list); return box;
     }
 
     function renderList(){
@@ -987,8 +794,9 @@
         const safeTitle = e.title ? escapeHTML(e.title) : '<span class="opacity-50">(uten tittel)</span>';
         tr.innerHTML=`
           <td class='py-1 whitespace-nowrap'>${dayjs(e.date).format('DD.MM.YYYY')}</td>
-          <td class='max-w-[280px] truncate'>${safeTitle}</td>
+          <td class='max-w-[260px] truncate'>${safeTitle}</td>
           <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>${escapeHTML(e.type||'')}</span></td>
+          <td class='max-w-[160px] truncate'>${escapeHTML(e.location||'–')}</td>
           <td>${escapeHTML(e.modality||'–')}</td>
           <td>${escapeHTML(e.intensity||'–')}</td>
           <td>${(e.shooting&&e.shooting.skudd)||0}</td>
@@ -1000,8 +808,7 @@
           </td>`;
         tr.querySelector('.btn-edit').addEventListener('click', ()=> openDialog({...e}));
         tr.querySelector('.btn-view').addEventListener('click', ()=> openViewDialog(e));
-        const tipHTML = eventTooltipHTML(e);
-        attachTipHandlers(tr, tipHTML);
+        const tipHTML = eventTooltipHTML(e); attachTipHandlers(tr, tipHTML);
         tbody.appendChild(tr);
       });
     }
@@ -1038,15 +845,10 @@
         </div>`;
       c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t)));
       c.querySelector('.btn-dup').addEventListener('click', async ()=>{
-        const copy = {...t,id:uid(),name:t.name+' (kopi)'};
-        state.bank.unshift(copy);
-        renderBank(); lsSet(KEY.BANK,state.bank);
-        await supaUpsertBankTemplate(copy);
+        const copy = {...t,id:uid(),name:t.name+' (kopi)'}; state.bank.unshift(copy); renderBank(); lsSet(KEY.BANK,state.bank); await supaUpsertBankTemplate(copy);
       });
       c.querySelector('.btn-del').addEventListener('click', async ()=>{
-        state.bank=state.bank.filter(x=>x.id!==t.id);
-        renderBank(); lsSet(KEY.BANK,state.bank);
-        await supaDeleteBankTemplate(t.id);
+        state.bank=state.bank.filter(x=>x.id!==t.id); renderBank(); lsSet(KEY.BANK,state.bank); await supaDeleteBankTemplate(t.id);
       });
       return c;
     }
@@ -1059,18 +861,18 @@
         modality:t.modality, intensity:t.intensity, durationMin:t.durationMin,
         age:t.age||[],
         shooting:t.shooting||{stilling:'',skudd:0,tema:[]},
-        raceSubtype:t.raceSubtype, notes:t.notes||'', roles:{}, eqtiming:''
+        raceSubtype:t.raceSubtype, notes:t.notes||'', roles:{}, location:''
       };
     }
 
-    // ---------- Rediger-dialog ----------
+    // ---------- Dialoger ----------
     function openDialog(data){
       const existing = state.events.find(x=>x.id===data.id);
       const isEdit = !!existing;
       const prevDate = existing ? existing.date : null;
 
       const model=Object.assign(
-        { id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, eqtiming:'' },
+        { id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, location:'' },
         data
       );
 
@@ -1081,12 +883,15 @@
       $('#btn-save')?.removeAttribute('disabled');
 
       const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
+      const ageChks = (state.ageGroups||[]).map(g=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'><input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/> <span class='text-sm'>${g.label}</span></label>`).join('');
+
       body.innerHTML=`
         ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
         <div class='grid grid-cols-2 gap-3'>
           ${field('Type', select('f-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
           ${field('Dato', `<input id='f-date' type='date' class='mt-1 w-full rounded-xl border px-3 py-2' value='${dayjs(model.date).format('YYYY-MM-DD')}'/>`)}
         </div>
+        ${field('Sted/plassering', `<input id='f-loc' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.location||'')}" placeholder='F.eks. Sørli'/>`)}
         <div class='grid grid-cols-2 gap-3'>
           ${field('Modalitet', select('f-mod', MODALITETER, model.modality))}
           ${field('Intensitet', select('f-int', INTENS, model.intensity))}
@@ -1106,14 +911,12 @@
         </div>
         <div>
           <label class='text-sm font-medium'>Målgruppe</label>
-          <div class='mt-1 flex flex-wrap gap-2'>
-            ${ALDER.map(([id,txt])=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'><input data-age='${id}' type='checkbox' ${model.age.includes(id)?'checked':''}/> <span class='text-sm'>${txt}</span></label>`).join('')}
-          </div>
+          <div class='mt-1 flex flex-wrap gap-2'>${ageChks}</div>
         </div>
         <div>
           <label class='text-sm font-medium'>Roller</label>
           <div class='mt-1 grid grid-cols-2 gap-2'>
-            ${ROLES.map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
+            ${['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'].map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
           </div>
         </div>
         <div>
@@ -1135,88 +938,58 @@
       $('#btn-save').onclick = async () => {
         const get = (id) => $('#'+id, body);
         const wasNew = state.events.findIndex(x => x.id === model.id) < 0;
-
-        const oldDate = prevDate || model.date;
+        const oldDate = existing ? existing.date : model.date;
 
         model.title       = get('f-title').value.trim();
         model.type        = get('f-type').value;
         model.date        = get('f-date').value;
+        model.location    = get('f-loc').value.trim();
         model.modality    = get('f-mod').value;
         model.intensity   = get('f-int').value;
         model.durationMin = parseInt(get('f-dur').value) || 60;
-        model.shooting    = {
-          stilling: get('f-still').value,
-          skudd: parseInt(get('f-skudd').value) || 0,
-          tema: model.shooting.tema || []
-        };
+        model.shooting    = { stilling: get('f-still').value, skudd: parseInt(get('f-skudd').value) || 0, tema: model.shooting.tema || [] };
         model.notes       = get('f-notes').value;
         model.raceSubtype = model.type === 'Konkurranse' ? (model.raceSubtype || '') : '';
-        model.age         = ALDER.map(([id]) => id).filter(id => $('[data-age="'+id+'"]', body).checked);
-        model.roles       = {};
-        ROLES.forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
+        model.age         = (state.ageGroups||[]).map(g => g.id).filter(id => $('[data-age="'+id+'"]', body).checked);
+        model.roles       = {}; ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'].forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
 
         const i = state.events.findIndex(x => x.id === model.id);
         if (i >= 0) state.events[i] = model; else state.events.push(model);
         lsSet(KEY.EVENTS, state.events);
         render();
-
         await supaUpsertEvent(model);
 
-        // Day order oppdatering:
-        if (wasNew){
-          const ids = getOrderForDate(model.date);
-          setOrderForDate(model.date, [...ids, model.id]);
-        } else if (oldDate !== model.date){
-          // flyttet dato: fjern fra gammel dato, legg til på ny
-          const oldIds = getOrderForDate(oldDate).filter(x=> x !== model.id);
-          setOrderForDate(oldDate, oldIds);
-          const newIds = getOrderForDate(model.date);
-          setOrderForDate(model.date, [...newIds, model.id]);
-        }
+        if (wasNew){ const ids = getOrderForDate(model.date); setOrderForDate(model.date, [...ids, model.id]); }
+        else if (oldDate !== model.date){ const oldIds = getOrderForDate(oldDate).filter(x=> x !== model.id); setOrderForDate(oldDate, oldIds); const newIds = getOrderForDate(model.date); setOrderForDate(model.date, [...newIds, model.id]); }
 
         closeDialog();
       };
 
       $('#btn-delete').onclick=async ()=>{
-        state.events=state.events.filter(x=>x.id!==model.id);
-        lsSet(KEY.EVENTS,state.events);
-        render();
+        state.events=state.events.filter(x=>x.id!==model.id); lsSet(KEY.EVENTS,state.events); render();
         await supaDeleteEvent(model.id);
-        const ids = getOrderForDate(model.date).filter(x=> x !== model.id);
-        setOrderForDate(model.date, ids);
+        const ids = getOrderForDate(model.date).filter(x=> x !== model.id); setOrderForDate(model.date, ids);
         closeDialog();
       };
 
       $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
-
       $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
     }
-    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
-
-    // ---------- Lese-dialog (Vis) ----------
     function openViewDialog(model){
       const body = $('#dlg-body');
       $('#dlg-title').textContent = 'Vis hendelse';
-      $('#btn-delete').classList.add('hidden');
-      $('#btn-save').classList.add('hidden');
-
+      $('#btn-delete').classList.add('hidden'); $('#btn-save').classList.add('hidden');
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-      const row = (label, value) => `
-        <div class="grid grid-cols-3 gap-3 items-start">
-          <div class="text-sm font-medium text-slate-700 col-span-1">${label}</div>
-          <div class="text-sm col-span-2">${value||'–'}</div>
-        </div>`;
-
+      const row = (label, value) => `<div class="grid grid-cols-3 gap-3 items-start"><div class="text-sm font-medium text-slate-700 col-span-1">${label}</div><div class="text-sm col-span-2">${value||'–'}</div></div>`;
       const ageChips = (model.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(a)}</span>`).join('');
       const tema = (model.shooting?.tema||[]).map(t=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(t)}</span>`).join('');
-      const roles = Object.entries(model.roles||{}).filter(([,v])=> (v||'').trim().length)
-        .map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
-
+      const roles = Object.entries(model.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
       body.innerHTML = `
         <div class="space-y-3">
           ${row('Tittel', esc(model.title||''))}
           ${row('Dato', dayjs(model.date).format('dddd D. MMMM YYYY'))}
           ${row('Type', esc(model.type||''))}
+          ${row('Sted', esc(model.location||''))}
           ${row('Modalitet', esc(model.modality||''))}
           ${row('Intensitet', esc(model.intensity||''))}
           ${row('Varighet', model.durationMin? esc(String(model.durationMin))+' min' : '–')}
@@ -1228,30 +1001,94 @@
             <div class="text-sm font-medium text-slate-700 mb-1">Notater</div>
             <div class="text-sm text-slate-700 whitespace-pre-wrap">${esc(model.notes||'–')}</div>
           </div>
-        </div>
-      `;
-
-      const cancel = $('#btn-cancel');
-      cancel.textContent = 'Lukk';
-      cancel.onclick = closeDialog;
-      $('#dlg-close').onclick = closeDialog;
-
-      $('#dialog').classList.remove('hidden');
-      $('#dialog').classList.add('flex');
-
+        </div>`;
+      const cancel = $('#btn-cancel'); cancel.textContent = 'Lukk'; cancel.onclick = closeDialog; $('#dlg-close').onclick = closeDialog;
+      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
       const reset = () => { cancel.textContent = 'Avbryt'; cancel.onclick = closeDialog; };
-      const obs = new MutationObserver(()=>{
-        if($('#dialog').classList.contains('hidden')){ reset(); obs.disconnect(); }
-      });
-      obs.observe($('#dialog'), { attributes:true, attributeFilter:['class'] });
+      const obs = new MutationObserver(()=>{ if($('#dialog').classList.contains('hidden')){ reset(); obs.disconnect(); } }); obs.observe($('#dialog'), { attributes:true, attributeFilter:['class'] });
     }
+    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
     function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
 
-    // ---------- Weeks ----------
+    // ---------- Admin: alder-editor ----------
+    function renderAgeEditor(){
+      const holder = $('#age-editor'); if(!holder) return;
+      holder.innerHTML = (state.ageGroups||[]).map((g,i)=>`
+        <div class="grid grid-cols-5 gap-2 items-center">
+          <input data-age-id="${i}" class="col-span-2 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.id)}" placeholder="ID (f.eks. 13-14)">
+          <input data-age-label="${i}" class="col-span-3 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.label)}" placeholder="Label (f.eks. 13–14 år)">
+          <button data-age-del="${i}" class="rounded-xl border bg-white px-3 py-1.5 text-red-700 border-red-300">Slett</button>
+        </div>`).join('');
+      holder.querySelectorAll('[data-age-del]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const i = +btn.getAttribute('data-age-del');
+          state.ageGroups.splice(i,1);
+          lsSet(KEY.AGES, state.ageGroups);
+          render();
+        };
+      });
+    }
+    $('#age-add')?.addEventListener('click', ()=>{
+      state.ageGroups.push({ id:'ny', label:'Ny gruppe' });
+      lsSet(KEY.AGES, state.ageGroups);
+      render();
+    });
+    $('#age-save')?.addEventListener('click', async ()=>{
+      const newList = [];
+      $('#age-editor').querySelectorAll('[data-age-id]').forEach((inp, idx)=>{
+        const id = inp.value.trim();
+        const label = $('#age-editor').querySelector(`[data-age-label="${idx}"]`).value.trim();
+        if(id && label) newList.push({ id, label });
+      });
+      if(newList.length===0){ alert('Legg inn minst én gruppe.'); return; }
+      state.ageGroups = newList;
+      lsSet(KEY.AGES, state.ageGroups);
+      await supaSaveAgeGroups();
+      render();
+      alert('Årsklasser lagret.');
+    });
+
+    // ---------- Admin: hendelser-oversikt ----------
+    function renderAdminEvents(){
+      const tb = $('#admin-events'); if(!tb) return;
+      const q = ($('#admin-q')?.value||'').toLowerCase().trim();
+      const from = $('#admin-from')?.value; const to = $('#admin-to')?.value;
+
+      let rows = [...state.events];
+      if(from) rows = rows.filter(e => e.date >= from);
+      if(to)   rows = rows.filter(e => e.date <= to);
+      if(q)    rows = rows.filter(e => [e.title,e.type,e.location,e.modality,e.intensity].some(x => (x||'').toLowerCase().includes(q)));
+
+      rows.sort((a,b)=> a.date.localeCompare(b.date));
+
+      tb.innerHTML = rows.map(e=>`
+        <tr class="border-t">
+          <td class="p-2 whitespace-nowrap">${dayjs(e.date).format('DD.MM.YYYY')}</td>
+          <td class="p-2 max-w-[240px] truncate">${escapeHTML(e.title||'(uten tittel)')}</td>
+          <td class="p-2">${escapeHTML(e.type||'')}</td>
+          <td class="p-2 max-w-[180px] truncate">${escapeHTML(e.location||'')}</td>
+          <td class="p-2">${escapeHTML(e.intensity||'')}</td>
+          <td class="p-2 text-right"><button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-edit="${e.id}">Rediger</button></td>
+        </tr>`).join('');
+
+      tb.querySelectorAll('[data-edit]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const id = btn.getAttribute('data-edit');
+          const ev = state.events.find(x=>x.id===id);
+          if(ev) openDialog({...ev});
+        };
+      });
+    }
+    $('#admin-search')?.addEventListener('click', renderAdminEvents);
+    $('#admin-q')?.addEventListener('input', renderAdminEvents);
+    $('#admin-from')?.addEventListener('change', renderAdminEvents);
+    $('#admin-to')?.addEventListener('change', renderAdminEvents);
+
+    // ---------- Weeks UI ----------
     function renderWeeks(){
-      const tbody=$('#tbl-weeks'); tbody.innerHTML='';
+      const tbody=$('#tbl-weeks'); if(!tbody) return; tbody.innerHTML='';
       const weeks={}; let d=dayjs(state.year+'-01-01').startOf('isoWeek'); const end=dayjs(state.year+'-12-31');
       while(d.isBefore(end.add(1,'day'))){ weeks[d.isoWeek()]=true; d=d.add(7,'day'); }
       Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{
@@ -1264,20 +1101,9 @@
         tbody.appendChild(tr);
       });
       $$('select[data-wk]').forEach(el=> el.onchange=async ()=>{
-        const wk=+el.getAttribute('data-wk');
-        state.weeks[wk]=state.weeks[wk]||{};
-        state.weeks[wk].code=el.value;
-        lsSet(KEY.WEEKS,state.weeks);
-        renderCalendar();
-        await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||'');
-      });
+        const wk=+el.getAttribute('data-wk'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].code=el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||''); });
       $$('input[data-wkn]').forEach(el=> el.oninput=async ()=>{
-        const wk=+el.getAttribute('data-wkn');
-        state.weeks[wk]=state.weeks[wk]||{};
-        state.weeks[wk].note=el.value;
-        lsSet(KEY.WEEKS,state.weeks);
-        await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value);
-      });
+        const wk=+el.getAttribute('data-wkn'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].note=el.value; lsSet(KEY.WEEKS,state.weeks); await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value); });
     }
 
     // ---------- CSV ----------
@@ -1285,14 +1111,15 @@
       const rows=text.split(/\r?\n/).map(r=>r.trim()).filter(Boolean);
       return rows.map(line=>{
         const parts=line.split(';').map(x=>x.trim());
-        const [dato,title,type,modality,intensity,duration,skudd,stilling,tema,age]=parts;
+        const [dato,title,type,modality,intensity,duration,skudd,stilling,tema,age,location]=parts;
         const dd=dato.includes('-')?dato:dato.split('.').reverse().join('-');
         return {
-          id:uid(), title, type:type||'Trening', date:dayjs(dd).format('YYYY-MM-DD'), modality:modality||'',
-          intensity:intensity||'', durationMin:parseInt(duration)||60,
+          id:uid(), title, type:type||'Trening', date:dayjs(dd).format('YYYY-MM-DD'),
+          modality:modality||'', intensity:intensity||'', durationMin:parseInt(duration)||60,
+          location: location || '',
           age:migrateAgeTagsInArray((age||'').split('|').filter(Boolean)),
           shooting:{ stilling:stilling||'', skudd:parseInt(skudd)||0, tema:(tema||'').split('|').filter(Boolean) },
-          notes:'', roles:{}, eqtiming:''
+          notes:'', roles:{}
         };
       });
     }
@@ -1307,56 +1134,38 @@
         const start=new Date(e.date+'T17:00:00'); const end=new Date(start.getTime()+((e.durationMin||60)*60000));
         lines.push('BEGIN:VEVENT'); lines.push('UID:'+e.id); lines.push('DTSTAMP:'+fmt(new Date())); lines.push('DTSTART:'+fmt(start)); lines.push('DTEND:'+fmt(end));
         const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+escIcs(title));
-        lines.push('DESCRIPTION:'+escIcs(e.notes||'')); lines.push('END:VEVENT');
+        if(e.location) lines.push('LOCATION:'+escIcs(e.location));
+        if(e.notes)    lines.push('DESCRIPTION:'+escIcs(e.notes));
+        lines.push('END:VEVENT');
       });
       lines.push('END:VCALENDAR');
       const blob=new Blob([lines.join('\n')],{type:'text/calendar'});
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
 
-    // ---------- Excel-eksport (ALLE ÅR + Øktbank) ----------
+    // ---------- Excel (alle år + bank) ----------
     async function fetchAllFromSupabase(table){
-      const pageSize = 1000;
-      let from = 0, to = pageSize - 1;
-      let all = [];
+      const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
       while(true){
-        const { data, error } = await supabase
-          .from(table)
-          .select('*')
-          .order('created_at', { ascending: true })
-          .range(from, to);
-        if(error){ throw error; }
-        all = all.concat(data || []);
-        if(!data || data.length < pageSize) break;
-        from += pageSize; to += pageSize;
+        const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: true }).range(from, to);
+        if(error){ throw error; } all = all.concat(data || []); if(!data || data.length < pageSize) break; from += pageSize; to += pageSize;
       }
       return all;
     }
     async function fetchAllEventsFromSupabase(){
-      const pageSize = 1000;
-      let from = 0, to = pageSize - 1;
-      let all = [];
+      const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
       while(true){
-        const { data, error } = await supabase
-          .from(TBL.events)
-          .select('*')
-          .order('date', { ascending: true })
-          .range(from, to);
-        if(error){ throw error; }
-        all = all.concat(data || []);
-        if(!data || data.length < pageSize) break;
-        from += pageSize; to += pageSize;
+        const { data, error } = await supabase.from(TBL.events).select('*').order('date', { ascending: true }).range(from, to);
+        if(error){ throw error; } all = all.concat(data || []); if(!data || data.length < pageSize) break; from += pageSize; to += pageSize;
       }
       return all;
     }
-
     function rowsForEventsExcel(rawRows){
       return (rawRows||[]).map(r=>{
-        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
-        const shooting = r.shooting || {};
+        const d = dayjs(r.date); const shooting = r.shooting || {};
         const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
         const roles = r.roles ? Object.entries(r.roles).filter(([k,v])=>(v||'').trim().length).map(([k,v])=>`${k}: ${v}`).join(' | ') : '';
-        const d = dayjs(r.date);
+        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
         return {
           ID: r.id || '',
           Dato: r.date || '',
@@ -1366,6 +1175,7 @@
           Tittel: r.title || '',
           Type: r.type || r.event_type || '',
           Konkurranse: r.race_subtype || '',
+          Sted: r.location || '',
           Modalitet: r.modality || '',
           Intensitet: r.intensity || '',
           Varighet_min: r.duration_min ?? '',
@@ -1380,12 +1190,11 @@
         };
       });
     }
-
     function rowsForBankExcel(rawRows){
       return (rawRows||[]).map(r=>{
-        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
         const shooting = r.shooting || {};
         const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
+        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
         return {
           ID: r.id || '',
           Navn: r.name || '',
@@ -1404,7 +1213,6 @@
         };
       });
     }
-
     function downloadXlsxMultiple(sheets){
       const wb = XLSX.utils.book_new();
       for(const {name, rows} of sheets){
@@ -1416,26 +1224,15 @@
       const stamp = dayjs().format('YYYYMMDD_HHmm');
       XLSX.writeFile(wb, `lss_arsplan_og_oktbank_${stamp}.xlsx`);
     }
-
     async function exportExcelAll(){
       try{
         let rawEvents = await fetchAllEventsFromSupabase();
         let rawBank   = await fetchAllFromSupabase(TBL.bank);
-
-        if(!rawEvents || rawEvents.length===0){
-          console.warn('Ingen events fra supabase, bruker lokal state');
-          rawEvents = state.events.map(e=> ({...mapEventToDb(e)}));
-        }
-        if(!rawBank || rawBank.length===0){
-          console.warn('Ingen bank fra supabase, bruker lokal state');
-          rawBank = state.bank.map(t=> ({...mapBankToDb(t)}));
-        }
-
+        if(!rawEvents || rawEvents.length===0) rawEvents = state.events.map(e=> ({...mapEventToDb(e)}));
+        if(!rawBank || rawBank.length===0)     rawBank   = state.bank.map(t=> ({...mapBankToDb(t)}));
         const rowsEvents = rowsForEventsExcel(rawEvents);
         const rowsBank   = rowsForBankExcel(rawBank);
-
         if(rowsEvents.length===0 && rowsBank.length===0){ alert('Ingen data å eksportere.'); return; }
-
         downloadXlsxMultiple([
           { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
           { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
@@ -1443,7 +1240,6 @@
       }catch(err){
         console.error('Excel-eksport feilet:', err);
         alert('Kunne ikke hente fra skyen. Eksporterer det som er lastet nå.');
-
         const rowsEvents = rowsForEventsExcel(state.events.map(e=> ({...mapEventToDb(e)})));
         const rowsBank   = rowsForBankExcel(state.bank.map(t=> ({...mapBankToDb(t)})));
         if(rowsEvents.length===0 && rowsBank.length===0){ alert('Ingen data å eksportere.'); return; }
@@ -1456,14 +1252,10 @@
 
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
-
-    // JSON-eksport
     $('#btn-export').onclick=()=>{
-      const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year,dayOrder:state.dayOrder},null,2)],{type:'application/json'});
+      const blob=new Blob([JSON.stringify({events:state.events,bank:state.bank,weeks:state.weeks,year:state.year,dayOrder:state.dayOrder,ageGroups:state.ageGroups},null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`arsplan_${state.year}.json`; a.click(); URL.revokeObjectURL(url);
     };
-
-    // Excel-eksport (ny)
     $('#btn-export-xlsx').onclick=exportExcelAll;
 
     $('#file-import').onchange=async(e)=>{
@@ -1474,6 +1266,7 @@
         if(data.bank){ state.bank=data.bank; for(const t of data.bank){ await supaUpsertBankTemplate(t); } }
         if(data.weeks){ state.weeks=data.weeks; for(const [wk,val] of Object.entries(state.weeks)){ await supaUpsertWeek(state.year, +wk, val.code||'BAS', val.note||''); } }
         if(data.dayOrder){ state.dayOrder=data.dayOrder; for(const [d,ids] of Object.entries(state.dayOrder)){ await supaUpsertDayOrder(d, ids); } }
+        if(data.ageGroups){ state.ageGroups=data.ageGroups; await supaSaveAgeGroups(); }
         if(data.year){ state.year=data.year; }
         migrateAllAgesInState();
         render(); alert('Import fullført');
@@ -1492,32 +1285,99 @@
 
     $('#q-bank').oninput=renderBank; $('#f-age').onchange=renderBank; $('#f-type').onchange=renderBank;
 
-    $('#btn-csv-eg').onclick=()=>{ $('#csv-text').value=`01.09.${state.year}; Basistrening + bevegelighet; Trening; Løp; I1; 45; 0; Variert; bevegelighet|balanse; 11-12|13-14
-03.09.${state.year}; Komb – I3 drag 4×6 + skyting; Trening; Løp; I3; 85; 40; Kombinert; overganger (inn/ut)|repetisjonsrytme; HL
-07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; 13-14|HL`; };
-    $('#btn-csv-import').onclick=async ()=>{
-      const rows=parseCSV($('#csv-text').value);
+    // CSV-admin eksempel
+    $('#btn-csv-eg')?.addEventListener('click', ()=>{ $('#csv-text').value=`01.09.${state.year}; Basistrening + bevegelighet; Trening; Løp; I1; 45; 0; Variert; bevegelighet|balanse; 11-12|13-14; Sørli
+03.09.${state.year}; Komb – I3 drag 4×6 + skyting; Trening; Løp; I3I3; 85; 40; Kombinert; overganger (inn/ut)|repetisjonsrytme; HL; Sørli
+07.09.${state.year}; KM sprint; Konkurranse; Ski skøyting; I5; 50; 10; Konk; ; 13-14|HL; Lørenskog`;}
+    );
+
+    // (Valgfri) CSV-import hvis du senere legger inn knappen #btn-csv-import i admin
+    $('#btn-csv-import')?.addEventListener('click', async ()=>{
+      const text = $('#csv-text')?.value || '';
+      if(!text.trim()){ alert('Lim inn CSV først.'); return; }
+      const rows = parseCSV(text);
       state.events.push(...rows);
-      // Legg nye nederst i day_order pr dato
-      const grouped = rows.reduce((acc,ev)=>{ acc[ev.date]=acc[ev.date]||[]; acc[ev.date].push(ev.id); return acc; }, {});
-      for(const [d,ids] of Object.entries(grouped)){
-        const current = getOrderForDate(d);
-        setOrderForDate(d, [...current, ...ids]);
-      }
-      render(); alert(`Importert ${rows.length} hendelser.`);
+      lsSet(KEY.EVENTS, state.events);
+      render();
       for(const ev of rows){ await supaUpsertEvent(ev); }
+      alert(`Importert ${rows.length} hendelser.`);
+    });
+
+    // ---------- PDF lokal forhåndsvisning ----------
+    $('#file-pdf').onchange=(e)=>{
+      const f=e.target.files[0]; if(!f) return;
+      const url=URL.createObjectURL(f);
+      $('#pdf-el').src=url;
+      $('#pdf-embed').classList.remove('hidden');
+      $('#pdf-empty').classList.add('hidden');
     };
 
-    $('#btn-ics').onclick=exportICS;
-
-    // Tabs
+    // ---------- Faner ----------
     $$('.tab-btn').forEach(b=> b.onclick=()=> switchTab(b.getAttribute('data-tab')) );
-    function switchTab(id){ $$('.tab-section').forEach(s=> s.classList.add('hidden')); $('#tab-'+id).classList.remove('hidden'); }
+    function switchTab(id){
+      $$('.tab-section').forEach(s=> s.classList.add('hidden'));
+      $('#tab-'+id)?.classList.remove('hidden');
+    }
 
-    // PDF local
-    $('#file-pdf').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); $('#pdf-el').src=url; $('#pdf-embed').classList.remove('hidden'); $('#pdf-empty').classList.add('hidden'); };
+    // ---------- Øktbank – standard maler ----------
+    function getDefaultTemplates(){
+      const T=[]; const add=(o)=>T.push({id:uid(),...o});
 
-    // Reflow ved resize
+      // Skiskytterskolen
+      add({name:'Skiskytterskolen – Introduksjon + 20 skudd liggende', type:'Trening', modality:'Basistrening', intensity:'I1', durationMin:60,
+           shooting:{stilling:'Liggende',skudd:20,tema:['Sikkerhet','Grunnstilling liggende','Siktebilde & avtrekk']},
+           age:['Skiskytterskolen'], notes:'Lekpreget. Veksle mellom enkle koordinasjonsleker og korte serier (2–3 skudd).'});
+      add({name:'Skiskytterskolen – Balansestafetter', type:'Trening', modality:'Basistrening', intensity:'I1', durationMin:50,
+           shooting:{stilling:'Liggende',skudd:10,tema:['Pust & ro','Etterhold']},
+           age:['Skiskytterskolen'], notes:'Stafetter med puter/linjer. Fokus ro på standplass.'});
+
+      // 9–10 år
+      add({name:'9–10 – Løpelek I2 + 20 skudd', type:'Trening', modality:'Løp', intensity:'I2', durationMin:55,
+           shooting:{stilling:'Liggende',skudd:20,tema:['Grunnstilling','Avtrekk']}, age:['9-10'],
+           notes:'Koordinasjonsløyper + 2×10 skudd liggende.'});
+      add({name:'9–10 – Rull på matte + presisjon', type:'Trening', modality:'Basistrening', intensity:'I1', durationMin:45,
+           shooting:{stilling:'Liggende',skudd:15,tema:['Pust & rytme']}, age:['9-10'],
+           notes:'Sirkel med matteøvelser, 3×5 skudd i ro.'});
+
+      // 11–12 år
+      add({name:'11–12 – Rulleski skøyting I2 teknikk + 30 skudd', type:'Trening', modality:'Rulleski skøyting', intensity:'I2', durationMin:70,
+           shooting:{stilling:'Liggende',skudd:30,tema:['Avtrekkstid','Siktebilde']}, age:['11-12'],
+           notes:'Kort bakke-teknikk, standplass 3×10 ligg.'});
+      add({name:'11–12 – Basistrening + mobilitet', type:'Trening', modality:'Basistrening', intensity:'I1', durationMin:60,
+           shooting:{stilling:'Variert',skudd:0,tema:[]}, age:['11-12'],
+           notes:'Sirkel: kjernestyrke, balanse, mobilitet.'});
+
+      // 13–14 år
+      add({name:'13–14 – I3 drag 5×4 min + stående', type:'Trening', modality:'Løp', intensity:'I3', durationMin:75,
+           shooting:{stilling:'Stående',skudd:35,tema:['Grunnstilling stående','Triggerkontroll']}, age:['13-14'],
+           notes:'20 min oppv., 5×4 min I3 (2 min pause), 7×5 skudd totalt fordelt.'});
+      add({name:'13–14 – Komb: inn/ut + serier', type:'Trening', modality:'Rulleski skøyting', intensity:'I2', durationMin:80,
+           shooting:{stilling:'Kombinert',skudd:40,tema:['Overganger (inn/ut)','Repetisjonsrytme']}, age:['13-14'],
+           notes:'Korte fartsdeler, skyting mellom drag.'});
+
+      // HL (15+)
+      add({name:'HL – VO2 I4 6×3 min + komb', type:'Trening', modality:'Løp', intensity:'I4', durationMin:85,
+           shooting:{stilling:'Kombinert',skudd:45,tema:['Overganger','Rytme']}, age:['HL'],
+           notes:'Bakke I4, skyting etter drag (L/S).'});
+      add({name:'HL – Rolig langtur I1–2 120 + 60 skudd', type:'Trening', modality:'Ski skøyting', intensity:'I2', durationMin:120,
+           shooting:{stilling:'Variert',skudd:60,tema:['Vind/korrigering','Pust & rytme']}, age:['HL'],
+           notes:'6×10 teknikkserier på standplass.'});
+      add({name:'HL – Testdag 3000 m + 2×5', type:'Trening', modality:'Løp', intensity:'I5', durationMin:60,
+           shooting:{stilling:'Stående',skudd:10,tema:['Trigger/holdtid']}, age:['HL'],
+           notes:'Oppv. 20 min, test 3000 m, skyting med puls.'});
+
+      // Felles konkurranse-maler
+      add({name:'Konk – Sprint', type:'Konkurranse', modality:'Ski skøyting', intensity:'I5', durationMin:50,
+           shooting:{stilling:'Konk',skudd:10,tema:[]}, raceSubtype:'Sprint', age:['9-10','11-12','13-14','HL'], notes:'Standard sprint.'});
+      add({name:'Konk – Normal', type:'Konkurranse', modality:'Ski skøyting', intensity:'I5', durationMin:60,
+           shooting:{stilling:'Konk',skudd:20,tema:[]}, raceSubtype:'Normal', age:['11-12','13-14','HL'], notes:'Standard normal.'});
+      add({name:'Restitusjon I1 (45) + bevegelighet', type:'Restitusjon', modality:'Løp', intensity:'I1', durationMin:45,
+           shooting:{stilling:'Variert',skudd:0,tema:[]}, age:['Skiskytterskolen','9-10','11-12','13-14','HL'],
+           notes:'Rolig bevegelse + 10–15 min mobilitet.'});
+      return T;
+    }
+
+    // ---------- Responsiv oppførsel ----------
     let __lastIsMobile = isMobile();
     window.addEventListener('resize', () => {
       const now = isMobile();
@@ -1529,7 +1389,8 @@
 
     // ---------- Init ----------
     (async function init(){
-      render(); switchTab('calendar');
+      render();
+      switchTab('calendar');
       bindDialogChrome();
       supaRealtimeInit();
       await supaLoadAll(state.year);
@@ -1537,3 +1398,4 @@
   </script>
 </body>
 </html>
+
