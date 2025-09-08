@@ -1539,6 +1539,11 @@
       $('#btn-print').onclick=()=> window.print();
     }
 
+// ---------- Sidebar toggle ----------
+document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('hidden');
+});
 
     window.addEventListener('DOMContentLoaded', init);
   </script>
