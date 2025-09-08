@@ -192,6 +192,20 @@
         </div>
       </section>
     </main>
+<!-- D: ICS -->
+<div>
+  <h4 class="font-semibold mb-2">Kalender</h4>
+  <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
+</div>
+
+<!-- E: Øktbank (seed) -->
+<div>
+  <h4 class="font-semibold mb-2">Øktbank</h4>
+  <button id="btn-seed-bank" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">
+    Legg inn 25 standardøkter i Øktbank
+  </button>
+  <p class="text-xs text-slate-500 mt-1">Trygg å kjøre flere ganger – hopper over maler som allerede finnes (matcher på navn).</p>
+</div>
 
     <!-- Sidepanel -->
     <aside class="space-y-4">
@@ -1346,6 +1360,54 @@
   ];
 }
 
+// Idempotent seeding av øktbank til Supabase.
+// - Leser eksisterende maler fra skyen
+// - Lagrer bare de som ikke finnes (matcher på navn, case-insensitivt)
+async function seedBankTemplates({ force = false } = {}) {
+  try {
+    // Hent eksisterende fra Supabase
+    const { data: existing, error } = await supabase
+      .from(TBL.bank)
+      .select('id,name,created_at')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    const existingNames = new Set(
+      (existing || []).map(r => (r.name || '').trim().toLowerCase())
+    );
+
+    const templates = getDefaultTemplates();
+
+    // Filtrer bort de som finnes fra før – med mindre force=true
+    const toInsert = force
+      ? templates
+      : templates.filter(t => !existingNames.has((t.name || '').trim().toLowerCase()));
+
+    // Ingenting å gjøre?
+    if (toInsert.length === 0) {
+      alert('Ingen nye maler å legge inn – Øktbanken ser allerede komplett ut 👍');
+      return;
+    }
+
+    // Oppdater Supabase (upsert én og én for å beholde tildelte id-er)
+    for (const t of toInsert) {
+      await supaUpsertBankTemplate(t);
+    }
+
+    // Oppdater lokal state (legg til nye som mangler i state.bank)
+    const localNames = new Set((state.bank || []).map(t => (t.name || '').trim().toLowerCase()));
+    const newlyAdded = toInsert.filter(t => !localNames.has((t.name || '').trim().toLowerCase()));
+    state.bank = [...(state.bank || []), ...newlyAdded];
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+
+    alert(`La inn ${toInsert.length} nye mal(er) i Øktbank ✅`);
+  } catch (e) {
+    console.error('Seeding av Øktbank feilet:', e);
+    alert('Kunne ikke legge inn standardøkter nå. Prøv igjen senere.');
+  }
+}
 
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
@@ -1373,6 +1435,11 @@
     $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date: dayjs().format('YYYY-MM-DD') }));
     $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date: dayjs().format('YYYY-MM-DD') }));
     $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse', date: dayjs().format('YYYY-MM-DD') }));
+    // Admin: Øktbank seeding-knapp
+document.getElementById('btn-seed-bank')?.addEventListener('click', () => {
+  seedBankTemplates();
+});
+
 
     // År-nav
     $('#year-prev').onclick=async ()=>{ state.year--; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); await supaLoadAll(state.year); };
