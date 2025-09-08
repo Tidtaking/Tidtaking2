@@ -1305,16 +1305,47 @@
     }
 
     // ---------- Øktbank defaults ----------
-    function getDefaultTemplates(){
-      return [
-        { id:uid(), name:'Basistrening + bevegelighet', type:'Trening', modality:'Løp', intensity:'I1', durationMin:45, age:['9-10','11-12'], shooting:{stilling:'Variert',skudd:0,tema:['bevegelighet','balanse']}, notes:'Lekpreget økt.' },
-        { id:uid(), name:'Komb – I3 drag 4×6 + skyting', type:'Trening', modality:'Løp', intensity:'I3', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'Kombinert',skudd:40,tema:['pustekontroll','overganger']}, notes:'' },
-        { id:uid(), name:'Rolig langkjøring', type:'Trening', modality:'Ski skøyting', intensity:'I1', durationMin:90, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Snakkefart.' },
-        { id:uid(), name:'Styrke sirkler', type:'Restitusjon', modality:'Styrke', intensity:'I2', durationMin:40, age:['Skiskytterskolen','9-10','11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kroppsvekt.' },
-        { id:uid(), name:'Skyteøkt – stående fokus', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:60, age:['13-14','HL'], shooting:{stilling:'Stående',skudd:60,tema:['avtrekk','balanse']}, notes:'' },
-        { id:uid(), name:'Testløp 2000 m', type:'Konkurranse', modality:'Løp', intensity:'I5', durationMin:20, age:['11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Enkelt testløp.' }
-      ];
-    }
+ function getDefaultTemplates(){
+  return [
+    // --- Skiskytterskolen / 9–10 ---
+    { id:uid(), name:'Lekpreget basis + bevegelighet', type:'Trening', modality:'Basistrening', intensity:'I1', durationMin:45, age:['Skiskytterskolen','9-10'], shooting:{stilling:'Variert',skudd:0,tema:['bevegelighet','balanse','lek']}, notes:'Sirkelstasjoner, dytt/drag-leker, enkel stafett.' },
+    { id:uid(), name:'Lett løp i skog + hinderlek', type:'Trening', modality:'Løp', intensity:'I1', durationMin:40, age:['Skiskytterskolen','9-10'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kort runde i mykt underlag, hoppe/dukk-oppgaver.' },
+    { id:uid(), name:'Rulleskilek (uten staver)', type:'Trening', modality:'Rulleski skøyting', intensity:'I1', durationMin:45, age:['9-10'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Trygghet, balanse, bremser. Øvelser på flatt område.' },
+    { id:uid(), name:'Styrke med egen kroppsvekt', type:'Restitusjon', modality:'Styrke', intensity:'I2', durationMin:35, age:['Skiskytterskolen','9-10'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Korte arbeidsøkter, lang pause, fokus teknikk.' },
+
+    // --- 11–12 ---
+    { id:uid(), name:'Komb – I2 løp + enkel skyting', type:'Trening', modality:'Løp', intensity:'I2', durationMin:60, age:['11-12'], shooting:{stilling:'Liggende',skudd:30,tema:['stilling','ro i sikte']}, notes:'Rolige overganger, 3–4 runder à 6–8 min I2.' },
+    { id:uid(), name:'Teknikk rulleski + balanse', type:'Trening', modality:'Rulleski skøyting', intensity:'I2', durationMin:60, age:['11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Trapping, sving, vektoverføring. 6–8 teknikkløyper.' },
+    { id:uid(), name:'Skyteøkt – liggende grunnstilling', type:'Skyting', modality:'Basistrening', intensity:'I1', durationMin:60, age:['11-12'], shooting:{stilling:'Liggende',skudd:50,tema:['avtrekk','pust','stilling']}, notes:'Korte serier, tørrtrening mellom serier.' },
+    { id:uid(), name:'Rolig langkjøring på ski', type:'Trening', modality:'Ski skøyting', intensity:'I1', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Snakkefart, 60–75 min etter føre.' },
+    { id:uid(), name:'I3 bakkeintervall (løp) kort', type:'Trening', modality:'Løp', intensity:'I3', durationMin:60, age:['11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'2–3 serier × 4–5 drag à 45–60 sek. Nedjogg.' },
+
+    // --- 13–14 ---
+    { id:uid(), name:'Komb – I3 drag 4×6 min + skyting', type:'Trening', modality:'Løp', intensity:'I3', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'Kombinert',skudd:40,tema:['pustekontroll','overganger']}, notes:'' },
+    { id:uid(), name:'Skyteøkt – stående fokus', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:60, age:['13-14','HL'], shooting:{stilling:'Stående',skudd:60,tema:['balanse','avtrekk','etterhold']}, notes:'Kort ståtid, mange repetisjoner.' },
+    { id:uid(), name:'Rolig langkjøring variert terreng', type:'Trening', modality:'Løp', intensity:'I1', durationMin:90, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Jeven pratetempo. 10–15 min styrke/lett spenst etterpå.' },
+    { id:uid(), name:'Rulleski klassisk – staking/diagonal', type:'Trening', modality:'Rulleski klassisk', intensity:'I2', durationMin:75, age:['13-14'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Teknikkblokker: 3×10 min fokusområder.' },
+    { id:uid(), name:'I4 terskel økt 5×5 min', type:'Trening', modality:'Løp', intensity:'I4', durationMin:70, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kontrollert hardt, 2–3 min pause.' },
+    { id:uid(), name:'Skyteøkt – kombi med puls 8×(2+5)', type:'Skyting', modality:'Basistrening', intensity:'I3', durationMin:80, age:['13-14'], shooting:{stilling:'Kombinert',skudd:60,tema:['pust','rytme','inn-ut']}, notes:'2 min arbeid + 5 skudd per runde.' },
+
+    // --- HL (15+) ---
+    { id:uid(), name:'Langkjøring ski – sone 1', type:'Trening', modality:'Ski klassisk', intensity:'I1', durationMin:120, age:['HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Valgfri staking/diagonal. Kort drill før/etter.' },
+    { id:uid(), name:'Terskel rulleski 3×12 min', type:'Trening', modality:'Rulleski skøyting', intensity:'I3', durationMin:90, age:['HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Jevn fart. 4 min pause.' },
+    { id:uid(), name:'Styrke helkropp + stabilitet', type:'Restitusjon', modality:'Styrke', intensity:'I2', durationMin:50, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Mobilitet + kjernestabilitet, teknikk først.' },
+    { id:uid(), name:'Skyting – stående presisjon 6×10', type:'Skyting', modality:'Basistrening', intensity:'I1', durationMin:70, age:['HL'], shooting:{stilling:'Stående',skudd:60,tema:['presisjon','avtrekk','hviletid']}, notes:'Lang hvile, fokus på kvalitet.' },
+    { id:uid(), name:'Komb – konkurransespesifikk', type:'Trening', modality:'Ski skøyting', intensity:'I4', durationMin:75, age:['HL'], shooting:{stilling:'Kombinert',skudd:50,tema:['treffbilde','seriehastighet','rutiner']}, notes:'2–3 blokker med konk-åpning + skyting.' },
+
+    // --- Felles/overlappende maler ---
+    { id:uid(), name:'Teknikk ski skøyting (alle)', type:'Trening', modality:'Ski skøyting', intensity:'I2', durationMin:60, age:['9-10','11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Vektoverføring, kant, armbruk. Video ved mulighet.' },
+    { id:uid(), name:'Basistrening med stasjoner', type:'Trening', modality:'Basistrening', intensity:'I2', durationMin:55, age:['Skiskytterskolen','9-10','11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'5–6 stasjoner à 4–6 min.' },
+    { id:uid(), name:'Skyting – liggende fart 10×5', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:65, age:['11-12','13-14'], shooting:{stilling:'Liggende',skudd:50,tema:['seriehastighet','etterhold']}, notes:'Jevn puls, fokus flyt.' },
+    { id:uid(), name:'Progressiv løp 3×12 min (I2→I3)', type:'Trening', modality:'Løp', intensity:'I3', durationMin:70, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Siste 3–4 min nær terskel.' },
+    { id:uid(), name:'Test: 2000 m løp', type:'Konkurranse', modality:'Løp', intensity:'I5', durationMin:20, age:['11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Enkelt testløp. God oppvarming.' },
+    { id:uid(), name:'Skyting – kombi stafett-lek', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:55, age:['9-10','11-12'], shooting:{stilling:'Liggende',skudd:40,tema:['trygg våpenføring','rutiner']}, notes:'Lag, enkel stafett med tilpassede avstander.' },
+    { id:uid(), name:'Kaldt føre – kort teknikk + rolig', type:'Trening', modality:'Ski klassisk', intensity:'I1', durationMin:60, age:['11-12','13-14'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kort teknikkdel, deretter rolig flyt.' }
+  ];
+}
+
 
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
