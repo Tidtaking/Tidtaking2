@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lørenskog Skiskyting – Årsplan & Øktbank (View Only)</title>
+  <title>Lørenskog Skiskyting – Årsplan (Visning)</title>
 
   <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -20,12 +20,20 @@
       #dialog .dialog-card{ width:100%; max-width:none; height:92vh; border-radius:0; display:flex; flex-direction:column; }
       #dialog .dialog-body{ overflow:auto; -webkit-overflow-scrolling: touch; flex:1 1 auto; }
     }
+
     .card{ border:1px solid rgb(226 232 240); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
     .daycell{ transition: background-color .15s ease; }
     @media print{
       aside, nav, .no-print { display:none!important; }
       body { background:white; }
     }
+
+    /* View-only små justeringer */
+    .is-view-only .dnd-handle { display:none; }
+    .is-view-only .btn-edit, 
+    .is-view-only .btn-del,
+    .is-view-only .btn-dup,
+    .is-view-only .btn-plan { display:none !important; }
   </style>
 
   <!-- Dayjs -->
@@ -33,15 +41,17 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
+  <!-- Norsk locale for Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/nb.min.js"></script>
 
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- SheetJS (XLSX) -->
+  <!-- SheetJS (XLSX) – ikke brukt i view, men lar oss senere gi eksport ved behov -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+
+<body class="bg-gray-100 min-h-screen is-view-only">
 
   <!-- ========= HEADER ========= -->
   <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
@@ -49,21 +59,22 @@
       <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
       <div>
         <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
-        <p class="text-sm opacity-80">Årsplan • Øktbank</p>
+        <p class="text-sm opacity-80">Årsplan – visning</p>
       </div>
     </div>
     <div class="mb-4 flex flex-wrap items-center justify-between gap-2 no-print md:sticky md:top-2 md:z-40">
-      <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
+      <!-- Skjult i view-only -->
+      <button id="btn-new" class="hidden inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
       <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
-      <button id="btn-export-xlsx" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter Excel</button>
-      <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm cursor-pointer">
+      <button id="btn-export-xlsx" class="hidden inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter Excel</button>
+      <label class="hidden inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm cursor-pointer">
         <input id="file-import" type="file" accept="application/json" class="hidden" />Importer
       </label>
     </div>
   </header>
 
   <!-- ========= PAGE CONTAINER ========= -->
-  <div class="mx-auto max-w-[96rem] px-3" id="page-grid">
+  <div class="mx-auto max-w-[96rem] px-3">
 
     <!-- Toolbar -->
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
@@ -75,40 +86,176 @@
       <nav class="flex flex-wrap gap-2">
         <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
         <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
-        <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+        <button data-tab="admin" class="hidden tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+
         <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Sidepanel</button>
+
         <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
-           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Selvanviser</a>
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+          Selvanviser
+        </a>
         <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
-           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">Tidtaking</a>
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+          Tidtaking
+        </a>
       </nav>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <!-- To-kolonne layout: hovedinnhold + valgfritt sidepanel -->
+    <div id="page-grid" class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <!-- Main -->
       <main id="main-content" class="space-y-4">
-        <!-- Kalender, Øktbank og Admin-seksjoner -->
-        <!-- ... (samme som før, uendret) ... -->
+        <!-- Calendar Tab -->
+        <section id="tab-calendar" class="tab-section">
+          <!-- Kalendergrid: 12 mnd desktop, 1 mnd mobil -->
+          <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
+
+          <div class="rounded-2xl border bg-white shadow-sm card">
+            <div class="flex items-center justify-between border-b p-4">
+              <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
+              <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm no-print">Vis/skjul liste</button>
+            </div>
+            <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+              <table class="w-full table-fixed text-sm">
+                <thead>
+                  <tr class="text-left text-slate-500">
+                    <th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th>
+                  </tr>
+                </thead>
+                <tbody id="tbl-events"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bank Tab -->
+        <section id="tab-bank" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm card">
+            <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
+            <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label class="text-sm font-medium">Søk</label>
+                <input id="q-bank" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Søk i øktbank…"/>
+              </div>
+              <div>
+                <label class="text-sm font-medium">Målgruppe</label>
+                <select id="f-age" class="mt-1 w-full h-10 rounded-xl border px-3"></select>
+              </div>
+              <div>
+                <label class="text-sm font-medium">Type</label>
+                <select id="f-type" class="mt-1 w-full h-10 rounded-xl border px-3">
+                  <option value="">Alle</option>
+                  <option>Trening</option>
+                  <option>Konkurranse</option>
+                  <option>Restitusjon</option>
+                </select>
+              </div>
+            </div>
+            <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
+          </div>
+        </section>
+
+        <!-- Admin Tab (skjult) -->
+        <section id="tab-admin" class="tab-section hidden"></section>
       </main>
 
       <!-- Sidepanel -->
-      <aside id="sidebar" class="space-y-4 hidden lg:block">
-        <!-- ... (samme som før, fargekode, utviklingstrapp, intensitetssoner, hurtigverktøy) ... -->
+      <aside id="sidebar" class="space-y-4 hidden">
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
+          <div id="legend" class="p-4 space-y-1 text-sm"></div>
+        </div>
+
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
+          <div class="p-4 text-sm text-slate-700 space-y-1">
+            <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
+            <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
+            <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
+            <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles.</p>
+            <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border bg-white shadow-sm card">
+          <div class="border-b p-4">
+            <h3 class="text-lg font-semibold">Intensitetssoner (I1–I5) for barn</h3>
+          </div>
+          <div class="p-4">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-slate-500">
+                  <th class="py-1">Sone</th>
+                  <th class="py-1">Følelse</th>
+                </tr>
+              </thead>
+              <tbody class="align-top">
+                <tr>
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#22c55e"></span>
+                      <span>I1 Svært lett</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Helt rolig, kan prate og le hele tiden</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#eab308"></span>
+                      <span>I2 Lett</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Puster litt mer, men kan snakke i setninger</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>
+                      <span>I3 Middels</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Blir varm og andpusten, kan snakke i korte setninger</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span>
+                      <span>I4 Hardt</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Ordentlig sliten, kan bare si noen få ord</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span>⚡</span>
+                      <span>I5 Maks</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Alt du har! Klarer bare noen sekunder–minutter</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </aside>
     </div>
   </div><!-- /container -->
 
-  <!-- Dialog -->
+  <!-- Dialog (lesevisning) -->
   <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-4">
-        <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
+        <h3 id="dlg-title" class="text-lg font-semibold">Detaljer</h3>
         <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
       </div>
       <div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
       <div class="border-t p-4 flex justify-end gap-2">
-        <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
-        <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
-        <button id="btn-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
+        <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lukk</button>
+        <button id="btn-save" class="hidden rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
+        <button id="btn-delete" class="hidden mr-auto rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
       </div>
     </div>
   </div>
@@ -117,51 +264,16 @@
   <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700"></div>
 
   <script>
+    /* ========== KONFIG ========== */
+    const VIEW_ONLY = true;
+
     // ---------- Dayjs ----------
     dayjs.extend(dayjs_plugin_isoWeek);
     dayjs.extend(dayjs_plugin_weekday);
     dayjs.extend(dayjs_plugin_localizedFormat);
-    dayjs.locale('nb');
+    dayjs.locale('nb'); // Norsk
 
-    // ---------- VIEW-ONLY FLAG ----------
-    const VIEW_ONLY = new URLSearchParams(location.search).get('view') === '1';
-    function applyViewOnly() {
-      if (!VIEW_ONLY) return;
-      document.body.classList.add('view-only');
-
-      // Skjul redigeringsknapper
-      document.getElementById('btn-new')?.classList.add('hidden');
-      document.getElementById('file-import')?.closest('label')?.classList.add('hidden');
-      document.querySelector('[data-tab="admin"]')?.classList.add('hidden');
-      document.querySelector('#sidebar .no-print')?.classList.add('hidden');
-
-      // Overstyr openDialog → bruk view
-      const _openDialog = window.openDialog;
-      window.openDialog = function(data) {
-        return window.openViewDialog?.(data) ?? _openDialog?.(data);
-      };
-
-      // Skjul lagre/slett
-      const style = document.createElement('style');
-      style.textContent = `
-        .view-only #btn-save,
-        .view-only #btn-delete,
-        .view-only .dnd-item [data-act],
-        .view-only #btn-new-on-day { display:none!important }
-        .view-only .dnd-item { cursor:default; }
-      `;
-      document.head.appendChild(style);
-    }
-
-    // ---------- Sidebar toggle ----------
-    function setSidebarButtonStyle(isVisible){
-      const btn = document.getElementById('btn-toggle-sidebar');
-      if(!btn) return;
-      const isHidden = !isVisible;
-      btn.classList.toggle('bg-blue-50', isHidden);
-      btn.classList.toggle('border-blue-300', isHidden);
-      btn.textContent = isHidden ? 'Sidepanel (skjult)' : 'Sidepanel';
-    }
+    /* ========== Sidebar toggle ========== */
     function applySidebarLayout(visible){
       const grid = document.getElementById('page-grid');
       const aside = document.getElementById('sidebar');
@@ -170,12 +282,11 @@
         aside.classList.remove('hidden');
         grid.classList.remove('lg:grid-cols-1');
         grid.classList.add('lg:grid-cols-[minmax(0,1fr)_360px]');
-      } else {
+      }else{
         aside.classList.add('hidden');
         grid.classList.remove('lg:grid-cols-[minmax(0,1fr)_360px]');
         grid.classList.add('lg:grid-cols-1');
       }
-      setSidebarButtonStyle(visible);
     }
     function setupSidebarToggle(){
       const btn = document.getElementById('btn-toggle-sidebar');
@@ -188,28 +299,627 @@
         const nowVisible = aside.classList.contains('hidden');
         applySidebarLayout(nowVisible);
         localStorage.setItem('lss:sidebar:visible', String(nowVisible));
+
+        // fargeindikator på knappen når panel er skjult
+        btn.classList.toggle('bg-yellow-100', !nowVisible);
+        btn.classList.toggle('border-yellow-300', !nowVisible);
+      });
+
+      // init fargeindikator
+      btn.classList.toggle('bg-yellow-100', !visible);
+      btn.classList.toggle('border-yellow-300', !visible);
+    }
+
+    /* ========== Konstanter / utils ========== */
+    const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
+    const MODALITETER = ['Ski skøyting','Ski klassisk','Rulleski skøyting','Rulleski klassisk','Løp','Sykkel','Styrke','Basistrening'];
+    const INTENS = ['I1','I2','I3','I4','I5'];
+    const WEEKCODES = ['BAS','OPP','KONK','RES','EKS'];
+    const DEFAULT_AGE_GROUPS = [
+      { id:'HL', label:'HL gruppe (15+)' },
+      { id:'13-14', label:'13–14 år' },
+      { id:'11-12', label:'11–12 år' },
+      { id:'9-10', label:'9–10 år' },
+      { id:'Skiskytterskolen', label:'Skiskytterskolen' }
+    ];
+    const AGE_MAP = { 'U12':'11-12', 'U14':'13-14', 'U16':'HL', 'JR':'HL' };
+
+    const KEY = {
+      EVENTS:'lss:events:v1',
+      BANK:'lss:bank:v3',
+      WEEKS:'lss:weeks:v1',
+      YEAR:'lss:year:v1',
+      DAYORDER:'lss:dayorder:v2',
+      AGES:'lss:ages:v1'
+    };
+
+    const $=(q,el=document)=>el.querySelector(q);
+    const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
+    const uid=()=> (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));
+    const lsGet=(k,d)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch{return d;} };
+    const lsSet=(k,v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} };
+
+    function fallbackLogo(){
+      const img=document.createElement('div');
+      img.className='h-14 w-20 rounded-xl bg-white grid place-items-center text-xs text-slate-500';
+      img.textContent='Logo';
+      return img;
+    }
+
+    function bindDialogChrome(){
+      const dlg = $('#dialog');
+      const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
+      $('#btn-cancel')?.addEventListener('click', doClose);
+      $('#dlg-close')?.addEventListener('click', doClose);
+      dlg?.addEventListener('click', (e) => { if (e.target === dlg) closeDialog(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog(); });
+    }
+
+    /* ========== Supabase (read-only i VIEW_ONLY) ========== */
+    const SUPA_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXRpIjoxNzQyNjQxNTg4LCJleHAiOjIwNTgyMTc1ODh9.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order', settings:'settings' };
+
+    let state = {
+      year: lsGet(KEY.YEAR, dayjs().year()),
+      month: dayjs().month() + 1,
+      events: [],
+      bank: [],
+      weeks: {},
+      dayOrder: lsGet(KEY.DAYORDER, {}),
+      ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
+    };
+    const MOBILE_BREAKPOINT = 768;
+    const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
+
+    async function supaLoadAll(year = state.year){
+      // Events
+      const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
+      if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
+      else { state.events = lsGet(KEY.EVENTS, state.events); }
+
+      // Bank
+      const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
+      if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
+      else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
+
+      // Weeks
+      const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
+      if(!wErr && wks){
+        const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
+        state.weeks = dict;
+      } else {
+        state.weeks = lsGet(KEY.WEEKS, getDefaultWeeks(year));
+      }
+
+      // Age groups
+      await supaLoadAgeGroups();
+
+      // Day order
+      await supaLoadDayOrderForYear(year);
+
+      migrateAllAgesInState();
+      render();
+    }
+
+    async function supaLoadAgeGroups(){
+      const { data, error } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      if(!error && data && Array.isArray(data.value)){ state.ageGroups = data.value; }
+      else { state.ageGroups = DEFAULT_AGE_GROUPS; await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups }); }
+      lsSet(KEY.AGES, state.ageGroups);
+    }
+
+    // WRITE-kall som no-ops i view-only
+    async function supaUpsertEvent(model){ /* no-op i VIEW_ONLY */ }
+    async function supaDeleteEvent(id){ /* no-op i VIEW_ONLY */ }
+    async function supaUpsertWeek(year, week, code, note){ /* no-op i VIEW_ONLY */ }
+    async function supaUpsertBankTemplate(t){ /* no-op i VIEW_ONLY */ }
+    async function supaDeleteBankTemplate(id){ /* no-op i VIEW_ONLY */ }
+    async function supaLoadDayOrderForYear(year){
+      const from = `${year}-01-01`;
+      const to   = `${year+1}-01-01`;
+      const { data, error } = await supabase.from(TBL.dayOrder).select('*').gte('date', from).lt('date', to);
+      if(error){ console.warn('Henting day_order feilet', error); return; }
+      const map = {};
+      for(const r of data||[]){ map[r.date] = Array.isArray(r.ids) ? r.ids : []; }
+      state.dayOrder = { ...state.dayOrder, ...map };
+      lsSet(KEY.DAYORDER, state.dayOrder);
+    }
+    async function supaUpsertDayOrder(dateISO, ids){ /* no-op i VIEW_ONLY */ }
+
+    function supaRealtimeInit(){
+      // Realtime – kun for å reflektere endringer fra trenere fortløpende
+      supabase.channel('events-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.events }, payload => {
+          if(payload.new?.year === state.year || payload.old?.year === state.year){ supaLoadAll(state.year); }
+        }).subscribe();
+
+      supabase.channel('weeks-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.weeks }, payload => {
+          if((payload.new?.year||payload.old?.year) === state.year){ supaLoadAll(state.year); }
+        }).subscribe();
+
+      supabase.channel('bank-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.bank }, () => supaLoadAll(state.year))
+        .subscribe();
+
+      supabase.channel('dayorder-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.dayOrder }, payload => {
+          const d = (payload.new?.date || payload.old?.date);
+          if(!d) return;
+          const y = dayjs(d).year();
+          if(y !== state.year) return;
+          if(payload.eventType === 'DELETE'){ delete state.dayOrder[d]; }
+          else { state.dayOrder[d] = payload.new?.ids || []; }
+          lsSet(KEY.DAYORDER, state.dayOrder);
+          render();
+        })
+        .subscribe();
+
+      supabase.channel('settings-rt')
+        .on('postgres_changes', { event: '*', schema: 'public', table: TBL.settings }, payload => {
+          if(payload.new?.key === 'age_groups'){
+            state.ageGroups = payload.new?.value || DEFAULT_AGE_GROUPS;
+            lsSet(KEY.AGES, state.ageGroups);
+            render();
+          }
+        })
+        .subscribe();
+    }
+
+    /* ========== Mappers / defaults ========== */
+    function mapEventToDb(e){
+      return {
+        id: e.id,
+        date: e.date,
+        year: dayjs(e.date).year(),
+        title: e.title || null,
+        type: e.type || null,
+        modality: e.modality || null,
+        intensity: e.intensity || null,
+        duration_min: e.durationMin ?? null,
+        age: e.age || [],
+        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: e.raceSubtype || null,
+        notes: e.notes || null,
+        roles: e.roles || {},
+        location: e.location || null
+      };
+    }
+    function mapEventFromDb(r){
+      const t = r.type ?? r.event_type ?? 'Trening';
+      return {
+        id: r.id,
+        date: r.date,
+        title: r.title || '',
+        type: t,
+        modality: r.modality || '',
+        intensity: r.intensity || '',
+        durationMin: r.duration_min ?? 60,
+        age: r.age || [],
+        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
+        raceSubtype: r.race_subtype || '',
+        notes: r.notes || '',
+        roles: r.roles || {},
+        location: r.location || ''
+      };
+    }
+    function mapBankToDb(t){
+      return {
+        id: t.id, name: t.name, type: t.type,
+        modality: t.modality, intensity: t.intensity,
+        duration_min: t.durationMin ?? null,
+        age: t.age || [],
+        shooting: t.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: t.raceSubtype || null,
+        notes: t.notes || null
+      };
+    }
+    function mapBankFromDb(r){
+      return {
+        id: r.id, name: r.name, type: r.type,
+        modality: r.modality, intensity: r.intensity,
+        durationMin: r.duration_min ?? null,
+        age: r.age || [],
+        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
+        raceSubtype: r.race_subtype || null,
+        notes: r.notes || null
+      };
+    }
+
+    function getDefaultWeeks(year){
+      const first=dayjs(year+'-01-01');
+      const last=dayjs(year+'-12-31');
+      const weeks={}; let d=first.startOf('isoWeek');
+      while(d.isBefore(last.add(1,'day'))){
+        const wk=d.isoWeek();
+        if(!weeks[wk]) weeks[wk]={code:'BAS',note:''};
+        d=d.add(7,'day');
+      }
+      return weeks;
+    }
+    function migrateAgeTagsInArray(arr){
+      if(!Array.isArray(arr)) return [];
+      return arr.map(a => AGE_MAP[a] || a);
+    }
+    function migrateAllAgesInState(){
+      state.events = (state.events || []).map(e => ({ ...e, age: migrateAgeTagsInArray(e.age) }));
+      state.bank   = (state.bank   || []).map(t => ({ ...t, age: migrateAgeTagsInArray(t.age) }));
+    }
+
+    /* ========== Tooltip ========== */
+    const tipEl = $('#lss-tooltip');
+    function showTooltip(html, x, y){
+      if(!tipEl) return;
+      tipEl.innerHTML = html;
+      tipEl.style.left = x+'px';
+      tipEl.style.top = (y-12)+'px';
+      tipEl.classList.remove('hidden');
+    }
+    function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
+    function attachTipHandlers(el, html){
+      let pressTimer = null;
+      let last = {x:0, y:0};
+      const onEnter = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
+      const onMove  = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
+      const onLeave = ()=> hideTooltip();
+      el.addEventListener('mouseenter', onEnter);
+      el.addEventListener('mousemove', onMove);
+      el.addEventListener('mouseleave', onLeave);
+      const startPress = (ev)=>{
+        const t = ev.touches?.[0]; if(!t) return;
+        last = { x: t.clientX, y: t.clientY };
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(()=> showTooltip(html, last.x, last.y), 300);
+      };
+      const movePress = (ev)=>{
+        const t = ev.touches?.[0]; if(!t) return;
+        last = { x: t.clientX, y: t.clientY };
+        if(!tipEl.classList.contains('hidden')) showTooltip(html, last.x, last.y);
+      };
+      const endPress = ()=>{ clearTimeout(pressTimer); setTimeout(hideTooltip, 1200); };
+      el.addEventListener('touchstart', startPress, { passive:true });
+      el.addEventListener('touchmove',  movePress,  { passive:true });
+      el.addEventListener('touchend',   endPress,   { passive:true });
+      el.addEventListener('touchcancel',endPress,   { passive:true });
+    }
+    function eventTooltipHTML(e){
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
+      const title = esc(e.title || e.type || '');
+      const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
+      const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
+      const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
+      const notes = (e.notes||'').trim() ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+      const tema = (e.shooting?.tema||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
+
+      return `
+        <div class="font-semibold mb-1">${title}</div>
+        <div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>
+        <div><span class="font-medium">Sted:</span> ${esc(e.location||'–')}</div>
+        <div><span class="font-medium">Modalitet:</span> ${esc(e.modality||'–')}</div>
+        <div><span class="font-medium">Intensitet:</span> ${esc(e.intensity||'–')}</div>
+        <div><span class="font-medium">Varighet:</span> ${e.durationMin? esc(String(e.durationMin))+' min' : '–'}</div>
+        <div class="mt-1"><span class="font-medium">Aldersklasser:</span> ${ageChips||'–'}</div>
+        <div class="mt-1"><span class="font-medium">Skyting:</span> ${esc(e.shooting?.stilling||'–')}, skudd: ${e.shooting?.skudd||0}</div>
+        ${tema}
+        ${race}
+        ${rolesList? `<div class="mt-1">${rolesList}</div>`:''}
+        ${notes}
+      `;
+    }
+
+    /* ========== Dag-sortering (read-only) ========== */
+    function getOrderForDate(dateISO){ return state.dayOrder[dateISO] || []; }
+    function setOrderForDate(dateISO, ids){ /* no-op i VIEW_ONLY */ }
+    function sortEventsByDayOrder(dateISO, events){
+      const order = getOrderForDate(dateISO);
+      const idx = new Map(order.map((id, i)=>[id, i]));
+      return [...events].sort((a,b)=>{
+        const ai = idx.has(a.id) ? idx.get(a.id) : Number.MAX_SAFE_INTEGER;
+        const bi = idx.has(b.id) ? idx.get(b.id) : Number.MAX_SAFE_INTEGER;
+        if (ai !== bi) return ai - bi;
+        return (a.title||'').localeCompare(b.title||'');
       });
     }
 
-    // ---------- init ----------
-    function init(){
-      bindDialogChrome?.();
-      bindUiHandlers?.();
-      setupSidebarToggle();
-      applyViewOnly();
-      switchTab?.('calendar');
-      supaLoadAll?.(state.year);
-      supaRealtimeInit?.();
+    /* ========== Dagvisning (lese) ========== */
+    function previewCardHTMLView(e){
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
+      const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
+      const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
+      const meta = [
+        e.type ? `<span class="inline-flex items-center gap-2">${dot}<span>${esc(e.type)}</span></span>` : '',
+        e.location ? `<span>${esc(e.location)}</span>` : '',
+        e.modality ? `<span>${esc(e.modality)}</span>` : '',
+        e.intensity ? `<span>${esc(e.intensity)}</span>` : '',
+        e.durationMin ? `<span>${String(e.durationMin)} min</span>` : ''
+      ].filter(Boolean).join(' • ');
+      const ages = (e.age||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${(e.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-[11px]">${esc(a)}</span>`).join('')}</div>` : '';
+      const notes = e.notes ? `<div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+      return `
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1">
+            <div class="text-base font-semibold flex items-center gap-2">
+              <span class="text-slate-400">•</span>
+              ${title}
+            </div>
+            <div class="mt-1 text-xs text-slate-600 flex flex-wrap gap-2">${meta}</div>
+            ${ages}
+            ${notes}
+          </div>
+        </div>
+      `;
     }
-    window.addEventListener('DOMContentLoaded', init);
+    function openDayView(dateISO, eventsForDay){
+      const d = dayjs(dateISO);
+      const items = sortEventsByDayOrder(dateISO, eventsForDay);
+      const body = $('#dlg-body');
+      $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
 
-    // ---------- Kortslutt skrivende kall i view-only ----------
-    async function supaUpsertEvent(model){ if(VIEW_ONLY) return; /* ... */ }
-    async function supaDeleteEvent(id){ if(VIEW_ONLY) return; /* ... */ }
-    async function supaUpsertWeek(y,w,c,n){ if(VIEW_ONLY) return; /* ... */ }
-    async function supaUpsertBankTemplate(t){ if(VIEW_ONLY) return; /* ... */ }
-    async function supaDeleteBankTemplate(id){ if(VIEW_ONLY) return; /* ... */ }
-    async function supaUpsertDayOrder(d,ids){ if(VIEW_ONLY) return; /* ... */ }
+      body.innerHTML = `
+        <div class="space-y-3">
+          <div id="view-list" class="space-y-3">
+            ${items.map(e=> `<div class="rounded-2xl border bg-white shadow-sm p-4">${previewCardHTMLView(e)}</div>`).join('')}
+          </div>
+        </div>
+      `;
+      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
+    }
+
+    function openViewDialog(model){
+      const body = $('#dlg-body');
+      $('#dlg-title').textContent = 'Hendelse';
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
+      const row = (label, value) => `<div class="grid grid-cols-3 gap-3 items-start"><div class="text-sm font-medium text-slate-700 col-span-1">${label}</div><div class="text-sm col-span-2">${value||'–'}</div></div>`;
+      const ageChips = (model.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(a)}</span>`).join('');
+      const tema = (model.shooting?.tema||[]).length
+        ? `<div class="mt-1 flex flex-wrap gap-1">${model.shooting.tema.map(t=>`<span class="rounded-full border px-2 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>`
+        : '';
+
+      body.innerHTML = `
+        ${row('Tittel', esc(model.title))}
+        ${row('Dato', dayjs(model.date).format('DD.MM.YYYY'))}
+        ${row('Sted', esc(model.location||''))}
+        ${row('Type', esc(model.type))}
+        ${row('Modalitet', esc(model.modality))}
+        ${row('Intensitet', esc(model.intensity))}
+        ${row('Varighet', model.durationMin? esc(String(model.durationMin))+' min':'–')}
+        ${row('Målgrupper', ageChips || '–')}
+        ${row('Skyting', `${esc(model.shooting?.stilling||'–')}, ${model.shooting?.skudd||0} skudd ${tema}`)}
+        ${model.type==='Konkurranse' ? row('Konkurranse-type', esc(model.raceSubtype||'')) : ''}
+        ${row('Notater', esc(model.notes))}
+        ${row('Roller', Object.entries(model.roles||{}).filter(([,v])=>v).map(([k,v])=>`<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('') || '–')}
+      `;
+
+      $('#dialog').classList.remove('hidden'); 
+      $('#dialog').classList.add('flex');
+    }
+
+    /* ========== Kalender-rendering (lik original, men uten redigering) ========== */
+    function render(){
+      $('#year-label').textContent = state.year;
+      $('#event-year').textContent = state.year;
+      renderLegend(); 
+      renderCalendar(); 
+      renderList();
+
+      // oppdatér filter for bank (aldersvalg)
+      const fAge = $('#f-age'); 
+      if(fAge){ fAge.innerHTML = `<option value="">Alle</option>` + (state.ageGroups||[]).map(g=>`<option value="${g.id}">${g.label}</option>`).join(''); }
+
+      lsSet(KEY.YEAR,state.year);
+      lsSet(KEY.EVENTS,state.events);
+      lsSet(KEY.BANK,state.bank);
+      lsSet(KEY.WEEKS,state.weeks);
+      lsSet(KEY.DAYORDER,state.dayOrder);
+      lsSet(KEY.AGES,state.ageGroups);
+    }
+
+    function renderLegend(){
+      const el=$('#legend'); if(!el) return;
+      el.innerHTML='';
+      Object.entries(COLORS).forEach(([k,c])=>{
+        const row=document.createElement('div');
+        row.className='flex items-center justify-between';
+        row.innerHTML=`<span class="flex items-center gap-2"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${c}"></span>${k}</span>`;
+        el.appendChild(row);
+      });
+    }
+
+    function renderCalendar(){
+      const grid = $('#calendar-grid'); grid.innerHTML = '';
+      if (isMobile()){ grid.appendChild(renderMonth(state.year, state.month, { withNav:true })); return; }
+      const months = Array.from({length:12},(_,i)=>i+1);
+      months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
+    }
+
+    function renderMonth(year, month, opts = { withNav:false }){
+      const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm card';
+      const header=document.createElement('div'); header.className='flex items-center justify-between border-b p-4';
+      const title = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM');
+      if (opts.withNav){
+        const left = document.createElement('button'); left.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm'; left.textContent = '◀';
+        const mid = document.createElement('div'); mid.className = 'text-lg font-semibold'; mid.textContent = `${title} ${year}`;
+        const right = document.createElement('button'); right.className = 'rounded-xl border bg-white px-3 py-1.5 shadow-sm'; right.textContent = '▶';
+        left.onclick = () => { let m = state.month - 1, y = state.year; if (m < 1){ m = 12; y--; } state.month = m; state.year = y; render(); supaLoadAll(state.year); };
+        right.onclick = () => { let m = state.month + 1, y = state.year; if (m > 12){ m = 1; y++; } state.month = m; state.year = y; render(); supaLoadAll(state.year); };
+        header.append(left, mid, right);
+      } else {
+        header.innerHTML=`<h3 class="text-lg font-semibold">${title}</h3>`;
+      }
+
+      const body=document.createElement('div'); body.className='p-2';
+      const daysHeader=document.createElement('div'); daysHeader.className='grid grid-cols-7 gap-1 text-xs text-slate-500 px-1';
+      'man tir ons tor fre lør søn'.split(' ').forEach(w=>{ const d=document.createElement('div'); d.className='px-1 py-1 text-center font-medium uppercase'; d.textContent=w; daysHeader.appendChild(d); });
+
+      const cells=document.createElement('div'); cells.className='mt-1 grid grid-cols-7 gap-1';
+      const first=dayjs(`${year}-${String(month).padStart(2,'0')}-01`).startOf('month');
+      const leading=(first.day()+6)%7; const days=first.daysInMonth();
+      for(let i=0;i<leading;i++) cells.appendChild(emptyCell());
+      for(let d=1; d<=days; d++) cells.appendChild(dayCell(dayjs(`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`)));
+      const total=leading+days; const trail=(7-(total%7))%7; for(let i=0;i<trail;i++) cells.appendChild(emptyCell());
+
+      body.appendChild(daysHeader); body.appendChild(cells); wrap.appendChild(header); wrap.appendChild(body); return wrap;
+    }
+
+    function emptyCell(){ const d = document.createElement('div'); d.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
+
+    function dayCell(d){
+      const key = d.format('YYYY-MM-DD');
+      let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
+      evts = sortEventsByDayOrder(key, evts);
+
+      const box = document.createElement('div'); box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
+      box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); });
+      if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
+
+      const top = document.createElement('div'); top.className = 'flex items-center justify-between text-xs text-slate-600';
+      const uniqueTypes = Array.from(new Set(evts.map(e => e.type))).slice(0,4);
+      const dotsHTML = uniqueTypes.map(t => `<span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[t]||'#6b7280'}'></span>`).join('');
+      top.innerHTML = `<span class="font-medium">${d.date()}</span><span class="flex gap-1">${dotsHTML}</span>`;
+
+      const list = document.createElement('div'); list.className = 'mt-1 flex flex-col gap-0.5';
+      evts.slice(0,3).forEach(e => {
+        const row = document.createElement('div'); row.className = 'truncate text-xs flex items-center gap-1';
+        const dot = document.createElement('span'); dot.className = 'inline-block h-2 w-2 rounded-full'; dot.style.background = COLORS[e.type] || '#6b7280';
+        const txt = document.createElement('span'); txt.className = 'font-medium truncate'; txt.textContent = e.title || e.type;
+        const tipHTML = eventTooltipHTML(e); attachTipHandlers(row, tipHTML);
+        row.appendChild(dot); row.appendChild(txt); list.appendChild(row);
+
+        row.addEventListener('click', (ev)=>{ ev.stopPropagation(); openViewDialog(e); });
+      });
+      if(evts.length > 3){ const more = document.createElement('div'); more.className = 'text-[10px] text-slate-500'; more.textContent = `+${evts.length-3} flere…`; list.appendChild(more); }
+
+      box.appendChild(top); box.appendChild(list); return box;
+    }
+
+    function renderList(){
+      const tbody=$('#tbl-events'); if(!tbody) return;
+      tbody.innerHTML='';
+      const yearEvents = state.events
+        .filter(e => dayjs(e.date).year() === state.year)
+        .sort((a,b)=>{
+          const da = dayjs(a.date), db = dayjs(b.date);
+          if (!da.isSame(db, 'day')) return da - db;
+          const order = getOrderForDate(da.format('YYYY-MM-DD'));
+          const ia = order.indexOf(a.id); const ib = order.indexOf(b.id);
+          const A = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
+          const B = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
+          if (A !== B) return A - B;
+          return (a.title||'').localeCompare(b.title||'');
+        });
+
+      yearEvents.forEach(e=>{
+        const tr=document.createElement('tr'); tr.className='border-t';
+        const safeTitle = e.title ? escapeHTML(e.title) : '<span class="opacity-50">(uten tittel)</span>';
+        tr.innerHTML=`
+          <td class='py-1 whitespace-nowrap'>${dayjs(e.date).format('DD.MM.YYYY')}</td>
+          <td class='max-w-[260px] truncate'>${safeTitle}</td>
+          <td><span class='inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs'><span class='inline-block h-2.5 w-2.5 rounded-full' style='background:${COLORS[e.type]||'#6b7280'}'></span>${escapeHTML(e.type||'')}</span></td>
+          <td class='max-w-[160px] truncate'>${escapeHTML(e.location||'–')}</td>
+          <td>${escapeHTML(e.modality||'–')}</td>
+          <td>${escapeHTML(e.intensity||'–')}</td>
+          <td>${(e.shooting&&e.shooting.skudd)||0}</td>
+          <td class='text-right'>
+            <div class="inline-flex gap-1">
+              <button class='btn-view rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Vis</button>
+            </div>
+          </td>`;
+        tr.querySelector('.btn-view').addEventListener('click', ()=> openViewDialog(e));
+        const tipHTML = eventTooltipHTML(e); attachTipHandlers(tr, tipHTML);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHTML(str){ return (str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+    /* ========== Tabs / UI-hendelser ========== */
+    function switchTab(name){
+      $$('.tab-section').forEach(s=> s.classList.add('hidden'));
+      $('#tab-'+name)?.classList.remove('hidden');
+      $$('.tab-btn').forEach(b=>{
+        b.classList.toggle('bg-slate-50', b.dataset.tab===name);
+        b.classList.toggle('border-blue-300', b.dataset.tab===name);
+      });
+    }
+
+    function bindUiHandlers(){
+      // Tabs
+      $$('.tab-btn').forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
+
+      // Toggle liste i Årsplan
+      $('#toggle-list')?.addEventListener('click', ()=>{
+        const el = $('#event-list');
+        if(!el) return;
+        el.classList.toggle('hidden');
+      });
+
+      // Bank-filter
+      $$('#q-bank, #f-age, #f-type').forEach(el=> el.addEventListener('input', renderBank));
+
+      // Hovedknapper
+      $('#btn-print').onclick=()=> window.print();
+    }
+
+    /* ========== Øktbank (read-only) ========== */
+    function renderBank(){
+      const q=($('#q-bank').value||'').toLowerCase();
+      const age=$('#f-age').value;
+      const type=$('#f-type').value;
+      const box=$('#bank-cards'); if(!box) return; box.innerHTML='';
+      state.bank
+        .filter(t=> (!q||t.name.toLowerCase().includes(q)) && (!age||(t.age||[]).includes(age)) && (!type||t.type===type))
+        .forEach(t=> box.appendChild(bankCard(t)) );
+    }
+
+    function bankCard(t){
+      const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm card';
+      c.innerHTML=`
+        <div class='border-b p-4 flex items-center justify-between'>
+          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${escapeHTML(t.name)}</h4>
+          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}</div>
+        </div>
+        <div class='p-4 text-sm space-y-1'>
+          <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
+          <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
+          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
+          <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
+          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}</div>`:''}
+          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${escapeHTML(t.notes)}</p>`:''}
+          <div class='pt-2 flex flex-wrap gap-2'>
+            <button class='btn-plan hidden rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
+            <button class='btn-dup hidden rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
+            <button class='btn-del hidden text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
+          </div>
+        </div>`;
+      return c;
+    }
+
+    /* ========== Init ========== */
+    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
+    function init(){
+      bindDialogChrome();
+      bindUiHandlers();
+      setupSidebarToggle();
+
+      // Start med Årsplan-fanen
+      switchTab('calendar');
+
+      // Last data og sett opp realtime
+      supaLoadAll(state.year);
+      supaRealtimeInit();
+
+      // Årsnavigasjon
+      $('#year-prev').onclick=()=>{ state.year--; render(); supaLoadAll(state.year); };
+      $('#year-next').onclick=()=>{ state.year++; render(); supaLoadAll(state.year); };
+
+      // Lukk dialog
+      $('#btn-cancel').onclick=closeDialog;
+      $('#dlg-close').onclick=closeDialog;
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
