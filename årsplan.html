@@ -1085,6 +1085,322 @@
     function escapeHTML(str){
       return (str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
     }
+// ---------- Weeks UI ----------
+function renderWeeks(){
+  const tbody = $('#tbl-weeks'); 
+  if(!tbody) return;
+  tbody.innerHTML = '';
+
+  // Lag en liste over alle ISO-uker i året
+  const weeks = {};
+  let d = dayjs(state.year+'-01-01').startOf('isoWeek');
+  const end = dayjs(state.year+'-12-31');
+  while(d.isBefore(end.add(1,'day'))){
+    weeks[d.isoWeek()] = true;
+    d = d.add(7,'day');
+  }
+
+  Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{
+    const code = (state.weeks[wk]?.code) || 'BAS';
+    const note = (state.weeks[wk]?.note) || '';
+    const tr = document.createElement('tr');
+    tr.className = 'border-t';
+    tr.innerHTML = `
+      <td class="p-2">${wk}</td>
+      <td>
+        <select data-wk="${wk}" class="rounded-xl border px-2 py-1">
+          ${WEEKCODES.map(c=>`<option ${c===code?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <input data-wkn="${wk}" class="w-full rounded-xl border px-2 py-1" value="${escapeHTML(note)}"/>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  $$('select[data-wk]').forEach(el=>{
+    el.onchange = async ()=>{
+      const wk = +el.getAttribute('data-wk');
+      state.weeks[wk] = state.weeks[wk] || {};
+      state.weeks[wk].code = el.value;
+      lsSet(KEY.WEEKS, state.weeks);
+      renderCalendar(); // oppdatér månedsvisning
+      await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note || '');
+    };
+  });
+  $$('input[data-wkn]').forEach(el=>{
+    el.oninput = async ()=>{
+      const wk = +el.getAttribute('data-wkn');
+      state.weeks[wk] = state.weeks[wk] || {};
+      state.weeks[wk].note = el.value;
+      lsSet(KEY.WEEKS, state.weeks);
+      await supaUpsertWeek(state.year, wk, state.weeks[wk].code || 'BAS', el.value);
+    };
+  });
+}
+
+// ---------- Admin: årsklasser (målgrupper) ----------
+function renderAgeEditor(){
+  const holder = $('#age-editor');
+  if(!holder) return;
+
+  holder.innerHTML = (state.ageGroups||[]).map((g,i)=>`
+    <div class="grid grid-cols-5 gap-2 items-center">
+      <input data-age-id="${i}" class="col-span-2 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.id)}" placeholder="ID (f.eks. 13-14)">
+      <input data-age-label="${i}" class="col-span-3 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.label)}" placeholder="Label (f.eks. 13–14 år)">
+      <button data-age-del="${i}" class="rounded-xl border bg-white px-3 py-1.5 text-red-700 border-red-300">Slett</button>
+    </div>
+  `).join('');
+
+  holder.querySelectorAll('[data-age-del]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const i = +btn.getAttribute('data-age-del');
+      state.ageGroups.splice(i,1);
+      lsSet(KEY.AGES, state.ageGroups);
+      renderAgeEditor();
+      renderBank(); // oppdatér filter og visning
+    };
+  });
+}
+$('#age-add')?.addEventListener('click', ()=>{
+  state.ageGroups.push({ id:'ny', label:'Ny gruppe' });
+  lsSet(KEY.AGES, state.ageGroups);
+  renderAgeEditor();
+});
+$('#age-save')?.addEventListener('click', async ()=>{
+  const newList = [];
+  $('#age-editor').querySelectorAll('[data-age-id]').forEach((inp, idx)=>{
+    const id = inp.value.trim();
+    const label = $('#age-editor').querySelector(`[data-age-label="${idx}"]`).value.trim();
+    if(id && label) newList.push({ id, label });
+  });
+  if(newList.length===0){ alert('Legg inn minst én gruppe.'); return; }
+  state.ageGroups = newList;
+  lsSet(KEY.AGES, state.ageGroups);
+  await supaSaveAgeGroups();
+  render(); // oppdatér alt som bruker grupper
+  alert('Årsklasser lagret.');
+});
+
+// ---------- Admin: hendelser-oversikt ----------
+function renderAdminEvents(){
+  const tb = $('#admin-events'); 
+  if(!tb) return;
+  const q = ($('#admin-q')?.value||'').toLowerCase().trim();
+  const from = $('#admin-from')?.value;
+  const to   = $('#admin-to')?.value;
+
+  let rows = [...state.events];
+  if(from) rows = rows.filter(e => e.date >= from);
+  if(to)   rows = rows.filter(e => e.date <= to);
+  if(q)    rows = rows.filter(e => [e.title,e.type,e.location,e.modality,e.intensity].some(x => (x||'').toLowerCase().includes(q)));
+
+  rows.sort((a,b)=> a.date.localeCompare(b.date));
+
+  tb.innerHTML = rows.map(e=>`
+    <tr class="border-t">
+      <td class="p-2 whitespace-nowrap">${dayjs(e.date).format('DD.MM.YYYY')}</td>
+      <td class="p-2 max-w-[240px] truncate">${escapeHTML(e.title||'(uten tittel)')}</td>
+      <td class="p-2">${escapeHTML(e.type||'')}</td>
+      <td class="p-2 max-w-[180px] truncate">${escapeHTML(e.location||'')}</td>
+      <td class="p-2">${escapeHTML(e.intensity||'')}</td>
+      <td class="p-2 text-right">
+        <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-edit="${e.id}">Rediger</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tb.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-edit');
+      const ev = state.events.find(x=>x.id===id);
+      if(ev) openDialog({...ev});
+    };
+  });
+}
+$('#admin-search')?.addEventListener('click', renderAdminEvents);
+$('#admin-q')?.addEventListener('input', renderAdminEvents);
+$('#admin-from')?.addEventListener('change', renderAdminEvents);
+$('#admin-to')?.addEventListener('change', renderAdminEvents);
+
+// ---------- ICS ----------
+function exportICS(){
+  const pad=n=>String(n).padStart(2,'0');
+  const fmt=d=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+  const escIcs=s=> (s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/[,;]/g, m=> '\\'+m);
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO'];
+
+  state.events.forEach(e=>{
+    const start=new Date(e.date+'T17:00:00');
+    const end=new Date(start.getTime()+((e.durationMin||60)*60000));
+    const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):''));
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:'+e.id);
+    lines.push('DTSTAMP:'+fmt(new Date()));
+    lines.push('DTSTART:'+fmt(start));
+    lines.push('DTEND:'+fmt(end));
+    lines.push('SUMMARY:'+escIcs(title));
+    if(e.location) lines.push('LOCATION:'+escIcs(e.location));
+    if(e.notes)    lines.push('DESCRIPTION:'+escIcs(e.notes));
+    lines.push('END:VEVENT');
+  });
+
+  lines.push('END:VCALENDAR');
+  const blob=new Blob([lines.join('\n')],{type:'text/calendar'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- Excel (alle år + bank via Supabase, med fallback) ----------
+async function fetchAllFromSupabase(table){
+  const pageSize = 1000;
+  let from = 0, to = pageSize - 1;
+  let all = [];
+  while(true){
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: true })
+      .range(from, to);
+    if(error) throw error;
+    all = all.concat(data || []);
+    if(!data || data.length < pageSize) break;
+    from += pageSize; to += pageSize;
+  }
+  return all;
+}
+
+async function fetchAllEventsFromSupabase(){
+  const pageSize = 1000;
+  let from = 0, to = pageSize - 1;
+  let all = [];
+  while(true){
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('*')
+      .order('date', { ascending: true })
+      .range(from, to);
+    if(error) throw error;
+    all = all.concat(data || []);
+    if(!data || data.length < pageSize) break;
+    from += pageSize; to += pageSize;
+  }
+  return all;
+}
+
+// Rader til Excel fra DB-format
+function rowsForEventsExcel(rawRows){
+  return (rawRows||[]).map(r=>{
+    const d = dayjs(r.date);
+    const shooting = r.shooting || {};
+    const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
+    const roles = r.roles
+      ? Object.entries(r.roles)
+          .filter(([,v])=>(v||'').trim().length)
+          .map(([k,v])=>`${k}: ${v}`).join(' | ')
+      : '';
+    const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
+    return {
+      ID: r.id || '',
+      Dato: r.date || '',
+      Ukedag: d.isValid()? d.format('dddd') : '',
+      Ukenr: d.isValid()? (typeof d.isoWeek==='function' ? d.isoWeek() : '') : '',
+      År: d.isValid()? d.year() : '',
+      Tittel: r.title || '',
+      Type: r.type || r.event_type || '',
+      Konkurranse: r.race_subtype || '',
+      Sted: r.location || '',
+      Modalitet: r.modality || '',
+      Intensitet: r.intensity || '',
+      Varighet_min: (r.duration_min ?? ''),
+      Skytestilling: shooting.stilling || '',
+      Skudd: (shooting.skudd ?? ''),
+      Tema: tema,
+      Aldersklasser: age,
+      Roller: roles,
+      Notater: r.notes || '',
+      Opprettet: r.created_at || '',
+      Oppdatert: r.updated_at || ''
+    };
+  });
+}
+
+function rowsForBankExcel(rawRows){
+  return (rawRows||[]).map(r=>{
+    const shooting = r.shooting || {};
+    const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
+    const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
+    return {
+      ID: r.id || '',
+      Navn: r.name || '',
+      Type: r.type || '',
+      Modalitet: r.modality || '',
+      Intensitet: r.intensity || '',
+      Varighet_min: (r.duration_min ?? ''),
+      Aldersklasser: age,
+      Skytestilling: shooting.stilling || '',
+      Skudd: (shooting.skudd ?? ''),
+      Tema: tema,
+      Konkurranse: r.race_subtype || '',
+      Notater: r.notes || '',
+      Opprettet: r.created_at || '',
+      Oppdatert: r.updated_at || ''
+    };
+  });
+}
+
+function downloadXlsxMultiple(sheets){
+  const wb = XLSX.utils.book_new();
+  for(const {name, rows} of sheets){
+    const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
+    const cols = Object.keys(rows[0] || {A:''}).map(k=>({wch: Math.min(50, Math.max(10, String(k).length+2))}));
+    ws['!cols'] = cols;
+    XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31));
+  }
+  const stamp = dayjs().format('YYYYMMDD_HHmm');
+  XLSX.writeFile(wb, `lss_arsplan_og_oktbank_${stamp}.xlsx`);
+}
+
+async function exportExcelAll(){
+  try{
+    // Hent ALT fra Supabase
+    let rawEvents = await fetchAllEventsFromSupabase();
+    let rawBank   = await fetchAllFromSupabase(TBL.bank);
+
+    // Fallback til lokal state hvis skyen er tom
+    if(!rawEvents || rawEvents.length===0) rawEvents = (state.events||[]).map(mapEventToDb);
+    if(!rawBank   || rawBank.length===0)   rawBank   = (state.bank||[]).map(mapBankToDb);
+
+    const rowsEvents = rowsForEventsExcel(rawEvents);
+    const rowsBank   = rowsForBankExcel(rawBank);
+    if(rowsEvents.length===0 && rowsBank.length===0){
+      alert('Ingen data å eksportere.');
+      return;
+    }
+    downloadXlsxMultiple([
+      { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
+      { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
+    ]);
+  }catch(err){
+    console.error('Excel-eksport feilet (sky):', err);
+    alert('Kunne ikke hente alt fra skyen. Eksporterer det som er lastet lokalt.');
+    const rowsEvents = rowsForEventsExcel((state.events||[]).map(mapEventToDb));
+    const rowsBank   = rowsForBankExcel((state.bank||[]).map(mapBankToDb));
+    if(rowsEvents.length===0 && rowsBank.length===0){
+      alert('Ingen data å eksportere.');
+      return;
+    }
+    downloadXlsxMultiple([
+      { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
+      { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
+    ]);
+  }
+}
+
+// Koble knappen (overstyrer ev. gammel listener)
+$('#btn-export-xlsx')?.addEventListener('click', exportExcelAll);
+
 
     // ---------- Init ----------
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
