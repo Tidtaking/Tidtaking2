@@ -402,6 +402,13 @@
       migrateAllAgesInState();
       render();
     }
+function getDefaultTemplates(){
+  return [
+    { id: uid(), name:"Basisøkt", type:"Trening", modality:"Løp", intensity:"I2", durationMin:60, age:["Alle"], shooting:{stilling:"",skudd:0,tema:[]} },
+    { id: uid(), name:"Skyteøkt enkel", type:"Trening", modality:"Ski skøyting", intensity:"I1", durationMin:45, age:["11-12"], shooting:{stilling:"Liggende",skudd:40,tema:["Treffsikkerhet"]} },
+    { id: uid(), name:"Hard intervall", type:"Trening", modality:"Rulleski klassisk", intensity:"I4", durationMin:30, age:["HL"], shooting:{stilling:"Stående",skudd:20,tema:["Belastning"]} }
+  ];
+}
 
     async function supaLoadAgeGroups(){
       const { data, error } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
