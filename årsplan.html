@@ -642,7 +642,7 @@
     }
 
     function eventTooltipHTML(e){
-      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
       const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
       const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
@@ -682,7 +682,7 @@
 
     // ---------- Dagsvisning (DnD) ----------
     function previewCardHTML(e){
-      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
       const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
       const meta = [
@@ -789,7 +789,7 @@
     }
 
     function renderMonth(year, month, opts = { withNav:false }){
-      const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm';
+      const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm card';
       const header=document.createElement('div'); header.className='flex items-center justify-between border-b p-4';
       const title = dayjs(`${year}-${String(month).padStart(2,'0')}-01`).format('MMMM');
       if (opts.withNav){
@@ -824,7 +824,7 @@
       let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
       evts = sortEventsByDayOrder(key, evts);
 
-      const box = document.createElement('div'); box.className = 'min-h-[92px] rounded-xl border bg-white/70 p-1 hover:bg-blue-50 cursor-pointer';
+      const box = document.createElement('div'); box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
       box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key }); });
       if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
 
@@ -896,7 +896,7 @@
     }
 
     function bankCard(t){
-      const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm';
+      const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm card';
       c.innerHTML=`
         <div class='border-b p-4 flex items-center justify-between'>
           <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${escapeHTML(t.name)}</h4>
@@ -1048,432 +1048,60 @@
       const body = $('#dlg-body');
       $('#dlg-title').textContent = 'Vis hendelse';
       $('#btn-delete').classList.add('hidden'); $('#btn-save').classList.add('hidden');
-      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const row = (label, value) => `<div class="grid grid-cols-3 gap-3 items-start"><div class="text-sm font-medium text-slate-700 col-span-1">${label}</div><div class="text-sm col-span-2">${value||'–'}</div></div>`;
       const ageChips = (model.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(a)}</span>`).join('');
-      const tema = (model.shooting?.tema||[]).map(t=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(t)}</span>`).join('');
-      const roles = Object.entries(model.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
+      const tema = (
+      const tema = (model.shooting?.tema||[]).length
+        ? `<div class="mt-1 flex flex-wrap gap-1">${model.shooting.tema.map(t=>`<span class="rounded-full border px-2 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>`
+        : '';
+
       body.innerHTML = `
-        <div class="space-y-3">
-          ${row('Tittel', esc(model.title||''))}
-          ${row('Dato', dayjs(model.date).format('dddd D. MMMM YYYY'))}
-          ${row('Type', esc(model.type||''))}
-          ${row('Sted', esc(model.location||''))}
-          ${row('Modalitet', esc(model.modality||''))}
-          ${row('Intensitet', esc(model.intensity||''))}
-          ${row('Varighet', model.durationMin? esc(String(model.durationMin))+' min' : '–')}
-          ${row('Aldersklasser', ageChips || '–')}
-          ${row('Konkurranse', model.type==='Konkurranse' ? esc(model.raceSubtype||'') : '–')}
-          ${row('Skyting', `${esc(model.shooting?.stilling||'–')}, skudd: ${model.shooting?.skudd||0}`)}
-          ${row('Tema', tema || '–')}
-          <div>
-            <div class="text-sm font-medium text-slate-700 mb-1">Notater</div>
-            <div class="text-sm text-slate-700 whitespace-pre-wrap">${esc(model.notes||'–')}</div>
-          </div>
-        </div>`;
-      const cancel = $('#btn-cancel'); cancel.textContent = 'Lukk'; cancel.onclick = closeDialog; $('#dlg-close').onclick = closeDialog;
-      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
-      const reset = () => { cancel.textContent = 'Avbryt'; cancel.onclick = closeDialog; };
-      const obs = new MutationObserver(()=>{ if($('#dialog').classList.contains('hidden')){ reset(); obs.disconnect(); } }); obs.observe($('#dialog'), { attributes:true, attributeFilter:['class'] });
+        ${row('Tittel', esc(model.title))}
+        ${row('Dato', dayjs(model.date).format('DD.MM.YYYY'))}
+        ${row('Sted', esc(model.location||''))}
+        ${row('Type', esc(model.type))}
+        ${row('Modalitet', esc(model.modality))}
+        ${row('Intensitet', esc(model.intensity))}
+        ${row('Varighet', model.durationMin? esc(String(model.durationMin))+' min':'–')}
+        ${row('Målgrupper', ageChips || '–')}
+        ${row('Skyting', `${esc(model.shooting?.stilling||'–')}, ${model.shooting?.skudd||0} skudd ${tema}`)}
+        ${model.type==='Konkurranse' ? row('Konkurranse-type', esc(model.raceSubtype||'')) : ''}
+        ${row('Notater', esc(model.notes))}
+        ${row('Roller', Object.entries(model.roles||{}).filter(([,v])=>v).map(([k,v])=>`<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('') || '–')}
+      `;
+
+      $('#btn-cancel').onclick=closeDialog; 
+      $('#dlg-close').onclick=closeDialog;
+      $('#dialog').classList.remove('hidden'); 
+      $('#dialog').classList.add('flex');
     }
+
+    // ---------- Utils ----------
+    function select(id, options, selected){
+      return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>
+        ${options.map(opt=>`<option ${opt===selected?'selected':''}>${opt}</option>`).join('')}
+      </select>`;
+    }
+    function escapeHTML(str){
+      return (str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+    }
+
+    // ---------- Init ----------
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
-
-    function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
-    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
-
-    // ---------- Admin: alder-editor ----------
-    function renderAgeEditor(){
-      const holder = $('#age-editor'); if(!holder) return;
-      holder.innerHTML = (state.ageGroups||[]).map((g,i)=>`
-        <div class="grid grid-cols-5 gap-2 items-center">
-          <input data-age-id="${i}" class="col-span-2 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.id)}" placeholder="ID (f.eks. 13-14)">
-          <input data-age-label="${i}" class="col-span-3 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.label)}" placeholder="Label (f.eks. 13–14 år)">
-          <button data-age-del="${i}" class="rounded-xl border bg-white px-3 py-1.5 text-red-700 border-red-300">Slett</button>
-        </div>`).join('');
-      holder.querySelectorAll('[data-age-del]').forEach(btn=>{
-        btn.onclick = ()=>{
-          const i = +btn.getAttribute('data-age-del');
-          state.ageGroups.splice(i,1);
-          lsSet(KEY.AGES, state.ageGroups);
-          render();
-        };
-      });
-    }
-    $('#age-add')?.addEventListener('click', ()=>{
-      state.ageGroups.push({ id:'ny', label:'Ny gruppe' });
-      lsSet(KEY.AGES, state.ageGroups);
-      render();
-    });
-    $('#age-save')?.addEventListener('click', async ()=>{
-      const newList = [];
-      $('#age-editor').querySelectorAll('[data-age-id]').forEach((inp, idx)=>{
-        const id = inp.value.trim();
-        const label = $('#age-editor').querySelector(`[data-age-label="${idx}"]`).value.trim();
-        if(id && label) newList.push({ id, label });
-      });
-      if(newList.length===0){ alert('Legg inn minst én gruppe.'); return; }
-      state.ageGroups = newList;
-      lsSet(KEY.AGES, state.ageGroups);
-      await supaSaveAgeGroups();
-      render();
-      alert('Årsklasser lagret.');
-    });
-
-    // ---------- Admin: hendelser-oversikt ----------
-    function renderAdminEvents(){
-      const tb = $('#admin-events'); if(!tb) return;
-      const q = ($('#admin-q')?.value||'').toLowerCase().trim();
-      const from = $('#admin-from')?.value; const to = $('#admin-to')?.value;
-
-      let rows = [...state.events];
-      if(from) rows = rows.filter(e => e.date >= from);
-      if(to)   rows = rows.filter(e => e.date <= to);
-      if(q)    rows = rows.filter(e => [e.title,e.type,e.location,e.modality,e.intensity].some(x => (x||'').toLowerCase().includes(q)));
-
-      rows.sort((a,b)=> a.date.localeCompare(b.date));
-
-      tb.innerHTML = rows.map(e=>`
-        <tr class="border-t">
-          <td class="p-2 whitespace-nowrap">${dayjs(e.date).format('DD.MM.YYYY')}</td>
-          <td class="p-2 max-w-[240px] truncate">${escapeHTML(e.title||'(uten tittel)')}</td>
-          <td class="p-2">${escapeHTML(e.type||'')}</td>
-          <td class="p-2 max-w-[180px] truncate">${escapeHTML(e.location||'')}</td>
-          <td class="p-2">${escapeHTML(e.intensity||'')}</td>
-          <td class="p-2 text-right"><button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-edit="${e.id}">Rediger</button></td>
-        </tr>`).join('');
-
-      tb.querySelectorAll('[data-edit]').forEach(btn=>{
-        btn.onclick = ()=>{
-          const id = btn.getAttribute('data-edit');
-          const ev = state.events.find(x=>x.id===id);
-          if(ev) openDialog({...ev});
-        };
-      });
-    }
-    $('#admin-search')?.addEventListener('click', renderAdminEvents);
-    $('#admin-q')?.addEventListener('input', renderAdminEvents);
-    $('#admin-from')?.addEventListener('change', renderAdminEvents);
-    $('#admin-to')?.addEventListener('change', renderAdminEvents);
-
-    // ---------- Weeks UI ----------
-    function renderWeeks(){
-      const tbody=$('#tbl-weeks'); if(!tbody) return; tbody.innerHTML='';
-      const weeks={}; let d=dayjs(state.year+'-01-01').startOf('isoWeek'); const end=dayjs(state.year+'-12-31');
-      while(d.isBefore(end.add(1,'day'))){ weeks[d.isoWeek()]=true; d=d.add(7,'day'); }
-      Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{
-        const code=(state.weeks[wk]&&state.weeks[wk].code)||'BAS';
-        const note=(state.weeks[wk]&&state.weeks[wk].note)||'';
-        const tr=document.createElement('tr'); tr.className='border-t';
-        tr.innerHTML=`<td class='p-2'>${wk}</td>
-          <td><select data-wk='${wk}' class='rounded-xl border px-2 py-1'>${WEEKCODES.map(c=>`<option ${c===code?'selected':''}>${c}</option>`).join('')}</select></td>
-          <td><input data-wkn='${wk}' class='w-full rounded-xl border px-2 py-1' value='${escapeHTML(note)}'/></td>`;
-        tbody.appendChild(tr);
-      });
-      $$('select[data-wk]').forEach(el=> el.onchange=async ()=>{
-        const wk=+el.getAttribute('data-wk');
-        state.weeks[wk]=state.weeks[wk]||{};
-        state.weeks[wk].code=el.value;
-        lsSet(KEY.WEEKS,state.weeks);
-        renderCalendar();
-        await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||'');
-      });
-      $$('input[data-wkn]').forEach(el=> el.oninput=async ()=>{
-        const wk=+el.getAttribute('data-wkn');
-        state.weeks[wk]=state.weeks[wk]||{};
-        state.weeks[wk].note=el.value;
-        lsSet(KEY.WEEKS,state.weeks);
-        await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value);
-      });
+    function init(){
+      bindDialogChrome();
+      supaLoadAll(state.year);
+      supaRealtimeInit();
+      $('#year-prev').onclick=()=>{ state.year--; render(); supaLoadAll(state.year); };
+      $('#year-next').onclick=()=>{ state.year++; render(); supaLoadAll(state.year); };
+      $$('#q-bank, #f-age, #f-type').forEach(el=> el.addEventListener('input', renderBank));
+      $('#btn-new').onclick=()=> openDialog({date:dayjs().format('YYYY-MM-DD')});
+      $('#btn-print').onclick=()=> window.print();
+      $('#btn-export-xlsx').onclick=()=> exportExcel();
     }
 
-    // ---------- ICS ----------
-    function exportICS(){
-      const pad=n=>String(n).padStart(2,'0');
-      const fmt=d=> `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
-      const escIcs=s=> (s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/[,;]/g, m=> '\\'+m);
-      const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO'];
-      state.events.forEach(e=>{
-        const start=new Date(e.date+'T17:00:00');
-        const end=new Date(start.getTime()+((e.durationMin||60)*60000));
-        lines.push('BEGIN:VEVENT');
-        lines.push('UID:'+e.id);
-        lines.push('DTSTAMP:'+fmt(new Date()));
-        lines.push('DTSTART:'+fmt(start));
-        lines.push('DTEND:'+fmt(end));
-        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):''));
-        lines.push('SUMMARY:'+escIcs(title));
-        if(e.location) lines.push('LOCATION:'+escIcs(e.location));
-        if(e.notes)    lines.push('DESCRIPTION:'+escIcs(e.notes));
-        lines.push('END:VEVENT');
-      });
-      lines.push('END:VCALENDAR');
-      const blob=new Blob([lines.join('\n')],{type:'text/calendar'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // ---------- Excel (alle år + bank) ----------
-    async function fetchAllFromSupabase(table){
-      const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
-      while(true){
-        const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: true }).range(from, to);
-        if(error){ throw error; }
-        all = all.concat(data || []);
-        if(!data || data.length < pageSize) break;
-        from += pageSize; to += pageSize;
-      }
-      return all;
-    }
-    async function fetchAllEventsFromSupabase(){
-      const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
-      while(true){
-        const { data, error } = await supabase.from(TBL.events).select('*').order('date', { ascending: true }).range(from, to);
-        if(error){ throw error; }
-        all = all.concat(data || []);
-        if(!data || data.length < pageSize) break;
-        from += pageSize; to += pageSize;
-      }
-      return all;
-    }
-    function rowsForEventsExcel(rawRows){
-      return (rawRows||[]).map(r=>{
-        const d = dayjs(r.date); const shooting = r.shooting || {};
-        const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
-        const roles = r.roles ? Object.entries(r.roles).filter(([k,v])=>(v||'').trim().length).map(([k,v])=>`${k}: ${v}`).join(' | ') : '';
-        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
-        return {
-          ID: r.id || '',
-          Dato: r.date || '',
-          Ukedag: d.isValid()? d.format('dddd') : '',
-          Ukenr: d.isValid()? (typeof d.isoWeek==='function' ? d.isoWeek() : '') : '',
-          År: d.isValid()? d.year() : '',
-          Tittel: r.title || '',
-          Type: r.type || r.event_type || '',
-          Konkurranse: r.race_subtype || '',
-          Sted: r.location || '',
-          Modalitet: r.modality || '',
-          Intensitet: r.intensity || '',
-          Varighet_min: r.duration_min ?? '',
-          Skytestilling: shooting.stilling || '',
-          Skudd: shooting.skudd ?? '',
-          Tema: tema,
-          Aldersklasser: age,
-          Roller: roles,
-          Notater: r.notes || '',
-          Opprettet: r.created_at || '',
-          Oppdatert: r.updated_at || ''
-        };
-      });
-    }
-    function rowsForBankExcel(rawRows){
-  return (rawRows||[]).map(r=>{
-    const shooting = r.shooting || {};
-    const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
-    const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
-    return {
-      "ID": r.id || '',
-      "Navn": r.name || '',
-      "Type": r.type || '',
-      "Modalitet": r.modality || '',
-      "Intensitet": r.intensity || '',
-      "Varighet_min": r.duration_min ?? '',
-      "Aldersklasser": age,
-      "Skytestilling": shooting.stilling || '',
-      "Skudd": shooting.skudd ?? '',
-      "Tema": tema,
-      "Konkurranse": r.race_subtype || '',
-      "Notater": r.notes || '',
-      "Opprettet": r.created_at || '',
-      "Oppdatert": r.updated_at || ''
-    };
-  });
-}
-
-    function downloadXlsxMultiple(sheets){
-      const wb = XLSX.utils.book_new();
-      for(const {name, rows} of sheets){
-        const ws = XLSX.utils.json_to_sheet(rows, { cellDates:false });
-        const cols = Object.keys(rows[0] || {A:''}).map(k=>({wch: Math.min(50, Math.max(10, String(k).length+2))}));
-        ws['!cols'] = cols;
-        XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31));
-      }
-      const stamp = dayjs().format('YYYYMMDD_HHmm');
-      XLSX.writeFile(wb, `lss_arsplan_og_oktbank_${stamp}.xlsx`);
-    }
-    async function exportExcelAll(){
-      try{
-        let rawEvents = await fetchAllEventsFromSupabase();
-        let rawBank   = await fetchAllFromSupabase(TBL.bank);
-        if(!rawEvents || rawEvents.length===0) rawEvents = state.events.map(e=> ({...mapEventToDb(e)}));
-        if(!rawBank || rawBank.length===0)     rawBank   = state.bank.map(t=> ({...mapBankToDb(t)}));
-        const rowsEvents = rowsForEventsExcel(rawEvents);
-        const rowsBank   = rowsForBankExcel(rawBank);
-        if(rowsEvents.length===0 && rowsBank.length===0){ alert('Ingen data å eksportere.'); return; }
-        downloadXlsxMultiple([
-          { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
-          { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
-        ]);
-      }catch(err){
-        console.error('Excel-eksport feilet:', err);
-        alert('Kunne ikke hente fra skyen. Eksporterer det som er lastet nå.');
-        const rowsEvents = rowsForEventsExcel(state.events.map(e=> ({...mapEventToDb(e)})));
-        const rowsBank   = rowsForBankExcel(state.bank.map(t=> ({...mapBankToDb(t)})));
-        if(rowsEvents.length===0 && rowsBank.length===0){ alert('Ingen data å eksportere.'); return; }
-        downloadXlsxMultiple([
-          { name:'Årsplan', rows: rowsEvents.length? rowsEvents : [{Merk:'Tomt'}] },
-          { name:'Øktbank', rows: rowsBank.length? rowsBank : [{Merk:'Tomt'}] }
-        ]);
-      }
-    }
-
-    // ---------- Øktbank defaults ----------
- function getDefaultTemplates(){
-  return [
-    // --- Skiskytterskolen / 9–10 ---
-    { id:uid(), name:'Lekpreget basis + bevegelighet', type:'Trening', modality:'Basistrening', intensity:'I1', durationMin:45, age:['Skiskytterskolen','9-10'], shooting:{stilling:'Variert',skudd:0,tema:['bevegelighet','balanse','lek']}, notes:'Sirkelstasjoner, dytt/drag-leker, enkel stafett.' },
-    { id:uid(), name:'Lett løp i skog + hinderlek', type:'Trening', modality:'Løp', intensity:'I1', durationMin:40, age:['Skiskytterskolen','9-10'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kort runde i mykt underlag, hoppe/dukk-oppgaver.' },
-    { id:uid(), name:'Rulleskilek (uten staver)', type:'Trening', modality:'Rulleski skøyting', intensity:'I1', durationMin:45, age:['9-10'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Trygghet, balanse, bremser. Øvelser på flatt område.' },
-    { id:uid(), name:'Styrke med egen kroppsvekt', type:'Restitusjon', modality:'Styrke', intensity:'I2', durationMin:35, age:['Skiskytterskolen','9-10'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Korte arbeidsøkter, lang pause, fokus teknikk.' },
-
-    // --- 11–12 ---
-    { id:uid(), name:'Komb – I2 løp + enkel skyting', type:'Trening', modality:'Løp', intensity:'I2', durationMin:60, age:['11-12'], shooting:{stilling:'Liggende',skudd:30,tema:['stilling','ro i sikte']}, notes:'Rolige overganger, 3–4 runder à 6–8 min I2.' },
-    { id:uid(), name:'Teknikk rulleski + balanse', type:'Trening', modality:'Rulleski skøyting', intensity:'I2', durationMin:60, age:['11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Trapping, sving, vektoverføring. 6–8 teknikkløyper.' },
-    { id:uid(), name:'Skyteøkt – liggende grunnstilling', type:'Skyting', modality:'Basistrening', intensity:'I1', durationMin:60, age:['11-12'], shooting:{stilling:'Liggende',skudd:50,tema:['avtrekk','pust','stilling']}, notes:'Korte serier, tørrtrening mellom serier.' },
-    { id:uid(), name:'Rolig langkjøring på ski', type:'Trening', modality:'Ski skøyting', intensity:'I1', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Snakkefart, 60–75 min etter føre.' },
-    { id:uid(), name:'I3 bakkeintervall (løp) kort', type:'Trening', modality:'Løp', intensity:'I3', durationMin:60, age:['11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'2–3 serier × 4–5 drag à 45–60 sek. Nedjogg.' },
-
-    // --- 13–14 ---
-    { id:uid(), name:'Komb – I3 drag 4×6 min + skyting', type:'Trening', modality:'Løp', intensity:'I3', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'Kombinert',skudd:40,tema:['pustekontroll','overganger']}, notes:'' },
-    { id:uid(), name:'Skyteøkt – stående fokus', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:60, age:['13-14','HL'], shooting:{stilling:'Stående',skudd:60,tema:['balanse','avtrekk','etterhold']}, notes:'Kort ståtid, mange repetisjoner.' },
-    { id:uid(), name:'Rolig langkjøring variert terreng', type:'Trening', modality:'Løp', intensity:'I1', durationMin:90, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Jeven pratetempo. 10–15 min styrke/lett spenst etterpå.' },
-    { id:uid(), name:'Rulleski klassisk – staking/diagonal', type:'Trening', modality:'Rulleski klassisk', intensity:'I2', durationMin:75, age:['13-14'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Teknikkblokker: 3×10 min fokusområder.' },
-    { id:uid(), name:'I4 terskel økt 5×5 min', type:'Trening', modality:'Løp', intensity:'I4', durationMin:70, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kontrollert hardt, 2–3 min pause.' },
-    { id:uid(), name:'Skyteøkt – kombi med puls 8×(2+5)', type:'Skyting', modality:'Basistrening', intensity:'I3', durationMin:80, age:['13-14'], shooting:{stilling:'Kombinert',skudd:60,tema:['pust','rytme','inn-ut']}, notes:'2 min arbeid + 5 skudd per runde.' },
-
-    // --- HL (15+) ---
-    { id:uid(), name:'Langkjøring ski – sone 1', type:'Trening', modality:'Ski klassisk', intensity:'I1', durationMin:120, age:['HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Valgfri staking/diagonal. Kort drill før/etter.' },
-    { id:uid(), name:'Terskel rulleski 3×12 min', type:'Trening', modality:'Rulleski skøyting', intensity:'I3', durationMin:90, age:['HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Jevn fart. 4 min pause.' },
-    { id:uid(), name:'Styrke helkropp + stabilitet', type:'Restitusjon', modality:'Styrke', intensity:'I2', durationMin:50, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Mobilitet + kjernestabilitet, teknikk først.' },
-    { id:uid(), name:'Skyting – stående presisjon 6×10', type:'Skyting', modality:'Basistrening', intensity:'I1', durationMin:70, age:['HL'], shooting:{stilling:'Stående',skudd:60,tema:['presisjon','avtrekk','hviletid']}, notes:'Lang hvile, fokus på kvalitet.' },
-    { id:uid(), name:'Komb – konkurransespesifikk', type:'Trening', modality:'Ski skøyting', intensity:'I4', durationMin:75, age:['HL'], shooting:{stilling:'Kombinert',skudd:50,tema:['treffbilde','seriehastighet','rutiner']}, notes:'2–3 blokker med konk-åpning + skyting.' },
-
-    // --- Felles/overlappende maler ---
-    { id:uid(), name:'Teknikk ski skøyting (alle)', type:'Trening', modality:'Ski skøyting', intensity:'I2', durationMin:60, age:['9-10','11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Vektoverføring, kant, armbruk. Video ved mulighet.' },
-    { id:uid(), name:'Basistrening med stasjoner', type:'Trening', modality:'Basistrening', intensity:'I2', durationMin:55, age:['Skiskytterskolen','9-10','11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'5–6 stasjoner à 4–6 min.' },
-    { id:uid(), name:'Skyting – liggende fart 10×5', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:65, age:['11-12','13-14'], shooting:{stilling:'Liggende',skudd:50,tema:['seriehastighet','etterhold']}, notes:'Jevn puls, fokus flyt.' },
-    { id:uid(), name:'Progressiv løp 3×12 min (I2→I3)', type:'Trening', modality:'Løp', intensity:'I3', durationMin:70, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Siste 3–4 min nær terskel.' },
-    { id:uid(), name:'Test: 2000 m løp', type:'Konkurranse', modality:'Løp', intensity:'I5', durationMin:20, age:['11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Enkelt testløp. God oppvarming.' },
-    { id:uid(), name:'Skyting – kombi stafett-lek', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:55, age:['9-10','11-12'], shooting:{stilling:'Liggende',skudd:40,tema:['trygg våpenføring','rutiner']}, notes:'Lag, enkel stafett med tilpassede avstander.' },
-    { id:uid(), name:'Kaldt føre – kort teknikk + rolig', type:'Trening', modality:'Ski klassisk', intensity:'I1', durationMin:60, age:['11-12','13-14'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kort teknikkdel, deretter rolig flyt.' }
-  ];
-}
-
-// Idempotent seeding av øktbank til Supabase.
-// - Leser eksisterende maler fra skyen
-// - Lagrer bare de som ikke finnes (matcher på navn, case-insensitivt)
-async function seedBankTemplates({ force = false } = {}) {
-  try {
-    // Hent eksisterende fra Supabase
-    const { data: existing, error } = await supabase
-      .from(TBL.bank)
-      .select('id,name,created_at')
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-
-    const existingNames = new Set(
-      (existing || []).map(r => (r.name || '').trim().toLowerCase())
-    );
-
-    const templates = getDefaultTemplates();
-
-    // Filtrer bort de som finnes fra før – med mindre force=true
-    const toInsert = force
-      ? templates
-      : templates.filter(t => !existingNames.has((t.name || '').trim().toLowerCase()));
-
-    // Ingenting å gjøre?
-    if (toInsert.length === 0) {
-      alert('Ingen nye maler å legge inn – Øktbanken ser allerede komplett ut 👍');
-      return;
-    }
-
-    // Oppdater Supabase (upsert én og én for å beholde tildelte id-er)
-    for (const t of toInsert) {
-      await supaUpsertBankTemplate(t);
-    }
-
-    // Oppdater lokal state (legg til nye som mangler i state.bank)
-    const localNames = new Set((state.bank || []).map(t => (t.name || '').trim().toLowerCase()));
-    const newlyAdded = toInsert.filter(t => !localNames.has((t.name || '').trim().toLowerCase()));
-    state.bank = [...(state.bank || []), ...newlyAdded];
-    lsSet(KEY.BANK, state.bank);
-    renderBank();
-
-    alert(`La inn ${toInsert.length} nye mal(er) i Øktbank ✅`);
-  } catch (e) {
-    console.error('Seeding av Øktbank feilet:', e);
-    alert('Kunne ikke legge inn standardøkter nå. Prøv igjen senere.');
-  }
-}
-
-    // ---------- UI events ----------
-    $('#btn-print').onclick=()=>window.print();
-    $('#btn-export-xlsx').onclick=exportExcelAll;
-    $('#btn-ics').onclick=exportICS;
-
-    $('#file-import').onchange=async(e)=>{
-      const f=e.target.files[0]; if(!f) return;
-      const text=await f.text();
-      try{
-        const data=JSON.parse(text);
-        if(data.events){ state.events=data.events; for(const ev of data.events){ await supaUpsertEvent(ev); } }
-        if(data.bank){ state.bank=data.bank; for(const t of data.bank){ await supaUpsertBankTemplate(t); } }
-        if(data.weeks){ state.weeks=data.weeks; for(const [wk,val] of Object.entries(state.weeks)){ await supaUpsertWeek(state.year, +wk, val.code||'BAS', val.note||''); } }
-        if(data.dayOrder){ state.dayOrder=data.dayOrder; for(const [d,ids] of Object.entries(state.dayOrder)){ await supaUpsertDayOrder(d, ids); } }
-        if(data.ageGroups){ state.ageGroups=data.ageGroups; await supaSaveAgeGroups(); }
-        if(data.year){ state.year=data.year; }
-        migrateAllAgesInState();
-        render(); alert('Import fullført');
-      }catch{ alert('Kunne ikke lese filen (må være JSON).'); }
-    };
-
-    // Hurtigknapper
-    $('#btn-new').onclick=()=> openDialog({ date: dayjs(`${state.year}-01-01`).format('YYYY-MM-DD') });
-    $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date: dayjs().format('YYYY-MM-DD') }));
-    $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date: dayjs().format('YYYY-MM-DD') }));
-    $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse', date: dayjs().format('YYYY-MM-DD') }));
-    // Admin: Øktbank seeding-knapp
-document.getElementById('btn-seed-bank')?.addEventListener('click', () => {
-  seedBankTemplates();
-});
-
-
-    // År-nav
-    $('#year-prev').onclick=async ()=>{ state.year--; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); await supaLoadAll(state.year); };
-    $('#year-next').onclick=async ()=>{ state.year++; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); await supaLoadAll(state.year); };
-
-    // Listevisning toggle
-    $('#toggle-list').onclick=()=> $('#event-list').classList.toggle('hidden');
-
-    // Øktbank filter
-    $('#q-bank').oninput=renderBank; $('#f-age').onchange=renderBank; $('#f-type').onchange=renderBank;
-
-    // Tabs
-    function setTab(name){
-      $$('.tab-section').forEach(s=> s.classList.add('hidden'));
-      $$('.tab-btn').forEach(b=> b.classList.remove('ring-2'));
-      $('#tab-'+name)?.classList.remove('hidden');
-      document.querySelector(`[data-tab="${name}"]`)?.classList.add('ring-2');
-    }
-    $$('.tab-btn').forEach(b=> b.addEventListener('click', ()=> setTab(b.getAttribute('data-tab')) ));
-    setTab('calendar');
-
-    // Init
-    bindDialogChrome();
-    supaLoadAll(state.year);
-    supaRealtimeInit();
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
