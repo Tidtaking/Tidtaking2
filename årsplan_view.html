@@ -372,6 +372,15 @@
     };
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
+function getDefaultTemplates(){
+  return [
+    { id: uid(), name:"Rolig løp", type:"Trening", modality:"Løp", intensity:"I1", durationMin:40, age:["9-10"], shooting:{stilling:"", skudd:0, tema:[]}, notes:"Lekpreget, rolig." },
+    { id: uid(), name:"Skyteøkt enkel", type:"Trening", modality:"Ski skøyting", intensity:"I1", durationMin:45, age:["11-12"], shooting:{stilling:"Liggende", skudd:30, tema:["Avtrekk"]}, notes:"Teknikk fokus." },
+    { id: uid(), name:"Intervall bakke", type:"Trening", modality:"Løp", intensity:"I4", durationMin:25, age:["13-14"], shooting:{stilling:"", skudd:0, tema:[]}, notes:"4x4 min bakkeintervall." },
+    { id: uid(), name:"Hard rulleski", type:"Trening", modality:"Rulleski klassisk", intensity:"I4", durationMin:35, age:["HL"], shooting:{stilling:"Stående", skudd:20, tema:["Belastning"]}, notes:"Konkurransespesifikk." },
+    { id: uid(), name:"Restitusjon", type:"Restitusjon", modality:"Sykkel", intensity:"I1", durationMin:50, age:["Alle"], shooting:{stilling:"", skudd:0, tema:[]}, notes:"Rolig pratetempo." }
+  ];
+}
 
     async function supaLoadAll(year = state.year){
       // Events
