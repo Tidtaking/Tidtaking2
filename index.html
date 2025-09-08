@@ -95,8 +95,14 @@
     .status.done{background:#3f2631; color:#fda4af}
 
     /* shooting targets */
-    .shooting .target{display:inline-grid; place-items:center; width:28px; height:28px; margin:2px; border-radius:50%; border:2px solid #333; background:#0c0f13; cursor:pointer; user-select:none}
-    .shooting .target[data-hit="true"]{background:#e5e7eb; color:#0b0d10}
+    .shooting .target{
+      display:inline-grid; place-items:center;
+      width:28px; height:28px; margin:2px;
+      border-radius:50%; border:2px solid #333;
+      background:#0c0f13; color:#0c0f13; cursor:pointer; user-select:none
+    }
+    /* HELT hvit ved treff */
+    .shooting .target[data-hit="true"]{background:#fff; color:#fff; border-color:#fff}
 
     /* Responsive column visibility */
     @media (max-width:720px){
@@ -265,6 +271,8 @@
         <label for="historyDate">Dato:</label>
         <input type="date" id="historyDate" />
         <button class="btn btn-secondary" id="btnRefreshHistory">Oppdater historikk</button>
+        <!-- NY knapp for all historikk -->
+        <button class="btn btn-secondary" id="btnShowAllHistory" title="Vis all lagret historikk uansett dato">Vis all historikk</button>
         <small id="historySummary" style="opacity:.8"></small>
       </div>
 
@@ -273,6 +281,7 @@
           <caption style="caption-side:top; text-align:left; font-weight:bold; padding:8px">Lagret i history</caption>
           <thead>
             <tr>
+              <th>Dato</th>
               <th>#</th>
               <th>Navn</th>
               <th>Kl.</th>
@@ -326,12 +335,13 @@
     </div>
   </dialog>
 
-  <!-- ====== APP LOGIKK (uendret funksjonelt, men ryddet og små fiks) ====== -->
+  <!-- ====== APP LOGIKK ====== -->
   <script>
     // Global state
     window.participants = {};
     window.localTimers = {};
     window._didBackfillPenalties = false;
+    window._historyShowAll = false; // viser all historikk når true
 
     // Markering
     window.updateSelection = function(snr, isSelected) {
@@ -667,12 +677,26 @@
       }).join('');
     };
 
+    // Støtter både valgt dato og "all historikk"
     window.updateHistoryView = async function(dateStr){
       const compDate = dateStr || (document.getElementById('historyDate')?.value || window.getTodayCompDate());
-      let { data: hist, error: errH } = await window.supabaseClient.from('history').select('*').eq('comp_date', compDate);
+
+      // 1) Hent history – enten for valgt dato, eller alle datoer
+      let hist, errH;
+      if (window._historyShowAll){
+        const resp = await window.supabaseClient.from('history').select('*').order('comp_date', { ascending:false });
+        hist = resp.data; errH = resp.error;
+      } else {
+        const resp = await window.supabaseClient.from('history').select('*').eq('comp_date', compDate);
+        hist = resp.data; errH = resp.error;
+      }
       if (errH){ console.error('Feil ved henting av history:', errH); hist = []; }
+
+      // 2) Hent participants
       let { data: parts, error: errP } = await window.supabaseClient.from('participants').select('*');
       if (errP){ console.error('Feil ved henting av participants:', errP); parts = []; }
+
+      // 3) Matching for “ikke lagret ennå”
       const savedSnr = new Set((hist||[]).map(h => h.snr).filter(v => v !== null && v !== undefined));
       const savedNameClass = new Set((hist||[]).map(h => `name:${lc(h.name)}|class:${lc(h.class)}`));
       const pending = (parts||[]).filter(p => {
@@ -680,10 +704,24 @@
         const byNC  = savedNameClass.has(`name:${lc(p.name)}|class:${lc(p.class)}`);
         return !(bySnr || byNC);
       });
-      const savedRows = (hist||[]).map(h => { const tid=(h.finish!=null)?window.formatTime(h.finish):'-'; const snr=(h.snr!=null)?h.snr:'-'; return `<tr><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`; }).join('');
-      const savedBody = document.getElementById('historySavedBody'); if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan='5'>Ingen lagret for ${compDate}.</td></tr>`;
-      const pendingBody = document.getElementById('historyPendingBody'); if (pendingBody) pendingBody.innerHTML = window.renderPendingInteractive(pending, compDate);
-      const summaryEl = document.getElementById('historySummary'); if (summaryEl) summaryEl.textContent = `${hist.length} lagret · ${pending.length} ikke lagret`;
+
+      // 4) Render lagret (med dato-kolonne)
+      const savedRows = (hist||[]).map(h => {
+        const tid=(h.finish!=null)?window.formatTime(h.finish):'-';
+        const snr=(h.snr!=null)?h.snr:'-';
+        const dato = h.comp_date || '-';
+        return `<tr><td>${dato}</td><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`;
+      }).join('');
+      const savedBody = document.getElementById('historySavedBody');
+      if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="6">Ingen lagret${window._historyShowAll ? '' : ` for ${compDate}`}.</td></tr>`;
+
+      // 5) Render ikke-lagret (fra participants) – interaktiv
+      const pendingBody = document.getElementById('historyPendingBody');
+      if (pendingBody) pendingBody.innerHTML = window.renderPendingInteractive(pending, compDate);
+
+      // 6) Oppsummering
+      const summaryEl = document.getElementById('historySummary');
+      if (summaryEl) summaryEl.textContent = `${(hist||[]).length} lagret${window._historyShowAll ? ' (alle datoer)' : ''} · ${pending.length} ikke lagret`;
     };
 
     // CSV-import
@@ -780,11 +818,24 @@
       if (d && o){ d.addEventListener('click', ()=> o.click()); }
     });
 
-    // Historikk – initialiser
+    // Historikk – initialiser & knapper
     (function(){
       const dateInput = document.getElementById('historyDate'); if (dateInput) { dateInput.value = window.getTodayCompDate(); }
-      const btnRefr = document.getElementById('btnRefreshHistory'); if (btnRefr){ btnRefr.addEventListener('click', ()=> window.updateHistoryView()); }
-      if (dateInput || btnRefr){ window.updateHistoryView(); }
+      const btnRefr = document.getElementById('btnRefreshHistory');
+      if (btnRefr){
+        btnRefr.addEventListener('click', ()=> {
+          window._historyShowAll = false;
+          window.updateHistoryView();
+        });
+      }
+      const btnAll = document.getElementById('btnShowAllHistory');
+      if (btnAll){
+        btnAll.addEventListener('click', ()=> {
+          window._historyShowAll = true;
+          window.updateHistoryView();
+        });
+      }
+      if (dateInput || btnRefr || btnAll){ window.updateHistoryView(); }
     })();
 
     // Når straffetid endres → reberegn og persister
