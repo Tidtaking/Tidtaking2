@@ -1244,27 +1244,29 @@
       });
     }
     function rowsForBankExcel(rawRows){
-      return (rawRows||[]).map(r=>{
-        const shooting = r.shooting || {};
-        const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
-        const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
-        return {
-          ID: r.id || '',
-          Navn: r.name || '',
-          Type: r.type || '',
-          Modalitet: r.modality || '',
-          Intensitet: r.intensity || '',
-          Varighet_min: r.duration_min ?? '',
-          Aldersklasser: age,
-          Skytestilling: shooting.stilling || '',
-          Skudd: shooting.skudd
-          Konkurranse: r.race_subtype || '',
-          Notater: r.notes || '',
-          Opprettet: r.created_at || '',
-          Oppdatert: r.updated_at || ''
-        };
-      });
-    }
+  return (rawRows||[]).map(r=>{
+    const shooting = r.shooting || {};
+    const tema = Array.isArray(shooting.tema) ? shooting.tema.join(' | ') : '';
+    const age = Array.isArray(r.age) ? r.age.join(' | ') : '';
+    return {
+      "ID": r.id || '',
+      "Navn": r.name || '',
+      "Type": r.type || '',
+      "Modalitet": r.modality || '',
+      "Intensitet": r.intensity || '',
+      "Varighet_min": r.duration_min ?? '',
+      "Aldersklasser": age,
+      "Skytestilling": shooting.stilling || '',
+      "Skudd": shooting.skudd ?? '',
+      "Tema": tema,
+      "Konkurranse": r.race_subtype || '',
+      "Notater": r.notes || '',
+      "Opprettet": r.created_at || '',
+      "Oppdatert": r.updated_at || ''
+    };
+  });
+}
+
     function downloadXlsxMultiple(sheets){
       const wb = XLSX.utils.book_new();
       for(const {name, rows} of sheets){
