@@ -345,42 +345,53 @@
     dayjs.extend(dayjs_plugin_localizedFormat);
     dayjs.locale('nb'); // <-- Norsk språk for måneder/ukedager
 
-  // ---------- Sidebar toggle (fikset) ----------
-  function applySidebarLayout(visible){
-    const grid = document.getElementById('page-grid');
+  // --- Sidebar toggle (med knappestil) ---
+function setSidebarButtonStyle(isVisible){
+  const btn = document.getElementById('btn-toggle-sidebar');
+  if(!btn) return;
+  // Farg knappen når panelet er SKJULT
+  const isHidden = !isVisible;
+  btn.classList.toggle('bg-blue-50', isHidden);
+  btn.classList.toggle('border-blue-300', isHidden);
+  btn.classList.toggle('text-[var(--brand)]', isHidden);
+  btn.setAttribute('aria-pressed', String(isHidden));
+  btn.textContent = isHidden ? 'Sidepanel (skjult)' : 'Sidepanel';
+}
+
+function applySidebarLayout(visible){
+  const grid = document.getElementById('page-grid');
+  const aside = document.getElementById('sidebar');
+  if(!grid || !aside) return;
+
+  if(visible){
+    aside.classList.remove('hidden');
+    grid.classList.remove('lg:grid-cols-1');
+    grid.classList.add('lg:grid-cols-[minmax(0,1fr)_360px]');
+  }else{
+    aside.classList.add('hidden');
+    grid.classList.remove('lg:grid-cols-[minmax(0,1fr)_360px]');
+    grid.classList.add('lg:grid-cols-1');
+  }
+  setSidebarButtonStyle(visible);
+}
+
+function setupSidebarToggle(){
+  const btn = document.getElementById('btn-toggle-sidebar');
+  if(!btn) return;
+
+  // last siste valg (default: vist)
+  const saved = localStorage.getItem('lss:sidebar:visible');
+  const visible = saved === null ? true : (saved === 'true');
+  applySidebarLayout(visible);
+
+  btn.addEventListener('click', () => {
     const aside = document.getElementById('sidebar');
+    const nowVisible = aside.classList.contains('hidden'); // blir motsatt etter toggle
+    applySidebarLayout(nowVisible);
+    localStorage.setItem('lss:sidebar:visible', String(nowVisible));
+  });
+}
 
-    if(!grid || !aside) return;
-
-    if(visible){
-      aside.classList.remove('hidden');
-      // to kolonner (innhold + sidepanel)
-      grid.classList.remove('lg:grid-cols-1');
-      grid.classList.add('lg:grid-cols-[minmax(0,1fr)_360px]');
-    }else{
-      aside.classList.add('hidden');
-      // én kolonne (innhold i full bredde)
-      grid.classList.remove('lg:grid-cols-[minmax(0,1fr)_360px]');
-      grid.classList.add('lg:grid-cols-1');
-    }
-  }
-
-  function setupSidebarToggle(){
-    const btn = document.getElementById('btn-toggle-sidebar');
-    if(!btn) return;
-
-    // last siste valg
-    const saved = localStorage.getItem('lss:sidebar:visible');
-    const visible = saved === null ? true : (saved === 'true'); // default: vist
-    applySidebarLayout(visible);
-
-    btn.addEventListener('click', () => {
-      const aside = document.getElementById('sidebar');
-      const nowVisible = aside.classList.contains('hidden');
-      applySidebarLayout(nowVisible);
-      localStorage.setItem('lss:sidebar:visible', String(nowVisible));
-    });
-  }
 
     // ---------- Konstanter ----------
     const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
