@@ -1051,7 +1051,6 @@
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const row = (label, value) => `<div class="grid grid-cols-3 gap-3 items-start"><div class="text-sm font-medium text-slate-700 col-span-1">${label}</div><div class="text-sm col-span-2">${value||'–'}</div></div>`;
       const ageChips = (model.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(a)}</span>`).join('');
-      const tema = (
       const tema = (model.shooting?.tema||[]).length
         ? `<div class="mt-1 flex flex-wrap gap-1">${model.shooting.tema.map(t=>`<span class="rounded-full border px-2 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>`
         : '';
