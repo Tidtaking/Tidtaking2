@@ -1,311 +1,299 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lørenskog Skiskyting – Årsplan & Øktbank</title>
-
-  <!-- Tailwind (CDN) -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Årsplan LSS</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    :root{ --brand:#18469a; --brand2:#dbe723; }
-    html,body{height:100%}
-    @media print{ .no-print{display:none!important} }
-    #lss-tooltip{ position:fixed; z-index:1000; pointer-events:none; transform:translate(-50%,-100%); max-width: min(88vw, 22rem); }
-    @media (max-width: 767px){
-      header h1{ font-size:1.125rem }
-      header .no-print button,
-      header .no-print label{ padding: .4rem .6rem; border-radius: .75rem; }
-      #dialog .dialog-card{ width:100%; max-width:none; height:92vh; border-radius:0; display:flex; flex-direction:column; }
-      #dialog .dialog-body{ overflow:auto; -webkit-overflow-scrolling: touch; flex:1 1 auto; }
-    }
-  </style>
-
-  <!-- Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
-
-  <!-- Supabase JS v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- SheetJS (XLSX) -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/advancedFormat.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-
-  <!-- ========= HEADER ========= -->
-  <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
-    <div class="flex items-center gap-3">
-      <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
-      <div>
-        <h1 class="text-2xl font-bold">Lørenskog Skiskyting</h1>
-        <p class="text-sm opacity-80">Årsplan • Øktbank</p>
-      </div>
-    </div>
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-2 no-print md:sticky md:top-2 md:z-40">
-      <button id="btn-new" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Ny hendelse</button>
-      <button id="btn-print" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Skriv ut</button>
-      <button id="btn-export-xlsx" class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm">Eksporter Excel</button>
-      <label class="inline-flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-[var(--brand)] shadow-sm cursor-pointer">
-        <input id="file-import" type="file" accept="application/json" class="hidden" />Importer
-      </label>
+<body class="bg-slate-50">
+  <header class="border-b bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between p-2">
+      <h1 class="text-lg font-bold">LSS Årsplan</h1>
+      <nav class="flex gap-2">
+        <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
+        <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
+        <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
+        <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+          Selvanviser
+        </a>
+        <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
+           class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
+          Tidtaking
+        </a>
+      </nav>
     </div>
   </header>
 
-  <!-- Toolbar -->
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
-    <div class="flex items-center gap-2">
-      <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
-      <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
-      <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
+  <main class="max-w-7xl mx-auto p-4">
+    <!-- Toolbar -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
+        <div id="year-label" class="rounded-xl border bg-white px-4 py-1.5 text-lg font-semibold shadow-sm"></div>
+        <button id="year-next" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">▶</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-new" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Ny hendelse</button>
+        <button id="btn-print" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Skriv ut</button>
+        <button id="btn-export-xlsx" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Eksporter Excel</button>
+        <label class="rounded-2xl border bg-white px-3 py-2 shadow-sm cursor-pointer">
+          <input id="file-import" type="file" accept="application/json" class="hidden" />
+          Importer
+        </label>
+      </div>
     </div>
-<nav class="flex gap-2">
-  <button data-tab="calendar" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Årsplan</button>
-  <button data-tab="bank" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Øktbank</button>
-  <button data-tab="admin" class="tab-btn rounded-2xl border bg-white px-3 py-2 shadow-sm">Admin</button>
-  <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" target="_blank" rel="noopener"
-     class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-    Selvanviser
-  </a>
-  <a href="https://tidtaking.github.io/Tidtaking2/velkommen.html" target="_blank" rel="noopener"
-     class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-    Tidtaking
-  </a>
-</nav>
 
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <!-- Hovedinnhold -->
+      <section class="lg:col-span-3 space-y-4">
+        <!-- Årsplan -->
+        <section id="tab-calendar" class="tab-section">
+          <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
 
-
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
-    <!-- Main -->
-    <main class="lg:col-span-3 space-y-4">
-      <!-- Calendar Tab -->
-      <section id="tab-calendar" class="tab-section">
-        <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
-        <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="flex items-center justify-between border-b p-4">
-            <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
-            <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm no-print">Vis/skjul liste</button>
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="flex items-center justify-between border-b p-4">
+              <h3 class="text-lg font-semibold">Hendelser <span id="event-year"></span></h3>
+              <button id="toggle-list" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Vis/skjul liste</button>
+            </div>
+            <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-slate-500">
+                    <th class="py-1">Dato</th>
+                    <th>Tittel</th>
+                    <th>Type</th>
+                    <th>Sted</th>
+                    <th>Modalitet</th>
+                    <th>Int</th>
+                    <th>Skudd</th>
+                    <th class="text-right">…</th>
+                  </tr>
+                </thead>
+                <tbody id="tbl-events"></tbody>
+              </table>
+            </div>
           </div>
-          <div id="event-list" class="max-h-[320px] overflow-auto p-2 hidden">
+        </section>
+
+        <!-- Øktbank -->
+        <section id="tab-bank" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="border-b p-4">
+              <h3 class="text-lg font-semibold">Øktbank</h3>
+            </div>
+
+            <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label class="text-sm font-medium">Søk</label>
+                <input id="q-bank" class="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Søk i øktbank…" />
+              </div>
+              <div>
+                <label class="text-sm font-medium">Målgruppe</label>
+                <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2"></select>
+              </div>
+              <div>
+                <label class="text-sm font-medium">Type</label>
+                <select id="f-type" class="mt-1 w-full rounded-xl border px-3 py-2">
+                  <option value="">Alle</option>
+                  <option>Trening</option>
+                  <option>Konkurranse</option>
+                  <option>Restitusjon</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+          </div>
+        </section>
+
+        <!-- Admin -->
+        <section id="tab-admin" class="tab-section hidden">
+          <div class="rounded-2xl border bg-white shadow-sm">
+            <div class="border-b p-4">
+              <h3 class="text-lg font-semibold">Admin</h3>
+            </div>
+
+            <div class="p-4 grid grid-cols-1 gap-6">
+              <!-- A: Rediger hendelser -->
+              <div>
+                <h4 class="font-semibold mb-2">Rediger hendelser</h4>
+                <div class="flex flex-wrap items-end gap-2">
+                  <div>
+                    <label class="text-sm font-medium">Søk</label>
+                    <input id="admin-q" class="mt-1 w-64 rounded-xl border px-3 py-2" placeholder="Søk i tittel, type, sted…" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Fra dato</label>
+                    <input id="admin-from" type="date" class="mt-1 rounded-xl border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Til dato</label>
+                    <input id="admin-to" type="date" class="mt-1 rounded-xl border px-3 py-2" />
+                  </div>
+                  <button id="admin-search" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Filtrer</button>
+                </div>
+
+                <div class="mt-3 max-h-[360px] overflow-auto rounded-xl border">
+                  <table class="w-full text-sm">
+                    <thead class="bg-slate-50 sticky top-0">
+                      <tr class="text-left text-slate-600">
+                        <th class="p-2">Dato</th>
+                        <th>Tittel</th>
+                        <th>Type</th>
+                        <th>Sted</th>
+                        <th>Int</th>
+                        <th class="text-right pr-2">…</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-events"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- B: Årsklasser -->
+              <div>
+                <h4 class="font-semibold mb-2">Årsklasser (målgrupper)</h4>
+                <p class="text-xs text-slate-600 mb-2">Endre etikett/ID eller legg til nye.</p>
+                <div id="age-editor" class="space-y-2"></div>
+                <div class="mt-2 flex gap-2">
+                  <button id="age-add" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Legg til gruppe</button>
+                  <button id="age-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre grupper</button>
+                </div>
+              </div>
+
+              <!-- C: Ukekoder -->
+              <div>
+                <h4 class="font-semibold mb-2">Ukekoder (BAS/OPP/KONK/RES/EKS)</h4>
+                <div class="max-h-72 overflow-auto rounded-xl border">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="text-left text-slate-500">
+                        <th class="p-2">Uke</th>
+                        <th>Kode</th>
+                        <th>Notat</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbl-weeks"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- D: Kalender (.ics) + Øktbank gjenopprett -->
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">
+                  Last ned .ics
+                </button>
+                <button id="btn-restore-bank" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">
+                  Gjenopprett øktbank (standard)
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- Sidepanel -->
+      <aside class="space-y-4">
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
+          <div id="legend" class="p-4 space-y-1 text-sm"></div>
+        </div>
+
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
+          <div class="p-4 text-sm text-slate-700 space-y-1">
+            <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
+            <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
+            <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
+            <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles.</p>
+            <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
+          </div>
+        </div>
+
+        <!-- Intensitetssoner -->
+        <div class="rounded-2xl border bg-white shadow-sm">
+          <div class="border-b p-4">
+            <h3 class="text-lg font-semibold">Intensitetssoner (I1–I5) for barn</h3>
+          </div>
+          <div class="p-4">
             <table class="w-full text-sm">
               <thead>
-                <tr class="text-left text-slate-500"><th class="py-1">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Modalitet</th><th>Int</th><th>Skudd</th><th class="text-right">…</th></tr>
+                <tr class="text-left text-slate-500">
+                  <th class="py-1">Sone</th>
+                  <th class="py-1">Følelse</th>
+                </tr>
               </thead>
-              <tbody id="tbl-events"></tbody>
+              <tbody class="align-top">
+                <tr>
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#22c55e"></span>
+                      <span>I1 Svært lett</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Helt rolig, kan prate og le hele tiden</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#eab308"></span>
+                      <span>I2 Lett</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Puster litt mer, men kan snakke i setninger</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>
+                      <span>I3 Middels</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Blir varm og andpusten, kan snakke i korte setninger</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span>
+                      <span>I4 Hardt</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Ordentlig sliten, kan bare si noen få ord</td>
+                </tr>
+                <tr class="border-t">
+                  <td class="py-2">
+                    <span class="inline-flex items-center gap-2">
+                      <span>⚡</span>
+                      <span>I5 Maks</span>
+                    </span>
+                  </td>
+                  <td class="py-2">Alt du har! Klarer bare noen sekunder–minutter</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
-      </section>
 
-      <!-- Bank Tab -->
-      <section id="tab-bank" class="tab-section hidden">
         <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
-          <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div>
-              <label class="text-sm font-medium">Søk</label>
-              <input id="q-bank" class="mt-1 w-full rounded-xl border px-3 py-2" placeholder="Søk i øktbank…"/>
-            </div>
-            <div>
-              <label class="text-sm font-medium">Målgruppe</label>
-              <select id="f-age" class="mt-1 w-full rounded-xl border px-3 py-2"></select>
-            </div>
-            <div>
-              <label class="text-sm font-medium">Type</label>
-              <select id="f-type" class="mt-1 w-full rounded-xl border px-3 py-2">
-                <option value="">Alle</option>
-                <option>Trening</option>
-                <option>Konkurranse</option>
-                <option>Restitusjon</option>
-              </select>
-            </div>
-          </div>
-          <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
-        </div>
-      </section>
-
-      <!-- Admin Tab -->
-      <section id="tab-admin" class="tab-section hidden">
-        <div class="rounded-2xl border bg-white shadow-sm">
-          <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin</h3></div>
-          <div class="p-4 grid grid-cols-1 gap-6">
-            <!-- A: Rediger hendelser -->
-            <div>
-              <h4 class="font-semibold mb-2">Rediger hendelser</h4>
-              <div class="flex flex-wrap items-end gap-2">
-                <div>
-                  <label class="text-sm font-medium">Søk</label>
-                  <input id="admin-q" class="mt-1 w-64 rounded-xl border px-3 py-2" placeholder="Søk i tittel, type, sted…">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Fra dato</label>
-                  <input id="admin-from" type="date" class="mt-1 rounded-xl border px-3 py-2">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Til dato</label>
-                  <input id="admin-to" type="date" class="mt-1 rounded-xl border px-3 py-2">
-                </div>
-                <button id="admin-search" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Filtrer</button>
-              </div>
-              <div class="mt-3 max-h-[360px] overflow-auto rounded-xl border">
-                <table class="w-full text-sm">
-                  <thead class="bg-slate-50 sticky top-0">
-                    <tr class="text-left text-slate-600">
-                      <th class="p-2">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Int</th><th class="text-right pr-2">…</th>
-                    </tr>
-                  </thead>
-                  <tbody id="admin-events"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- B: Årsklasser -->
-            <div>
-              <h4 class="font-semibold mb-2">Årsklasser (målgrupper)</h4>
-              <p class="text-xs text-slate-600 mb-2">Endre etikett/ID eller legg til nye.</p>
-              <div id="age-editor" class="space-y-2"></div>
-              <div class="mt-2 flex gap-2">
-                <button id="age-add" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Legg til gruppe</button>
-                <button id="age-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre grupper</button>
-              </div>
-            </div>
-
-            <!-- C: Ukekoder -->
-            <div>
-              <h4 class="font-semibold mb-2">Ukekoder (BAS/OPP/KONK/RES/EKS)</h4>
-              <div class="max-h-72 overflow-auto rounded-xl border">
-                <table class="w-full text-sm">
-                  <thead><tr class="text-left text-slate-500"><th class="p-2">Uke</th><th>Kode</th><th>Notat</th></tr></thead>
-                  <tbody id="tbl-weeks"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- D: ICS -->
-            <div>
-              <h4 class="font-semibold mb-2">Kalender</h4>
-              <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
-            </div>
+          <div class="border-b p-4"><h3 class="text-lg font-semibold">Hurtigverktøy</h3></div>
+          <div class="p-4 flex flex-col gap-2">
+            <button id="quick-trening" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny trening</button>
+            <button id="quick-skyting" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny skyteøkt</button>
+            <button id="quick-konk" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny konkurranse</button>
           </div>
         </div>
-      </section>
-    </main>
-
-    <!-- Sidepanel -->
-    <aside class="space-y-4">
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
-        <div id="legend" class="p-4 space-y-1 text-sm"></div>
-      </div>
-
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4"><h3 class="text-lg font-semibold">Utviklingstrapp (kort)</h3></div>
-        <div class="p-4 text-sm text-slate-700 space-y-1">
-          <p><span class="font-medium">Skiskytterskolen:</span> Introduksjon, sikkerhet, enkel liggende, lek.</p>
-          <p><span class="font-medium">9–10 år:</span> Variasjon/lek, korte økter, koordinasjon og balanse.</p>
-          <p><span class="font-medium">11–12 år:</span> Mer struktur, enkel intensitetsforståelse, liggende videreutvikles.</p>
-          <p><span class="font-medium">13–14 år:</span> Tydelig progresjon, stående introduseres/videreutvikles.</p>
-          <p><span class="font-medium">HL gruppe (15+):</span> Individtilpasning, helhetlig belastning, konk-spesifikt.</p>
-        </div>
-      </div>
-
-      <!-- Intensitetssoner -->
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4">
-          <h3 class="text-lg font-semibold">Intensitetssoner (I1–I5) for barn</h3>
-        </div>
-        <div class="p-4">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-left text-slate-500">
-                <th class="py-1">Sone</th>
-                <th class="py-1">Følelse</th>
-              </tr>
-            </thead>
-            <tbody class="align-top">
-              <tr>
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#22c55e"></span>
-                    <span>I1 Svært lett</span>
-                  </span>
-                </td>
-                <td class="py-2">Helt rolig, kan prate og le hele tiden</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#eab308"></span>
-                    <span>I2 Lett</span>
-                  </span>
-                </td>
-                <td class="py-2">Puster litt mer, men kan snakke i setninger</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#f59e0b"></span>
-                    <span>I3 Middels</span>
-                  </span>
-                </td>
-                <td class="py-2">Blir varm og andpusten, kan snakke i korte setninger</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:#ef4444"></span>
-                    <span>I4 Hardt</span>
-                  </span>
-                </td>
-                <td class="py-2">Ordentlig sliten, kan bare si noen få ord</td>
-              </tr>
-              <tr class="border-t">
-                <td class="py-2">
-                  <span class="inline-flex items-center gap-2">
-                    <span>⚡</span>
-                    <span>I5 Maks</span>
-                  </span>
-                </td>
-                <td class="py-2">Alt du har! Klarer bare noen sekunder–minutter</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="rounded-2xl border bg-white shadow-sm">
-        <div class="border-b p-4"><h3 class="text-lg font-semibold">Hurtigverktøy</h3></div>
-        <div class="p-4 flex flex-col gap-2 no-print">
-          <button id="quick-trening" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny trening</button>
-          <button id="quick-skyting" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny skyteøkt</button>
-          <button id="quick-konk" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny konkurranse</button>
-        </div>
-      </div>
-    </aside>
-  </div>
-
-  <!-- Dialog -->
-  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-    <div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
-      <div class="flex items-center justify-between border-b p-4">
-        <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
-        <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
-      </div>
-      <div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
-      <div class="border-t p-4 flex justify-end gap-2">
-        <button id="btn-delete" class="mr-auto hidden rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
-        <button id="btn-cancel" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Avbryt</button>
-        <button id="btn-save" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
-      </div>
+      </aside>
     </div>
-  </div>
-
-  <!-- Tooltip -->
-  <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700"></div>
-
   <script>
     // ---------- Dayjs ----------
     dayjs.extend(dayjs_plugin_isoWeek);
@@ -336,11 +324,14 @@
       AGES:'lss:ages:v1'
     };
 
+    // ---------- Småhjelpere ----------
     const $=(q,el=document)=>el.querySelector(q);
     const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
     const uid=()=> (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));
     const lsGet=(k,d)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch{return d;} };
     const lsSet=(k,v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} };
+    const MOBILE_BREAKPOINT = 768;
+    const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
     function fallbackLogo(){
       const img=document.createElement('div');
@@ -348,6 +339,7 @@
       img.textContent='Logo';
       return img;
     }
+
     function bindDialogChrome(){
       const dlg = $('#dialog');
       const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
@@ -373,8 +365,185 @@
       dayOrder: lsGet(KEY.DAYORDER, {}),
       ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
     };
-    const MOBILE_BREAKPOINT = 768;
-    const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
+
+    // ---------- Mappers ----------
+    function mapEventToDb(e){
+      return {
+        id: e.id,
+        year: dayjs(e.date).year(),
+        date: e.date,
+        title: e.title || null,
+        type: e.type || null,
+        modality: e.modality || null,
+        intensity: e.intensity || null,
+        duration_min: e.durationMin ?? null,
+        age: e.age || [],
+        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: e.raceSubtype || null,
+        notes: e.notes || null,
+        roles: e.roles || {},
+        location: e.location || null
+      };
+    }
+    function mapEventFromDb(r){
+      const t = r.type ?? r.event_type ?? 'Trening';
+      return {
+        id: r.id,
+        date: r.date,
+        title: r.title || '',
+        type: t,
+        modality: r.modality || '',
+        intensity: r.intensity || '',
+        durationMin: r.duration_min ?? 60,
+        age: r.age || [],
+        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
+        raceSubtype: r.race_subtype || '',
+        notes: r.notes || '',
+        roles: r.roles || {},
+        location: r.location || ''
+      };
+    }
+    function mapBankToDb(t){
+      return {
+        id: t.id,
+        name: t.name,
+        type: t.type,
+        modality: t.modality,
+        intensity: t.intensity,
+        duration_min: t.durationMin ?? null,
+        age: t.age || [],
+        shooting: t.shooting || { stilling:'', skudd:0, tema:[] },
+        race_subtype: t.raceSubtype || null,
+        notes: t.notes || null
+      };
+    }
+    function mapBankFromDb(r){
+      return {
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        modality: r.modality,
+        intensity: r.intensity,
+        durationMin: r.duration_min ?? null,
+        age: r.age || [],
+        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
+        raceSubtype: r.race_subtype || null,
+        notes: r.notes || null
+      };
+    }
+
+    // ---------- Defaults ----------
+    function getDefaultWeeks(year){
+      const first=dayjs(year+'-01-01');
+      const last=dayjs(year+'-12-31');
+      const weeks={}; let d=first.startOf('isoWeek');
+      while(d.isBefore(last.add(1,'day'))){
+        const wk=d.isoWeek();
+        if(!weeks[wk]) weeks[wk]={code:'BAS',note:''};
+        d=d.add(7,'day');
+      }
+      return weeks;
+    }
+
+    function getDefaultTemplates(){
+      // > 20 økter – fordelt på aldersgrupper og typer
+      const T = (name, type, modality, intensity, dur, age, skudd=0, still='', tema=[], notes='') =>
+        ({ id: uid(), name, type, modality, intensity, durationMin: dur, age, shooting:{stilling:still, skudd, tema}, notes });
+
+      return [
+        T('Lek-basert grunntrening', 'Trening', 'Basistrening', 'I1', 45, ['Skiskytterskolen','9-10'], 0,'','', 'Koordinasjon/lek'),
+        T('Ski lek og balanse', 'Trening', 'Ski skøyting', 'I1', 50, ['9-10'], 0,'','', 'Enkle hinder/øvelser'),
+        T('Løp kortintervall 10×1', 'Trening', 'Løp', 'I3', 40, ['11-12','13-14']),
+        T('Styrke sirkel', 'Trening', 'Styrke', 'I2', 35, ['11-12','13-14','HL']),
+        T('Rulleski teknikk', 'Trening', 'Rulleski skøyting', 'I1', 60, ['11-12','13-14']),
+        T('Kombinasjonsøkt I3 4×6', 'Trening', 'Løp', 'I3', 60, ['13-14','HL'], 30,'Kombinert',['Treffrytme','Pust-kontroll']),
+        T('Skyting teknikk liggende', 'Skyting', 'Basistrening', 'I1', 45, ['11-12','13-14'], 40,'Liggende',['Stilling','Avtrekk']),
+        T('Skyting teknikk stående', 'Skyting', 'Basistrening', 'I1', 45, ['13-14','HL'], 40,'Stående',['Stilling','Avtrekk']),
+        T('Konk-forberedelse', 'Trening', 'Løp', 'I2', 40, ['13-14','HL'], 10,'Liggende',['Serier'],'Kort stigning'),
+        T('Langtur rolig', 'Trening', 'Løp', 'I1', 75, ['13-14','HL']),
+        T('Langtur ski', 'Trening', 'Ski skøyting', 'I1', 90, ['HL']),
+        T('Restitusjon + bevegelighet', 'Restitusjon', 'Basistrening', 'I1', 30, ['11-12','13-14','HL']),
+        T('Rulleski terskel 3×10', 'Trening', 'Rulleski skøyting', 'I3', 75, ['HL']),
+        T('Sykkel I2 60 min', 'Trening', 'Sykkel', 'I2', 60, ['13-14','HL']),
+        T('Ski terskel 4×8', 'Trening', 'Ski klassisk', 'I3', 70, ['HL']),
+        T('Basistrening stasjonar', 'Trening', 'Basistrening', 'I2', 50, ['9-10','11-12']),
+        T('Skyting komb løp 5×(600m+5sk)', 'Trening', 'Løp', 'I3', 60, ['13-14','HL'], 25,'Kombinert',['Inn/ut','Pulsfall']),
+        T('Serier 6×10 skudd', 'Skyting', 'Basistrening', 'I1', 50, ['11-12','13-14','HL'], 60,'Liggende',['Rytme']),
+        T('Styrke helkropp', 'Trening', 'Styrke', 'I2', 45, ['13-14','HL']),
+        T('Teknikk løp – frekvens', 'Trening', 'Løp', 'I2', 50, ['11-12','13-14']),
+        T('Konkurranse – klubbkarusell', 'Konkurranse', 'Løp', 'I4', 60, ['11-12','13-14','HL'], 10,'Konk',['Rutinetraining']),
+        T('Samling – helg (oversikt)', 'Samling', 'Basistrening', 'I1', 120, ['11-12','13-14','HL'])
+      ];
+    }
+
+    function migrateAgeTagsInArray(arr){
+      if(!Array.isArray(arr)) return [];
+      return arr.map(a => AGE_MAP[a] || a);
+    }
+    function migrateAllAgesInState(){
+      state.events = (state.events || []).map(e => ({ ...e, age: migrateAgeTagsInArray(e.age) }));
+      state.bank   = (state.bank   || []).map(t => ({ ...t, age: migrateAgeTagsInArray(t.age) }));
+    }
+
+    // ---------- Tooltip ----------
+    const tipEl = $('#lss-tooltip');
+    function showTooltip(html, x, y){
+      if(!tipEl) return;
+      tipEl.innerHTML = html;
+      tipEl.style.left = x+'px';
+      tipEl.style.top = (y-12)+'px';
+      tipEl.classList.remove('hidden');
+    }
+    function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
+    function attachTipHandlers(el, html){
+      let pressTimer = null;
+      let last = {x:0, y:0};
+      const onEnter = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
+      const onMove  = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
+      const onLeave = ()=> hideTooltip();
+      el.addEventListener('mouseenter', onEnter);
+      el.addEventListener('mousemove', onMove);
+      el.addEventListener('mouseleave', onLeave);
+      const startPress = (ev)=>{
+        const t = ev.touches?.[0]; if(!t) return;
+        last = { x: t.clientX, y: t.clientY };
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(()=> showTooltip(html, last.x, last.y), 300);
+      };
+      const movePress = (ev)=>{
+        const t = ev.touches?.[0]; if(!t) return;
+        last = { x: t.clientX, y: t.clientY };
+        if(!tipEl.classList.contains('hidden')) showTooltip(html, last.x, last.y);
+      };
+      const endPress = ()=>{ clearTimeout(pressTimer); setTimeout(hideTooltip, 1200); };
+      el.addEventListener('touchstart', startPress, { passive:true });
+      el.addEventListener('touchmove',  movePress,  { passive:true });
+      el.addEventListener('touchend',   endPress,   { passive:true });
+      el.addEventListener('touchcancel',endPress,   { passive:true });
+    }
+    function eventTooltipHTML(e){
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+      const title = esc(e.title || e.type || '');
+      const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
+      const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
+      const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
+      const notes = (e.notes||'').trim() ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
+      const tema = (e.shooting?.tema||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
+      return `
+        <div class="font-semibold mb-1">${title}</div>
+        <div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>
+        <div><span class="font-medium">Sted:</span> ${esc(e.location||'–')}</div>
+        <div><span class="font-medium">Modalitet:</span> ${esc(e.modality||'–')}</div>
+        <div><span class="font-medium">Intensitet:</span> ${esc(e.intensity||'–')}</div>
+        <div><span class="font-medium">Varighet:</span> ${e.durationMin? esc(String(e.durationMin))+' min' : '–'}</div>
+        <div class="mt-1"><span class="font-medium">Aldersklasser:</span> ${ageChips||'–'}</div>
+        <div class="mt-1"><span class="font-medium">Skyting:</span> ${esc(e.shooting?.stilling||'–')}, skudd: ${e.shooting?.skudd||0}</div>
+        ${tema}
+        ${race}
+        ${rolesList? `<div class="mt-1">${rolesList}</div>`:''}
+        ${notes}
+      `;
+    }
 
     // ---------- I/O ----------
     async function supaLoadAll(year = state.year){
@@ -495,155 +664,6 @@
         .subscribe();
     }
 
-    // ---------- Mappers ----------
-    function mapEventToDb(e){
-      return {
-        id: e.id,
-        date: e.date,
-        title: e.title || null,
-        type: e.type || null,
-        modality: e.modality || null,
-        intensity: e.intensity || null,
-        duration_min: e.durationMin ?? null,
-        age: e.age || [],
-        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: e.raceSubtype || null,
-        notes: e.notes || null,
-        roles: e.roles || {},
-        location: e.location || null
-      };
-    }
-    function mapEventFromDb(r){
-      const t = r.type ?? r.event_type ?? 'Trening';
-      return {
-        id: r.id,
-        date: r.date,
-        title: r.title || '',
-        type: t,
-        modality: r.modality || '',
-        intensity: r.intensity || '',
-        durationMin: r.duration_min ?? 60,
-        age: r.age || [],
-        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
-        raceSubtype: r.race_subtype || '',
-        notes: r.notes || '',
-        roles: r.roles || {},
-        location: r.location || ''
-      };
-    }
-    function mapBankToDb(t){
-      return {
-        id: t.id,
-        name: t.name,
-        type: t.type,
-        modality: t.modality,
-        intensity: t.intensity,
-        duration_min: t.durationMin ?? null,
-        age: t.age || [],
-        shooting: t.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: t.raceSubtype || null,
-        notes: t.notes || null
-      };
-    }
-    function mapBankFromDb(r){
-      return {
-        id: r.id,
-        name: r.name,
-        type: r.type,
-        modality: r.modality,
-        intensity: r.intensity,
-        durationMin: r.duration_min ?? null,
-        age: r.age || [],
-        shooting: r.shooting || { stilling:'', skudd:0, tema:[] },
-        raceSubtype: r.race_subtype || null,
-        notes: r.notes || null
-      };
-    }
-
-    // ---------- Defaults / migrering ----------
-    function getDefaultWeeks(year){
-      const first=dayjs(year+'-01-01');
-      const last=dayjs(year+'-12-31');
-      const weeks={}; let d=first.startOf('isoWeek');
-      while(d.isBefore(last.add(1,'day'))){
-        const wk=d.isoWeek();
-        if(!weeks[wk]) weeks[wk]={code:'BAS',note:''};
-        d=d.add(7,'day');
-      }
-      return weeks;
-    }
-    function migrateAgeTagsInArray(arr){
-      if(!Array.isArray(arr)) return [];
-      return arr.map(a => AGE_MAP[a] || a);
-    }
-    function migrateAllAgesInState(){
-      state.events = (state.events || []).map(e => ({ ...e, age: migrateAgeTagsInArray(e.age) }));
-      state.bank   = (state.bank   || []).map(t => ({ ...t, age: migrateAgeTagsInArray(t.age) }));
-    }
-
-    // ---------- Tooltip ----------
-    const tipEl = $('#lss-tooltip');
-    function showTooltip(html, x, y){
-      if(!tipEl) return;
-      tipEl.innerHTML = html;
-      tipEl.style.left = x+'px';
-      tipEl.style.top = (y-12)+'px';
-      tipEl.classList.remove('hidden');
-    }
-    function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
-
-    function attachTipHandlers(el, html){
-      let pressTimer = null;
-      let last = {x:0, y:0};
-      const onEnter = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
-      const onMove  = (ev)=> showTooltip(html, ev.clientX, ev.clientY);
-      const onLeave = ()=> hideTooltip();
-      el.addEventListener('mouseenter', onEnter);
-      el.addEventListener('mousemove', onMove);
-      el.addEventListener('mouseleave', onLeave);
-      const startPress = (ev)=>{
-        const t = ev.touches?.[0]; if(!t) return;
-        last = { x: t.clientX, y: t.clientY };
-        clearTimeout(pressTimer);
-        pressTimer = setTimeout(()=> showTooltip(html, last.x, last.y), 300);
-      };
-      const movePress = (ev)=>{
-        const t = ev.touches?.[0]; if(!t) return;
-        last = { x: t.clientX, y: t.clientY };
-        if(!tipEl.classList.contains('hidden')) showTooltip(html, last.x, last.y);
-      };
-      const endPress = ()=>{ clearTimeout(pressTimer); setTimeout(hideTooltip, 1200); };
-      el.addEventListener('touchstart', startPress, { passive:true });
-      el.addEventListener('touchmove',  movePress,  { passive:true });
-      el.addEventListener('touchend',   endPress,   { passive:true });
-      el.addEventListener('touchcancel',endPress,   { passive:true });
-    }
-
-    function eventTooltipHTML(e){
-      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-      const title = esc(e.title || e.type || '');
-      const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
-      const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
-      const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
-      const notes = (e.notes||'').trim() ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
-      const tema = (e.shooting?.tema||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
-
-      return `
-        <div class="font-semibold mb-1">${title}</div>
-        <div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>
-        <div><span class="font-medium">Sted:</span> ${esc(e.location||'–')}</div>
-        <div><span class="font-medium">Modalitet:</span> ${esc(e.modality||'–')}</div>
-        <div><span class="font-medium">Intensitet:</span> ${esc(e.intensity||'–')}</div>
-        <div><span class="font-medium">Varighet:</span> ${e.durationMin? esc(String(e.durationMin))+' min' : '–'}</div>
-        <div class="mt-1"><span class="font-medium">Aldersklasser:</span> ${ageChips||'–'}</div>
-        <div class="mt-1"><span class="font-medium">Skyting:</span> ${esc(e.shooting?.stilling||'–')}, skudd: ${e.shooting?.skudd||0}</div>
-        ${tema}
-        ${race}
-        ${rolesList? `<div class="mt-1">${rolesList}</div>`:''}
-        ${notes}
-      `;
-    }
-
     // ---------- Day order ----------
     function getOrderForDate(dateISO){ return state.dayOrder[dateISO] || []; }
     function setOrderForDate(dateISO, ids){ state.dayOrder[dateISO] = ids; lsSet(KEY.DAYORDER, state.dayOrder); supaUpsertDayOrder(dateISO, ids); }
@@ -737,7 +757,7 @@
       $('#event-year').textContent = state.year;
       renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks(); renderAgeEditor(); renderAdminEvents();
 
-      // oppdatér filter for bank (aldersvalg)
+      // Oppdatér Øktbank-filter (aldersvalg)
       const fAge = $('#f-age'); if(fAge){ fAge.innerHTML = `<option value="">Alle</option>` + state.ageGroups.map(g=>`<option value="${g.id}">${g.label}</option>`).join(''); }
 
       lsSet(KEY.YEAR,state.year);
@@ -919,7 +939,6 @@
     function openDialog(data){
       const existing = state.events.find(x=>x.id===data.id);
       const isEdit = !!existing;
-      const prevDate = existing ? existing.date : null;
 
       const model=Object.assign(
         { id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, location:'' },
@@ -988,7 +1007,6 @@
       $('#btn-save').onclick = async () => {
         const get = (id) => $('#'+id, body);
         const wasNew = state.events.findIndex(x => x.id === model.id) < 0;
-        const oldDate = model.date;
 
         model.title       = get('f-title').value.trim();
         model.type        = get('f-type').value;
@@ -1024,6 +1042,7 @@
       $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
       $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
     }
+
     function openViewDialog(model){
       const body = $('#dlg-body');
       $('#dlg-title').textContent = 'Vis hendelse';
@@ -1056,8 +1075,8 @@
       const reset = () => { cancel.textContent = 'Avbryt'; cancel.onclick = closeDialog; };
       const obs = new MutationObserver(()=>{ if($('#dialog').classList.contains('hidden')){ reset(); obs.disconnect(); } }); obs.observe($('#dialog'), { attributes:true, attributeFilter:['class'] });
     }
-    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
+    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
     function select(id, items, val){ return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>${items.map(x=>`<option ${x===val?'selected':''}>${x}</option>`).join('')}</select>`; }
     function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m])); }
 
@@ -1099,7 +1118,7 @@
       alert('Årsklasser lagret.');
     });
 
-        // ---------- Admin: hendelser-oversikt ----------
+    // ---------- Admin: hendelser-oversikt ----------
     function renderAdminEvents(){
       const tb = $('#admin-events'); if(!tb) return;
       const q = ($('#admin-q')?.value||'').toLowerCase().trim();
@@ -1150,20 +1169,9 @@
         tbody.appendChild(tr);
       });
       $$('select[data-wk]').forEach(el=> el.onchange=async ()=>{
-        const wk=+el.getAttribute('data-wk');
-        state.weeks[wk]=state.weeks[wk]||{};
-        state.weeks[wk].code=el.value;
-        lsSet(KEY.WEEKS,state.weeks);
-        renderCalendar();
-        await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||'');
-      });
+        const wk=+el.getAttribute('data-wk'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].code=el.value; lsSet(KEY.WEEKS,state.weeks); renderCalendar(); await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note||''); });
       $$('input[data-wkn]').forEach(el=> el.oninput=async ()=>{
-        const wk=+el.getAttribute('data-wkn');
-        state.weeks[wk]=state.weeks[wk]||{};
-        state.weeks[wk].note=el.value;
-        lsSet(KEY.WEEKS,state.weeks);
-        await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value);
-      });
+        const wk=+el.getAttribute('data-wkn'); state.weeks[wk]=state.weeks[wk]||{}; state.weeks[wk].note=el.value; lsSet(KEY.WEEKS,state.weeks); await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', el.value); });
     }
 
     // ---------- ICS ----------
@@ -1173,35 +1181,24 @@
       const escIcs=s=> (s||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/[,;]/g, m=> '\\'+m);
       const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LSS Årsplan//NO'];
       state.events.forEach(e=>{
-        const start=new Date(e.date+'T17:00:00');
-        const end=new Date(start.getTime()+((e.durationMin||60)*60000));
-        lines.push('BEGIN:VEVENT');
-        lines.push('UID:'+e.id);
-        lines.push('DTSTAMP:'+fmt(new Date()));
-        lines.push('DTSTART:'+fmt(start));
-        lines.push('DTEND:'+fmt(end));
-        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):''));
-        lines.push('SUMMARY:'+escIcs(title));
+        const start=new Date(e.date+'T17:00:00'); const end=new Date(start.getTime()+((e.durationMin||60)*60000));
+        lines.push('BEGIN:VEVENT'); lines.push('UID:'+e.id); lines.push('DTSTAMP:'+fmt(new Date())); lines.push('DTSTART:'+fmt(start)); lines.push('DTEND:'+fmt(end));
+        const title=e.title||(e.type+(e.raceSubtype?(' – '+e.raceSubtype):'')); lines.push('SUMMARY:'+escIcs(title));
         if(e.location) lines.push('LOCATION:'+escIcs(e.location));
         if(e.notes)    lines.push('DESCRIPTION:'+escIcs(e.notes));
         lines.push('END:VEVENT');
       });
       lines.push('END:VCALENDAR');
       const blob=new Blob([lines.join('\n')],{type:'text/calendar'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click();
-      URL.revokeObjectURL(url);
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lss_arsplan.ics'; a.click(); URL.revokeObjectURL(url);
     }
 
-    // ---------- Excel (alle år + bank) ----------
+    // ---------- Excel (Årsplan + Øktbank) ----------
     async function fetchAllFromSupabase(table){
       const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
       while(true){
         const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: true }).range(from, to);
-        if(error){ throw error; }
-        all = all.concat(data || []);
-        if(!data || data.length < pageSize) break;
-        from += pageSize; to += pageSize;
+        if(error){ throw error; } all = all.concat(data || []); if(!data || data.length < pageSize) break; from += pageSize; to += pageSize;
       }
       return all;
     }
@@ -1209,10 +1206,7 @@
       const pageSize = 1000; let from = 0, to = pageSize - 1; let all = [];
       while(true){
         const { data, error } = await supabase.from(TBL.events).select('*').order('date', { ascending: true }).range(from, to);
-        if(error){ throw error; }
-        all = all.concat(data || []);
-        if(!data || data.length < pageSize) break;
-        from += pageSize; to += pageSize;
+        if(error){ throw error; } all = all.concat(data || []); if(!data || data.length < pageSize) break; from += pageSize; to += pageSize;
       }
       return all;
     }
@@ -1226,7 +1220,7 @@
           ID: r.id || '',
           Dato: r.date || '',
           Ukedag: d.isValid()? d.format('dddd') : '',
-          Ukenr: d.isValid()? (typeof d.isoWeek==='function' ? d.isoWeek() : '') : '',
+          Ukenr: d.isValid()? (d.isoWeek?.() || '') : '',
           År: d.isValid()? d.year() : '',
           Tittel: r.title || '',
           Type: r.type || r.event_type || '',
@@ -1306,27 +1300,15 @@
       }
     }
 
-    // ---------- Øktbank defaults ----------
-    function getDefaultTemplates(){
-      return [
-        { id:uid(), name:'Basistrening + bevegelighet', type:'Trening', modality:'Løp', intensity:'I1', durationMin:45, age:['9-10','11-12'], shooting:{stilling:'Variert',skudd:0,tema:['bevegelighet','balanse']}, notes:'Lekpreget økt.' },
-        { id:uid(), name:'Komb – I3 drag 4×6 + skyting', type:'Trening', modality:'Løp', intensity:'I3', durationMin:75, age:['11-12','13-14'], shooting:{stilling:'Kombinert',skudd:40,tema:['pustekontroll','overganger']}, notes:'' },
-        { id:uid(), name:'Rolig langkjøring', type:'Trening', modality:'Ski skøyting', intensity:'I1', durationMin:90, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Snakkefart.' },
-        { id:uid(), name:'Styrke sirkler', type:'Restitusjon', modality:'Styrke', intensity:'I2', durationMin:40, age:['Skiskytterskolen','9-10','11-12'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kroppsvekt.' },
-        { id:uid(), name:'Skyteøkt – stående fokus', type:'Skyting', modality:'Basistrening', intensity:'I2', durationMin:60, age:['13-14','HL'], shooting:{stilling:'Stående',skudd:60,tema:['avtrekk','balanse']}, notes:'' },
-        { id:uid(), name:'Testløp 2000 m', type:'Konkurranse', modality:'Løp', intensity:'I5', durationMin:20, age:['11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Enkelt testløp.' }
-      ];
-    }
-
     // ---------- UI events ----------
     $('#btn-print').onclick=()=>window.print();
     $('#btn-export-xlsx').onclick=exportExcelAll;
     $('#btn-ics').onclick=exportICS;
 
+    // Import fra JSON (årsplan/øktbank/uker/dag-rekkefølge/grupper)
     $('#file-import').onchange=async(e)=>{
       const f=e.target.files[0]; if(!f) return;
-      const text=await f.text();
-      try{
+      const text=await f.text(); try{
         const data=JSON.parse(text);
         if(data.events){ state.events=data.events; for(const ev of data.events){ await supaUpsertEvent(ev); } }
         if(data.bank){ state.bank=data.bank; for(const t of data.bank){ await supaUpsertBankTemplate(t); } }
@@ -1339,36 +1321,52 @@
       }catch{ alert('Kunne ikke lese filen (må være JSON).'); }
     };
 
-    // Hurtigknapper
     $('#btn-new').onclick=()=> openDialog({ date: dayjs(`${state.year}-01-01`).format('YYYY-MM-DD') });
     $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date: dayjs().format('YYYY-MM-DD') }));
     $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date: dayjs().format('YYYY-MM-DD') }));
     $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse', date: dayjs().format('YYYY-MM-DD') }));
 
-    // År-nav
     $('#year-prev').onclick=async ()=>{ state.year--; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); await supaLoadAll(state.year); };
     $('#year-next').onclick=async ()=>{ state.year++; if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year); await supaLoadAll(state.year); };
 
-    // Listevisning toggle
     $('#toggle-list').onclick=()=> $('#event-list').classList.toggle('hidden');
 
-    // Øktbank filter
     $('#q-bank').oninput=renderBank; $('#f-age').onchange=renderBank; $('#f-type').onchange=renderBank;
 
-    // Tabs
-    function setTab(name){
-      $$('.tab-section').forEach(s=> s.classList.add('hidden'));
-      $$('.tab-btn').forEach(b=> b.classList.remove('ring-2'));
-      $('#tab-'+name)?.classList.remove('hidden');
-      document.querySelector(`[data-tab="${name}"]`)?.classList.add('ring-2');
-    }
-    $$('.tab-btn').forEach(b=> b.addEventListener('click', ()=> setTab(b.getAttribute('data-tab')) ));
-    setTab('calendar');
+    // Gjenopprett standard øktbank
+    $('#btn-restore-bank')?.addEventListener('click', async ()=>{
+      if(!confirm('Erstatt øktbank med standardforslag?')) return;
+      const tpl = getDefaultTemplates();
+      state.bank = tpl;
+      lsSet(KEY.BANK, state.bank);
+      renderBank();
+      for(const t of tpl){ await supaUpsertBankTemplate(t); }
+      alert('Øktbank gjenopprettet.');
+    });
+
+    // Legg til eksterne linker under "Hurtigverktøy"
+    (function addExternalLinks(){
+      const panel = $('#quick-konk')?.parentElement;
+      if(!panel) return;
+      const mkBtn = (href, label) => {
+        const a = document.createElement('a');
+        a.href = href; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'rounded-xl border bg-white px-3 py-2 shadow-sm text-center';
+        a.textContent = label;
+        return a;
+      };
+      panel.appendChild(mkBtn('https://tidtaking.github.io/Tidtaking2/selvanviser','Selvanviser'));
+      panel.appendChild(mkBtn('https://tidtaking.github.io/Tidtaking2/velkommen.html','Tidtaking'));
+    })();
 
     // Init
     bindDialogChrome();
-    supaLoadAll(state.year);
     supaRealtimeInit();
+    (async ()=>{ 
+      if(!state.weeks || Object.keys(state.weeks).length===0) state.weeks=getDefaultWeeks(state.year);
+      await supaLoadAll(state.year);
+      render();
+    })();
   </script>
 </body>
 </html>
