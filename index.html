@@ -312,14 +312,31 @@
     };
 
     // Helpers
-    window.getShootingArray = function(p) {
-      if (Array.isArray(p.shooting)) return p.shooting;
-      if (typeof p.shooting === 'string') {
-        try { return JSON.parse(p.shooting.trim()); }
-        catch(e){ console.error('Kunne ikke parse shooting for snr', p?.snr, p?.shooting, e); return [Array(5).fill(false), Array(5).fill(false)]; }
-      }
-      return [Array(5).fill(false), Array(5).fill(false)];
-    };
+window.getShootingArray = function(p) {
+  if (!p || !p.shooting) {
+    // alltid fallback: 2 serier med 5 skudd (false = bom)
+    return [Array(5).fill(false), Array(5).fill(false)];
+  }
+
+  if (Array.isArray(p.shooting)) {
+    // Sikre at det faktisk er 2 serier
+    if (p.shooting.length < 2) return [Array(5).fill(false), Array(5).fill(false)];
+    return p.shooting;
+  }
+
+  if (typeof p.shooting === 'string') {
+    try {
+      const parsed = JSON.parse(p.shooting);
+      if (Array.isArray(parsed) && parsed.length >= 2) return parsed;
+    } catch (e) {
+      console.warn('Kunne ikke parse shooting for', p?.snr, e);
+    }
+  }
+
+  // fallback hvis alt feiler
+  return [Array(5).fill(false), Array(5).fill(false)];
+};
+
 
     window.formatTime = function(sec){
       const sTot = Number(sec) || 0;
