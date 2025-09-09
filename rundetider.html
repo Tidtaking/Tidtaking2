@@ -13,7 +13,6 @@
       --fg:#0f172a;
       --muted:#64748b;
       --border:#e2e8f0;
-      --stickyTop:56px;   /* settes dynamisk */
       --radius:14px;
     }
 
@@ -64,15 +63,18 @@
     .card-bd{ padding:0 }
 
     /* Table */
-/* Endre dette */
-thead th{
-  background:#f1f5f9;
-  position:sticky;
-  top:0;              /* <- var(--stickyTop) byttes til 0 */
-  z-index:5;
-  border-bottom:1px solid var(--border);
-}
-
+    .table-wrap{
+      overflow-x:auto;           /* horisontal scroll på mobil */
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      width:100%;
+    }
+    table{ width:100%; border-collapse:collapse; background:#fff; min-width:820px }
+    thead th{
+      background:#f1f5f9;
+      position:sticky; top:0;    /* sticky relativt til .table-wrap (intern scroller) */
+      z-index:5; border-bottom:1px solid var(--border);
+    }
     th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top }
     th{ font-weight:700; color:#0f172a }
     tbody tr:hover{ background:#f8fafc }
@@ -163,16 +165,11 @@ thead th{
     function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); }catch{ return [] } }
     function setPending(arr){ localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
 
-    /* ===== Sticky header offset: blå header + kortoverskrift ===== */
-    function setStickyTop(){
-      const siteHd = document.querySelector('header');
-      const cardHd = document.querySelector('.card-hd');
-      const site = siteHd?.getBoundingClientRect().height || 56;
-      const card = cardHd?.getBoundingClientRect().height || 0;
-      const pad  = 6; // liten luft
-      document.documentElement.style.setProperty('--stickyTop', Math.ceil(site + card + pad) + 'px');
+    /* ===== Re-render helper ===== */
+    function forceRender(){
+      lastRenderHash = "";  // tving ny render selv om hash matcher
+      render();
     }
-    window.addEventListener('resize', setStickyTop);
 
     /* ===== Data ===== */
     async function fetchActiveParticipants(){
@@ -364,7 +361,10 @@ thead th{
 
       const newLaps = [...(p.laps||[]), lapTime];
       participants[snr] = { ...p, laps:newLaps };
-      render(); vibrate([5,35,20]);
+
+      // Umiddelbar visuell oppdatering
+      vibrate([5,35,20]);
+      forceRender();
 
       try{
         if(!online()) throw new Error('offline');
@@ -384,7 +384,10 @@ thead th{
 
       const newLaps = p.laps.slice(0, -1);
       participants[snr] = { ...p, laps:newLaps };
-      render(); vibrate([10,30,10]);
+
+      // Umiddelbar visuell oppdatering
+      vibrate([10,30,10]);
+      forceRender();
 
       try{
         if(!online()) throw new Error('offline');
@@ -393,14 +396,14 @@ thead th{
         toast('Siste rundetid angret');
       }catch(err){
         // Ved offline: rull tilbake så vi ikke drifter fra server
-        participants[snr] = p; render();
+        participants[snr] = p;
+        forceRender();
         toast('Kan ikke angre nå (offline)');
       }finally{ restore(); }
     }
 
     /* ===== Lifecycle ===== */
     async function init(){
-      setStickyTop();
       updateBadges();
       window.addEventListener('online', ()=>{ updateBadges(); processQueue(); toast('Tilbake online'); });
       window.addEventListener('offline', ()=>{ updateBadges(); toast('Du er offline'); });
