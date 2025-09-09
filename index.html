@@ -555,7 +555,7 @@
       const now = new Date().toISOString();
       for (const snr in window.participants){
         let p = window.participants[snr];
-        if (!window.localTimers[snr] && (p.status === 'Venter' eller p.status === 'Planlagt')){
+        if (!window.localTimers[snr] && (p.status === 'Venter' || p.status === 'Planlagt')){
           p.start = now; p.status = 'I gang';
           window.localTimers[snr] = setInterval(window.updateTable, 1000);
           const { error } = await window.supabaseClient.from('participants').update({ start:p.start, status:p.status }).eq('snr', snr);
