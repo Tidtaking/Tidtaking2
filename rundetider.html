@@ -13,10 +13,7 @@
       --fg:#0f172a;
       --muted:#64748b;
       --border:#e2e8f0;
-      --ok:#16a34a;
-      --accent:#2563eb;
-      --danger:#dc2626;
-      --stickyTop:64px;   /* settes dynamisk i JS (header + seksjonsheader) */
+      --stickyTop:56px;   /* kun høyden på blå toppheader */
       --radius:14px;
     }
 
@@ -64,21 +61,21 @@
       box-shadow:0 1px 3px rgba(0,0,0,.06);
     }
     .card-hd{ padding:12px 14px; border-bottom:1px solid var(--border) }
-    .card-bd{ padding:8px 12px 12px }
+    .card-bd{ padding:0 } /* ingen ekstra padding rundt tabellen */
 
     /* Table */
     .table-wrap{ overflow:auto; border-radius:calc(var(--radius) - 2px); }
     table{ width:100%; border-collapse:collapse; background:#fff; min-width:820px }
     thead th{
       background:#f1f5f9;
-      position:sticky; top:var(--stickyTop);
+      position:sticky; top:var(--stickyTop); /* kun blå toppheader */
       z-index:5; border-bottom:1px solid var(--border);
     }
     th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top }
     th{ font-weight:700; color:#0f172a }
     tbody tr:hover{ background:#f8fafc }
 
-    /* kolonne-bredder (robust på mobil) */
+    /* kolonne-bredder */
     th.col-action, td.col-action{ width:112px }
     th.col-laps,   td.col-laps  { width:220px }
     th.col-snr,    td.col-snr   { width:70px; text-align:center }
@@ -137,7 +134,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
       auth:{ persistSession:false },
-      global:{ headers:{ "x-client-info":"lsk-rundetider-1.3" } }
+      global:{ headers:{ "x-client-info":"lsk-rundetider-1.4" } }
     });
 
     // ===== State =====
@@ -154,11 +151,10 @@
     function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); }catch{ return [] } }
     function setPending(arr){ localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
 
-    // Sticky top = header + seksjonsheader (slik at første rad ikke skjules)
+    // Sett stickyTop til faktisk header-høyde (kun blå header)
     function setStickyTop(){
       const pageHeader = document.querySelector('header');
-      const sectionHead = document.querySelector('.card .card-hd');
-      const h = (pageHeader?.getBoundingClientRect().height||0) + (sectionHead?.getBoundingClientRect().height||0);
+      const h = (pageHeader?.getBoundingClientRect().height||56);
       document.documentElement.style.setProperty('--stickyTop', Math.ceil(h)+'px');
     }
     window.addEventListener('resize', setStickyTop);
@@ -286,7 +282,7 @@
         const canLap  = (p.status==='I gang');
         const canUndo = (p.laps && p.laps.length>0);
 
-        // S1/S2 som "treff/5"
+        // S1/S2 som treff/5
         let s1 = null, s2 = null;
         if (Array.isArray(p.shooting) && p.shooting.length>=2){
           const c = (arr)=>arr.reduce((a,b)=>a+(b===true?1:0),0);
@@ -300,7 +296,7 @@
           : '<span class="note">–</span>';
 
         const actionBtns = `
-          <div class="flex flex-col gap-1">
+          <div class="flex-col" style="display:flex; gap:6px">
             <button class="btn btn-primary" data-action="lap" data-snr="${p.snr}" ${canLap?'':'disabled'}>Rundetid</button>
             <button class="btn btn-undo" data-action="undo" data-snr="${p.snr}" ${canUndo?'':'disabled'}>Angre</button>
           </div>
@@ -381,7 +377,7 @@
 
       const newLaps = p.laps.slice(0, -1);
       participants[snr] = { ...p, laps:newLaps };
-      render(); vibrate([10,30,10]); // kort feedback
+      render(); vibrate([10,30,10]);
 
       try{
         if(!online()) throw new Error('offline');
@@ -441,21 +437,24 @@
         <strong>Deltakere “i gang / fullført”</strong>
         <div class="note">Knappene står til venstre og er alltid synlige på mobil. Rundetider vises rett ved knappene. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</div>
       </div>
-      <div class="card-bd table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th class="col-action">Handling</th>
-              <th class="col-laps">Rundetider</th>
-              <th class="col-snr">Startnr</th>
-              <th>Navn</th>
-              <th>Klasse</th>
-              <th>Status</th>
-              <th class="col-shoot">S1 / S2</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
+
+      <div class="card-bd">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="col-action">Handling</th>
+                <th class="col-laps">Rundetider</th>
+                <th class="col-snr">Startnr</th>
+                <th>Navn</th>
+                <th>Klasse</th>
+                <th>Status</th>
+                <th class="col-shoot">S1 / S2</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
