@@ -3,243 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tidtaking for Ski-konkurranser</title>
+  <title>Lørenskog Skiklubb – Tidtaking</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    /* ====== Design tokens ====== */
     :root{
-      --bg:#0b0d10;           /* mørk bakgrunn for kontrast */
-      --panel:#12161c;        /* kort/panel-bakgrunn */
-      --panel-2:#0f1318;      /* sekundær panelbakgrunn */
-      --text:#e6edf3;         /* primær tekst */
-      --muted:#9aa6b2;        /* sekundær tekst */
-      --border:#1f2937;       /* linjer */
-      --brand:#3b82f6;        /* blå */
-      --ok:#22c55e;           /* grønn */
-      --warn:#f59e0b;         /* oransje */
-      --danger:#ef4444;       /* rød */
-      --purple:#8b5cf6;       /* lilla */
-      --radius:16px;
-      --radius-sm:10px;
-      --shadow:0 8px 24px rgba(0,0,0,.25);
+      --brand:#18469a;   /* Lørenskog blå */
+      --brand2:#dbe723;  /* Lørenskog gul */
     }
 
-    /* ====== Base ====== */
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-    a{color:var(--brand);text-decoration:none}
+    body{ background:#f5f7fb; color:#0f172a; }
+    .card{ background:#fff; border:1px solid #e2e8f0; border-radius:1rem; padding:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+    .subtle{ color:#475569 }
+    .soft{ background:#f8fafc }
 
-    /* ====== Layout ====== */
-    .container{max-width:1100px; margin:0 auto; padding:16px}
-    header{position:sticky; top:0; z-index:50; background:linear-gradient(180deg, rgba(11,13,16,0.9), rgba(11,13,16,0.6)); backdrop-filter: blur(10px); border-bottom:1px solid var(--border)}
-    .header-inner{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px}
-    .title{font-size:clamp(18px,2.5vw,24px); font-weight:700; letter-spacing:.2px}
-    #liveClock{font-weight:700}
+    table{ width:100%; border-collapse:collapse; background:white; }
+    th,td{ padding:10px 12px; border-bottom:1px solid #e2e8f0; text-align:left; font-size:14px; }
+    thead th{ background:#f1f5f9; font-weight:600; font-size:13px; position:sticky; top:0; z-index:1; }
 
-    .grid{display:grid; gap:12px}
-    .grid.cols-2{grid-template-columns:1fr 1fr}
-    @media (max-width:900px){.grid.cols-2{grid-template-columns:1fr}}
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px; border-radius:.75rem; font-size:14px; font-weight:600; border:1px solid #e2e8f0; cursor:pointer; transition: background .15s, transform .04s; }
+    .btn:hover{ background:#f1f5f9; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ background:#fff; color:var(--brand); border-color:#cbd5e1; }
+    .btn-danger{ background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
+    .btn-purple{ background:#ede9fe; color:#6d28d9; border-color:#ddd6fe; }
+    .btn-ghost{ background:transparent; }
 
-    .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow)}
-    .card h3{margin:0 0 8px 0; font-size:16px}
+    .status{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; letter-spacing:.2px }
+    .status.wait{ background:#f3f4f6; color:#64748b; }
+    .status.plan{ background:#dbeafe; color:#1d4ed8; }
+    .status.run{ background:#dcfce7; color:#15803d; }
+    .status.done{ background:#fee2e2; color:#b91c1c; }
 
-    /* ====== Form ====== */
-    .form-row{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
-    @media (max-width:900px){.form-row{grid-template-columns:1fr 1fr}}
-    @media (max-width:560px){.form-row{grid-template-columns:1fr}}
-
-    label{font-size:12px; color:var(--muted)}
-    input, select, button{
-      width:100%;
-      border:1px solid var(--border);
-      background:var(--panel-2);
-      color:var(--text);
-      padding:10px 12px;
-      border-radius:var(--radius-sm);
-      font-size:14px;
-    }
-    input::placeholder{color:#718096}
-
-    .toolbar{display:flex; flex-wrap:wrap; gap:8px}
-    .toolbar > *{flex:1 1 160px}
-
-    /* ====== Buttons ====== */
-    .btn{cursor:pointer; font-weight:600; transition:transform .04s ease, opacity .15s}
-    .btn:active{transform:translateY(1px)}
-    .btn-start{background:var(--warn); color:#0b0d10; border-color:transparent}
-    .btn-lap{background:var(--brand); color:#fff; border-color:transparent}
-    .btn-finish{background:var(--ok); color:#0b0d10; border-color:transparent}
-    .btn-ghost{background:transparent}
-    .btn-danger{background:var(--danger); color:#fff; border-color:transparent}
-    .btn-secondary{background:#2b3340}
-    .btn-purple{background:var(--purple); color:#fff}
-
-    /* ====== Table ====== */
-    .table-wrap{overflow:auto; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow)}
-    table{width:100%; border-collapse:collapse; min-width:960px; background:var(--panel)}
-    thead th{position:sticky; top:0; background:#0e1319; z-index:2}
-    th, td{border-bottom:1px solid var(--border); padding:8px 10px; text-align:left; font-size:13px}
-    th{font-weight:700; color:#c8d1db}
-    tbody tr:hover{background:#11171f}
-
-    /* status tag */
-    .status{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:12px; letter-spacing:.2px}
-    .status.wait{background:#1f2937; color:#cbd5e1}
-    .status.plan{background:#0b3a6a; color:#93c5fd}
-    .status.run{background:#0f3d2e; color:#86efac}
-    .status.done{background:#3f2631; color:#fda4af}
-
-    /* shooting targets */
     .shooting .target{
       display:inline-grid; place-items:center;
-      width:28px; height:28px; margin:2px;
-      border-radius:50%; border:2px solid #333;
-      background:#0c0f13; color:#0c0f13; cursor:pointer; user-select:none
+      width:26px; height:26px; margin:2px;
+      border-radius:50%; border:2px solid #475569;
+      background:#ffffff; color:#ffffff; cursor:pointer; user-select:none
     }
-    /* HELT hvit ved treff */
-    .shooting .target[data-hit="true"]{background:#fff; color:#fff; border-color:#fff}
+    /* Tydelig markering ved treff (mørk prikk) */
+    .shooting .target[data-hit="true"]{ background:#0f172a; color:#0f172a; border-color:#0f172a }
 
-    /* Responsive column visibility */
-    @media (max-width:720px){
-      .col-laps, .col-finishdiff{display:none}
-      th.col-laps, th.col-finishdiff{display:none}
+    /* Mobil: skjul noen kolonner */
+    @media (max-width:760px){
+      .col-laps, .col-finishdiff{ display:none }
+      th.col-laps, th.col-finishdiff{ display:none }
     }
 
-    /* sticky actions (bottom) for mobile */
+    /* Sticky actionbar på mobil */
     .sticky-actions{
       position:sticky; bottom:0; z-index:40; margin-top:12px;
-      background:linear-gradient(180deg, rgba(11,13,16,0), rgba(11,13,16,0.85) 30%, rgba(11,13,16,1));
+      background:linear-gradient(180deg, rgba(245,247,251,0), rgba(245,247,251,0.85) 35%, rgba(245,247,251,1));
       padding-top:6px;
     }
     .sticky-actions .bar{
-      display:flex; gap:8px; flex-wrap:wrap; padding:10px; border:1px solid var(--border);
-      background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow)
+      display:flex; gap:8px; flex-wrap:wrap; padding:10px; border:1px solid #e2e8f0;
+      background:#ffffff; border-radius:1rem; box-shadow:0 8px 24px rgba(15,23,42,.06);
     }
 
-    /* dialog */
-    dialog{border:none; border-radius:var(--radius); padding:18px; background:var(--panel); color:var(--text); box-shadow:var(--shadow)}
-    dialog::backdrop{background:rgba(0,0,0,.5)}
+    dialog{ border:none; border-radius:1rem; padding:18px; background:#fff; color:#0f172a; box-shadow:0 12px 30px rgba(0,0,0,.18); }
+    dialog::backdrop{ background:rgba(0,0,0,.45) }
   </style>
+
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", window.supabaseClient);
   </script>
 </head>
-<body>
-  <!-- Header -->
-  <header>
-    <div class="header-inner container">
-      <div class="title">Tidtaking for Ski-konkurranser</div>
-      <div id="liveClock"></div>
+<body class="min-h-screen flex flex-col">
+
+  <!-- HEADER -->
+  <header class="bg-[var(--brand)] text-white p-3 shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb" class="h-12 w-16 rounded bg-white p-1 object-contain">
+        <div>
+          <h1 class="text-xl font-bold leading-tight">Lørenskog Skiklubb</h1>
+          <p class="text-sm opacity-90">Tidtaking for ski-konkurranser</p>
+        </div>
+      </div>
+      <div id="liveClock" class="font-bold text-lg"></div>
     </div>
   </header>
 
-  <main class="container">
-    <!-- Registrering & import -->
-    <section class="grid cols-2">
+  <!-- MAIN -->
+  <main class="flex-1 max-w-6xl mx-auto w-full p-4 space-y-6">
+
+    <!-- Registrering + Oppsett -->
+    <section class="grid md:grid-cols-2 gap-4">
       <div class="card">
-        <h3>Manuell registrering</h3>
-        <div class="form-row" style="margin-top:6px">
+        <h3 class="font-semibold mb-3">Manuell registrering</h3>
+        <div class="grid sm:grid-cols-2 gap-3">
           <div>
-            <label for="newStartNumber">Startnummer</label>
-            <input type="number" id="newStartNumber" placeholder="Startnummer" />
+            <label class="text-sm subtle">Startnummer</label>
+            <input type="number" id="newStartNumber" class="w-full border rounded-lg px-3 py-2" placeholder="Startnr." />
           </div>
           <div>
-            <label for="newParticipant">Navn</label>
-            <input type="text" id="newParticipant" placeholder="Navn" />
+            <label class="text-sm subtle">Navn</label>
+            <input type="text" id="newParticipant" class="w-full border rounded-lg px-3 py-2" placeholder="Navn" />
           </div>
           <div>
-            <label for="newParticipantClass">Klasse</label>
-            <select id="newParticipantClass">
-              <option value="">Velg klasse...</option>
-              <option value="G10 Nybeg og yngre">G10 Nybeg og yngre</option>
-              <option value="K19">K19</option>
-              <option value="J16">J16</option>
-              <option value="K17">K17</option>
-              <option value="M18">M18</option>
-              <option value="M19">M19</option>
-              <option value="K18">K18</option>
-              <option value="G14">G14</option>
-              <option value="G11-12 Nybeg">G11-12 Nybeg</option>
-              <option value="J11">J11</option>
-              <option value="G12">G12</option>
-              <option value="G13">G13</option>
-              <option value="J10 Nybeg og yngre">J10 Nybeg og yngre</option>
-              <option value="J11-12 Nybeg">J11-12 Nybeg</option>
-              <option value="G11">G11</option>
-              <option value="J12">J12</option>
-              <option value="J13">J13</option>
-              <option value="J14">J14</option>
-              <option value="J15">J15</option><!-- rettet verdi -->
-              <option value="G15">G15</option>
-              <option value="G16">G16</option>
-              <option value="M17">M17</option>
+            <label class="text-sm subtle">Klasse</label>
+            <select id="newParticipantClass" class="w-full border rounded-lg px-3 py-2">
+              <option value="">Velg klasse…</option>
+              <option>G10 Nybeg og yngre</option>
+              <option>K19</option>
+              <option>J16</option>
+              <option>K17</option>
+              <option>M18</option>
+              <option>M19</option>
+              <option>K18</option>
+              <option>G14</option>
+              <option>G11-12 Nybeg</option>
+              <option>J11</option>
+              <option>G12</option>
+              <option>G13</option>
+              <option>J10 Nybeg og yngre</option>
+              <option>J11-12 Nybeg</option>
+              <option>G11</option>
+              <option>J12</option>
+              <option>J13</option>
+              <option>J14</option>
+              <option>J15</option>
+              <option>G15</option>
+              <option>G16</option>
+              <option>M17</option>
             </select>
           </div>
-          <div style="align-self:end">
-            <button class="btn btn-secondary" id="btnAddParticipant">Lagre deltaker</button>
+          <div class="flex items-end">
+            <button id="btnAddParticipant" class="btn btn-primary w-full">Lagre deltaker</button>
           </div>
         </div>
 
-        <div class="toolbar" style="margin-top:10px">
+        <div class="mt-3 grid sm:grid-cols-[1fr_auto_auto] gap-2 items-end">
           <div>
-            <label for="csvImport">CSV-import</label>
-            <input type="file" id="csvImport" accept=".csv" />
+            <label class="text-sm subtle">CSV-import</label>
+            <input type="file" id="csvImport" accept=".csv" class="w-full border rounded-lg px-3 py-2" />
           </div>
-          <button class="btn btn-secondary" id="btnImportCSV" style="align-self:end">Importer CSV</button>
-          <button class="btn btn-ghost" id="btnSaveCSV" style="align-self:end">Lagre CSV</button>
+          <button id="btnImportCSV" class="btn btn-primary">Importer CSV</button>
+          <button id="btnSaveCSV" class="btn">Lagre CSV</button>
         </div>
       </div>
 
       <div class="card">
-        <h3>Oppsett</h3>
-        <div class="form-row" style="margin-top:6px">
+        <h3 class="font-semibold mb-3">Oppsett</h3>
+        <div class="grid sm:grid-cols-2 gap-3">
           <div>
-            <label for="penaltyTime">Tilleggstid pr bom (sek)</label>
-            <input type="number" id="penaltyTime" value="30" />
+            <label class="text-sm subtle">Tilleggstid pr bom (sek)</label>
+            <input type="number" id="penaltyTime" value="30" class="w-full border rounded-lg px-3 py-2" />
           </div>
           <div>
-            <label for="firstStartTime">Første starttid</label>
-            <input type="time" id="firstStartTime" step="1" />
+            <label class="text-sm subtle">Første starttid</label>
+            <input type="time" id="firstStartTime" step="1" class="w-full border rounded-lg px-3 py-2" />
           </div>
           <div>
-            <label for="startInterval">Intervall (sek)</label>
-            <input type="number" id="startInterval" value="30" />
+            <label class="text-sm subtle">Intervall (sek)</label>
+            <input type="number" id="startInterval" value="30" class="w-full border rounded-lg px-3 py-2" />
           </div>
-          <div style="align-self:end">
-            <button class="btn btn-secondary" id="btnAssignStartTimes">Tildel starttider</button>
+          <div class="flex items-end">
+            <button id="btnAssignStartTimes" class="btn btn-primary w-full">Tildel starttider</button>
           </div>
         </div>
 
-        <div class="toolbar" style="margin-top:10px">
-          <button class="btn btn-danger" id="btnResetAll">Nullstill Alt</button>
-          <button class="btn btn-secondary" id="btnStartMass">Fellesstart</button>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="btnResetAll" class="btn btn-danger">Nullstill alt</button>
+          <button id="btnStartMass" class="btn btn-primary">Fellesstart</button>
         </div>
       </div>
     </section>
 
-    <!-- Handling for markerte -->
-    <section class="card" style="margin-top:12px">
-      <h3>Operasjoner for markerte deltakere</h3>
-      <div class="toolbar" style="margin-top:8px">
+    <!-- Operasjoner for markerte -->
+    <section class="card">
+      <h3 class="font-semibold mb-3">Operasjoner for markerte deltakere</h3>
+      <div class="flex flex-wrap gap-2">
         <button class="btn btn-danger" id="btnDeleteSelected">Slett markerte</button>
-        <button class="btn btn-secondary" id="btnToggleSelected">Start/Stop markerte</button>
+        <button class="btn btn-primary" id="btnToggleSelected">Start/Stop markerte</button>
         <button class="btn btn-purple" id="btnSaveSelectedHistory">Lagre markerte til history</button>
       </div>
     </section>
 
     <!-- Resultater -->
-    <section style="margin-top:12px">
-      <div class="table-wrap">
+    <section class="card">
+      <h3 class="font-semibold mb-3">Resultater</h3>
+      <div class="overflow-x-auto">
         <table>
           <thead>
             <tr>
@@ -265,20 +216,19 @@
     </section>
 
     <!-- Historikk -->
-    <section id="historySection" class="card" style="margin-top:12px">
-      <h3 style="text-align:center">Historikk – lagret vs. ikke lagret</h3>
-      <div style="display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:6px">
-        <label for="historyDate">Dato:</label>
-        <input type="date" id="historyDate" />
-        <button class="btn btn-secondary" id="btnRefreshHistory">Oppdater historikk</button>
-        <!-- NY knapp for all historikk -->
-        <button class="btn btn-secondary" id="btnShowAllHistory" title="Vis all lagret historikk uansett dato">Vis all historikk</button>
-        <small id="historySummary" style="opacity:.8"></small>
+    <section id="historySection" class="card">
+      <h3 class="font-semibold mb-3">Historikk – lagret vs. ikke lagret</h3>
+      <div class="flex flex-wrap gap-2 items-center mb-2">
+        <label for="historyDate" class="text-sm subtle">Dato:</label>
+        <input type="date" id="historyDate" class="border rounded-lg px-3 py-2" />
+        <button class="btn btn-primary" id="btnRefreshHistory">Oppdater historikk</button>
+        <button class="btn" id="btnShowAllHistory" title="Vis all lagret historikk uansett dato">Vis all historikk</button>
+        <small id="historySummary" class="subtle"></small>
       </div>
 
-      <div class="table-wrap" style="margin-top:6px">
+      <div class="overflow-x-auto">
         <table>
-          <caption style="caption-side:top; text-align:left; font-weight:bold; padding:8px">Lagret i history</caption>
+          <caption class="text-left font-semibold px-2 py-2">Lagret i history</caption>
           <thead>
             <tr>
               <th>Dato</th>
@@ -293,9 +243,9 @@
         </table>
       </div>
 
-      <div class="table-wrap" style="margin-top:12px">
+      <div class="overflow-x-auto mt-4">
         <table>
-          <caption style="caption-side:top; text-align:left; font-weight:bold; padding:8px">Ikke lagret ennå (fra participants)</caption>
+          <caption class="text-left font-semibold px-2 py-2">Ikke lagret ennå (fra participants)</caption>
           <thead>
             <tr>
               <th>Velg</th>
@@ -315,10 +265,10 @@
       </div>
     </section>
 
-    <!-- Sticky actions (mobile helper) -->
+    <!-- Sticky (mobil) -->
     <div class="sticky-actions">
       <div class="bar">
-        <button class="btn btn-secondary" id="btnToggleSelected__dup" title="Start/Stop markerte">Start/Stop</button>
+        <button class="btn btn-primary" id="btnToggleSelected__dup" title="Start/Stop markerte">Start/Stop</button>
         <button class="btn btn-purple" id="btnSaveSelectedHistory__dup" title="Lagre markerte til history">Lagre til history</button>
         <button class="btn btn-danger" id="btnDeleteSelected__dup" title="Slett markerte">Slett</button>
       </div>
@@ -326,16 +276,21 @@
 
   </main>
 
-  <!-- Dialog -->
+  <!-- FOOTER -->
+  <footer class="text-center text-sm text-gray-500 py-5">
+    © 2025 Lørenskog Skiklubb – Tidtaking
+  </footer>
+
+  <!-- Bekreftelsesdialog -->
   <dialog id="confirmDialog">
     <p id="confirmText">Er du sikker på at du vil nullstille alt?</p>
-    <div style="display:flex; gap:8px; margin-top:10px">
-      <button class="btn btn-secondary" id="btnConfirmCancel">Avbryt</button>
+    <div class="mt-3 flex gap-2">
+      <button class="btn" id="btnConfirmCancel">Avbryt</button>
       <button class="btn btn-danger" id="btnConfirmOk">OK</button>
     </div>
   </dialog>
 
-  <!-- ====== APP LOGIKK ====== -->
+  <!-- ====== APP LOGIKK (HELE) ====== -->
   <script>
     // Global state
     window.participants = {};
@@ -496,7 +451,7 @@
         rows.push(`<tr>
           <td>${checkbox}</td>
           <td>${placement}</td>
-          <td>${(p.status === 'Planlagt' || p.timer) ? '-' : `<button class='btn btn-start' onclick='startIndividual(${snr})'>Start</button>`}</td>
+          <td>${(p.status === 'Planlagt' || p.timer) ? '-' : `<button class='btn btn-primary' onclick='startIndividual(${snr})'>Start</button>`}</td>
           <td>${snr}</td>
           <td>${p.name}</td>
           <td>${p.class}</td>
@@ -507,7 +462,7 @@
           <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
           <td class="col-laps">${lapDiffs || '-'}</td>
           <td class="col-finishdiff">${finishDiff}</td>
-          <td>${p.timer ? `<button class='btn btn-lap' onclick='recordLap(${snr})'>Rundetid</button> <button class='btn btn-finish' onclick='recordFinish(${snr})'>Mål</button>` : '-'}</td>
+          <td>${p.timer ? `<button class='btn btn-primary' onclick='recordLap(${snr})'>Rundetid</button> <button class='btn btn-primary' onclick='recordFinish(${snr})'>Mål</button>` : '-'}</td>
         </tr>`);
       }
       document.getElementById('results').innerHTML = rows.join('');
@@ -661,7 +616,7 @@
           tid = window.formatTime(wp.finish);
         }
         const bom = window.getShootingArray(wp).flat().filter(h => h === false).length;
-        const actions = wp.timer ? `<button class='btn btn-lap' onclick='recordLap(${wp.snr})'>Rundetid</button> <button class='btn btn-finish' onclick='recordFinish(${wp.snr})'>Mål</button>` : '-';
+        const actions = wp.timer ? `<button class='btn btn-primary' onclick='recordLap(${wp.snr})'>Rundetid</button> <button class='btn btn-primary' onclick='recordFinish(${wp.snr})'>Mål</button>` : '-';
         return `<tr>
           <td><input type='checkbox' class='select-participant' data-snr='${wp.snr}' onchange='updateSelection(${wp.snr}, this.checked)' ${selectedAttr}></td>
           <td>${wp.snr}</td>
@@ -787,7 +742,7 @@
       else { alert(`Lagret ${rows.length} markerte til history for ${compDate}.`); if (window.updateHistoryView){ window.updateHistoryView(); } }
     };
 
-    // Timere og init (konsolidert oppdatering)
+    // Timere og init
     setInterval(()=>{ window.updateLiveClock(); window.updateTable(); }, 1000);
 
     // Event listeners
