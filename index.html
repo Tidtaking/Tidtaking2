@@ -516,6 +516,39 @@
       }
     };
 
+    // ⬇️ Viktig: ikke overskriv start når det allerede finnes start/laps/finish
+    window.startIndividual = async function(snr){
+      let p = window.participants[snr];
+      if (!p) return;
+
+      const alreadyStarted = !!p.start;
+      const hasLaps = Array.isArray(p.laps) && p.laps.length > 0;
+      const hasFinish = p.rawFinish != null || p.finish != null;
+
+      if (!alreadyStarted && !hasLaps && !hasFinish){
+        p.start = new Date().toISOString();  // bare første gang
+        const { error } = await window.supabaseClient
+          .from('participants')
+          .update({ start: p.start })
+          .eq('snr', snr);
+        if (error) console.error('Feil ved lagring av start for snr', snr, error);
+      }
+
+      p.status = 'I gang';
+      if (!window.localTimers[snr]) {
+        window.localTimers[snr] = setInterval(window.updateTable, 1000);
+      }
+
+      const { error: err2 } = await window.supabaseClient
+        .from('participants')
+        .update({ status: p.status })
+        .eq('snr', snr);
+      if (err2) console.error('Feil ved oppdatering av status for snr', snr, err2);
+
+      window.updateTable();
+      if (window.updateHistoryView) window.updateHistoryView();
+    };
+
     window.addParticipant = async function(){
       const snrStr = document.getElementById('newStartNumber').value; const snr = parseInt(snrStr);
       const name = document.getElementById('newParticipant').value; const cls = document.getElementById('newParticipantClass').value;
@@ -528,6 +561,31 @@
       document.getElementById('newStartNumber').value = '';
       document.getElementById('newParticipant').value = '';
       setTimeout(window.updateTable, 500);
+    };
+
+    // Ikke overskriv eksisterende start ved fellesstart
+    window.startMass = async function(){
+      const nowISO = new Date().toISOString();
+      for (const snr in window.participants){
+        let p = window.participants[snr];
+        const alreadyStarted = !!p.start;
+        const hasLaps = Array.isArray(p.laps) && p.laps.length > 0;
+        const hasFinish = p.rawFinish != null || p.finish != null;
+
+        if (!alreadyStarted && !hasLaps && !hasFinish){
+          p.start = nowISO; p.status = 'I gang';
+          if (!window.localTimers[snr]) window.localTimers[snr] = setInterval(window.updateTable, 1000);
+          const { error } = await window.supabaseClient.from('participants').update({ start:p.start, status:p.status }).eq('snr', snr);
+          if (error) console.error('Feil ved startMass for snr', snr, error);
+        } else if (p.status === 'Venter' || p.status === 'Planlagt'){
+          // Oppgrader status til "I gang" uten å endre start
+          p.status = 'I gang';
+          if (!window.localTimers[snr]) window.localTimers[snr] = setInterval(window.updateTable, 1000);
+          const { error } = await window.supabaseClient.from('participants').update({ status:p.status }).eq('snr', snr);
+          if (error) console.error('Feil ved status-oppdatering i startMass for snr', snr, error);
+        }
+      }
+      window.updateTable();
     };
 
     window.assignStartTimes = async function(){
@@ -551,31 +609,6 @@
       window.updateTable();
     };
 
-    window.startMass = async function(){
-      const now = new Date().toISOString();
-      for (const snr in window.participants){
-        let p = window.participants[snr];
-        if (!window.localTimers[snr] && (p.status === 'Venter' || p.status === 'Planlagt')){
-          p.start = now; p.status = 'I gang';
-          window.localTimers[snr] = setInterval(window.updateTable, 1000);
-          const { error } = await window.supabaseClient.from('participants').update({ start:p.start, status:p.status }).eq('snr', snr);
-          if (error) console.error('Feil ved startMass for snr', snr, error);
-        }
-      }
-      window.updateTable();
-    };
-
-    window.startIndividual = async function(snr){
-      let p = window.participants[snr];
-      if (p && !window.localTimers[snr]){
-        p.start = new Date().toISOString(); p.status = 'I gang';
-        window.localTimers[snr] = setInterval(window.updateTable, 1000);
-        const { error } = await window.supabaseClient.from('participants').update({ start:p.start, status:p.status }).eq('snr', snr);
-        if (error) console.error('Feil ved startIndividual for snr', snr, error);
-        window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-      }
-    };
-
     window.recordLap = async function(snr){
       let p = window.participants[snr];
       if (p && p.start){
@@ -590,6 +623,7 @@
       }
     };
 
+    // ⬇️ Viktig: mål minst like stor som siste rundetid
     window.recordFinish = async function(snr){
       let p = window.participants[snr];
       if (p && p.start){
@@ -602,11 +636,24 @@
         }});
 
         if (window.localTimers[snr]){ clearInterval(window.localTimers[snr]); delete window.localTimers[snr]; }
-        p.rawFinish = (Date.now() - Date.parse(p.start))/1000;
+
+        // beregn måltid fra opprinnelig start
+        let raw = (Date.now() - Date.parse(p.start))/1000;
+
+        // ikke tillat at mål < siste rundetid
+        const lastLap = (Array.isArray(p.laps) && p.laps.length) ? p.laps[p.laps.length-1] : 0;
+        if (raw < lastLap) raw = lastLap;
+
+        p.rawFinish = raw;
         p.status = 'Fullført';
         window.updateFinalTime(snr);
-        const { error } = await window.supabaseClient.from('participants').update({ rawFinish:p.rawFinish, status:p.status, finish:p.finish }).eq('snr', snr);
+
+        const { error } = await window.supabaseClient
+          .from('participants')
+          .update({ rawFinish:p.rawFinish, status:p.status, finish:p.finish })
+          .eq('snr', snr);
         if (error) console.error('Feil ved recordFinish for snr', snr, error);
+
         window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
       }
     };
@@ -737,14 +784,13 @@
         return !(bySnr || byNC);
       });
 
-      // 4) Render lagret (med dato-kolonne)
-const savedRows = (hist||[]).map(h => {
-  const tid  = (h.finish != null) ? window.formatTime(h.finish) : '-';
-  const snr  = (h.snr   != null) ? h.snr : '-';   // <-- fikset
-  const dato = h.comp_date || '-';
-  return `<tr><td>${dato}</td><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`;
-}).join('');
-
+      // 4) Render lagret (med dato-kolonne)  <-- rettet "the snr"
+      const savedRows = (hist||[]).map(h => {
+        const tid  = (h.finish != null) ? window.formatTime(h.finish) : '-';
+        const snr  = (h.snr   != null) ? h.snr : '-';
+        const dato = h.comp_date || '-';
+        return `<tr><td>${dato}</td><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`;
+      }).join('');
       const savedBody = document.getElementById('historySavedBody');
       if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="6">Ingen lagret${window._historyShowAll ? '' : ` for ${compDate}`}.</td></tr>`;
 
