@@ -64,13 +64,15 @@
     .card-bd{ padding:0 }
 
     /* Table */
-    .table-wrap{ overflow:auto; }
-    table{ width:100%; border-collapse:collapse; background:#fff; min-width:820px }
-    thead th{
-      background:#f1f5f9;
-      position:sticky; top:var(--stickyTop);
-      z-index:5; border-bottom:1px solid var(--border);
-    }
+/* Endre dette */
+thead th{
+  background:#f1f5f9;
+  position:sticky;
+  top:0;              /* <- var(--stickyTop) byttes til 0 */
+  z-index:5;
+  border-bottom:1px solid var(--border);
+}
+
     th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top }
     th{ font-weight:700; color:#0f172a }
     tbody tr:hover{ background:#f8fafc }
