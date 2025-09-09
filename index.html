@@ -37,14 +37,16 @@
     .status.run{ background:#dcfce7; color:#15803d; }
     .status.done{ background:#fee2e2; color:#b91c1c; }
 
+    /* SKYTING: sort som standard, hvit ved treff (m/ sort kant) */
     .shooting .target{
       display:inline-grid; place-items:center;
       width:26px; height:26px; margin:2px;
-      border-radius:50%; border:2px solid #475569;
-      background:#ffffff; color:#ffffff; cursor:pointer; user-select:none
+      border-radius:50%; border:2px solid #0f172a;
+      background:#000000; color:#000000; cursor:pointer; user-select:none
     }
-    /* Tydelig markering ved treff (mørk prikk) */
-    .shooting .target[data-hit="true"]{ background:#0f172a; color:#0f172a; border-color:#0f172a }
+    .shooting .target[data-hit="true"]{
+      background:#ffffff; color:#ffffff; border-color:#0f172a;
+    }
 
     /* Mobil: skjul noen kolonner */
     @media (max-width:760px){
@@ -290,7 +292,7 @@
     </div>
   </dialog>
 
-  <!-- ====== APP LOGIKK (HELE) ====== -->
+  <!-- ====== APP LOGIKK ====== -->
   <script>
     // Global state
     window.participants = {};
@@ -312,31 +314,17 @@
     };
 
     // Helpers
-window.getShootingArray = function(p) {
-  if (!p || !p.shooting) {
-    // alltid fallback: 2 serier med 5 skudd (false = bom)
-    return [Array(5).fill(false), Array(5).fill(false)];
-  }
-
-  if (Array.isArray(p.shooting)) {
-    // Sikre at det faktisk er 2 serier
-    if (p.shooting.length < 2) return [Array(5).fill(false), Array(5).fill(false)];
-    return p.shooting;
-  }
-
-  if (typeof p.shooting === 'string') {
-    try {
-      const parsed = JSON.parse(p.shooting);
-      if (Array.isArray(parsed) && parsed.length >= 2) return parsed;
-    } catch (e) {
-      console.warn('Kunne ikke parse shooting for', p?.snr, e);
-    }
-  }
-
-  // fallback hvis alt feiler
-  return [Array(5).fill(false), Array(5).fill(false)];
-};
-
+    window.getShootingArray = function(p) {
+      if (!p || !p.shooting) return [Array(5).fill(false), Array(5).fill(false)];
+      if (Array.isArray(p.shooting)) return (p.shooting.length >= 2) ? p.shooting : [Array(5).fill(false), Array(5).fill(false)];
+      if (typeof p.shooting === 'string') {
+        try {
+          const parsed = JSON.parse(p.shooting);
+          return (Array.isArray(parsed) && parsed.length >= 2) ? parsed : [Array(5).fill(false), Array(5).fill(false)];
+        } catch { return [Array(5).fill(false), Array(5).fill(false)]; }
+      }
+      return [Array(5).fill(false), Array(5).fill(false)];
+    };
 
     window.formatTime = function(sec){
       const sTot = Number(sec) || 0;
@@ -465,10 +453,18 @@ window.getShootingArray = function(p) {
         const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
         const statusTag = p.status==='Venter' ? 'status wait' : p.status==='Planlagt' ? 'status plan' : p.status==='I gang' ? 'status run' : 'status done';
 
+        const startBtn = (p.status === 'Planlagt' || p.status === 'Venter') && !p.timer
+          ? `<button class='btn btn-primary' data-action="start" data-snr="${snr}">Start</button>`
+          : '-';
+
+        const actionBtns = p.timer
+          ? `<button class='btn btn-primary' data-action="lap" data-snr="${snr}">Rundetid</button> <button class='btn btn-primary' data-action="finish" data-snr="${snr}">Mål</button>`
+          : '-';
+
         rows.push(`<tr>
           <td>${checkbox}</td>
           <td>${placement}</td>
-          <td>${(p.status === 'Planlagt' || p.timer) ? '-' : `<button class='btn btn-primary' onclick='startIndividual(${snr})'>Start</button>`}</td>
+          <td>${startBtn}</td>
           <td>${snr}</td>
           <td>${p.name}</td>
           <td>${p.class}</td>
@@ -479,7 +475,7 @@ window.getShootingArray = function(p) {
           <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
           <td class="col-laps">${lapDiffs || '-'}</td>
           <td class="col-finishdiff">${finishDiff}</td>
-          <td>${p.timer ? `<button class='btn btn-primary' onclick='recordLap(${snr})'>Rundetid</button> <button class='btn btn-primary' onclick='recordFinish(${snr})'>Mål</button>` : '-'}</td>
+          <td>${actionBtns}</td>
         </tr>`);
       }
       document.getElementById('results').innerHTML = rows.join('');
@@ -633,7 +629,11 @@ window.getShootingArray = function(p) {
           tid = window.formatTime(wp.finish);
         }
         const bom = window.getShootingArray(wp).flat().filter(h => h === false).length;
-        const actions = wp.timer ? `<button class='btn btn-primary' onclick='recordLap(${wp.snr})'>Rundetid</button> <button class='btn btn-primary' onclick='recordFinish(${wp.snr})'>Mål</button>` : '-';
+
+        const actions = wp.timer
+          ? `<button class='btn btn-primary' data-action="lap" data-snr="${wp.snr}">Rundetid</button> <button class='btn btn-primary' data-action="finish" data-snr="${wp.snr}">Mål</button>`
+          : '-';
+
         return `<tr>
           <td><input type='checkbox' class='select-participant' data-snr='${wp.snr}' onchange='updateSelection(${wp.snr}, this.checked)' ${selectedAttr}></td>
           <td>${wp.snr}</td>
@@ -758,6 +758,19 @@ window.getShootingArray = function(p) {
       if (error){ console.error('Feil ved lagring til history:', error); alert('Feil ved lagring til history – sjekk konsollen.'); }
       else { alert(`Lagret ${rows.length} markerte til history for ${compDate}.`); if (window.updateHistoryView){ window.updateHistoryView(); } }
     };
+
+    // Delegert knapphåndtering → fungerer på første klikk selv etter re-render
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.getAttribute('data-action');
+      const snr = btn.getAttribute('data-snr');
+      if (!snr) return;
+
+      if (action === 'start') { await window.startIndividual(snr); }
+      if (action === 'lap')   { await window.recordLap(snr); }
+      if (action === 'finish'){ await window.recordFinish(snr); }
+    });
 
     // Timere og init
     setInterval(()=>{ window.updateLiveClock(); window.updateTable(); }, 1000);
