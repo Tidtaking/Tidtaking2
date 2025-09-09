@@ -13,7 +13,7 @@
       --fg:#0f172a;
       --muted:#64748b;
       --border:#e2e8f0;
-      --stickyTop:56px;   /* kun høyden på blå toppheader */
+      --stickyTop:56px;   /* settes dynamisk */
       --radius:14px;
     }
 
@@ -24,7 +24,7 @@
       font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
     }
 
-    /* Header */
+    /* Header (blå) */
     header{
       position:sticky; top:0; z-index:50;
       background:var(--brand); color:#fff;
@@ -58,17 +58,17 @@
 
     .card{
       background:#fff; border:1px solid var(--border); border-radius:var(--radius);
-      box-shadow:0 1px 3px rgba(0,0,0,.06);
+      box-shadow:0 1px 3px rgba(0,0,0,0.06); overflow:hidden;
     }
     .card-hd{ padding:12px 14px; border-bottom:1px solid var(--border) }
-    .card-bd{ padding:0 } /* ingen ekstra padding rundt tabellen */
+    .card-bd{ padding:0 }
 
     /* Table */
-    .table-wrap{ overflow:auto; border-radius:calc(var(--radius) - 2px); }
+    .table-wrap{ overflow:auto; }
     table{ width:100%; border-collapse:collapse; background:#fff; min-width:820px }
     thead th{
       background:#f1f5f9;
-      position:sticky; top:var(--stickyTop); /* kun blå toppheader */
+      position:sticky; top:var(--stickyTop);
       z-index:5; border-bottom:1px solid var(--border);
     }
     th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top }
@@ -76,22 +76,33 @@
     tbody tr:hover{ background:#f8fafc }
 
     /* kolonne-bredder */
-    th.col-action, td.col-action{ width:112px }
-    th.col-laps,   td.col-laps  { width:220px }
-    th.col-snr,    td.col-snr   { width:70px; text-align:center }
-    th.col-shoot,  td.col-shoot { width:80px; text-align:center }
+    th.col-action, td.col-action{ width:124px }
+    th.col-laps,   td.col-laps  { width:240px }
+    th.col-snr,    td.col-snr   { width:74px; text-align:center }
+    th.col-shoot,  td.col-shoot { width:78px; text-align:center }
 
     /* Buttons */
     .btn{
       display:inline-flex; align-items:center; justify-content:center; gap:6px;
-      border:1px solid var(--border); border-radius:10px; background:#fff;
+      border:1px solid var(--border); border-radius:12px; background:#fff;
       padding:.48rem .58rem; font-size:13px; font-weight:800; cursor:pointer;
       transition:transform .04s ease, background .15s;
     }
     .btn:active{ transform:translateY(1px) }
     .btn[disabled]{ opacity:.55; cursor:not-allowed }
-    .btn-primary{ color:var(--brand); }
-    .btn-undo{ background:#fff7ed; border-color:#fed7aa; color:#7c2d12 }
+
+    /* stor primær-knapp for mobiltreff */
+    .btn-primary{
+      color:var(--brand);
+      padding:.62rem .78rem;            /* større */
+      font-size:14.5px;
+      min-width:108px;
+    }
+    /* angre litt mindre */
+    .btn-undo{
+      background:#fff7ed; border-color:#fed7aa; color:#7c2d12;
+      padding:.44rem .56rem; font-size:12.8px; min-width:74px;
+    }
 
     /* Status-tag */
     .status{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:700 }
@@ -112,38 +123,37 @@
     }
     .toast.show{ opacity:1 }
 
-    /* Info-text */
     .note{ color:var(--muted); font-size:13px }
 
     @media (max-width:560px){
       .header-inner{ padding:10px 10px }
       th,td{ font-size:13px; padding:.55rem .5rem }
-      th.col-action, td.col-action{ width:108px }
-      th.col-laps,   td.col-laps  { width:200px }
+      th.col-action, td.col-action{ width:128px }
+      th.col-laps,   td.col-laps  { width:220px }
       th.col-snr,    td.col-snr   { width:64px }
       th.col-shoot,  td.col-shoot { width:74px }
-      .btn{ padding:.44rem .54rem; font-size:12.5px }
+      .btn-primary{ padding:.68rem .86rem; font-size:15px; min-width:118px } /* ekstra stor på mobil */
     }
   </style>
 
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
-    // ===== Supabase init =====
+    /* ===== Supabase init ===== */
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
       auth:{ persistSession:false },
-      global:{ headers:{ "x-client-info":"lsk-rundetider-1.4" } }
+      global:{ headers:{ "x-client-info":"lsk-rundetider-1.5" } }
     });
 
-    // ===== State =====
-    let participants = {};           // { snr: { ...row, laps: number[], shooting: boolean[][] } }
-    let lastRenderHash = "";         // for diff
+    /* ===== State ===== */
+    let participants = {};
+    let lastRenderHash = "";
     let lastRealtimeAt = 0;
     const PENDING_KEY = "pendingLaps_v1";
 
-    // ===== Utils =====
+    /* ===== Utils ===== */
     const online = ()=>navigator.onLine;
     const vibrate = (pat=[6,40,20])=>{ if (navigator.vibrate) navigator.vibrate(pat); };
     const toast = (msg,ms=1400)=>{ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),ms); };
@@ -151,15 +161,18 @@
     function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); }catch{ return [] } }
     function setPending(arr){ localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
 
-    // Sett stickyTop til faktisk header-høyde (kun blå header)
+    /* ===== Sticky header offset: blå header + kortoverskrift ===== */
     function setStickyTop(){
-      const pageHeader = document.querySelector('header');
-      const h = (pageHeader?.getBoundingClientRect().height||56);
-      document.documentElement.style.setProperty('--stickyTop', Math.ceil(h)+'px');
+      const siteHd = document.querySelector('header');
+      const cardHd = document.querySelector('.card-hd');
+      const site = siteHd?.getBoundingClientRect().height || 56;
+      const card = cardHd?.getBoundingClientRect().height || 0;
+      const pad  = 6; // liten luft
+      document.documentElement.style.setProperty('--stickyTop', Math.ceil(site + card + pad) + 'px');
     }
     window.addEventListener('resize', setStickyTop);
 
-    // ===== Data =====
+    /* ===== Data ===== */
     async function fetchActiveParticipants(){
       const { data, error } = await supabaseClient
         .from('participants')
@@ -180,14 +193,13 @@
     }
     function applyParticipants(list){ for(const p of list) participants[p.snr]=p; render(); }
 
-    // ===== Realtime =====
+    /* ===== Realtime ===== */
     function subscribeRealtime(){
       supabaseClient
         .channel('participants-rt')
         .on('postgres_changes',{ event:'*', schema:'public', table:'participants' }, payload=>{
           lastRealtimeAt = Date.now();
-          const row = payload.new || payload.old;
-          if (!row) return;
+          const row = payload.new || payload.old; if (!row) return;
           if (!['I gang','Fullført'].includes(row.status)) return;
           participants[row.snr] = {
             ...(participants[row.snr]||{}),
@@ -210,7 +222,7 @@
       applyParticipants(list);
     }
 
-    // ===== Offline-kø =====
+    /* ===== Offline-kø ===== */
     async function processQueue(){
       if(!online()) return;
       let q = getPending();
@@ -233,9 +245,9 @@
       setPending(q);
       updateBadges(); render();
     }
-    window.processQueue = processQueue; // for "Synk nå"
+    window.processQueue = processQueue;
 
-    // ===== UI =====
+    /* ===== UI ===== */
     function updateBadges(){
       const onlineEl = document.getElementById('online');
       const queuedEl = document.getElementById('queued');
@@ -266,7 +278,6 @@
     }
 
     function render(){
-      // sort: I gang -> Fullført, deretter snr
       const arr = Object.values(participants).sort((a,b)=>{
         const rank=v=>v.status==='I gang'?0:(v.status==='Fullført'?1:2);
         const r = rank(a)-rank(b);
@@ -282,7 +293,7 @@
         const canLap  = (p.status==='I gang');
         const canUndo = (p.laps && p.laps.length>0);
 
-        // S1/S2 som treff/5
+        // S1/S2 som x/5
         let s1 = null, s2 = null;
         if (Array.isArray(p.shooting) && p.shooting.length>=2){
           const c = (arr)=>arr.reduce((a,b)=>a+(b===true?1:0),0);
@@ -295,15 +306,13 @@
           ? p.laps.map(l=>`<span class="chip">${formatTime(l)}</span>`).join('')
           : '<span class="note">–</span>';
 
-        const actionBtns = `
-          <div class="flex-col" style="display:flex; gap:6px">
-            <button class="btn btn-primary" data-action="lap" data-snr="${p.snr}" ${canLap?'':'disabled'}>Rundetid</button>
-            <button class="btn btn-undo" data-action="undo" data-snr="${p.snr}" ${canUndo?'':'disabled'}>Angre</button>
-          </div>
-        `;
-
         return `<tr>
-          <td class="col-action">${actionBtns}</td>
+          <td class="col-action">
+            <div style="display:flex; flex-direction:column; gap:6px">
+              <button class="btn btn-primary" data-action="lap" data-snr="${p.snr}" ${canLap?'':'disabled'}>Rundetid</button>
+              <button class="btn btn-undo"    data-action="undo" data-snr="${p.snr}" ${canUndo?'':'disabled'}>Angre</button>
+            </div>
+          </td>
           <td class="col-laps">${lapsHtml}</td>
           <td class="col-snr"><strong>${p.snr}</strong></td>
           <td>${p.name||''}</td>
@@ -326,7 +335,6 @@
         if (action==='undo') await undoLastLap(snr, btn);
       }, { passive:true });
 
-      // touch feedback
       document.addEventListener('touchstart', (e)=>{
         const btn = e.target.closest('button[data-action]'); if (!btn) return;
         btn.style.transform='scale(0.98)';
@@ -344,17 +352,14 @@
       return ()=>{ clearTimeout(t); el.disabled = prev; };
     }
 
-    // ===== Handling =====
     async function recordLap(snr, btnEl){
       const p = participants[snr];
       if (!p || !p.start){ toast('Deltakeren har ikke startet enda.'); return; }
 
       const restore = temporarilyDisable(btnEl, 900);
 
-      // lokal rundetid fra start
       const lapTime = (Date.now() - Date.parse(p.start))/1000;
 
-      // optimistisk
       const newLaps = [...(p.laps||[]), lapTime];
       participants[snr] = { ...p, laps:newLaps };
       render(); vibrate([5,35,20]);
@@ -385,13 +390,13 @@
         if (error) throw error;
         toast('Siste rundetid angret');
       }catch(err){
-        // Ved offline: rull tilbake lokalt til forrige (for ikke å drifte fra server)
+        // Ved offline: rull tilbake så vi ikke drifter fra server
         participants[snr] = p; render();
         toast('Kan ikke angre nå (offline)');
       }finally{ restore(); }
     }
 
-    // ===== Lifecycle =====
+    /* ===== Lifecycle ===== */
     async function init(){
       setStickyTop();
       updateBadges();
@@ -402,7 +407,6 @@
       applyParticipants(list);
       subscribeRealtime();
 
-      // bakgrunnsjobber
       setInterval(processQueue, 2500);
       setInterval(realtimeFallbackTick, 3500);
 
