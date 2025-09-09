@@ -16,7 +16,7 @@
       --ok:#16a34a;
       --accent:#2563eb;
       --danger:#dc2626;
-      --stickyTop:64px;   /* settes dynamisk i JS */
+      --stickyTop:64px;   /* settes dynamisk i JS (header + seksjonsheader) */
       --radius:14px;
     }
 
@@ -37,9 +37,7 @@
       max-width:1100px; margin:0 auto; padding:10px 14px;
       display:flex; align-items:center; justify-content:space-between; gap:12px;
     }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-    }
+    .brand{ display:flex; align-items:center; gap:10px; }
     .brand img{
       height:40px; width:54px; object-fit:contain; border-radius:8px; background:#fff; padding:3px;
     }
@@ -70,18 +68,19 @@
 
     /* Table */
     .table-wrap{ overflow:auto; border-radius:calc(var(--radius) - 2px); }
-    table{ width:100%; border-collapse:collapse; background:#fff; min-width:760px }
+    table{ width:100%; border-collapse:collapse; background:#fff; min-width:820px }
     thead th{
       background:#f1f5f9;
       position:sticky; top:var(--stickyTop);
       z-index:5; border-bottom:1px solid var(--border);
     }
-    th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px }
+    th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px; vertical-align:top }
     th{ font-weight:700; color:#0f172a }
     tbody tr:hover{ background:#f8fafc }
 
     /* kolonne-bredder (robust på mobil) */
     th.col-action, td.col-action{ width:112px }
+    th.col-laps,   td.col-laps  { width:220px }
     th.col-snr,    td.col-snr   { width:70px; text-align:center }
     th.col-shoot,  td.col-shoot { width:80px; text-align:center }
 
@@ -104,6 +103,9 @@
     .status.done{ background:#fee2e2; color:#991b1b }
     .status.plan{ background:#dbeafe; color:#1d4ed8 }
 
+    /* Laps chips */
+    .chip{ display:inline-block; background:#f1f5f9; padding:6px 8px; border-radius:10px; margin:0 6px 6px 0; font-variant-numeric:tabular-nums; }
+
     /* Toast */
     .toast{
       position:fixed; left:50%; transform:translateX(-50%);
@@ -120,6 +122,7 @@
       .header-inner{ padding:10px 10px }
       th,td{ font-size:13px; padding:.55rem .5rem }
       th.col-action, td.col-action{ width:108px }
+      th.col-laps,   td.col-laps  { width:200px }
       th.col-snr,    td.col-snr   { width:64px }
       th.col-shoot,  td.col-shoot { width:74px }
       .btn{ padding:.44rem .54rem; font-size:12.5px }
@@ -134,7 +137,7 @@
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
       auth:{ persistSession:false },
-      global:{ headers:{ "x-client-info":"lsk-rundetider-1.2" } }
+      global:{ headers:{ "x-client-info":"lsk-rundetider-1.3" } }
     });
 
     // ===== State =====
@@ -144,22 +147,21 @@
     const PENDING_KEY = "pendingLaps_v1";
 
     // ===== Utils =====
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
     const online = ()=>navigator.onLine;
     const vibrate = (pat=[6,40,20])=>{ if (navigator.vibrate) navigator.vibrate(pat); };
     const toast = (msg,ms=1400)=>{ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),ms); };
     function hashData(data){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(data)))).slice(0,64) }catch{ return String(Math.random()) } }
-
     function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); }catch{ return [] } }
     function setPending(arr){ localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
 
-    // Sticky header offset = faktisk header-høyde
-    (function setStickyTop(){
-      const h = document.querySelector('header');
-      if(!h) return;
-      const apply=()=> document.documentElement.style.setProperty('--stickyTop', Math.ceil(h.getBoundingClientRect().height)+'px');
-      apply(); window.addEventListener('resize', apply);
-    })();
+    // Sticky top = header + seksjonsheader (slik at første rad ikke skjules)
+    function setStickyTop(){
+      const pageHeader = document.querySelector('header');
+      const sectionHead = document.querySelector('.card .card-hd');
+      const h = (pageHeader?.getBoundingClientRect().height||0) + (sectionHead?.getBoundingClientRect().height||0);
+      document.documentElement.style.setProperty('--stickyTop', Math.ceil(h)+'px');
+    }
+    window.addEventListener('resize', setStickyTop);
 
     // ===== Data =====
     async function fetchActiveParticipants(){
@@ -235,6 +237,7 @@
       setPending(q);
       updateBadges(); render();
     }
+    window.processQueue = processQueue; // for "Synk nå"
 
     // ===== UI =====
     function updateBadges(){
@@ -259,6 +262,13 @@
       return '<span class="status wait">Venter</span>';
     }
 
+    function formatTime(sec){
+      const s = Number(sec)||0;
+      const m = Math.floor(s/60);
+      const r = (s % 60).toFixed(1);
+      return m>0 ? `${m}m ${r}s` : `${r}s`;
+    }
+
     function render(){
       // sort: I gang -> Fullført, deretter snr
       const arr = Object.values(participants).sort((a,b)=>{
@@ -267,7 +277,6 @@
         return r!==0 ? r : (a.snr-b.snr);
       });
 
-      // kompakt hash
       const compact = arr.map(p=>({snr:p.snr,name:p.name,class:p.class,status:p.status,laps:p.laps,shooting:p.shooting}));
       const h = hashData(compact);
       if (h===lastRenderHash) return;
@@ -287,7 +296,7 @@
         const sText = `${(s1!=null?`${s1}/5`:'–')} / ${(s2!=null?`${s2}/5`:'–')}`;
 
         const lapsHtml = (p.laps?.length)
-          ? p.laps.map(l=>`<span class="inline-block rounded bg-slate-100 px-2 py-1 mr-1 mb-1">${formatTime(l)}</span>`).join('')
+          ? p.laps.map(l=>`<span class="chip">${formatTime(l)}</span>`).join('')
           : '<span class="note">–</span>';
 
         const actionBtns = `
@@ -299,12 +308,12 @@
 
         return `<tr>
           <td class="col-action">${actionBtns}</td>
+          <td class="col-laps">${lapsHtml}</td>
           <td class="col-snr"><strong>${p.snr}</strong></td>
           <td>${p.name||''}</td>
           <td>${p.class||''}</td>
           <td>${statusTag(p.status||'-')}</td>
           <td class="col-shoot">${sText}</td>
-          <td>${lapsHtml}</td>
         </tr>`;
       }).join('');
 
@@ -388,6 +397,7 @@
 
     // ===== Lifecycle =====
     async function init(){
+      setStickyTop();
       updateBadges();
       window.addEventListener('online', ()=>{ updateBadges(); processQueue(); toast('Tilbake online'); });
       window.addEventListener('offline', ()=>{ updateBadges(); toast('Du er offline'); });
@@ -403,17 +413,6 @@
       delegateClicks();
     }
     document.addEventListener('DOMContentLoaded', init);
-
-    // Eksponér for "Synk nå"
-    window.processQueue = processQueue;
-
-    // Formattering
-    function formatTime(sec){
-      const s = Number(sec)||0;
-      const m = Math.floor(s/60);
-      const r = (s % 60).toFixed(1);
-      return m>0 ? `${m}: ${r}s`.replace(': ','m ') : `${r}s`;
-    }
   </script>
 </head>
 <body>
@@ -440,19 +439,19 @@
     <div class="card">
       <div class="card-hd">
         <strong>Deltakere “i gang / fullført”</strong>
-        <div class="note">Knappene står til venstre og er alltid tilgjengelige på mobil. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</div>
+        <div class="note">Knappene står til venstre og er alltid synlige på mobil. Rundetider vises rett ved knappene. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</div>
       </div>
       <div class="card-bd table-wrap">
         <table>
           <thead>
             <tr>
               <th class="col-action">Handling</th>
+              <th class="col-laps">Rundetider</th>
               <th class="col-snr">Startnr</th>
               <th>Navn</th>
               <th>Klasse</th>
               <th>Status</th>
               <th class="col-shoot">S1 / S2</th>
-              <th>Rundetider</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
