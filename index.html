@@ -299,6 +299,19 @@
     window.localTimers = {};
     window._didBackfillPenalties = false;
     window._historyShowAll = false; // viser all historikk når true
+    // UNDO-stack per deltaker
+    window.undoStack = {}; // { [snr]: [ {type, prev:{...}} ] }
+    const UNDO_MAX = 5;
+
+    // Hjelper for undo
+    function pushUndo(snr, item){
+      if (!window.undoStack[snr]) window.undoStack[snr] = [];
+      window.undoStack[snr].push(item);
+      if (window.undoStack[snr].length > UNDO_MAX) window.undoStack[snr].shift();
+    }
+    function hasUndo(snr){
+      return Array.isArray(window.undoStack[snr]) && window.undoStack[snr].length > 0;
+    }
 
     // Markering
     window.updateSelection = function(snr, isSelected) {
@@ -394,9 +407,11 @@
           const totalMisses = record.shooting.flat().filter(h => h === false).length;
           record.finish = Number(record.rawFinish) + totalMisses * penaltyPerMiss;
         }
+        // behold valg + ikke nullstill undo-stack
         record.selected = !!(old[record.snr] && old[record.snr].selected);
         if (window.localTimers[record.snr]) record.timer = window.localTimers[record.snr];
         window.participants[record.snr] = record;
+        if (!window.undoStack[record.snr]) window.undoStack[record.snr] = [];
       })
     };
 
@@ -458,8 +473,10 @@
           : '-';
 
         const actionBtns = p.timer
-          ? `<button class='btn btn-primary' data-action="lap" data-snr="${snr}">Rundetid</button> <button class='btn btn-primary' data-action="finish" data-snr="${snr}">Mål</button>`
-          : '-';
+          ? `<button class='btn btn-primary' data-action="lap" data-snr="${snr}">Rundetid</button>
+             <button class='btn btn-primary' data-action="finish" data-snr="${snr}">Mål</button>
+             ${hasUndo(snr) ? `<button class='btn' data-action="undo" data-snr="${snr}">Angre</button>` : ''}`
+          : `${hasUndo(snr) ? `<button class='btn' data-action="undo" data-snr="${snr}">Angre</button>` : '-'}`;
 
         rows.push(`<tr>
           <td>${checkbox}</td>
@@ -538,7 +555,7 @@
       const now = new Date().toISOString();
       for (const snr in window.participants){
         let p = window.participants[snr];
-        if (!window.localTimers[snr] && (p.status === 'Venter' || p.status === 'Planlagt')){
+        if (!window.localTimers[snr] && (p.status === 'Venter' eller p.status === 'Planlagt')){
           p.start = now; p.status = 'I gang';
           window.localTimers[snr] = setInterval(window.updateTable, 1000);
           const { error } = await window.supabaseClient.from('participants').update({ start:p.start, status:p.status }).eq('snr', snr);
@@ -562,6 +579,9 @@
     window.recordLap = async function(snr){
       let p = window.participants[snr];
       if (p && p.start){
+        // push undo før endring
+        pushUndo(snr, { type:'lap', prev:{ laps:[...p.laps] } });
+
         const lapTime = (Date.now() - Date.parse(p.start))/1000;
         p.laps.push(lapTime);
         const { error } = await window.supabaseClient.from('participants').update({ laps:p.laps }).eq('snr', snr);
@@ -573,6 +593,14 @@
     window.recordFinish = async function(snr){
       let p = window.participants[snr];
       if (p && p.start){
+        // push undo før endring (ta vare på forrige verdier)
+        pushUndo(snr, { type:'finish', prev:{
+          rawFinish: p.rawFinish ?? null,
+          status: p.status,
+          finish: p.finish ?? null,
+          hadTimer: !!window.localTimers[snr]
+        }});
+
         if (window.localTimers[snr]){ clearInterval(window.localTimers[snr]); delete window.localTimers[snr]; }
         p.rawFinish = (Date.now() - Date.parse(p.start))/1000;
         p.status = 'Fullført';
@@ -583,7 +611,37 @@
       }
     };
 
-    // Lagrer finish når blink endres etter målgang
+    // UNDO – angre siste rundetid/mål
+    window.undoLast = async function(snr){
+      const stack = window.undoStack[snr];
+      if (!stack || stack.length === 0) return;
+      const last = stack.pop();
+      const p = window.participants[snr];
+      if (!p) return;
+
+      if (last.type === 'lap'){
+        p.laps = last.prev.laps || [];
+        const { error } = await window.supabaseClient.from('participants').update({ laps:p.laps }).eq('snr', snr);
+        if (error) console.error('Feil ved UNDO lap for snr', snr, error);
+      } else if (last.type === 'finish'){
+        // Reåpne hvis den var fullført
+        p.rawFinish = last.prev.rawFinish;
+        p.finish = last.prev.finish;
+        p.status = last.prev.status || 'I gang';
+
+        // Start timer igjen hvis vi er i gang
+        if (p.status === 'I gang' && !window.localTimers[snr]){
+          window.localTimers[snr] = setInterval(window.updateTable, 1000);
+        }
+        const payload = { rawFinish:p.rawFinish, finish:p.finish, status:p.status };
+        const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
+        if (error) console.error('Feil ved UNDO finish for snr', snr, error);
+      }
+
+      window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
+    };
+
+    // Lagrer finish når blink endres etter målgang (ikke inkludert i undo, men kan legges til senere)
     window.toggleTarget = async function(snr, shootIdx, idx){
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
@@ -631,8 +689,10 @@
         const bom = window.getShootingArray(wp).flat().filter(h => h === false).length;
 
         const actions = wp.timer
-          ? `<button class='btn btn-primary' data-action="lap" data-snr="${wp.snr}">Rundetid</button> <button class='btn btn-primary' data-action="finish" data-snr="${wp.snr}">Mål</button>`
-          : '-';
+          ? `<button class='btn btn-primary' data-action="lap" data-snr="${wp.snr}">Rundetid</button>
+             <button class='btn btn-primary' data-action="finish" data-snr="${wp.snr}">Mål</button>
+             ${hasUndo(wp.snr) ? `<button class='btn' data-action="undo" data-snr="${wp.snr}">Angre</button>` : ''}`
+          : `${hasUndo(wp.snr) ? `<button class='btn' data-action="undo" data-snr="${wp.snr}">Angre</button>` : '-'}`;
 
         return `<tr>
           <td><input type='checkbox' class='select-participant' data-snr='${wp.snr}' onchange='updateSelection(${wp.snr}, this.checked)' ${selectedAttr}></td>
@@ -680,7 +740,7 @@
       // 4) Render lagret (med dato-kolonne)
       const savedRows = (hist||[]).map(h => {
         const tid=(h.finish!=null)?window.formatTime(h.finish):'-';
-        const snr=(h.snr!=null)?h.snr:'-';
+        the snr=(h.snr!=null)?h.snr:'-';
         const dato = h.comp_date || '-';
         return `<tr><td>${dato}</td><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`;
       }).join('');
@@ -770,6 +830,7 @@
       if (action === 'start') { await window.startIndividual(snr); }
       if (action === 'lap')   { await window.recordLap(snr); }
       if (action === 'finish'){ await window.recordFinish(snr); }
+      if (action === 'undo')  { await window.undoLast(snr); }
     });
 
     // Timere og init
