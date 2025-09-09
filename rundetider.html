@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Lørenskog Skiklubb – Rundetider</title>
+  <title>Lørenskog Skiklubb – Rundetider (mobilvennlig)</title>
 
   <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -13,96 +13,124 @@
       --brand:#18469a;   /* Lørenskog blå */
       --brand2:#dbe723;  /* Lørenskog gul */
     }
-    /* Sticky header og sticky første kolonne for mobil */
-    thead th{ position:sticky; top:72px; background:white; z-index:2 }
-    @media (max-width:640px){
-      .col-actions{ position:sticky; left:0; z-index:3; background:white }
-      tbody td.col-actions{ box-shadow: 6px 0 8px -6px rgba(0,0,0,.08) }
+    body{ background:#f5f7fb; color:#0f172a; }
+    .card{ background:#fff; border:1px solid #e2e8f0; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+
+    /* Tabell-justeringer for stabil layout på mobil */
+    table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    thead th{ background:#f1f5f9; position:sticky; top:64px; z-index:5; }
+    th,td{ border-bottom:1px solid #e2e8f0; padding:.65rem .75rem; font-size:14px; }
+    th{text-align:left; font-weight:600; color:#334155; }
+
+    /* Kolonnebredder */
+    th.col-action, td.col-action{ width:120px; }
+    th.col-snr, td.col-snr{ width:80px; }
+    th.col-shoot, td.col-shoot{ width:92px; }
+
+    /* Knapper */
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      padding:.55rem .7rem; border-radius:.75rem; border:1px solid #e2e8f0; font-weight:600; font-size:14px; background:#fff; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ color:var(--brand); }
+    .btn-undo{ background:#f1f5f9; color:#0f172a; }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .status{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:700 }
+    .status.run{ background:#dcfce7; color:#15803d }
+    .status.done{ background:#fee2e2; color:#b91c1c }
+    .status.plan{ background:#dbeafe; color:#1d4ed8 }
+    .status.wait{ background:#f3f4f6; color:#64748b }
+
+    /* Badge-stil i header */
+    .badge{ font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; }
+    .badge.online{ background:#ecfdf5; border-color:#86efac; color:#166534 }
+    .badge.offline{ background:#fff7ed; border-color:#fdba74; color:#92400e }
+    .badge.queue{ background:#eff6ff; border-color:#93c5fd; color:#1e3a8a }
+
+    /* Rundetider felt */
+    .lapchip{ display:inline-block; font-variant-numeric:tabular-nums; background:#f8fafc; border:1px solid #e2e8f0; padding:.15rem .45rem; border-radius:.5rem; margin-right:.25rem; margin-bottom:.25rem; }
+
+    @media (max-width: 560px){
+      th,td{ font-size:13px; padding:.6rem .55rem; }
+      th.col-action, td.col-action{ width:112px; }
+      th.col-snr, td.col-snr{ width:70px; }
+      th.col-shoot, td.col-shoot{ width:86px; }
+      .btn{ padding:.5rem .6rem; font-size:13px; }
     }
-    /* Liten toast */
-    .toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom) + 14px);
-      background:#111827; color:#fff; padding:10px 14px; border-radius:10px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,.2);
-      opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:50 }
-    .toast.show{ opacity:1 }
   </style>
 
-  <!-- Supabase SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    window.supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession:false },
-      global: { headers: { "x-client-info":"lsk-rundetider-1.2" } }
-    });
-  </script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-50 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col">
 
   <!-- HEADER -->
-  <header class="bg-[var(--brand)] text-white sticky top-0 z-40 shadow">
+  <header class="bg-[var(--brand)] text-white sticky top-0 z-50 shadow">
     <div class="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <img src="Logo LSK Klubb farger JPG.jpeg" class="h-11 w-14 rounded bg-white p-1 object-contain" alt="Lørenskog Skiklubb">
-        <div>
-          <div class="font-bold leading-tight">Lørenskog Skiklubb</div>
-          <div class="text-white/90 text-sm">Rundetider (mobilvennlig)</div>
+        <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb" class="h-10 w-14 rounded bg-white p-1 object-contain">
+        <div class="leading-tight">
+          <div class="font-bold">Lørenskog Skiklubb</div>
+          <div class="text-sm opacity-90">Rundetider (mobilvennlig)</div>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <span id="onlinePill" class="text-xs font-semibold rounded-full px-2 py-1 bg-emerald-100 text-emerald-800">Online</span>
-        <span id="queuePill" class="text-xs font-semibold rounded-full px-2 py-1 bg-blue-100 text-blue-800">0 i kø</span>
-        <button id="btnSync" class="hidden sm:inline-flex items-center rounded-lg border border-white/30 px-3 py-1 text-sm hover:bg-white/10">Synk nå</button>
+        <span id="onlineBadge" class="badge">Sjekker …</span>
+        <span id="queueBadge" class="badge queue">–</span>
+        <button id="btnSync" class="btn btn-primary text-white bg-[var(--brand)] border-0">Synk nå</button>
       </div>
     </div>
   </header>
 
   <!-- MAIN -->
-  <main class="flex-1 max-w-6xl mx-auto w-full p-3 sm:p-4">
-    <div class="rounded-2xl border bg-white shadow-sm">
-      <div class="p-3 sm:p-4 border-b">
-        <h1 class="text-lg sm:text-xl font-semibold">Deltakere “i gang / fullført”</h1>
-        <p class="text-slate-500 text-sm">Knappene står til venstre og er alltid tilgjengelige på mobil. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</p>
+  <main class="flex-1 max-w-6xl mx-auto w-full p-3">
+    <section class="card overflow-hidden">
+      <div class="px-4 py-3 border-b bg-white">
+        <h2 class="text-lg font-semibold">Deltakere “i gang / fullført”</h2>
+        <p class="text-sm text-slate-600">Knappene står til venstre og er alltid tilgjengelige på mobil. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</p>
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px]">
-          <thead class="text-sm text-slate-600">
+        <table>
+          <thead>
             <tr>
-              <th class="col-actions w-[170px] text-left p-2 sm:p-3">Handling</th>
-              <th class="w-[80px] text-left p-2 sm:p-3">Startnr</th>
-              <th class="text-left p-2 sm:p-3">Navn</th>
-              <th class="text-left p-2 sm:p-3">Klasse</th>
-              <th class="text-left p-2 sm:p-3">Status</th>
-              <th class="text-left p-2 sm:p-3">S1 / S2</th>
-              <th class="text-left p-2 sm:p-3">Rundetider</th>
+              <th class="col-action">Handling</th>
+              <th class="col-snr">Startnr</th>
+              <th>Navn</th>
+              <th>Klasse</th>
+              <th>Status</th>
+              <th class="col-shoot">S1 / S2</th>
+              <th>Rundetider</th>
             </tr>
           </thead>
-          <tbody id="tbody" class="text-[15px]"></tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
-    </div>
-
-    <div class="mt-3 flex gap-2">
-      <button id="btnSyncMobile" class="sm:hidden inline-flex items-center rounded-lg border px-3 py-2 bg-white">Synk nå</button>
-    </div>
+    </section>
   </main>
 
-  <footer class="text-center text-xs text-slate-500 py-6">© 2025 Lørenskog Skiklubb</footer>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
   <script>
-    // ===== State =====
-    const PENDING_KEY = "lsk:rundetider:queue:v1";
-    const participants = {}; // { snr: { snr,name,class,status,start,laps,shooting,shootingtime1,shootingtime2 } }
-    let lastRenderHash = "";
+    /* ====== Supabase init ====== */
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supa = window.supabase.createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession:false },
+      global: { headers: { "x-client-info":"lsk-rundetider-1.2" } }
+    });
 
-    // ===== Utils =====
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-    const online = ()=> navigator.onLine;
-    const toast = (msg, ms=1200)=>{ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), ms); };
-    const vibrate = (pat=[6,40,20])=> { if(navigator.vibrate) navigator.vibrate(pat); };
+    /* ====== App state ====== */
+    let participants = {};            // keyed by snr
+    let lastRenderSig = "";
+    const UNDO_STACK = {};            // snr -> last removed lap (number)
+    const QUEUE_KEY = "lsk:rundetider:queue_v1";
+
+    const $ = (q, el=document) => el.querySelector(q);
+
+    const online = () => navigator.onLine;
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    function getQueue(){ try{ return JSON.parse(localStorage.getItem(QUEUE_KEY)||"[]"); }catch{return []} }
+    function setQueue(arr){ localStorage.setItem(QUEUE_KEY, JSON.stringify(arr)); }
 
     function fmt(sec){
       const s = Number(sec)||0;
@@ -110,240 +138,231 @@
       const r = (s%60).toFixed(1);
       return m>0 ? `${m}m ${r}s` : `${r}s`;
     }
-    function hashData(obj){
-      try{ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).slice(0,64); }catch{ return String(Math.random());}
-    }
 
-    function getQueue(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||'[]'); }catch{ return []; } }
-    function setQueue(arr){ localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
-    function updatePills(){
-      const qp = document.getElementById('queuePill');
-      const op = document.getElementById('onlinePill');
-      const q = getQueue().length;
-      qp.textContent = q ? `${q} i kø` : 'Ingen i kø';
-      qp.className = "text-xs font-semibold rounded-full px-2 py-1 bg-blue-100 text-blue-800";
-      op.textContent = online()? "Online" : "Offline";
-      op.className = "text-xs font-semibold rounded-full px-2 py-1 " + (online()? "bg-emerald-100 text-emerald-800":"bg-amber-100 text-amber-800");
-    }
-
-    // Parse shooting -> "S1: •○••○ / S2: •••○•"
-    function parseShooting(sh){
-      let arr = sh;
-      if (typeof arr === 'string'){
-        try{ arr = JSON.parse(arr); }catch{ arr = []; }
+    function getShooting(p){
+      // forventer shooting som jsonb array [[...5],[...5]] med true/false
+      let s = p?.shooting;
+      if (!s) return { s1:null, s2:null };
+      if (typeof s === 'string'){
+        try{ s = JSON.parse(s); }catch{ return { s1:null, s2:null }; }
       }
-      if (!Array.isArray(arr)) arr = [];
-      const s1 = (arr[0]||[]).map(x=> x? '•' : '○').join('');
-      const s2 = (arr[1]||[]).map(x=> x? '•' : '○').join('');
-      return { s1, s2 };
+      if (!Array.isArray(s) || s.length < 2) return { s1:null, s2:null };
+      const c1 = (Array.isArray(s[0]) ? s[0].filter(Boolean).length : null);
+      const c2 = (Array.isArray(s[1]) ? s[1].filter(Boolean).length : null);
+      return { s1:c1, s2:c2 };
     }
 
-    // ===== Data =====
+    function statusTag(txt){
+      const cls = txt==='I gang' ? 'run' : (txt==='Fullført' ? 'done' : txt==='Planlagt' ? 'plan' : 'wait');
+      return `<span class="status ${cls}">${txt}</span>`;
+    }
+
+    /* ====== Data ====== */
     async function fetchActive(){
-      const { data, error } = await window.supabaseClient
+      const { data, error } = await supa
         .from('participants')
-        .select('snr,name,class,status,start,laps,shooting,shootingtime1,shootingtime2')
-        .in('status',['I gang','Fullført'])
+        .select('snr,name,class,status,start,laps,shooting')
+        .in('status', ['I gang','Fullført'])
         .order('status', { ascending:true })
         .order('snr', { ascending:true });
-      if (error){ console.error('Henting feilet', error); return []; }
-      return data.map(r => ({
-        ...r,
-        laps: Array.isArray(r.laps) ? r.laps : [],
-      }));
+      if (error){ console.error(error); return []; }
+      return data.map(r => ({ ...r, laps: Array.isArray(r.laps) ? r.laps : [] }));
     }
 
     function apply(list){
-      for (const r of list){ participants[r.snr] = r; }
+      for (const p of list) participants[p.snr] = p;
       render();
     }
 
-    // ===== Realtime + fallback =====
-    let lastRealtimeAt = 0;
-    function subscribeRealtime(){
-      return window.supabaseClient
-        .channel('rt-participants')
-        .on('postgres_changes', { event:'*', schema:'public', table:'participants' }, payload=>{
-          lastRealtimeAt = Date.now();
+    /* ====== Realtime + fallback ====== */
+    let lastRt = 0;
+    function subscribe(){
+      supa.channel('participants-rt')
+        .on('postgres_changes', { event:'*', schema:'public', table:'participants' }, payload => {
+          lastRt = Date.now();
           const row = payload.new || payload.old;
           if (!row) return;
           if (!['I gang','Fullført'].includes(row.status)) return;
-          participants[row.snr] = { ...(participants[row.snr]||{}), ...row, laps: Array.isArray(row.laps)? row.laps : [] };
+          participants[row.snr] = {
+            ...(participants[row.snr]||{}),
+            ...row,
+            laps: Array.isArray(row.laps) ? row.laps : []
+          };
           render();
         })
         .subscribe();
     }
-    async function pollFallback(){
-      if (Date.now() - lastRealtimeAt < 6000) return;
+    async function rtFallback(){
+      if (Date.now() - lastRt < 6000) return;
       const list = await fetchActive();
       apply(list);
     }
 
-    // ===== Queue processor =====
+    /* ====== Offline-kø ====== */
     async function processQueue(){
       if (!online()) return;
       let q = getQueue();
-      if (!q.length) { updatePills(); return; }
+      if (!q.length) return;
       for (let i=0;i<q.length;i++){
-        const item = q[i];
+        const item = q[i]; // { snr, op: 'addLap'|'undoLap', value }
         try{
           const cur = participants[item.snr]?.laps || [];
-          const newLaps = [...cur, ...item.toAppend];
-          const { error } = await window.supabaseClient.from('participants').update({ laps:newLaps }).eq('snr', item.snr);
+          let next = cur.slice();
+          if (item.op === 'addLap'){ next = [...cur, item.value]; }
+          if (item.op === 'undoLap'){ next = cur.slice(0, -1); }
+          const { error } = await supa.from('participants').update({ laps: next }).eq('snr', item.snr);
           if (error) throw error;
-          participants[item.snr] = { ...(participants[item.snr]||{snr:item.snr}), laps:newLaps };
-          q[i]._done = true;
+          // Optimistisk lokalt
+          participants[item.snr] = { ...(participants[item.snr]||{snr:item.snr}), laps: next };
+          item._done = true;
         }catch(e){
-          console.warn('Kø feilet, prøver senere', e);
+          console.warn('Synk feilet, prøver senere', e);
           break;
         }
       }
-      q = q.filter(x=>!x._done);
+      q = q.filter(x => !x._done);
       setQueue(q);
-      updatePills();
+      updateBadges();
       render();
     }
 
-    // ===== Actions =====
-    // Debounce/disable helper
-    function temporarilyDisable(el, ms=700){
+    /* ====== UI ====== */
+    function updateBadges(){
+      const qLen = getQueue().length;
+      const qEl = $('#queueBadge');
+      qEl.textContent = qLen ? `${qLen} i kø` : 'Ingen i kø';
+
+      const onEl = $('#onlineBadge');
+      if (online()){
+        onEl.textContent = 'Online';
+        onEl.className = 'badge online';
+      } else {
+        onEl.textContent = 'Offline';
+        onEl.className = 'badge offline';
+      }
+    }
+
+    function render(){
+      const rows = Object.values(participants)
+        .sort((a,b)=>{
+          const rank = v => (v.status==='I gang'?0:(v.status==='Fullført'?1:2));
+          const r = rank(a)-rank(b);
+          return r!==0 ? r : (a.snr - b.snr);
+        });
+
+      const compact = rows.map(p => [p.snr,p.name,p.class,p.status,p.laps?.length, getShooting(p)]);
+      const sig = JSON.stringify(compact);
+      if (sig === lastRenderSig) return;
+      lastRenderSig = sig;
+
+      const html = rows.map(p=>{
+        const laps = (p.laps||[]).map((l,i)=>`<span class="lapchip">${i+1}: ${fmt(l)}</span>`).join(' ');
+        const { s1, s2 } = getShooting(p);
+        return `<tr>
+          <td class="col-action">
+            <div class="flex flex-col gap-1">
+              <button class="btn btn-primary" data-action="lap" data-snr="${p.snr}">Rundetid</button>
+              <button class="btn btn-undo" data-action="undo" data-snr="${p.snr}">Angre</button>
+            </div>
+          </td>
+          <td class="col-snr font-semibold">${p.snr}</td>
+          <td>${p.name||''}</td>
+          <td>${p.class||''}</td>
+          <td>${statusTag(p.status||'-')}</td>
+          <td class="col-shoot">${(s1??'–')} / ${(s2??'–')}</td>
+          <td>${laps||'<span class="text-slate-500">–</span>'}</td>
+        </tr>`;
+      }).join('');
+      $('#tbody').innerHTML = html;
+    }
+
+    function disableTemporarily(el, ms=650){
       if (!el) return ()=>{};
-      const prev = el.disabled; el.disabled = true;
+      const prev = el.disabled;
+      el.disabled = true;
       const t = setTimeout(()=>{ el.disabled = prev; }, ms);
       return ()=>{ clearTimeout(t); el.disabled = prev; };
     }
 
-    async function doLap(snr, btn){
+    async function handleLap(snr, btn){
       const p = participants[snr];
-      if (!p || !p.start){ toast('Ikke startet ennå'); return; }
-      const restore = temporarilyDisable(btn, 800);
+      if (!p || !p.start){ /* ikke startet */ return; }
+      const restore = disableTemporarily(btn, 800);
+
       const lapTime = (Date.now() - Date.parse(p.start))/1000;
-
-      // Optimistisk
-      participants[snr] = { ...p, laps:[...(p.laps||[]), lapTime] };
-      render(); vibrate();
-
-      try{
-        if (!online()) throw new Error('offline');
-        const { error } = await window.supabaseClient.from('participants').update({ laps: participants[snr].laps }).eq('snr', snr);
-        if (error) throw error;
-        toast('Rundetid lagret');
-      }catch(err){
-        const q = getQueue(); q.push({ snr, toAppend:[lapTime], at:Date.now() }); setQueue(q);
-        updatePills(); toast('Lagres når du er online');
-      }finally{ restore(); }
-    }
-
-    async function undoLap(snr, btn){
-      const p = participants[snr];
-      if (!p || !(p.laps||[]).length){ toast('Ingen rundetid å angre'); return; }
-      const restore = temporarilyDisable(btn, 800);
-
-      // Optimistisk
-      const newLaps = p.laps.slice(0, -1);
-      participants[snr] = { ...p, laps:newLaps };
+      // Optimistisk + undo stack
+      UNDO_STACK[snr] = lapTime;
+      const next = [...(p.laps||[]), lapTime];
+      participants[snr] = { ...p, laps: next };
       render();
 
       try{
         if (!online()) throw new Error('offline');
-        const { error } = await window.supabaseClient.from('participants').update({ laps:newLaps }).eq('snr', snr);
+        const { error } = await supa.from('participants').update({ laps: next }).eq('snr', snr);
         if (error) throw error;
-        toast('Siste rundetid angret');
-      }catch(err){
-        // Ved offline/feil ruller vi tilbake optimistisk endring (holder oss konsistente)
-        participants[snr] = { ...p };
-        render();
-        toast('Kunne ikke angre nå');
-      }finally{ restore(); }
+      }catch{
+        const q = getQueue(); q.push({ snr, op:'addLap', value: lapTime, at: Date.now() }); setQueue(q);
+        updateBadges();
+      }finally{
+        restore();
+      }
     }
 
-    // ===== Render =====
-    function render(){
-      // Sortér: I gang (først), deretter fullført, og stigende startnr
-      const rows = Object.values(participants).sort((a,b)=>{
-        const rank = s => s==='I gang'?0:1;
-        const r = rank(a.status)-rank(b.status);
-        return r!==0 ? r : (a.snr - b.snr);
-      });
+    async function handleUndo(snr, btn){
+      const p = participants[snr];
+      if (!p || !(p.laps||[]).length) return;
+      const restore = disableTemporarily(btn, 800);
 
-      // Hash for å unngå unødvendig DOM
-      const compact = rows.map(p=>({snr:p.snr,status:p.status,l:(p.laps||[]).length}));
-      const h = hashData(compact);
-      if (h === lastRenderHash) return;
-      lastRenderHash = h;
+      // Ta siste lokalt og legg på undo-stack for informasjon (valgfritt)
+      const cur = p.laps.slice();
+      const removed = cur.pop();
+      UNDO_STACK[snr] = removed;
+      participants[snr] = { ...p, laps: cur };
+      render();
 
-      const html = rows.map(p=>{
-        const { s1, s2 } = parseShooting(p.shooting);
-        const lapsHtml = (p.laps||[]).length
-          ? p.laps.map((l,i)=>`<span class="inline-block mr-2 mb-1 rounded border px-2 py-0.5 text-xs bg-slate-50">${i+1}: ${fmt(l)}</span>`).join('')
-          : '<span class="text-slate-400">–</span>';
-        const canLap = p.status === 'I gang';
-
-        // Handling-kolonne (venstre)
-        const actions = canLap
-          ? `<button class="js-lap inline-flex items-center rounded-lg bg-emerald-600 text-white px-3 py-2 mr-2 active:translate-y-[1px]" data-snr="${p.snr}">Rundetid</button>
-             <button class="js-undo inline-flex items-center rounded-lg bg-white border px-3 py-2 active:translate-y-[1px]" data-snr="${p.snr}">Angre</button>`
-          : `<button class="js-undo inline-flex items-center rounded-lg bg-white border px-3 py-2 active:translate-y-[1px]" data-snr="${p.snr}">Angre</button>`;
-
-        return `<tr class="border-b hover:bg-slate-50/70">
-          <td class="col-actions p-2 sm:p-3">${actions}</td>
-          <td class="p-2 sm:p-3 font-medium">${p.snr}</td>
-          <td class="p-2 sm:p-3">${p.name||''}</td>
-          <td class="p-2 sm:p-3">${p.class||''}</td>
-          <td class="p-2 sm:p-3">
-            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold
-              ${p.status==='I gang' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-              ${p.status}
-            </span>
-          </td>
-          <td class="p-2 sm:p-3">
-            <div class="text-sm"><span class="text-slate-500">S1:</span> ${s1||'–'}</div>
-            <div class="text-sm"><span class="text-slate-500">S2:</span> ${s2||'–'}</div>
-          </td>
-          <td class="p-2 sm:p-3">${lapsHtml}</td>
-        </tr>`;
-      }).join('');
-
-      document.getElementById('tbody').innerHTML = html;
+      try{
+        if (!online()) throw new Error('offline');
+        const { error } = await supa.from('participants').update({ laps: cur }).eq('snr', snr);
+        if (error) throw error;
+      }catch{
+        const q = getQueue(); q.push({ snr, op:'undoLap', at: Date.now() }); setQueue(q);
+        updateBadges();
+      }finally{
+        restore();
+      }
     }
 
-    // ===== Delegated events (klikk & touch) =====
-    function bindEvents(){
-      // Klikk
+    function delegate(){
       document.addEventListener('click', async (e)=>{
-        const lapBtn = e.target.closest('.js-lap');
-        if (lapBtn){ await doLap(Number(lapBtn.dataset.snr), lapBtn); return; }
-        const undoBtn = e.target.closest('.js-undo');
-        if (undoBtn){ await undoLap(Number(undoBtn.dataset.snr), undoBtn); return; }
-      });
-
-      // Touch: visuell respons
-      ['touchstart','touchend','touchcancel'].forEach(evt=>{
-        document.addEventListener(evt, (e)=>{
-          const btn = e.target.closest('.js-lap, .js-undo');
-          if (!btn) return;
-          if (evt==='touchstart') btn.style.transform='scale(.98)';
-          else btn.style.transform='';
-        }, { passive:true });
-      });
-
-      document.getElementById('btnSync').addEventListener('click', processQueue);
-      document.getElementById('btnSyncMobile').addEventListener('click', processQueue);
-
-      window.addEventListener('online', ()=>{ updatePills(); processQueue(); toast('Tilbake online'); });
-      window.addEventListener('offline', ()=>{ updatePills(); toast('Du er offline'); });
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const snr = Number(btn.dataset.snr);
+        const act = btn.dataset.action;
+        if (act === 'lap'){ await handleLap(snr, btn); }
+        if (act === 'undo'){ await handleUndo(snr, btn); }
+      }, { passive:true });
     }
 
-    // ===== Init =====
-    (async function init(){
-      updatePills();
-      bindEvents();
-      const list = await fetchActive(); apply(list);
-      subscribeRealtime();
-      // Bakgrunnsjobber
+    /* ====== Lifecycle ====== */
+    async function init(){
+      updateBadges();
+      $('#btnSync').addEventListener('click', processQueue);
+
+      window.addEventListener('online', ()=>{ updateBadges(); processQueue(); });
+      window.addEventListener('offline', ()=>{ updateBadges(); });
+
+      const list = await fetchActive();
+      apply(list);
+      subscribe();
+
+      // Jevnlig vedlikehold
       setInterval(processQueue, 2500);
-      setInterval(pollFallback, 3500);
-    })();
+      setInterval(rtFallback, 3500);
+
+      delegate();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
