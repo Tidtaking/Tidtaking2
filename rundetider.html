@@ -5,92 +5,444 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Lørenskog Skiklubb – Rundetider (mobilvennlig)</title>
 
-  <!-- Tailwind (CDN) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
   <style>
     :root{
-      --brand:#18469a;   /* Lørenskog blå */
-      --brand2:#dbe723;  /* Lørenskog gul */
+      --brand:#18469a;    /* Lørenskog blå */
+      --brand2:#dbe723;   /* Lørenskog gul */
+      --bg:#f5f7fb;
+      --fg:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --ok:#16a34a;
+      --accent:#2563eb;
+      --danger:#dc2626;
+      --stickyTop:64px;   /* settes dynamisk i JS */
+      --radius:14px;
     }
-    body{ background:#f5f7fb; color:#0f172a; }
-    .card{ background:#fff; border:1px solid #e2e8f0; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,.06); }
 
-    /* Tabell-justeringer for stabil layout på mobil */
-    table{ width:100%; border-collapse:collapse; table-layout:fixed; }
-    thead th{ background:#f1f5f9; position:sticky; top:64px; z-index:5; }
-    th,td{ border-bottom:1px solid #e2e8f0; padding:.65rem .75rem; font-size:14px; }
-    th{text-align:left; font-weight:600; color:#334155; }
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--fg); background:var(--bg);
+      font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif;
+    }
 
-    /* Kolonnebredder */
-    th.col-action, td.col-action{ width:120px; }
-    th.col-snr, td.col-snr{ width:80px; }
-    th.col-shoot, td.col-shoot{ width:92px; }
+    /* Header */
+    header{
+      position:sticky; top:0; z-index:50;
+      background:var(--brand); color:#fff;
+      box-shadow:0 2px 0 rgba(0,0,0,.06);
+    }
+    .header-inner{
+      max-width:1100px; margin:0 auto; padding:10px 14px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+    }
+    .brand img{
+      height:40px; width:54px; object-fit:contain; border-radius:8px; background:#fff; padding:3px;
+    }
+    .brand h1{ margin:0; font-size:18px; line-height:1.1; font-weight:800 }
+    .brand .sub{ font-size:12px; opacity:.9 }
 
-    /* Knapper */
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px;
-      padding:.55rem .7rem; border-radius:.75rem; border:1px solid #e2e8f0; font-weight:600; font-size:14px; background:#fff; }
-    .btn:active{ transform:translateY(1px); }
+    .badges{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .pill{
+      font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.25);
+      background:rgba(255,255,255,.12); color:#fff; font-weight:700;
+    }
+    .pill.ok{ background:#dcfce7; color:#14532d; border-color:#bbf7d0 }
+    .pill.warn{ background:#fff7ed; color:#7c2d12; border-color:#fed7aa }
+    .btn-top{
+      border:none; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer;
+      background:#fff; color:var(--brand);
+    }
+
+    /* Page container */
+    .container{ max-width:1100px; margin:0 auto; padding:14px }
+
+    .card{
+      background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      box-shadow:0 1px 3px rgba(0,0,0,.06);
+    }
+    .card-hd{ padding:12px 14px; border-bottom:1px solid var(--border) }
+    .card-bd{ padding:8px 12px 12px }
+
+    /* Table */
+    .table-wrap{ overflow:auto; border-radius:calc(var(--radius) - 2px); }
+    table{ width:100%; border-collapse:collapse; background:#fff; min-width:760px }
+    thead th{
+      background:#f1f5f9;
+      position:sticky; top:var(--stickyTop);
+      z-index:5; border-bottom:1px solid var(--border);
+    }
+    th,td{ padding:.65rem .6rem; text-align:left; border-bottom:1px solid var(--border); font-size:14px }
+    th{ font-weight:700; color:#0f172a }
+    tbody tr:hover{ background:#f8fafc }
+
+    /* kolonne-bredder (robust på mobil) */
+    th.col-action, td.col-action{ width:112px }
+    th.col-snr,    td.col-snr   { width:70px; text-align:center }
+    th.col-shoot,  td.col-shoot { width:80px; text-align:center }
+
+    /* Buttons */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      border:1px solid var(--border); border-radius:10px; background:#fff;
+      padding:.48rem .58rem; font-size:13px; font-weight:800; cursor:pointer;
+      transition:transform .04s ease, background .15s;
+    }
+    .btn:active{ transform:translateY(1px) }
+    .btn[disabled]{ opacity:.55; cursor:not-allowed }
     .btn-primary{ color:var(--brand); }
-    .btn-undo{ background:#f1f5f9; color:#0f172a; }
-    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .btn-undo{ background:#fff7ed; border-color:#fed7aa; color:#7c2d12 }
 
+    /* Status-tag */
     .status{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:700 }
-    .status.run{ background:#dcfce7; color:#15803d }
-    .status.done{ background:#fee2e2; color:#b91c1c }
+    .status.wait{ background:#f3f4f6; color:#475569 }
+    .status.run{ background:#dcfce7; color:#166534 }
+    .status.done{ background:#fee2e2; color:#991b1b }
     .status.plan{ background:#dbeafe; color:#1d4ed8 }
-    .status.wait{ background:#f3f4f6; color:#64748b }
 
-    /* Badge-stil i header */
-    .badge{ font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; }
-    .badge.online{ background:#ecfdf5; border-color:#86efac; color:#166534 }
-    .badge.offline{ background:#fff7ed; border-color:#fdba74; color:#92400e }
-    .badge.queue{ background:#eff6ff; border-color:#93c5fd; color:#1e3a8a }
+    /* Toast */
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:calc(env(safe-area-inset-bottom) + 14px); z-index:1000;
+      background:#111827; color:#fff; padding:10px 14px; border-radius:10px; font-size:14px;
+      box-shadow:0 8px 24px rgba(0,0,0,.2); opacity:0; pointer-events:none; transition:opacity .2s;
+    }
+    .toast.show{ opacity:1 }
 
-    /* Rundetider felt */
-    .lapchip{ display:inline-block; font-variant-numeric:tabular-nums; background:#f8fafc; border:1px solid #e2e8f0; padding:.15rem .45rem; border-radius:.5rem; margin-right:.25rem; margin-bottom:.25rem; }
+    /* Info-text */
+    .note{ color:var(--muted); font-size:13px }
 
-    @media (max-width: 560px){
-      th,td{ font-size:13px; padding:.6rem .55rem; }
-      th.col-action, td.col-action{ width:112px; }
-      th.col-snr, td.col-snr{ width:70px; }
-      th.col-shoot, td.col-shoot{ width:86px; }
-      .btn{ padding:.5rem .6rem; font-size:13px; }
+    @media (max-width:560px){
+      .header-inner{ padding:10px 10px }
+      th,td{ font-size:13px; padding:.55rem .5rem }
+      th.col-action, td.col-action{ width:108px }
+      th.col-snr,    td.col-snr   { width:64px }
+      th.col-shoot,  td.col-shoot { width:74px }
+      .btn{ padding:.44rem .54rem; font-size:12.5px }
     }
   </style>
 
   <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="min-h-screen flex flex-col">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // ===== Supabase init =====
+    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
+      auth:{ persistSession:false },
+      global:{ headers:{ "x-client-info":"lsk-rundetider-1.2" } }
+    });
 
-  <!-- HEADER -->
-  <header class="bg-[var(--brand)] text-white sticky top-0 z-50 shadow">
-    <div class="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb" class="h-10 w-14 rounded bg-white p-1 object-contain">
-        <div class="leading-tight">
-          <div class="font-bold">Lørenskog Skiklubb</div>
-          <div class="text-sm opacity-90">Rundetider (mobilvennlig)</div>
+    // ===== State =====
+    let participants = {};           // { snr: { ...row, laps: number[], shooting: boolean[][] } }
+    let lastRenderHash = "";         // for diff
+    let lastRealtimeAt = 0;
+    const PENDING_KEY = "pendingLaps_v1";
+
+    // ===== Utils =====
+    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+    const online = ()=>navigator.onLine;
+    const vibrate = (pat=[6,40,20])=>{ if (navigator.vibrate) navigator.vibrate(pat); };
+    const toast = (msg,ms=1400)=>{ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),ms); };
+    function hashData(data){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(data)))).slice(0,64) }catch{ return String(Math.random()) } }
+
+    function getPending(){ try{ return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); }catch{ return [] } }
+    function setPending(arr){ localStorage.setItem(PENDING_KEY, JSON.stringify(arr)); }
+
+    // Sticky header offset = faktisk header-høyde
+    (function setStickyTop(){
+      const h = document.querySelector('header');
+      if(!h) return;
+      const apply=()=> document.documentElement.style.setProperty('--stickyTop', Math.ceil(h.getBoundingClientRect().height)+'px');
+      apply(); window.addEventListener('resize', apply);
+    })();
+
+    // ===== Data =====
+    async function fetchActiveParticipants(){
+      const { data, error } = await supabaseClient
+        .from('participants')
+        .select('snr,name,class,status,start,laps,shooting')
+        .in('status',['I gang','Fullført'])
+        .order('status',{ ascending:true })
+        .order('snr',{ ascending:true });
+      if (error){ console.error('Henting feilet', error); return [];}
+      return (data||[]).map(p => ({
+        ...p,
+        laps: Array.isArray(p.laps) ? p.laps : [],
+        shooting: Array.isArray(p.shooting) ? p.shooting
+                 : (typeof p.shooting==='string' ? (()=>{
+                      try{ const j=JSON.parse(p.shooting); return Array.isArray(j)?j:[[],[]]; }catch{ return [[],[]]; }
+                    })()
+                    : [[],[]])
+      }));
+    }
+    function applyParticipants(list){ for(const p of list) participants[p.snr]=p; render(); }
+
+    // ===== Realtime =====
+    function subscribeRealtime(){
+      supabaseClient
+        .channel('participants-rt')
+        .on('postgres_changes',{ event:'*', schema:'public', table:'participants' }, payload=>{
+          lastRealtimeAt = Date.now();
+          const row = payload.new || payload.old;
+          if (!row) return;
+          if (!['I gang','Fullført'].includes(row.status)) return;
+          participants[row.snr] = {
+            ...(participants[row.snr]||{}),
+            ...row,
+            laps: Array.isArray(row.laps) ? row.laps : [],
+            shooting: Array.isArray(row.shooting) ? row.shooting
+                    : (typeof row.shooting==='string' ? (()=>{
+                        try{ const j=JSON.parse(row.shooting); return Array.isArray(j)?j:[[],[]]; }catch{ return [[],[]]; }
+                      })()
+                      : [[],[]])
+          };
+          render();
+        })
+        .subscribe();
+    }
+    async function realtimeFallbackTick(){
+      const NO_EVENT_MS = 6000;
+      if (Date.now() - lastRealtimeAt < NO_EVENT_MS) return;
+      const list = await fetchActiveParticipants();
+      applyParticipants(list);
+    }
+
+    // ===== Offline-kø =====
+    async function processQueue(){
+      if(!online()) return;
+      let q = getPending();
+      if (!q.length) return;
+      for(let i=0;i<q.length;i++){
+        const item = q[i];
+        try{
+          const p = participants[item.snr] || { snr:item.snr, laps:[] };
+          const newLaps = [...(p.laps||[]), item.lapTime];
+          const { error } = await supabaseClient.from('participants').update({ laps:newLaps }).eq('snr', item.snr);
+          if (error) throw error;
+          participants[item.snr] = { ...p, laps:newLaps };
+          q[i]._done = true;
+        }catch(e){
+          console.warn('Køelement feilet, prøver senere', item, e);
+          break;
+        }
+      }
+      q = q.filter(x=>!x._done);
+      setPending(q);
+      updateBadges(); render();
+    }
+
+    // ===== UI =====
+    function updateBadges(){
+      const onlineEl = document.getElementById('online');
+      const queuedEl = document.getElementById('queued');
+      if (online()){
+        onlineEl.textContent = 'Online';
+        onlineEl.className = 'pill ok';
+      } else {
+        onlineEl.textContent = 'Offline';
+        onlineEl.className = 'pill warn';
+      }
+      const q = getPending().length;
+      queuedEl.textContent = q ? `${q} i kø` : 'Ingen i kø';
+      queuedEl.className = 'pill';
+    }
+
+    function statusTag(st){
+      if (st==='I gang') return '<span class="status run">I gang</span>';
+      if (st==='Fullført') return '<span class="status done">Fullført</span>';
+      if (st==='Planlagt') return '<span class="status plan">Planlagt</span>';
+      return '<span class="status wait">Venter</span>';
+    }
+
+    function render(){
+      // sort: I gang -> Fullført, deretter snr
+      const arr = Object.values(participants).sort((a,b)=>{
+        const rank=v=>v.status==='I gang'?0:(v.status==='Fullført'?1:2);
+        const r = rank(a)-rank(b);
+        return r!==0 ? r : (a.snr-b.snr);
+      });
+
+      // kompakt hash
+      const compact = arr.map(p=>({snr:p.snr,name:p.name,class:p.class,status:p.status,laps:p.laps,shooting:p.shooting}));
+      const h = hashData(compact);
+      if (h===lastRenderHash) return;
+      lastRenderHash = h;
+
+      const rows = arr.map(p=>{
+        const canLap  = (p.status==='I gang');
+        const canUndo = (p.laps && p.laps.length>0);
+
+        // S1/S2 som "treff/5"
+        let s1 = null, s2 = null;
+        if (Array.isArray(p.shooting) && p.shooting.length>=2){
+          const c = (arr)=>arr.reduce((a,b)=>a+(b===true?1:0),0);
+          s1 = Array.isArray(p.shooting[0]) ? c(p.shooting[0]) : null;
+          s2 = Array.isArray(p.shooting[1]) ? c(p.shooting[1]) : null;
+        }
+        const sText = `${(s1!=null?`${s1}/5`:'–')} / ${(s2!=null?`${s2}/5`:'–')}`;
+
+        const lapsHtml = (p.laps?.length)
+          ? p.laps.map(l=>`<span class="inline-block rounded bg-slate-100 px-2 py-1 mr-1 mb-1">${formatTime(l)}</span>`).join('')
+          : '<span class="note">–</span>';
+
+        const actionBtns = `
+          <div class="flex flex-col gap-1">
+            <button class="btn btn-primary" data-action="lap" data-snr="${p.snr}" ${canLap?'':'disabled'}>Rundetid</button>
+            <button class="btn btn-undo" data-action="undo" data-snr="${p.snr}" ${canUndo?'':'disabled'}>Angre</button>
+          </div>
+        `;
+
+        return `<tr>
+          <td class="col-action">${actionBtns}</td>
+          <td class="col-snr"><strong>${p.snr}</strong></td>
+          <td>${p.name||''}</td>
+          <td>${p.class||''}</td>
+          <td>${statusTag(p.status||'-')}</td>
+          <td class="col-shoot">${sText}</td>
+          <td>${lapsHtml}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('tbody').innerHTML = rows;
+    }
+
+    function delegateClicks(){
+      document.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const snr = Number(btn.getAttribute('data-snr'));
+        if (action==='lap')  await recordLap(snr, btn);
+        if (action==='undo') await undoLastLap(snr, btn);
+      }, { passive:true });
+
+      // touch feedback
+      document.addEventListener('touchstart', (e)=>{
+        const btn = e.target.closest('button[data-action]'); if (!btn) return;
+        btn.style.transform='scale(0.98)';
+      }, { passive:true });
+      document.addEventListener('touchend', (e)=>{
+        const btn = e.target.closest('button[data-action]'); if (!btn) return;
+        btn.style.transform='';
+      }, { passive:true });
+    }
+
+    function temporarilyDisable(el,ms){
+      if(!el) return ()=>{};
+      const prev = el.disabled; el.disabled = true;
+      const t = setTimeout(()=>{ el.disabled = prev; }, ms);
+      return ()=>{ clearTimeout(t); el.disabled = prev; };
+    }
+
+    // ===== Handling =====
+    async function recordLap(snr, btnEl){
+      const p = participants[snr];
+      if (!p || !p.start){ toast('Deltakeren har ikke startet enda.'); return; }
+
+      const restore = temporarilyDisable(btnEl, 900);
+
+      // lokal rundetid fra start
+      const lapTime = (Date.now() - Date.parse(p.start))/1000;
+
+      // optimistisk
+      const newLaps = [...(p.laps||[]), lapTime];
+      participants[snr] = { ...p, laps:newLaps };
+      render(); vibrate([5,35,20]);
+
+      try{
+        if(!online()) throw new Error('offline');
+        const { error } = await supabaseClient.from('participants').update({ laps:newLaps }).eq('snr', snr);
+        if (error) throw error;
+        toast('Rundetid lagret');
+      }catch(err){
+        const q = getPending(); q.push({ snr, lapTime, at: Date.now() }); setPending(q);
+        updateBadges(); toast('Lagres når du er online');
+      }finally{ restore(); }
+    }
+
+    async function undoLastLap(snr, btnEl){
+      const p = participants[snr];
+      if (!p || !p.laps || p.laps.length===0) return;
+      const restore = temporarilyDisable(btnEl, 600);
+
+      const newLaps = p.laps.slice(0, -1);
+      participants[snr] = { ...p, laps:newLaps };
+      render(); vibrate([10,30,10]); // kort feedback
+
+      try{
+        if(!online()) throw new Error('offline');
+        const { error } = await supabaseClient.from('participants').update({ laps:newLaps }).eq('snr', snr);
+        if (error) throw error;
+        toast('Siste rundetid angret');
+      }catch(err){
+        // Ved offline: rull tilbake lokalt til forrige (for ikke å drifte fra server)
+        participants[snr] = p; render();
+        toast('Kan ikke angre nå (offline)');
+      }finally{ restore(); }
+    }
+
+    // ===== Lifecycle =====
+    async function init(){
+      updateBadges();
+      window.addEventListener('online', ()=>{ updateBadges(); processQueue(); toast('Tilbake online'); });
+      window.addEventListener('offline', ()=>{ updateBadges(); toast('Du er offline'); });
+
+      const list = await fetchActiveParticipants();
+      applyParticipants(list);
+      subscribeRealtime();
+
+      // bakgrunnsjobber
+      setInterval(processQueue, 2500);
+      setInterval(realtimeFallbackTick, 3500);
+
+      delegateClicks();
+    }
+    document.addEventListener('DOMContentLoaded', init);
+
+    // Eksponér for "Synk nå"
+    window.processQueue = processQueue;
+
+    // Formattering
+    function formatTime(sec){
+      const s = Number(sec)||0;
+      const m = Math.floor(s/60);
+      const r = (s % 60).toFixed(1);
+      return m>0 ? `${m}: ${r}s`.replace(': ','m ') : `${r}s`;
+    }
+  </script>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb" />
+        <div>
+          <h1>Lørenskog Skiklubb</h1>
+          <div class="sub">Rundetider (mobilvennlig)</div>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <span id="onlineBadge" class="badge">Sjekker …</span>
-        <span id="queueBadge" class="badge queue">–</span>
-        <button id="btnSync" class="btn btn-primary text-white bg-[var(--brand)] border-0">Synk nå</button>
+      <div class="badges">
+        <span id="online" class="pill">Sjekker …</span>
+        <span id="queued" class="pill">–</span>
+        <button class="btn-top" onclick="processQueue()">Synk nå</button>
       </div>
     </div>
   </header>
 
-  <!-- MAIN -->
-  <main class="flex-1 max-w-6xl mx-auto w-full p-3">
-    <section class="card overflow-hidden">
-      <div class="px-4 py-3 border-b bg-white">
-        <h2 class="text-lg font-semibold">Deltakere “i gang / fullført”</h2>
-        <p class="text-sm text-slate-600">Knappene står til venstre og er alltid tilgjengelige på mobil. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</p>
+  <!-- Main -->
+  <main class="container">
+    <div class="card">
+      <div class="card-hd">
+        <strong>Deltakere “i gang / fullført”</strong>
+        <div class="note">Knappene står til venstre og er alltid tilgjengelige på mobil. Du kan registrere rundetid offline – det synkes når dekning er tilbake.</div>
       </div>
-
-      <div class="overflow-x-auto">
+      <div class="card-bd table-wrap">
         <table>
           <thead>
             <tr>
@@ -106,263 +458,9 @@
           <tbody id="tbody"></tbody>
         </table>
       </div>
-    </section>
+    </div>
   </main>
 
-  <script>
-    /* ====== Supabase init ====== */
-    const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supa = window.supabase.createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession:false },
-      global: { headers: { "x-client-info":"lsk-rundetider-1.2" } }
-    });
-
-    /* ====== App state ====== */
-    let participants = {};            // keyed by snr
-    let lastRenderSig = "";
-    const UNDO_STACK = {};            // snr -> last removed lap (number)
-    const QUEUE_KEY = "lsk:rundetider:queue_v1";
-
-    const $ = (q, el=document) => el.querySelector(q);
-
-    const online = () => navigator.onLine;
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-    function getQueue(){ try{ return JSON.parse(localStorage.getItem(QUEUE_KEY)||"[]"); }catch{return []} }
-    function setQueue(arr){ localStorage.setItem(QUEUE_KEY, JSON.stringify(arr)); }
-
-    function fmt(sec){
-      const s = Number(sec)||0;
-      const m = Math.floor(s/60);
-      const r = (s%60).toFixed(1);
-      return m>0 ? `${m}m ${r}s` : `${r}s`;
-    }
-
-    function getShooting(p){
-      // forventer shooting som jsonb array [[...5],[...5]] med true/false
-      let s = p?.shooting;
-      if (!s) return { s1:null, s2:null };
-      if (typeof s === 'string'){
-        try{ s = JSON.parse(s); }catch{ return { s1:null, s2:null }; }
-      }
-      if (!Array.isArray(s) || s.length < 2) return { s1:null, s2:null };
-      const c1 = (Array.isArray(s[0]) ? s[0].filter(Boolean).length : null);
-      const c2 = (Array.isArray(s[1]) ? s[1].filter(Boolean).length : null);
-      return { s1:c1, s2:c2 };
-    }
-
-    function statusTag(txt){
-      const cls = txt==='I gang' ? 'run' : (txt==='Fullført' ? 'done' : txt==='Planlagt' ? 'plan' : 'wait');
-      return `<span class="status ${cls}">${txt}</span>`;
-    }
-
-    /* ====== Data ====== */
-    async function fetchActive(){
-      const { data, error } = await supa
-        .from('participants')
-        .select('snr,name,class,status,start,laps,shooting')
-        .in('status', ['I gang','Fullført'])
-        .order('status', { ascending:true })
-        .order('snr', { ascending:true });
-      if (error){ console.error(error); return []; }
-      return data.map(r => ({ ...r, laps: Array.isArray(r.laps) ? r.laps : [] }));
-    }
-
-    function apply(list){
-      for (const p of list) participants[p.snr] = p;
-      render();
-    }
-
-    /* ====== Realtime + fallback ====== */
-    let lastRt = 0;
-    function subscribe(){
-      supa.channel('participants-rt')
-        .on('postgres_changes', { event:'*', schema:'public', table:'participants' }, payload => {
-          lastRt = Date.now();
-          const row = payload.new || payload.old;
-          if (!row) return;
-          if (!['I gang','Fullført'].includes(row.status)) return;
-          participants[row.snr] = {
-            ...(participants[row.snr]||{}),
-            ...row,
-            laps: Array.isArray(row.laps) ? row.laps : []
-          };
-          render();
-        })
-        .subscribe();
-    }
-    async function rtFallback(){
-      if (Date.now() - lastRt < 6000) return;
-      const list = await fetchActive();
-      apply(list);
-    }
-
-    /* ====== Offline-kø ====== */
-    async function processQueue(){
-      if (!online()) return;
-      let q = getQueue();
-      if (!q.length) return;
-      for (let i=0;i<q.length;i++){
-        const item = q[i]; // { snr, op: 'addLap'|'undoLap', value }
-        try{
-          const cur = participants[item.snr]?.laps || [];
-          let next = cur.slice();
-          if (item.op === 'addLap'){ next = [...cur, item.value]; }
-          if (item.op === 'undoLap'){ next = cur.slice(0, -1); }
-          const { error } = await supa.from('participants').update({ laps: next }).eq('snr', item.snr);
-          if (error) throw error;
-          // Optimistisk lokalt
-          participants[item.snr] = { ...(participants[item.snr]||{snr:item.snr}), laps: next };
-          item._done = true;
-        }catch(e){
-          console.warn('Synk feilet, prøver senere', e);
-          break;
-        }
-      }
-      q = q.filter(x => !x._done);
-      setQueue(q);
-      updateBadges();
-      render();
-    }
-
-    /* ====== UI ====== */
-    function updateBadges(){
-      const qLen = getQueue().length;
-      const qEl = $('#queueBadge');
-      qEl.textContent = qLen ? `${qLen} i kø` : 'Ingen i kø';
-
-      const onEl = $('#onlineBadge');
-      if (online()){
-        onEl.textContent = 'Online';
-        onEl.className = 'badge online';
-      } else {
-        onEl.textContent = 'Offline';
-        onEl.className = 'badge offline';
-      }
-    }
-
-    function render(){
-      const rows = Object.values(participants)
-        .sort((a,b)=>{
-          const rank = v => (v.status==='I gang'?0:(v.status==='Fullført'?1:2));
-          const r = rank(a)-rank(b);
-          return r!==0 ? r : (a.snr - b.snr);
-        });
-
-      const compact = rows.map(p => [p.snr,p.name,p.class,p.status,p.laps?.length, getShooting(p)]);
-      const sig = JSON.stringify(compact);
-      if (sig === lastRenderSig) return;
-      lastRenderSig = sig;
-
-      const html = rows.map(p=>{
-        const laps = (p.laps||[]).map((l,i)=>`<span class="lapchip">${i+1}: ${fmt(l)}</span>`).join(' ');
-        const { s1, s2 } = getShooting(p);
-        return `<tr>
-          <td class="col-action">
-            <div class="flex flex-col gap-1">
-              <button class="btn btn-primary" data-action="lap" data-snr="${p.snr}">Rundetid</button>
-              <button class="btn btn-undo" data-action="undo" data-snr="${p.snr}">Angre</button>
-            </div>
-          </td>
-          <td class="col-snr font-semibold">${p.snr}</td>
-          <td>${p.name||''}</td>
-          <td>${p.class||''}</td>
-          <td>${statusTag(p.status||'-')}</td>
-          <td class="col-shoot">${(s1??'–')} / ${(s2??'–')}</td>
-          <td>${laps||'<span class="text-slate-500">–</span>'}</td>
-        </tr>`;
-      }).join('');
-      $('#tbody').innerHTML = html;
-    }
-
-    function disableTemporarily(el, ms=650){
-      if (!el) return ()=>{};
-      const prev = el.disabled;
-      el.disabled = true;
-      const t = setTimeout(()=>{ el.disabled = prev; }, ms);
-      return ()=>{ clearTimeout(t); el.disabled = prev; };
-    }
-
-    async function handleLap(snr, btn){
-      const p = participants[snr];
-      if (!p || !p.start){ /* ikke startet */ return; }
-      const restore = disableTemporarily(btn, 800);
-
-      const lapTime = (Date.now() - Date.parse(p.start))/1000;
-      // Optimistisk + undo stack
-      UNDO_STACK[snr] = lapTime;
-      const next = [...(p.laps||[]), lapTime];
-      participants[snr] = { ...p, laps: next };
-      render();
-
-      try{
-        if (!online()) throw new Error('offline');
-        const { error } = await supa.from('participants').update({ laps: next }).eq('snr', snr);
-        if (error) throw error;
-      }catch{
-        const q = getQueue(); q.push({ snr, op:'addLap', value: lapTime, at: Date.now() }); setQueue(q);
-        updateBadges();
-      }finally{
-        restore();
-      }
-    }
-
-    async function handleUndo(snr, btn){
-      const p = participants[snr];
-      if (!p || !(p.laps||[]).length) return;
-      const restore = disableTemporarily(btn, 800);
-
-      // Ta siste lokalt og legg på undo-stack for informasjon (valgfritt)
-      const cur = p.laps.slice();
-      const removed = cur.pop();
-      UNDO_STACK[snr] = removed;
-      participants[snr] = { ...p, laps: cur };
-      render();
-
-      try{
-        if (!online()) throw new Error('offline');
-        const { error } = await supa.from('participants').update({ laps: cur }).eq('snr', snr);
-        if (error) throw error;
-      }catch{
-        const q = getQueue(); q.push({ snr, op:'undoLap', at: Date.now() }); setQueue(q);
-        updateBadges();
-      }finally{
-        restore();
-      }
-    }
-
-    function delegate(){
-      document.addEventListener('click', async (e)=>{
-        const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-        const snr = Number(btn.dataset.snr);
-        const act = btn.dataset.action;
-        if (act === 'lap'){ await handleLap(snr, btn); }
-        if (act === 'undo'){ await handleUndo(snr, btn); }
-      }, { passive:true });
-    }
-
-    /* ====== Lifecycle ====== */
-    async function init(){
-      updateBadges();
-      $('#btnSync').addEventListener('click', processQueue);
-
-      window.addEventListener('online', ()=>{ updateBadges(); processQueue(); });
-      window.addEventListener('offline', ()=>{ updateBadges(); });
-
-      const list = await fetchActive();
-      apply(list);
-      subscribe();
-
-      // Jevnlig vedlikehold
-      setInterval(processQueue, 2500);
-      setInterval(rtFallback, 3500);
-
-      delegate();
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
-  </script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
