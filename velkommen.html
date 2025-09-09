@@ -1,150 +1,230 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dagens deltakere – Lørenskog Skiklubb</title>
-
-  <!-- Tailwind (CDN) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dagens Deltakere - Tidtaking</title>
   <style>
-    :root{ --brand:#18469a; --brand2:#dbe723; }
+    :root {
+      --brand: #18469a;
+      --brand-dark: #0f2f6b;
+      --brand-accent: #dbe723;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background: var(--brand);
+      color: white;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header img {
+      height: 60px;
+      width: auto;
+      border-radius: 8px;
+      background: white;
+      padding: 4px;
+    }
+    header h1 {
+      font-size: 28px;
+      margin: 0;
+    }
+    header p {
+      margin: 0;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+    main {
+      padding: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .filter-container {
+      margin: 0 auto 20px;
+      max-width: 600px;
+      text-align: left;
+      background: #eee;
+      padding: 15px;
+      border-radius: 12px;
+    }
+    .filter-container label {
+      font-size: 16px;
+      margin: 5px 0;
+      display: block;
+    }
+    .filter-container input {
+      font-size: 16px;
+      padding: 8px;
+      margin-bottom: 10px;
+      width: 100%;
+      max-width: 300px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .filter-container button {
+      font-size: 16px;
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: var(--brand);
+      color: white;
+      transition: 0.2s;
+    }
+    .filter-container button:hover {
+      background: var(--brand-dark);
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 600px;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      font-size: 16px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    /* Nav-linker som dashboard */
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+    .navlink {
+      display: block;
+      text-align: center;
+      background-color: var(--brand);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .navlink:hover {
+      background-color: var(--brand-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    }
+    @media (max-width: 480px) {
+      header h1 {
+        font-size: 22px;
+      }
+      th, td {
+        font-size: 14px;
+        padding: 8px;
+      }
+      .navlink {
+        font-size: 16px;
+        padding: 12px;
+      }
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-
-  <!-- HEADER -->
-  <header class="mb-6 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
-    <div class="flex items-center gap-3">
-      <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb" class="h-14 w-20 rounded-xl bg-white p-1 object-contain">
-      <div>
-        <h1 class="text-2xl font-bold">Lørenskog Skiklubb</h1>
-        <p class="text-sm opacity-80">Dagens deltakere</p>
-      </div>
+<body>
+  <header>
+    <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb logo" onerror="this.style.display='none'">
+    <div>
+      <h1>Lørenskog Skiklubb</h1>
+      <p>Dagens Deltakere – Tidtaking</p>
     </div>
   </header>
 
-  <main class="mx-auto max-w-3xl px-3 space-y-6">
-    <!-- Filter -->
-    <div class="rounded-2xl border bg-white shadow-sm p-4">
-      <h2 class="text-lg font-semibold mb-3">Filtrer</h2>
-      <div class="grid gap-4 md:grid-cols-2">
-        <div>
-          <label class="block text-sm font-medium mb-1" for="competitionInput">Konkurransenavn:</label>
-          <input id="competitionInput" type="text" placeholder="F.eks. Klubbløp-2025"
-            class="w-full h-10 rounded-xl border px-3" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1" for="dateInput">Dato:</label>
-          <input id="dateInput" type="date"
-            class="w-full h-10 rounded-xl border px-3" />
-        </div>
-      </div>
-      <div class="mt-4">
-        <button id="filterBtn" class="rounded-xl border bg-[var(--brand)] text-white px-4 py-2 shadow-sm">
-          Vis deltakere
-        </button>
-      </div>
+  <main>
+    <h2>Finn deltakere</h2>
+    <div class="filter-container">
+      <label for="competitionInput">Konkurransenavn:</label>
+      <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
+      
+      <label for="dateInput">Dato (yyyy-mm-dd):</label>
+      <input type="date" id="dateInput">
+      
+      <button id="filterBtn">Vis deltakere</button>
     </div>
-
-    <!-- Tabell -->
-    <div id="participantTable" class="rounded-2xl border bg-white shadow-sm p-4 text-center text-slate-600">
-      <p>Laster deltakere…</p>
+    
+    <div id="participantTable">
+      <p style="text-align:center;">Laster deltakere...</p>
     </div>
-
-    <!-- Navigasjon -->
-    <div class="rounded-2xl border bg-white shadow-sm p-4">
-      <h2 class="text-lg font-semibold mb-3">Navigasjon</h2>
-      <div class="flex flex-wrap gap-2">
-        <a href="https://tidtaking.github.io/Tidtaking2/" class="navlink">Oppsett</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/live.html" class="navlink">Livevisning</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html" class="navlink">Rundetider</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/skyting.html" class="navlink">Skyting</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/maal.html" class="navlink">Mål</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html" class="navlink">Strafferunder</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/starter.html" class="navlink">Starter</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/import" class="navlink">Import</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/resultat" class="navlink">Resultater</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/sim" class="navlink">Simulator</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/historikk" class="navlink">Historikk</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/huskeliste" class="navlink">Huskeliste</a>
-        <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" class="navlink">Selvanviser</a>
-      </div>
+    
+    <div class="nav-grid">
+      <a href="https://tidtaking.github.io/Tidtaking2/" class="navlink">Oppsett</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/live.html" class="navlink">Livevisning</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html" class="navlink">Rundetider</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/skyting.html" class="navlink">Skyting</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/maal.html" class="navlink">Mål</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html" class="navlink">Strafferunder</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/starter.html" class="navlink">Starter</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/import" class="navlink">Import</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/resultat" class="navlink">Resultater</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/sim" class="navlink">Simulator</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/historikk" class="navlink">Historikk</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/huskeliste" class="navlink">Huskeliste</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" class="navlink">Selvanviser</a>
     </div>
   </main>
 
-  <style>
-    .navlink {
-      @apply rounded-xl border bg-[var(--brand)] text-white px-3 py-2 shadow-sm hover:bg-blue-900;
-    }
-    table {
-      @apply w-full border-collapse text-left;
-    }
-    th, td {
-      @apply border px-3 py-2;
-    }
-    th {
-      @apply bg-slate-100 font-medium;
-    }
-  </style>
-
-  <!-- Supabase JS -->
+  <!-- Supabase -->
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm";
-
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
+    
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    document.getElementById("dateInput").value = new Date().toISOString().split("T")[0];
-
+    document.getElementById("dateInput").value = new Date().toISOString().split('T')[0];
+    
     async function fetchParticipants() {
       const comp = document.getElementById("competitionInput").value.trim();
       const date = document.getElementById("dateInput").value;
-
-      let query = supabase.from("participants").select("*").eq("comp_date", date);
-      if (comp) query = query.eq("competition", comp);
-
-      const { data, error } = await query;
+      
+      let query = supabaseClient.from('participants').select('*').eq('comp_date', date);
+      if (comp !== "") query = query.eq('competition', comp);
+      
+      const { data: participants, error } = await query;
       if (error) {
-        console.error(error);
+        console.error("Feil ved henting:", error);
         document.getElementById("participantTable").innerHTML = "<p>Feil ved henting av deltakere.</p>";
         return;
       }
-
-      if (!data || data.length === 0) {
-        document.getElementById("participantTable").innerHTML = `<p>Ingen deltakere funnet for <b>${comp||'valgt konkurranse'}</b> ${date}.</p>`;
+      if (!participants || participants.length === 0) {
+        document.getElementById("participantTable").innerHTML = `<p style="text-align:center;">Ingen deltakere funnet for <strong>${comp||'valgt konkurranse'}</strong> den <strong>${date}</strong>.</p>`;
         return;
       }
-
-      data.sort((a, b) => (parseInt(a.snr)||0) - (parseInt(b.snr)||0));
-
-      const rows = data.map(p => `
-        <tr>
-          <td>${p.snr||''}</td>
-          <td>${p.name||''}</td>
-        </tr>
-      `).join("");
-
-      document.getElementById("participantTable").innerHTML = `
-        <table class="mt-3">
-          <thead><tr><th>Startnr</th><th>Navn</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      `;
+      
+      participants.sort((a,b)=>(parseInt(a.snr)||0)-(parseInt(b.snr)||0));
+      let tableHtml = `<table><thead><tr><th>Startnummer</th><th>Navn</th></tr></thead><tbody>`;
+      for (const p of participants) {
+        tableHtml += `<tr><td>${p.snr||""}</td><td>${p.name||""}</td></tr>`;
+      }
+      tableHtml += "</tbody></table>";
+      document.getElementById("participantTable").innerHTML = tableHtml;
     }
-
-    // Init load
+    
     document.addEventListener("DOMContentLoaded", fetchParticipants);
     document.getElementById("filterBtn").addEventListener("click", fetchParticipants);
-
-    // Realtime oppdatering
-    supabase.channel("participants-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants" }, (payload) => {
-        console.log("Realtime endring i participants:", payload);
-        fetchParticipants(); // Oppdater listen
-      })
-      .subscribe();
   </script>
 </body>
 </html>
