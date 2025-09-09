@@ -738,12 +738,13 @@
       });
 
       // 4) Render lagret (med dato-kolonne)
-      const savedRows = (hist||[]).map(h => {
-        const tid=(h.finish!=null)?window.formatTime(h.finish):'-';
-        the snr=(h.snr!=null)?h.snr:'-';
-        const dato = h.comp_date || '-';
-        return `<tr><td>${dato}</td><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`;
-      }).join('');
+const savedRows = (hist||[]).map(h => {
+  const tid  = (h.finish != null) ? window.formatTime(h.finish) : '-';
+  const snr  = (h.snr   != null) ? h.snr : '-';   // <-- fikset
+  const dato = h.comp_date || '-';
+  return `<tr><td>${dato}</td><td>${snr}</td><td>${h.name||''}</td><td>${h.class||''}</td><td>${h.status||''}</td><td>${tid}</td></tr>`;
+}).join('');
+
       const savedBody = document.getElementById('historySavedBody');
       if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="6">Ingen lagret${window._historyShowAll ? '' : ` for ${compDate}`}.</td></tr>`;
 
