@@ -44,7 +44,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
-<!-- Endret til hvit bakgrunn -->
 <body class="bg-gray-100 min-h-screen">
 
   <!-- ========= HEADER ========= -->
@@ -67,7 +66,6 @@
   </header>
 
   <!-- ========= PAGE CONTAINER ========= -->
-  <!-- Litt bredere totalbredde enn før -->
   <div class="mx-auto max-w-[96rem] px-3">
 
     <!-- Toolbar -->
@@ -90,22 +88,22 @@
            class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
           Tidtaking
         </a>
-                <a href="https://tidtaking.github.io/Tidtaking2/årsplan_view.html" target="_blank" rel="noopener"
+        <a href="https://tidtaking.github.io/Tidtaking2/årsplan_view.html" target="_blank" rel="noopener"
            class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
           View-Only
         </a>
-         <!-- Ny knapp for å vise/skjule sidepanel -->
+        <!-- Ny knapp for å vise/skjule sidepanel -->
         <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Sidepanel</button>
       </nav>
     </div>
 
     <!-- To-kolonne layout: hovedinnhold + valgfritt sidepanel -->
-<div id="page-grid" class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div id="page-grid" class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <!-- Main -->
       <main id="main-content" class="space-y-4">
         <!-- Calendar Tab -->
         <section id="tab-calendar" class="tab-section">
-          <!-- Kalendergrid beholder egen responsive oppdeling -->
+          <!-- Kalendergrid -->
           <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
 
           <div class="rounded-2xl border bg-white shadow-sm card">
@@ -180,7 +178,7 @@
                   <table class="w-full table-fixed text-sm">
                     <thead class="bg-slate-50 sticky top-0">
                       <tr class="text-left text-slate-600">
-                        <th class="p-2">Dato</th><th>Tittel</th><th>Type</th><th>Sted</th><th>Int</th><th class="text-right pr-2">…</th>
+                        <th class="p-2">Dato</th><th class="p-2">Tittel</th><th class="p-2">Type</th><th class="p-2">Sted</th><th class="p-2">Int</th><th class="p-2 text-right pr-2">…</th>
                       </tr>
                     </thead>
                     <tbody id="admin-events"></tbody>
@@ -224,13 +222,78 @@
                 </button>
                 <p class="text-xs text-slate-500 mt-1">Trygg å kjøre flere ganger – hopper over maler som allerede finnes (matcher på navn).</p>
               </div>
+
+              <!-- F: Varslinger (NY) -->
+              <div class="rounded-2xl border bg-white shadow-sm card p-4">
+                <h4 class="font-semibold mb-2">Varslinger</h4>
+                <p class="text-xs text-slate-600 mb-3">
+                  Abonnenter mottar e-post ved <b>per endring</b>, som <b>sum dag</b> (daglig digest) eller <b>sum uke</b> (ukentlig digest).
+                </p>
+
+                <!-- Avsender -->
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-sm font-medium">Avsender navn</label>
+                    <input id="nf-from-name" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Lørenskog Skiskyting"/>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Avsender e-post</label>
+                    <input id="nf-from-email" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="noreply@din-domene.no"/>
+                  </div>
+                  <div class="md:col-span-2">
+                    <button id="nf-save-sender" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Lagre avsender</button>
+                  </div>
+                </div>
+
+                <!-- Abonnenter -->
+                <div class="flex flex-wrap items-end gap-2 mb-2">
+                  <div>
+                    <label class="text-sm font-medium">E-post</label>
+                    <input id="nf-email" class="mt-1 w-64 h-10 rounded-xl border px-3" placeholder="person@eksempel.no">
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Frekvens</label>
+                    <select id="nf-frequency" class="mt-1 h-10 rounded-xl border px-3">
+                      <option value="per_change">Per endring</option>
+                      <option value="daily">Sum dag</option>
+                      <option value="weekly">Sum uke</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Typer (valgfritt)</label>
+                    <select id="nf-types" multiple class="mt-1 h-24 rounded-xl border px-3 min-w-[12rem]">
+                      <option>Trening</option><option>Skyting</option><option>Konkurranse</option>
+                      <option>Samling</option><option>Restitusjon</option><option>Annet</option>
+                    </select>
+                    <div class="text-[11px] text-slate-500">Hold Ctrl/Cmd for flere</div>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Aldersgrupper (valgfritt)</label>
+                    <select id="nf-ages" multiple class="mt-1 h-24 rounded-xl border px-3 min-w-[12rem]"></select>
+                    <div class="text-[11px] text-slate-500">Hold Ctrl/Cmd for flere</div>
+                  </div>
+                  <button id="nf-add" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Legg til/oppdater</button>
+                </div>
+
+                <div class="mt-2 max-h-[300px] overflow-auto rounded-xl border">
+                  <table class="w-full text-sm">
+                    <thead class="bg-slate-50 sticky top-0">
+                      <tr class="text-left text-slate-600">
+                        <th class="p-2">E-post</th><th>Frekvens</th><th>Typer</th><th>Aldersgrupper</th><th>Aktiv</th><th class="text-right pr-2">…</th>
+                      </tr>
+                    </thead>
+                    <tbody id="nf-table"></tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- /Varslinger -->
             </div>
           </div>
         </section>
       </main>
 
-      <!-- Sidepanel (kan skjules/vises) -->
-<aside id="sidebar" class="space-y-4 hidden">
+      <!-- Sidepanel -->
+      <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
           <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
           <div id="legend" class="p-4 space-y-1 text-sm"></div>
@@ -347,55 +410,47 @@
     dayjs.extend(dayjs_plugin_isoWeek);
     dayjs.extend(dayjs_plugin_weekday);
     dayjs.extend(dayjs_plugin_localizedFormat);
-    dayjs.locale('nb'); // <-- Norsk språk for måneder/ukedager
+    dayjs.locale('nb');
 
-  // --- Sidebar toggle (med knappestil) ---
-function setSidebarButtonStyle(isVisible){
-  const btn = document.getElementById('btn-toggle-sidebar');
-  if(!btn) return;
-  // Farg knappen når panelet er SKJULT
-  const isHidden = !isVisible;
-  btn.classList.toggle('bg-blue-50', isHidden);
-  btn.classList.toggle('border-blue-300', isHidden);
-  btn.classList.toggle('text-[var(--brand)]', isHidden);
-  btn.setAttribute('aria-pressed', String(isHidden));
-  btn.textContent = isHidden ? 'Sidepanel (skjult)' : 'Sidepanel';
-}
-
-function applySidebarLayout(visible){
-  const grid = document.getElementById('page-grid');
-  const aside = document.getElementById('sidebar');
-  if(!grid || !aside) return;
-
-  if(visible){
-    aside.classList.remove('hidden');
-    grid.classList.remove('lg:grid-cols-1');
-    grid.classList.add('lg:grid-cols-[minmax(0,1fr)_360px]');
-  }else{
-    aside.classList.add('hidden');
-    grid.classList.remove('lg:grid-cols-[minmax(0,1fr)_360px]');
-    grid.classList.add('lg:grid-cols-1');
-  }
-  setSidebarButtonStyle(visible);
-}
-
-function setupSidebarToggle(){
-  const btn = document.getElementById('btn-toggle-sidebar');
-  if(!btn) return;
-
-  // last siste valg (default: vist)
-  const saved = localStorage.getItem('lss:sidebar:visible');
-  const visible = saved === null ? true : (saved === 'true');
-  applySidebarLayout(visible);
-
-  btn.addEventListener('click', () => {
-    const aside = document.getElementById('sidebar');
-    const nowVisible = aside.classList.contains('hidden'); // blir motsatt etter toggle
-    applySidebarLayout(nowVisible);
-    localStorage.setItem('lss:sidebar:visible', String(nowVisible));
-  });
-}
-
+    // --- Sidebar toggle (med knappestil) ---
+    function setSidebarButtonStyle(isVisible){
+      const btn = document.getElementById('btn-toggle-sidebar');
+      if(!btn) return;
+      const isHidden = !isVisible;
+      btn.classList.toggle('bg-blue-50', isHidden);
+      btn.classList.toggle('border-blue-300', isHidden);
+      btn.classList.toggle('text-[var(--brand)]', isHidden);
+      btn.setAttribute('aria-pressed', String(isHidden));
+      btn.textContent = isHidden ? 'Sidepanel (skjult)' : 'Sidepanel';
+    }
+    function applySidebarLayout(visible){
+      const grid = document.getElementById('page-grid');
+      const aside = document.getElementById('sidebar');
+      if(!grid || !aside) return;
+      if(visible){
+        aside.classList.remove('hidden');
+        grid.classList.remove('lg:grid-cols-1');
+        grid.classList.add('lg:grid-cols-[minmax(0,1fr)_360px]');
+      }else{
+        aside.classList.add('hidden');
+        grid.classList.remove('lg:grid-cols-[minmax(0,1fr)_360px]');
+        grid.classList.add('lg:grid-cols-1');
+      }
+      setSidebarButtonStyle(visible);
+    }
+    function setupSidebarToggle(){
+      const btn = document.getElementById('btn-toggle-sidebar');
+      if(!btn) return;
+      const saved = localStorage.getItem('lss:sidebar:visible');
+      const visible = saved === null ? true : (saved === 'true');
+      applySidebarLayout(visible);
+      btn.addEventListener('click', () => {
+        const aside = document.getElementById('sidebar');
+        const nowVisible = aside.classList.contains('hidden');
+        applySidebarLayout(nowVisible);
+        localStorage.setItem('lss:sidebar:visible', String(nowVisible));
+      });
+    }
 
     // ---------- Konstanter ----------
     const COLORS = { Trening:'#2563eb', Skyting:'#0ea5e9', Konkurranse:'#dc2626', Samling:'#a855f7', Annet:'#6b7280', Restitusjon:'#16a34a' };
@@ -438,13 +493,13 @@ function setupSidebarToggle(){
       const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
       $('#btn-cancel')?.addEventListener('click', doClose);
       $('#dlg-close')?.addEventListener('click', doClose);
-dlg?.addEventListener('click', (e) => { 
-  if (e.target === dlg) {
-    if (confirm("Vil du lukke uten å lagre endringer?")) {
-      closeDialog();
-    }
-  }
-});
+      dlg?.addEventListener('click', (e) => {
+        if (e.target === dlg) {
+          if (confirm("Vil du lukke uten å lagre endringer?")) {
+            closeDialog();
+          }
+        }
+      });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog(); });
     }
 
@@ -591,7 +646,7 @@ dlg?.addEventListener('click', (e) => {
       return {
         id: e.id,
         date: e.date,
-        year: dayjs(e.date).year(),   // VIKTIG: for .eq('year', year)
+        year: dayjs(e.date).year(),
         title: e.title || null,
         type: e.type || null,
         modality: e.modality || null,
@@ -683,7 +738,6 @@ dlg?.addEventListener('click', (e) => {
       tipEl.classList.remove('hidden');
     }
     function hideTooltip(){ if(tipEl) tipEl.classList.add('hidden'); }
-
     function attachTipHandlers(el, html){
       let pressTimer = null;
       let last = {x:0, y:0};
@@ -710,7 +764,6 @@ dlg?.addEventListener('click', (e) => {
       el.addEventListener('touchend',   endPress,   { passive:true });
       el.addEventListener('touchcancel',endPress,   { passive:true });
     }
-
     function eventTooltipHTML(e){
       const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const title = esc(e.title || e.type || '');
@@ -719,7 +772,6 @@ dlg?.addEventListener('click', (e) => {
       const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
       const notes = (e.notes||'').trim() ? `<div class="mt-2 text-slate-600 whitespace-pre-wrap">${esc(e.notes)}</div>` : '';
       const tema = (e.shooting?.tema||[]).length ? `<div class="mt-1 flex flex-wrap gap-1">${e.shooting.tema.map(t=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px]">${esc(t)}</span>`).join('')}</div>` : '';
-
       return `
         <div class="font-semibold mb-1">${title}</div>
         <div><span class="font-medium">Type:</span> ${esc(e.type||'–')}</div>
@@ -829,8 +881,7 @@ dlg?.addEventListener('click', (e) => {
       $('#event-year').textContent = state.year;
       renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks(); renderAgeEditor(); renderAdminEvents();
 
-      // oppdatér filter for bank (aldersvalg)
-      const fAge = $('#f-age'); 
+      const fAge = $('#f-age');
       if(fAge){ fAge.innerHTML = `<option value="">Alle</option>` + (state.ageGroups||[]).map(g=>`<option value="${g.id}">${g.label}</option>`).join(''); }
 
       lsSet(KEY.YEAR,state.year);
@@ -889,7 +940,6 @@ dlg?.addEventListener('click', (e) => {
     }
 
     function emptyCell(){ const d = document.createElement('div'); d.className = 'min-h-[80px] rounded-xl border bg-white/70 p-1 opacity-50'; return d; }
-
     function dayCell(d){
       const key = d.format('YYYY-MM-DD');
       let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
@@ -1069,7 +1119,8 @@ dlg?.addEventListener('click', (e) => {
       function refreshTema(){
         const holder=$('#tema-tags'); holder.innerHTML='';
         (model.shooting.tema||[]).forEach((t,i)=>{
-          const b=document.createElement('span'); b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs'; b.textContent=t;
+          const b=document.createElement('span'); b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs'; b.text
+content=t;
           const x=document.createElement('button'); x.textContent='×'; x.className='ml-1'; x.onclick=()=>{ model.shooting.tema.splice(i,1); refreshTema(); };
           b.appendChild(x); holder.appendChild(b);
         });
@@ -1115,6 +1166,7 @@ dlg?.addEventListener('click', (e) => {
       $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
       $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
     }
+
     function openViewDialog(model){
       const body = $('#dlg-body');
       $('#dlg-title').textContent = 'Vis hendelse';
@@ -1397,7 +1449,6 @@ dlg?.addEventListener('click', (e) => {
       });
     }
 
-    // ---------- XLSX hjelpefunksjoner ----------
     function downloadXlsxMultiple(sheets){
       const wb = XLSX.utils.book_new();
       for(const {name, rows} of sheets){
@@ -1412,11 +1463,9 @@ dlg?.addEventListener('click', (e) => {
 
     async function exportExcelAll(){
       try{
-        // Hent ALT fra Supabase
         let rawEvents = await fetchAllEventsFromSupabase();
         let rawBank   = await fetchAllFromSupabase(TBL.bank);
 
-        // Fallback til lokal state hvis skyen er tom
         if(!rawEvents || rawEvents.length===0) rawEvents = (state.events||[]).map(mapEventToDb);
         if(!rawBank   || rawBank.length===0)   rawBank   = (state.bank||[]).map(mapBankToDb);
 
@@ -1448,7 +1497,6 @@ dlg?.addEventListener('click', (e) => {
 
     // ---------- Øktbank seed / defaults ----------
     function getDefaultTemplates(){
-      // En lett, trygg startpakke – kan utvides
       return [
         { id: uid(), name:'Rolig langkjøring', type:'Trening', modality:'Løp', intensity:'I1', durationMin:60, age:['11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Rolig pratetempo.' },
         { id: uid(), name:'Styrke helkropp', type:'Trening', modality:'Styrke', intensity:'I2', durationMin:45, age:['9-10','11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kroppsvekt + stabilitet.' },
@@ -1460,17 +1508,98 @@ dlg?.addEventListener('click', (e) => {
 
     async function seedBankIfWanted(){
       const defaults = getDefaultTemplates();
-      // Unngå duplikater på navn
       const existingNames = new Set((state.bank||[]).map(b=> (b.name||'').toLowerCase()));
       const toAdd = defaults.filter(t => !existingNames.has((t.name||'').toLowerCase()));
       if(toAdd.length===0){ alert('Ingen nye maler å legge til.'); return; }
-      // Legg lokalt
       state.bank = [...toAdd, ...(state.bank||[])];
       lsSet(KEY.BANK, state.bank);
       renderBank();
-      // Og i skyen
       for(const t of toAdd){ await supaUpsertBankTemplate(t); }
       alert(`La til ${toAdd.length} mal(er) i Øktbank.`);
+    }
+
+    // ---------- Varslinger (Admin) ----------
+    async function nfLoadSender(){
+      const { data } = await supabase.from(TBL.settings).select('value').eq('key','notify_sender').maybeSingle();
+      $('#nf-from-name').value  = data?.value?.from_name  || 'Lørenskog Skiskyting';
+      $('#nf-from-email').value = data?.value?.from_email || 'noreply@din-domene.no';
+    }
+    async function nfSaveSender(){
+      const from_name  = $('#nf-from-name').value.trim();
+      const from_email = $('#nf-from-email').value.trim();
+      await supabase.from(TBL.settings).upsert({ key:'notify_sender', value: { from_name, from_email } });
+      alert('Avsender lagret.');
+    }
+    function nfGetSelectedOptions(sel){ return Array.from(sel.options).filter(o=>o.selected).map(o=>o.value); }
+    async function nfLoadAgesIntoSelect(){
+      const sel = $('#nf-ages'); if(!sel) return;
+      const { data } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      const list = Array.isArray(data?.value) ? data.value : state.ageGroups;
+      sel.innerHTML = (list||[]).map(g=>`<option value="${escapeHTML(g.id)}">${escapeHTML(g.label)}</option>`).join('');
+    }
+    async function nfLoadSubs(){
+      const { data, error } = await supabase.from('notify_subscribers').select('*').order('email');
+      const tb = $('#nf-table');
+      if (error) { console.warn(error); tb.innerHTML = `<tr><td colspan="6" class="p-3 text-slate-500">Kunne ikke hente.</td></tr>`; return; }
+      tb.innerHTML = (data||[]).map(s=>`
+        <tr class="border-t">
+          <td class="p-2">${escapeHTML(s.email)}</td>
+          <td class="p-2">${escapeHTML(s.frequency)}</td>
+          <td class="p-2">${(s.types||[]).join(', ') || '—'}</td>
+          <td class="p-2">${(s.ages||[]).join(', ')  || '—'}</td>
+          <td class="p-2">${s.active ? 'Ja' : 'Nei'}</td>
+          <td class="p-2 text-right">
+            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-nf-edit="${escapeHTML(s.email)}">Rediger</button>
+            <button class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm" data-nf-del="${escapeHTML(s.email)}">Slett</button>
+            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-nf-toggle="${escapeHTML(s.email)}">${s.active?'Deaktiver':'Aktiver'}</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tb.querySelectorAll('[data-nf-edit]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const email = btn.getAttribute('data-nf-edit');
+          const s = (data||[]).find(x=>x.email===email);
+          if(!s) return;
+          $('#nf-email').value = s.email;
+          $('#nf-frequency').value = s.frequency;
+          const selT = $('#nf-types'); Array.from(selT.options).forEach(o=> o.selected = (s.types||[]).includes(o.value));
+          const selA = $('#nf-ages');  Array.from(selA.options).forEach(o=> o.selected = (s.ages||[]).includes(o.value));
+        };
+      });
+      tb.querySelectorAll('[data-nf-del]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const email = btn.getAttribute('data-nf-del');
+          if(!confirm(`Slette ${email}?`)) return;
+          await supabase.from('notify_subscribers').delete().eq('email', email);
+          nfLoadSubs();
+        };
+      });
+      tb.querySelectorAll('[data-nf-toggle]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const email = btn.getAttribute('data-nf-toggle');
+          const row = (data||[]).find(x=>x.email===email);
+          if(!row) return;
+          await supabase.from('notify_subscribers').update({ active: !row.active }).eq('email', email);
+          nfLoadSubs();
+        };
+      });
+    }
+    async function nfAddOrUpdate(){
+      const email = $('#nf-email').value.trim().toLowerCase();
+      if(!email){ alert('Skriv inn e-post.'); return; }
+      const frequency = $('#nf-frequency').value;
+      const types = nfGetSelectedOptions($('#nf-types'));
+      const ages  = nfGetSelectedOptions($('#nf-ages'));
+      await supabase.from('notify_subscribers').upsert({ email, frequency, types, ages, active:true });
+      $('#nf-email').value = '';
+      Array.from($('#nf-types').options).forEach(o=>o.selected=false);
+      Array.from($('#nf-ages').options).forEach(o=>o.selected=false);
+      nfLoadSubs();
+    }
+    function nfBindUI(){
+      $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
+      $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
     }
 
     // ---------- Tabs / UI-hendelser ----------
@@ -1484,28 +1613,17 @@ dlg?.addEventListener('click', (e) => {
     }
 
     function bindUiHandlers(){
-      // Tabs
       $$('.tab-btn').forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
-
-      // Toggle liste i Årsplan
       $('#toggle-list')?.addEventListener('click', ()=>{
         const el = $('#event-list');
         if(!el) return;
         el.classList.toggle('hidden');
       });
-
-      // Hurtigknapper
       $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date:dayjs().format('YYYY-MM-DD') }));
       $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date:dayjs().format('YYYY-MM-DD'), shooting:{stilling:'Liggende',skudd:30,tema:[]} }));
       $('#quick-konk')?.addEventListener('click',   ()=> openDialog({ type:'Konkurranse', date:dayjs().format('YYYY-MM-DD') }));
-
-      // ICS
       $('#btn-ics')?.addEventListener('click', exportICS);
-
-      // Seed bank
       $('#btn-seed-bank')?.addEventListener('click', seedBankIfWanted);
-
-      // Import JSON (events+weeks+bank)
       $('#file-import')?.addEventListener('change', async (ev)=>{
         const f = ev.target.files?.[0]; if(!f) return;
         try{
@@ -1523,17 +1641,11 @@ dlg?.addEventListener('click', (e) => {
           ev.target.value='';
         }
       });
-
-      // Excel-eksport (flersidig)
       $('#btn-export-xlsx')?.addEventListener('click', exportExcelAll);
-
-      // Admin-filtre
       $('#admin-search')?.addEventListener('click', renderAdminEvents);
       $('#admin-q')?.addEventListener('input', renderAdminEvents);
       $('#admin-from')?.addEventListener('change', renderAdminEvents);
       $('#admin-to')?.addEventListener('change', renderAdminEvents);
-
-      // Årsklasser-knapper
       $('#age-add')?.addEventListener('click', ()=>{
         state.ageGroups.push({ id:'ny', label:'Ny gruppe' });
         lsSet(KEY.AGES, state.ageGroups);
@@ -1557,29 +1669,28 @@ dlg?.addEventListener('click', (e) => {
 
     // ---------- Init ----------
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
-    function init(){
+    async function init(){
       bindDialogChrome();
       bindUiHandlers();
-      setupSidebarToggle(); // <-- legg til denne linjen
-
-
-      // Start med Årsplan-fanen
+      setupSidebarToggle();
       switchTab('calendar');
 
-      // Last data og sett opp realtime
-      supaLoadAll(state.year);
+      await supaLoadAll(state.year);
       supaRealtimeInit();
 
-      // Årsnavigasjon
       $('#year-prev').onclick=()=>{ state.year--; render(); supaLoadAll(state.year); };
       $('#year-next').onclick=()=>{ state.year++; render(); supaLoadAll(state.year); };
 
-      // Søke/filter i bank
       $$('#q-bank, #f-age, #f-type').forEach(el=> el.addEventListener('input', renderBank));
 
-      // Hovedknapper
       $('#btn-new').onclick=()=> openDialog({date:dayjs().format('YYYY-MM-DD')});
       $('#btn-print').onclick=()=> window.print();
+
+      // Varslinger (Admin)
+      nfBindUI();
+      await nfLoadAgesIntoSelect();
+      await nfLoadSender();
+      await nfLoadSubs();
     }
 
     window.addEventListener('DOMContentLoaded', init);
