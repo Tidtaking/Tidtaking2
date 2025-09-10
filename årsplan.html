@@ -641,25 +641,26 @@
         .subscribe();
     }
 
-    // ---------- Mappers ----------
-    function mapEventToDb(e){
-      return {
-        id: e.id,
-        date: e.date,
-        year: dayjs(e.date).year(),
-        title: e.title || null,
-        type: e.type || null,
-        modality: e.modality || null,
-        intensity: e.intensity || null,
-        duration_min: e.durationMin ?? null,
-        age: e.age || [],
-        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: e.raceSubtype || null,
-        notes: e.notes || null,
-        roles: e.roles || {},
-        location: e.location || null
-      };
-    }
+// --- ERSTATT HELE mapEventToDb MED DENNE ---
+function mapEventToDb(e){
+  return {
+    id: e.id,
+    date: e.date,
+    // year: IKKE send! Den er generated i DB
+    title: e.title || null,
+    type: e.type || null,
+    modality: e.modality || null,
+    intensity: e.intensity || null,
+    duration_min: e.durationMin ?? null,
+    age: e.age || [],
+    shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
+    race_subtype: e.raceSubtype || null,
+    notes: e.notes || null,
+    roles: e.roles || {},
+    location: e.location || null
+  };
+}
+
     function mapEventFromDb(r){
       const t = r.type ?? r.event_type ?? 'Trening';
       return {
