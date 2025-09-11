@@ -563,15 +563,24 @@
       const { error } = await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups });
       if(error){ console.warn('Lagre age_groups feilet', error); alert('Kunne ikke lagre grupper til skyen.'); }
     }
-async function notifyPerChange(eventId){
+async function notifyPerChange(eventId, change = 'upsert'){
   try{
-    await supabase.functions.invoke('notify-dispatch', {
-      body: { mode: 'per_change', eventId: eventId || null }
+    const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+      body: { mode: 'per_change', change, eventId }
     });
+    if (error) throw error;
+    console.log('[notify-dispatch] OK', data);
   }catch(err){
-    console.warn('notify-dispatch feilet:', err);
+    console.error('[notify-dispatch] FEIL', err);
   }
 }
+
+// Etter lagring/oppdatering:
+await notifyPerChange(model.id, 'upsert');
+
+// Etter sletting:
+await notifyPerChange(model.id, 'delete');
+
 
    function replaceIdEverywhere(oldId, newId, dateISO){
   if (!oldId || !newId || oldId === newId) return;
