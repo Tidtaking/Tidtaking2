@@ -622,9 +622,56 @@ async function supaUpsertEvent(model){
 }
 
 
-  async function supaDeleteEvent(ev){
+  async function findServerIdFor(ev){
+  const title = (ev.title || '').trim();
+
+  // 1) eksakt match på dato + tittel
+  {
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, modality, location, updated_at, created_at')
+      .eq('date', ev.date)
+      .eq('title', title)
+      .limit(5);
+    if (!error && data && data.length){
+      // Om flere, preferer samme type
+      const sameType = data.find(r => (r.type || '') === (ev.type || ''));
+      return (sameType || data[0]).id;
+    }
+  }
+
+  // 2) løsere: dato + tittel inneholder (case-insensitiv), sorter nyest oppdatert
+  if (title.length >= 3){
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, updated_at, created_at')
+      .eq('date', ev.date)
+      .ilike('title', `%${title}%`)
+      .order('updated_at', { ascending: false })
+      .limit(5);
+    if (!error && data && data.length){
+      const sameType = data.find(r => (r.type || '') === (ev.type || ''));
+      return (sameType || data[0]).id;
+    }
+  }
+
+  // 3) siste utvei: nyeste rad på akkurat den datoen
+  {
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id')
+      .eq('date', ev.date)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (!error && data && data.length) return data[0].id;
+  }
+
+  return null;
+}
+
+async function supaDeleteEvent(ev){
   try{
-    // 1) Prøv å slette på id
+    // 1) forsøk å slette på klient-ID
     let { data, error } = await supabase
       .from(TBL.events)
       .delete()
@@ -637,35 +684,36 @@ async function supaUpsertEvent(model){
       return;
     }
 
-    if (!data || data.length === 0){
-      // 2) Fallback: forsøk å finne en "samme rad" i DB (konservativ match)
-      const { data: hit } = await supabase
-        .from(TBL.events)
-        .select('id')
-        .eq('date', ev.date)
-        .eq('title', ev.title || '')
-        .eq('type', ev.type || null)
-        .eq('location', ev.location || null)
-        .limit(1)
-        .maybeSingle();
+    if (data && data.length){
+      await notifyPerChange(null);
+      return;
+    }
 
-      if (hit?.id){
-        const res2 = await supabase
-          .from(TBL.events)
-          .delete()
-          .eq('id', hit.id)
-          .select('id');
-
-        if (!res2.error){
-          console.log('Slettet via fallback på id:', hit.id);
-          await notifyPerChange(null);
-          return;
-        }
-      }
-
+    // 2) fallback: finn serverens ID for denne hendelsen
+    const sid = await findServerIdFor(ev);
+    if (!sid){
       console.warn('Ingen rader slettet. ID/kompositt-nøkkel traff ikke', ev);
       alert('Fant ingen rad å slette i skyen (ID og fallback traff ikke).');
       return;
+    }
+
+    // 3) slett på funnet server-ID
+    const res2 = await supabase
+      .from(TBL.events)
+      .delete()
+      .eq('id', sid)
+      .select('id');
+
+    if (res2.error){
+      console.warn('Sletting via fallback feilet', res2.error);
+      alert('Kunne ikke slette i skyen via fallback.');
+      return;
+    }
+
+    // 4) hvis vi slettet via en annen ID enn klientens, reparer klient-state
+    if (sid !== ev.id){
+      replaceIdEverywhere(ev.id, sid, ev.date);
+      console.log('Reparerte klient-ID -> server-ID ved sletting:', ev.id, '→', sid);
     }
 
     await notifyPerChange(null);
@@ -674,6 +722,7 @@ async function supaUpsertEvent(model){
     alert('Uventet feil ved sletting (se konsoll).');
   }
 }
+
 
 
 
