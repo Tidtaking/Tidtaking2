@@ -573,16 +573,47 @@ async function notifyPerChange(eventId){
   }
 }
 
-   async function supaUpsertEvent(model){
+   function replaceIdEverywhere(oldId, newId, dateISO){
+  if (!oldId || !newId || oldId === newId) return;
+
+  // A) Bytt i events-lista
+  const i = state.events.findIndex(x => x.id === oldId);
+  if (i >= 0) { state.events[i] = { ...state.events[i], id: newId }; }
+
+  // B) Bytt i dayOrder for aktuell dato
+  const key = dateISO || (state.events[i]?.date);
+  if (key && state.dayOrder[key]) {
+    state.dayOrder[key] = state.dayOrder[key].map(x => x === oldId ? newId : x);
+  }
+
+  // C) Lagre og rerender
+  lsSet(KEY.EVENTS, state.events);
+  lsSet(KEY.DAYORDER, state.dayOrder);
+  render();
+}
+
+async function supaUpsertEvent(model){
   const row = mapEventToDb(model);
   try{
-    const { error } = await supabase.from(TBL.events).upsert(row, { onConflict: 'id' });
-    if(error){
+    // Hent tilbake raden som ble skrevet – inkludert serverens id
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .upsert(row, { onConflict: 'id' })
+      .select('id, date')   // hent minst id (og gjerne date for dayOrder)
+      .single();
+
+    if (error){
       console.warn('Upsert event feilet', error);
       alert('Kunne ikke lagre til skyen. Lagret lokalt.');
       return;
     }
-    // Send e-post per endring
+
+    // Hvis DB ga oss en annen id enn modellen, bytt den inn i all klient-state
+    if (data && data.id && data.id !== model.id){
+      replaceIdEverywhere(model.id, data.id, data.date || model.date);
+      model.id = data.id; // sørg for at videre bruk av modellen har riktig id
+    }
+
     await notifyPerChange(model.id);
   }catch(err){
     console.error('Upsert event exception:', err);
@@ -590,38 +621,60 @@ async function notifyPerChange(eventId){
   }
 }
 
-  async function supaDeleteEvent(id){
+
+  async function supaDeleteEvent(ev){
   try{
-    // Be om å få tilbake slettede rader – da ser vi om noe faktisk ble slettet.
-    const { data, error } = await supabase
+    // 1) Prøv å slette på id
+    let { data, error } = await supabase
       .from(TBL.events)
       .delete()
-      .eq('id', id)
-      .select('id'); // <- viktig!
+      .eq('id', ev.id)
+      .select('id');
 
     if (error){
       console.warn('Sletting feilet', error);
-      alert('Kunne ikke slette i skyen. Viser fortsatt slettet lokalt til du laster siden på nytt.');
+      alert('Kunne ikke slette i skyen.');
       return;
     }
 
-    // data er en array med slettede rader. Tom array = ingen rad matchet ID-en.
     if (!data || data.length === 0){
-      console.warn('Ingen rader slettet. ID traff ikke noen rad i DB:', id);
-      alert('Fant ingen rad å slette i skyen (ID traff ikke). Sjekk at ID i klient = ID i databasen.');
+      // 2) Fallback: forsøk å finne en "samme rad" i DB (konservativ match)
+      const { data: hit } = await supabase
+        .from(TBL.events)
+        .select('id')
+        .eq('date', ev.date)
+        .eq('title', ev.title || '')
+        .eq('type', ev.type || null)
+        .eq('location', ev.location || null)
+        .limit(1)
+        .maybeSingle();
+
+      if (hit?.id){
+        const res2 = await supabase
+          .from(TBL.events)
+          .delete()
+          .eq('id', hit.id)
+          .select('id');
+
+        if (!res2.error){
+          console.log('Slettet via fallback på id:', hit.id);
+          await notifyPerChange(null);
+          return;
+        }
+      }
+
+      console.warn('Ingen rader slettet. ID/kompositt-nøkkel traff ikke', ev);
+      alert('Fant ingen rad å slette i skyen (ID og fallback traff ikke).');
       return;
     }
 
-    // Valgfritt: logg hva som ble slettet
-    console.log('Slettet rader:', data.map(r=>r.id));
-
-    // Send evt. varsel etter faktisk sletting
     await notifyPerChange(null);
   }catch(err){
     console.error('Delete exception:', err);
     alert('Uventet feil ved sletting (se konsoll).');
   }
 }
+
 
 
     async function supaUpsertWeek(year, week, code, note){
@@ -920,7 +973,7 @@ function mapEventToDb(e){
         if(btn.dataset.act === 'view') return openViewDialog(evObj);
         if(btn.dataset.act === 'edit') return openDialog({...evObj});
         if(btn.dataset.act === 'dup'){ const copy = { ...evObj, id: uid(), title: (evObj.title||evObj.type)+' (kopi)' }; state.events.push(copy); lsSet(KEY.EVENTS, state.events); render(); await supaUpsertEvent(copy); const order = getOrderForDate(dateISO); setOrderForDate(dateISO, [...order, copy.id]); return; }
-        if(btn.dataset.act === 'del'){ if(!confirm('Slette denne hendelsen?')) return; state.events = state.events.filter(x=> x.id !== evObj.id); lsSet(KEY.EVENTS, state.events); render(); await supaDeleteEvent(evObj.id); const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id); setOrderForDate(dateISO, ids); const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')); return openDayView(dateISO, remaining); }
+        if(btn.dataset.act === 'del'){ if(!confirm('Slette denne hendelsen?')) return; state.events = state.events.filter(x=> x.id !== evObj.id); lsSet(KEY.EVENTS, state.events); render(); await supaDeleteEvent(evObj); const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id); setOrderForDate(dateISO, ids); const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')); return openDayView(dateISO, remaining); }
       });
 
       $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
@@ -1210,7 +1263,7 @@ content=t;
 
       $('#btn-delete').onclick=async ()=>{
         state.events=state.events.filter(x=>x.id!==model.id); lsSet(KEY.EVENTS,state.events); render();
-        await supaDeleteEvent(model.id);
+await supaDeleteEvent(model);
         const ids = getOrderForDate(model.date).filter(x=> x !== model.id); setOrderForDate(model.date, ids);
         closeDialog();
       };
