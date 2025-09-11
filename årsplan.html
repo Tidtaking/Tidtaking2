@@ -123,7 +123,6 @@
             </div>
           </div>
         </section>
-<div id="day-view" class="p-4"></div>
 
         <!-- Bank Tab -->
         <section id="tab-bank" class="tab-section hidden">
@@ -574,22 +573,32 @@ async function notifyPerChange(eventId){
   }
 }
 
-   async function supaUpsertEvent(model){
+  async function supaUpsertEvent(model){
   const row = mapEventToDb(model);
   try{
-    const { error } = await supabase.from(TBL.events).upsert(row, { onConflict: 'id' });
+    // be om representasjon så vi vet at DB faktisk skrev raden
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .upsert(row, { onConflict: 'id' })
+      .select('id')
+      .maybeSingle();
+
     if(error){
       console.warn('Upsert event feilet', error);
       alert('Kunne ikke lagre til skyen. Lagret lokalt.');
-      return;
+      return false;
     }
-    // Send e-post per endring
-    await notifyPerChange(model.id);
+    // best-effort notifikasjon – men ikke la feil her stoppe lagringen
+    try{ await notifyPerChange(model.id); }catch(e){ console.warn('notify feilet (ignorerer):', e); }
+
+    return !!data?.id; // <- viktig: true ved suksess
   }catch(err){
     console.error('Upsert event exception:', err);
     alert('Uventet feil ved lagring (se konsoll).');
+    return false;
   }
 }
+
 
 async function supaDeleteEvent(id){
   try{
