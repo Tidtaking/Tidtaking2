@@ -229,6 +229,9 @@
                 <p class="text-xs text-slate-600 mb-3">
                   Abonnenter mottar e-post ved <b>per endring</b>, som <b>sum dag</b> (daglig digest) eller <b>sum uke</b> (ukentlig digest).
                 </p>
+<button id="nf-drain" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+  Send ventende varsler
+</button>
 
                 <!-- Avsender -->
                 <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1778,10 +1781,44 @@ await supaDeleteEvent(model);
       Array.from($('#nf-ages').options).forEach(o=>o.selected=false);
       nfLoadSubs();
     }
-    function nfBindUI(){
-      $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
-      $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
+function nfBindUI(){
+  // Lagre avsender
+  $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
+
+  // Legg til / oppdater abonnent
+  $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
+
+  // Tøm køen manuelt (drain)
+  $('#nf-drain')?.addEventListener('click', async () => {
+    const btn = $('#nf-drain');
+    if (!btn) return;
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Sender…';
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+        body: { mode: 'per_change', drain: true, batchSize: 50 }
+      });
+      if (error) throw error;
+
+      const sent    = data?.sent    ?? data?.results?.sent    ?? 0;
+      const failed  = data?.failed  ?? data?.results?.failed  ?? 0;
+      const skipped = data?.skipped ?? data?.results?.skipped ?? 0;
+      alert(`OK — sendt: ${sent}, hoppet over: ${skipped}, feilet: ${failed}`);
+    } catch (e) {
+      console.error('[notify drain] FEIL', e);
+      alert('Feil ved utsending (se konsoll).');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
     }
+  });
+
+  // Enter i e-postfelt = lagre/oppdater
+  $('#nf-email')?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); nfAddOrUpdate(); }
+  });
+}
 
     // ---------- Tabs / UI-hendelser ----------
     function switchTab(name){
