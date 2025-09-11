@@ -564,24 +564,21 @@
       if(error){ console.warn('Lagre age_groups feilet', error); alert('Kunne ikke lagre grupper til skyen.'); }
     }
 async function notifyPerChange(eventId, change = 'upsert'){
-  try{
+  try {
     const { data, error } = await supabase.functions.invoke('notify-dispatch', {
       body: { mode: 'per_change', change, eventId }
     });
     if (error) throw error;
-    console.log('[notify-dispatch] OK', data);
-  }catch(err){
-    console.error('[notify-dispatch] FEIL', err);
+    console.log('[notify] OK', data);
+  } catch (err) {
+    console.error('[notify] FEIL', err);
   }
 }
 
-// Etter lagring/oppdatering:
+// etter lagring
 await notifyPerChange(model.id, 'upsert');
-
-// Etter sletting:
+// etter sletting
 await notifyPerChange(model.id, 'delete');
-    }
-
 
    function replaceIdEverywhere(oldId, newId, dateISO){
   if (!oldId || !newId || oldId === newId) return;
