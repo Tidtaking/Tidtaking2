@@ -590,33 +590,36 @@ async function notifyPerChange(eventId){
   }
 }
 
-   async function supaDeleteEvent(id){
+async function supaDeleteEvent(id){
   try{
+    // Be PostgREST returnere de slettede radene slik at vi kan verifisere
     const { data, error } = await supabase
       .from(TBL.events)
       .delete()
       .eq('id', id)
-      .select('id');     // <= be om retur
+      .select('id'); // <- viktig for å få data tilbake
 
     if (error){
       console.warn('Sletting feilet', error);
-      alert('Kunne ikke slette i skyen.');
-      return;
+      alert('Kunne ikke slette i skyen: ' + (error.message || 'se konsoll'));
+      return false;
     }
     if (!data || data.length === 0){
       console.warn('Ingen rader ble slettet (sjekk RLS/policy og at id finnes)');
-      alert('Fikk ikke slettet i skyen (ingen rad matchet).');
-      return;
+      alert('Ingen rader ble slettet (sjekk RLS/policy og at id finnes).');
+      return false;
     }
 
-    // OK – trigge varsling
-    await notifyPerChange(null);
+    // Meld fra til notifier (best effort)
+    try{ await notifyPerChange(null); }catch{}
+
+    return true;
   }catch(err){
     console.error('Delete exception:', err);
     alert('Uventet feil ved sletting (se konsoll).');
+    return false;
   }
 }
-
 
     async function supaUpsertWeek(year, week, code, note){
       const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
@@ -882,44 +885,60 @@ function mapEventToDb(e){
         </div>
       `;
     }
-    function openDayView(dateISO, eventsForDay){
-      const d = dayjs(dateISO);
-      const items = sortEventsByDayOrder(dateISO, eventsForDay);
-      const body = $('#dlg-body');
-      $('#dlg-title').textContent = d.format('dddd D. MMMM YYYY');
-      $('#btn-delete').classList.add('hidden');
-      $('#btn-save').classList.remove('hidden');
+    function openDayView(dateISO, evts) {
+  const container = $('#day-view');
+  const list = evts.map(evObj => {
+    const html = `
+      <div class="day-event">
+        <span class="time">${evObj.time || ''}</span>
+        <span class="title">${evObj.title || ''}</span>
+        <button class="btn-edit" data-id="${evObj.id}" data-act="edit">✎</button>
+        <button class="btn-del" data-id="${evObj.id}" data-act="del">🗑</button>
+      </div>`;
+    return html;
+  }).join('');
 
-      body.innerHTML = `
-        <div class="space-y-3">
-          <div id="dnd-list" class="space-y-3">
-            ${items.map(e=> `<div class="rounded-2xl border bg-white shadow-sm p-4 dnd-item" draggable="true" data-id="${e.id}">${previewCardHTML(e)}</div>`).join('')}
-          </div>
-          <div class="pt-2">
-            <button id="btn-new-on-day" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny hendelse denne dagen</button>
-          </div>
-        </div>
-      `;
+  container.innerHTML = `
+    <h3>${dateISO}</h3>
+    <div>${list || '<em>Ingen hendelser</em>'}</div>
+    <button id="btn-new">+ Ny hendelse</button>
+  `;
 
-      const list = $('#dnd-list');
-      let dragEl = null;
-      list.addEventListener('dragstart', (ev)=>{ const item = ev.target.closest('.dnd-item'); if(!item) return; dragEl = item; item.classList.add('opacity-60'); ev.dataTransfer.effectAllowed = 'move'; try { ev.dataTransfer.setData('text/plain', item.dataset.id || ''); } catch {} });
-      list.addEventListener('dragover', (ev)=>{ ev.preventDefault(); const over = ev.target.closest('.dnd-item'); if(!over || over === dragEl) return; const rect = over.getBoundingClientRect(); const before = (ev.clientY - rect.top) < rect.height / 2; if (before) list.insertBefore(dragEl, over); else list.insertBefore(dragEl, over.nextSibling); });
-      list.addEventListener('drop', ()=>{ const ids = Array.from(list.querySelectorAll('.dnd-item')).map(el => el.dataset.id); setOrderForDate(dateISO, ids); render(); });
-      list.addEventListener('dragend', ()=>{ if(dragEl){ dragEl.classList.remove('opacity-60'); dragEl = null; } });
+  // Ny hendelse
+  $('#btn-new').onclick = () => openDialog({ date: dateISO });
 
-      list.addEventListener('click', async (e)=>{
-        const btn = e.target.closest('button[data-act]'); if(!btn) return;
-        const item = e.target.closest('.dnd-item'); const id = item?.dataset.id; const evObj = state.events.find(x=>x.id===id); if(!evObj) return;
-        if(btn.dataset.act === 'view') return openViewDialog(evObj);
-        if(btn.dataset.act === 'edit') return openDialog({...evObj});
-        if(btn.dataset.act === 'dup'){ const copy = { ...evObj, id: uid(), title: (evObj.title||evObj.type)+' (kopi)' }; state.events.push(copy); lsSet(KEY.EVENTS, state.events); render(); await supaUpsertEvent(copy); const order = getOrderForDate(dateISO); setOrderForDate(dateISO, [...order, copy.id]); return; }
-        if(btn.dataset.act === 'del'){ if(!confirm('Slette denne hendelsen?')) return; state.events = state.events.filter(x=> x.id !== evObj.id); lsSet(KEY.EVENTS, state.events); render(); await supaDeleteEvent(evObj.id); const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id); setOrderForDate(dateISO, ids); const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')); return openDayView(dateISO, remaining); }
-      });
+  // Edit / delete på hver rad
+  container.querySelectorAll('button').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const evObj = state.events.find(e => e.id === id);
+      if (!evObj) return;
 
-      $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
-      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
-    }
+      if (btn.dataset.act === 'edit') {
+        return openDialog(evObj);
+      }
+
+      if (btn.dataset.act === 'del') {
+        if (!confirm('Slette denne hendelsen?')) return;
+
+        const ok = await supaDeleteEvent(evObj.id);
+        if (!ok) return; // ikke fjern lokalt hvis sletting feilet i DB
+
+        // Fjern lokalt etter bekreftet sletting
+        state.events = state.events.filter(x => x.id !== evObj.id);
+        lsSet(KEY.EVENTS, state.events);
+
+        const ids = getOrderForDate(dateISO).filter(x => x !== evObj.id);
+        setOrderForDate(dateISO, ids);
+
+        render();
+
+        const remaining = state.events.filter(x => dayjs(x.date).isSame(dateISO, 'day'));
+        return openDayView(dateISO, remaining);
+      }
+    };
+  });
+}
 
     // ---------- Render ----------
     function render(){
