@@ -123,6 +123,7 @@
             </div>
           </div>
         </section>
+<div id="day-view" class="p-4"></div>
 
         <!-- Bank Tab -->
         <section id="tab-bank" class="tab-section hidden">
@@ -912,11 +913,13 @@ function openDayView(dateISO, evts) {
     return html;
   }).join('');
 
-  container.innerHTML = `
-    <h3>${dateISO}</h3>
-    <div>${list || '<em>Ingen hendelser</em>'}</div>
-    <button id="btn-new">+ Ny hendelse</button>
-  `;
+container.innerHTML = `
+  <h3>${dateISO}</h3>
+  <div>${list || '<em>Ingen hendelser</em>'}</div>
+  <button id="btn-new-day">+ Ny hendelse</button>
+`;
+container.querySelector('#btn-new-day').onclick = () => openDialog({ date: dateISO });
+
 
   // Ny hendelse
   $('#btn-new').onclick = () => openDialog({ date: dateISO });
