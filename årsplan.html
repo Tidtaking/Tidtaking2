@@ -1124,113 +1124,182 @@ function mapEventToDb(e){
     }
 
     // ---------- Dialoger ----------
-    function openDialog(data){
-      const existing = state.events.find(x=>x.id===data.id);
-      const isEdit = !!existing;
+   function openDialog(data){
+  const existing = state.events.find(x=>x.id===data.id);
+  const isEdit = !!existing;
 
-      const model=Object.assign(
-        { id:uid(), title:'', type:'Trening', date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'', durationMin:60, age:[], shooting:{stilling:'',skudd:0,tema:[]}, notes:'', raceSubtype:'', roles:{}, location:'' },
-        data
-      );
+  const model=Object.assign(
+    {
+      id:uid(), title:'', type:'Trening',
+      date:dayjs().format('YYYY-MM-DD'), modality:'', intensity:'',
+      durationMin:60, age:[],
+      shooting:{stilling:'',skudd:0,tema:[]},
+      notes:'', raceSubtype:'', roles:{}, location:''
+    },
+    data
+  );
 
-      const body=$('#dlg-body'); body.innerHTML='';
-      $('#dlg-title').textContent=isEdit?'Rediger hendelse':'Ny hendelse';
-      $('#btn-delete').classList.toggle('hidden',!isEdit);
-      $('#btn-save')?.classList.remove('hidden');
-      $('#btn-save')?.removeAttribute('disabled');
+  const body=$('#dlg-body'); body.innerHTML='';
+  $('#dlg-title').textContent=isEdit?'Rediger hendelse':'Ny hendelse';
+  $('#btn-delete').classList.toggle('hidden',!isEdit);
+  $('#btn-save')?.classList.remove('hidden');
+  $('#btn-save')?.removeAttribute('disabled');
 
-      const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
-      const ageChks = (state.ageGroups||[]).map(g=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'><input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/> <span class='text-sm'>${g.label}</span></label>`).join('');
+  const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
+  const ageChks = (state.ageGroups||[]).map(g=>`
+    <label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'>
+      <input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/>
+      <span class='text-sm'>${g.label}</span>
+    </label>`).join('');
 
-      body.innerHTML=`
-        ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
-        <div class='grid grid-cols-2 gap-3'>
-          ${field('Type', select('f-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
-          ${field('Dato', `<input id='f-date' type='date' class='mt-1 w-full rounded-xl border px-3 py-2' value='${dayjs(model.date).format('YYYY-MM-DD')}'/>`)}
-        </div>
-        ${field('Sted/plassering', `<input id='f-loc' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.location||'')}" placeholder='F.eks. Sørli'/>`)}
-        <div class='grid grid-cols-2 gap-3'>
-          ${field('Modalitet', select('f-mod', MODALITETER, model.modality))}
-          ${field('Intensitet', select('f-int', INTENS, model.intensity))}
-        </div>
-        <div class='grid grid-cols-3 gap-3'>
-          ${field('Varighet (min)', `<input id='f-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
-          ${field('Skytestilling', select('f-still', ['Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
-          ${field('Skudd', `<input id='f-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
-        </div>
-        <div>
-          <label class='text-sm font-medium'>Tema (skyting)</label>
-          <div class='mt-1 flex flex-wrap gap-1' id='tema-tags'></div>
-          <div class='mt-1 flex gap-2'>
-            <input id='f-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
-            <button id='add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
-          </div>
-        </div>
-        <div>
-          <label class='text-sm font-medium'>Målgruppe</label>
-          <div class='mt-1 flex flex-wrap gap-2'>${ageChks}</div>
-        </div>
-        <div>
-          <label class='text-sm font-medium'>Roller</label>
-          <div class='mt-1 grid grid-cols-2 gap-2'>
-            ${['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'].map(r=>`<div><div class='text-xs text-slate-600 mb-1'>${r}</div><input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/></div>`).join('')}
-          </div>
-        </div>
-        <div>
-          <label class='text-sm font-medium'>Notater</label>
-          <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${escapeHTML(model.notes||'')}</textarea>
-        </div>`;
+  body.innerHTML=`
+    ${field('Tittel', `<input id='f-title' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.title)}" placeholder='F.eks. I3 drag + 30 skudd'/>`)}
+    <div class='grid grid-cols-2 gap-3'>
+      ${field('Type', select('f-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
+      ${field('Dato', `<input id='f-date' type='date' class='mt-1 w-full rounded-xl border px-3 py-2' value='${dayjs(model.date).format('YYYY-MM-DD')}'/>`)}
+    </div>
+    ${field('Sted/plassering', `<input id='f-loc' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.location||'')}" placeholder='F.eks. Sørli'/>`)}
+    <div class='grid grid-cols-2 gap-3'>
+      ${field('Modalitet', select('f-mod', MODALITETER, model.modality))}
+      ${field('Intensitet', select('f-int', INTENS, model.intensity))}
+    </div>
+    <div class='grid grid-cols-3 gap-3'>
+      ${field('Varighet (min)', `<input id='f-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
+      ${field('Skytestilling', select('f-still', ['Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
+      ${field('Skudd', `<input id='f-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
+    </div>
+    <div>
+      <label class='text-sm font-medium'>Tema (skyting)</label>
+      <div class='mt-1 flex flex-wrap gap-1' id='tema-tags'></div>
+      <div class='mt-1 flex gap-2'>
+        <input id='f-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
+        <button id='add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
+      </div>
+    </div>
+    <div>
+      <label class='text-sm font-medium'>Målgruppe</label>
+      <div class='mt-1 flex flex-wrap gap-2'>${ageChks}</div>
+    </div>
+    <div>
+      <label class='text-sm font-medium'>Roller</label>
+      <div class='mt-1 grid grid-cols-2 gap-2'>
+        ${['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'].map(r=>`
+          <div>
+            <div class='text-xs text-slate-600 mb-1'>${r}</div>
+            <input data-role='${r}' class='w-full rounded-xl border px-3 py-2' value='${escapeHTML(model.roles[r]||'')}' placeholder='Navn(e), komma-separert'/>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <label class='text-sm font-medium'>Notater</label>
+      <textarea id='f-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Detaljer, fokusområder, oppmøtested, utstyr…'>${escapeHTML(model.notes||'')}</textarea>
+    </div>`;
 
-      function refreshTema(){
-        const holder=$('#tema-tags'); holder.innerHTML='';
-        (model.shooting.tema||[]).forEach((t,i)=>{
-          const b=document.createElement('span'); b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs'; b.text
-content=t;
-          const x=document.createElement('button'); x.textContent='×'; x.className='ml-1'; x.onclick=()=>{ model.shooting.tema.splice(i,1); refreshTema(); };
-          b.appendChild(x); holder.appendChild(b);
-        });
-      }
-      refreshTema();
-      $('#add-tema').onclick=()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
+  function refreshTema(){
+    const holder=$('#tema-tags'); holder.innerHTML='';
+    (model.shooting.tema||[]).forEach((t,i)=>{
+      const b=document.createElement('span');
+      b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
+      b.textContent=t;
+      const x=document.createElement('button'); x.textContent='×'; x.className='ml-1';
+      x.onclick=()=>{ model.shooting.tema.splice(i,1); refreshTema(); };
+      b.appendChild(x); holder.appendChild(b);
+    });
+  }
+  refreshTema();
+  $('#add-tema').onclick=()=>{
+    const v=$('#f-tema').value.trim(); if(!v) return;
+    model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v]));
+    $('#f-tema').value=''; refreshTema();
+  };
 
-      $('#btn-save').onclick = async () => {
-        const get = (id) => $('#'+id, body);
-        const wasNew = state.events.findIndex(x => x.id === model.id) < 0;
+  // --- lagre ---
+  $('#btn-save').onclick = async () => {
+    const get = (id) => $('#'+id, body);
+    const wasNew = state.events.findIndex(x => x.id === model.id) < 0;
 
-        model.title       = get('f-title').value.trim();
-        model.type        = get('f-type').value;
-        model.date        = get('f-date').value;
-        model.location    = get('f-loc').value.trim();
-        model.modality    = get('f-mod').value;
-        model.intensity   = get('f-int').value;
-        model.durationMin = parseInt(get('f-dur').value) || 60;
-        model.shooting    = { stilling: get('f-still').value, skudd: parseInt(get('f-skudd').value) || 0, tema: model.shooting.tema || [] };
-        model.notes       = get('f-notes').value;
-        model.raceSubtype = model.type === 'Konkurranse' ? (model.raceSubtype || '') : '';
-        model.age         = (state.ageGroups||[]).map(g => g.id).filter(id => $('[data-age="'+id+'"]', body).checked);
-        model.roles       = {}; ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'].forEach(r => model.roles[r] = $('[data-role="'+r+'"]', body).value);
+    model.title       = get('f-title').value.trim();
+    model.type        = get('f-type').value;
+    model.date        = get('f-date').value;
+    model.location    = get('f-loc').value.trim();
+    model.modality    = get('f-mod').value;
+    model.intensity   = get('f-int').value;
+    model.durationMin = parseInt(get('f-dur').value) || 60;
+    model.shooting    = {
+      stilling: get('f-still').value,
+      skudd: parseInt(get('f-skudd').value) || 0,
+      tema: model.shooting.tema || []
+    };
+    model.notes       = get('f-notes').value;
+    model.raceSubtype = model.type === 'Konkurranse' ? (model.raceSubtype || '') : '';
+    model.age         = (state.ageGroups||[]).map(g => g.id).filter(id => $('[data-age="'+id+'"]', body).checked);
+    model.roles       = {};
+    ['Hovedtrener','Assistent','Standplass','Lagleder/foreldre'].forEach(r => {
+      model.roles[r] = ($('[data-role="'+r+'"]', body).value || '').trim();
+    });
 
-        const i = state.events.findIndex(x => x.id === model.id);
-        if (i >= 0) state.events[i] = model; else state.events.push(model);
-        lsSet(KEY.EVENTS, state.events);
-        render();
-        await supaUpsertEvent(model);
+    // disable knapper mens vi lagrer
+    $('#btn-save').setAttribute('disabled','true');
+    $('#btn-cancel').setAttribute('disabled','true');
 
-        if (wasNew){ const ids = getOrderForDate(model.date); setOrderForDate(model.date, [...ids, model.id]); }
-
-        closeDialog();
-      };
-
-      $('#btn-delete').onclick=async ()=>{
-        state.events=state.events.filter(x=>x.id!==model.id); lsSet(KEY.EVENTS,state.events); render();
-        await supaDeleteEvent(model.id);
-        const ids = getOrderForDate(model.date).filter(x=> x !== model.id); setOrderForDate(model.date, ids);
-        closeDialog();
-      };
-
-      $('#btn-cancel').onclick=closeDialog; $('#dlg-close').onclick=closeDialog;
-      $('#dialog').classList.remove('hidden'); $('#dialog').classList.add('flex');
+    // 1) lagre til DB
+    const ok = await supaUpsertEvent(model); // må returnere true/false
+    if(!ok){
+      $('#btn-save').removeAttribute('disabled');
+      $('#btn-cancel').removeAttribute('disabled');
+      return; // ikke rør lokal state hvis DB feilet
     }
+
+    // 2) oppdater lokal state etter suksess
+    const i = state.events.findIndex(x => x.id === model.id);
+    if (i >= 0) state.events[i] = model; else state.events.push(model);
+    lsSet(KEY.EVENTS, state.events);
+
+    // 3) legg inn i dagsrekkefølge om ny
+    if (wasNew){
+      const ids = getOrderForDate(model.date);
+      setOrderForDate(model.date, [...ids, model.id]);
+    }
+
+    render();
+    closeDialog();
+  };
+
+  // --- slett ---
+  $('#btn-delete').onclick = async ()=>{
+    if(!confirm('Slette denne hendelsen?')) return;
+
+    // disable knapper mens vi sletter
+    $('#btn-delete').setAttribute('disabled','true');
+    $('#btn-save')?.setAttribute('disabled','true');
+    $('#btn-cancel')?.setAttribute('disabled','true');
+
+    const ok = await supaDeleteEvent(model.id); // må returnere true/false
+    if(!ok){
+      // re-enable for å kunne prøve igjen
+      $('#btn-delete').removeAttribute('disabled');
+      $('#btn-save')?.removeAttribute('disabled');
+      $('#btn-cancel')?.removeAttribute('disabled');
+      return; // ikke fjern lokalt hvis DB feilet
+    }
+
+    // fjern lokalt ETTER bekreftet sletting i DB
+    state.events = state.events.filter(x=>x.id!==model.id);
+    lsSet(KEY.EVENTS,state.events);
+
+    const ids = getOrderForDate(model.date).filter(x=> x !== model.id);
+    setOrderForDate(model.date, ids);
+
+    render();
+    closeDialog();
+  };
+
+  $('#btn-cancel').onclick=closeDialog; 
+  $('#dlg-close').onclick=closeDialog;
+  $('#dialog').classList.remove('hidden'); 
+  $('#dialog').classList.add('flex');
+}
+
 
     function openViewDialog(model){
       const body = $('#dlg-body');
