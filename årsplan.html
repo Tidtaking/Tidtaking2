@@ -229,9 +229,18 @@
                 <p class="text-xs text-slate-600 mb-3">
                   Abonnenter mottar e-post ved <b>per endring</b>, som <b>sum dag</b> (daglig digest) eller <b>sum uke</b> (ukentlig digest).
                 </p>
-<button id="nf-drain" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
-  Send ventende varsler
 </button>
+<div class="mt-3 flex flex-wrap gap-2">
+  <button id="nf-drain" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Send ventende (per endring)
+  </button>
+  <button id="nf-send-daily" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Send daglig oppsummering (nå)
+  </button>
+  <button id="nf-send-weekly" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Send ukentlig oppsummering (nå)
+  </button>
+</div>
 
                 <!-- Avsender -->
                 <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1782,43 +1791,54 @@ await supaDeleteEvent(model);
       nfLoadSubs();
     }
 function nfBindUI(){
-  // Lagre avsender
   $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
-
-  // Legg til / oppdater abonnent
   $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
 
-  // Tøm køen manuelt (drain)
+  // Drain per-change kø (venterader)
   $('#nf-drain')?.addEventListener('click', async () => {
-    const btn = $('#nf-drain');
-    if (!btn) return;
-    const oldText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Sender…';
     try {
       const { data, error } = await supabase.functions.invoke('notify-dispatch', {
         body: { mode: 'per_change', drain: true, batchSize: 50 }
       });
       if (error) throw error;
-
-      const sent    = data?.sent    ?? data?.results?.sent    ?? 0;
-      const failed  = data?.failed  ?? data?.results?.failed  ?? 0;
-      const skipped = data?.skipped ?? data?.results?.skipped ?? 0;
-      alert(`OK — sendt: ${sent}, hoppet over: ${skipped}, feilet: ${failed}`);
+      alert(`Per-endring drain: ${JSON.stringify(data)}`);
+      // Oppdater tabellen så du ser status-oppdateringer (sent/skipped/error)
+      nfLoadSubs();
     } catch (e) {
       console.error('[notify drain] FEIL', e);
-      alert('Feil ved utsending (se konsoll).');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = oldText;
+      alert('Feil ved utsending (per-change). Se konsoll.');
     }
   });
 
-  // Enter i e-postfelt = lagre/oppdater
-  $('#nf-email')?.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Enter') { ev.preventDefault(); nfAddOrUpdate(); }
+  // Tving DAGLIG digest nå (siste 24h)
+  $('#nf-send-daily')?.addEventListener('click', async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+        body: { mode: 'digest', digest: { frequency: 'daily' } }
+      });
+      if (error) throw error;
+      alert(`Daglig digest: ${JSON.stringify(data)}`);
+    } catch (e) {
+      console.error('[notify daily] FEIL', e);
+      alert('Feil ved daglig oppsummering. Se konsoll.');
+    }
+  });
+
+  // Tving UKENTLIG digest nå (siste 7 dager)
+  $('#nf-send-weekly')?.addEventListener('click', async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+        body: { mode: 'digest', digest: { frequency: 'weekly' } }
+      });
+      if (error) throw error;
+      alert(`Ukentlig digest: ${JSON.stringify(data)}`);
+    } catch (e) {
+      console.error('[notify weekly] FEIL', e);
+      alert('Feil ved ukentlig oppsummering. Se konsoll.');
+    }
   });
 }
+
 
     // ---------- Tabs / UI-hendelser ----------
     function switchTab(name){
