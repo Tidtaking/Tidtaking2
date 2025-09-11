@@ -592,21 +592,31 @@ async function notifyPerChange(eventId){
 
    async function supaDeleteEvent(id){
   try{
-    const { error, status } = await supabase.from(TBL.events).delete().eq('id', id);
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .delete()
+      .eq('id', id)
+      .select('id');     // <= be om retur
 
-    if(error){
+    if (error){
       console.warn('Sletting feilet', error);
-      alert('Kunne ikke slette i skyen. Viser fortsatt slettet lokalt til du laster siden på nytt.');
+      alert('Kunne ikke slette i skyen.');
+      return;
+    }
+    if (!data || data.length === 0){
+      console.warn('Ingen rader ble slettet (sjekk RLS/policy og at id finnes)');
+      alert('Fikk ikke slettet i skyen (ingen rad matchet).');
       return;
     }
 
-    // status 204 = OK (ingen body). Kall e-postutsending umiddelbart.
+    // OK – trigge varsling
     await notifyPerChange(null);
   }catch(err){
     console.error('Delete exception:', err);
     alert('Uventet feil ved sletting (se konsoll).');
   }
 }
+
 
     async function supaUpsertWeek(year, week, code, note){
       const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
