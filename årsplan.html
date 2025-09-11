@@ -575,11 +575,6 @@ async function notifyPerChange(eventId, change = 'upsert'){
   }
 }
 
-// etter lagring
-await notifyPerChange(model.id, 'upsert');
-// etter sletting
-await notifyPerChange(model.id, 'delete');
-
    function replaceIdEverywhere(oldId, newId, dateISO){
   if (!oldId || !newId || oldId === newId) return;
 
