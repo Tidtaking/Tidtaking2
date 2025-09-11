@@ -1142,8 +1142,9 @@ container.querySelector('#btn-new-day').onclick = () => openDialog({ date: dateI
 
     // ---------- Dialoger ----------
    function openDialog(data){
-  const existing = state.events.find(x=>x.id===data.id);
-  const isEdit = !!existing;
+const existing = data?.id ? state.events.find(x=>x.id===data.id) : null;
+const isEdit = !!existing;
+
 
   const model=Object.assign(
     {
