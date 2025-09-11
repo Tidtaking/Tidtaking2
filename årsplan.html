@@ -622,25 +622,39 @@ async function supaUpsertEvent(model){
 }
 
 
-  async function findServerIdFor(ev){
+  async function findServerCandidates(ev){
   const title = (ev.title || '').trim();
 
-  // 1) eksakt match på dato + tittel
+  // Primær: eksakt match på mange felt
+  {
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, modality, location, intensity, duration_min, race_subtype, shooting, notes, updated_at, created_at')
+      .eq('date', ev.date)
+      .eq('title', title)
+      .eq('type', ev.type || null)
+      .eq('location', ev.location || null)
+      .eq('modality', ev.modality || null)
+      .eq('intensity', ev.intensity || null)
+      .eq('duration_min', ev.durationMin ?? null)
+      .limit(10);
+    if (!error && data && data.length) return data;
+  }
+
+  // Sekundær: eksakt på (date,title,type), sorter nyest oppdatert øverst
   {
     const { data, error } = await supabase
       .from(TBL.events)
       .select('id, title, type, date, modality, location, updated_at, created_at')
       .eq('date', ev.date)
       .eq('title', title)
-      .limit(5);
-    if (!error && data && data.length){
-      // Om flere, preferer samme type
-      const sameType = data.find(r => (r.type || '') === (ev.type || ''));
-      return (sameType || data[0]).id;
-    }
+      .eq('type', ev.type || null)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+    if (!error && data && data.length) return data;
   }
 
-  // 2) løsere: dato + tittel inneholder (case-insensitiv), sorter nyest oppdatert
+  // Tertiær: bare på (date,title~ilike)
   if (title.length >= 3){
     const { data, error } = await supabase
       .from(TBL.events)
@@ -648,73 +662,63 @@ async function supaUpsertEvent(model){
       .eq('date', ev.date)
       .ilike('title', `%${title}%`)
       .order('updated_at', { ascending: false })
-      .limit(5);
-    if (!error && data && data.length){
-      const sameType = data.find(r => (r.type || '') === (ev.type || ''));
-      return (sameType || data[0]).id;
-    }
+      .limit(10);
+    if (!error && data && data.length) return data;
   }
 
-  // 3) siste utvei: nyeste rad på akkurat den datoen
+  // Siste utvei: nyeste rad på datoen
   {
     const { data, error } = await supabase
       .from(TBL.events)
-      .select('id')
+      .select('id, title, type, date, updated_at, created_at')
       .eq('date', ev.date)
       .order('created_at', { ascending: false })
       .limit(1);
-    if (!error && data && data.length) return data[0].id;
+    if (!error && data && data.length) return data;
   }
 
-  return null;
+  return [];
 }
+
 
 async function supaDeleteEvent(ev){
   try{
-    // 1) forsøk å slette på klient-ID
+    // 1) Forsøk direkte på klient-ID
     let { data, error } = await supabase
       .from(TBL.events)
       .delete()
       .eq('id', ev.id)
       .select('id');
 
-    if (error){
-      console.warn('Sletting feilet', error);
-      alert('Kunne ikke slette i skyen.');
+    if (error){ console.warn('Sletting feilet', error); alert('Kunne ikke slette i skyen.'); return; }
+    if (data && data.length){ await verifyDeletion(ev); await notifyPerChange(null); return; }
+
+    // 2) Fallback: finn kandidater i DB
+    const candidates = await findServerCandidates(ev);
+    if (!candidates.length){
+      console.warn('Ingen kandidater funnet for sletting', ev);
+      alert('Fant ingen match i skyen for sletting.');
       return;
     }
 
-    if (data && data.length){
-      await notifyPerChange(null);
-      return;
-    }
+    // Velg kandidat: eksakt title+type først, ellers første
+    const chosen = candidates.find(r => (r.title||'') === (ev.title||'') && (r.type||'') === (ev.type||'')) || candidates[0];
 
-    // 2) fallback: finn serverens ID for denne hendelsen
-    const sid = await findServerIdFor(ev);
-    if (!sid){
-      console.warn('Ingen rader slettet. ID/kompositt-nøkkel traff ikke', ev);
-      alert('Fant ingen rad å slette i skyen (ID og fallback traff ikke).');
-      return;
-    }
-
-    // 3) slett på funnet server-ID
     const res2 = await supabase
       .from(TBL.events)
       .delete()
-      .eq('id', sid)
+      .eq('id', chosen.id)
       .select('id');
 
-    if (res2.error){
-      console.warn('Sletting via fallback feilet', res2.error);
-      alert('Kunne ikke slette i skyen via fallback.');
-      return;
+    if (res2.error){ console.warn('Sletting via fallback feilet', res2.error); alert('Kunne ikke slette i skyen via fallback.'); return; }
+
+    if (chosen.id !== ev.id){
+      replaceIdEverywhere(ev.id, chosen.id, ev.date);
+      console.log('Reparerte klient-ID → server-ID ved sletting:', ev.id, '→', chosen.id);
     }
 
-    // 4) hvis vi slettet via en annen ID enn klientens, reparer klient-state
-    if (sid !== ev.id){
-      replaceIdEverywhere(ev.id, sid, ev.date);
-      console.log('Reparerte klient-ID -> server-ID ved sletting:', ev.id, '→', sid);
-    }
+    // 3) Ekstra verifikasjon (se neste punkt)
+    await verifyDeletion(ev);
 
     await notifyPerChange(null);
   }catch(err){
@@ -722,6 +726,27 @@ async function supaDeleteEvent(ev){
     alert('Uventet feil ved sletting (se konsoll).');
   }
 }
+async function verifyDeletion(ev){
+  const title = (ev.title || '').trim();
+  const { data, error } = await supabase
+    .from(TBL.events)
+    .select('id, title, type, date, location, modality')
+    .eq('date', ev.date)
+    .eq('title', title)
+    .eq('type', ev.type || null)
+    .limit(5);
+
+  if (error){
+    console.warn('Verifisering feilet', error);
+    return;
+  }
+
+  if (data && data.length){
+    console.warn('Advarsel: Det finnes fortsatt rader som matcher etter sletting:', data);
+    alert('Obs: Det finnes fortsatt en (eller flere) rader i skyen med samme dato/tittel/type. Se konsollen for detaljer.');
+  }
+}
+
 
 
 
