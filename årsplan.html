@@ -123,6 +123,7 @@
             </div>
           </div>
         </section>
+<div id="day-view" class="p-4"></div>
 
         <!-- Bank Tab -->
         <section id="tab-bank" class="tab-section hidden">
@@ -885,8 +886,12 @@ function mapEventToDb(e){
         </div>
       `;
     }
-    function openDayView(dateISO, evts) {
+function openDayView(dateISO, evts) {
   const container = $('#day-view');
+  if (!container) {
+    console.warn('Fant ikke #day-view i DOM');
+    return;
+  }
   const list = evts.map(evObj => {
     const html = `
       <div class="day-event">
