@@ -590,23 +590,39 @@ async function notifyPerChange(eventId){
   }
 }
 
-   async function supaDeleteEvent(id){
+  async function supaDeleteEvent(id){
   try{
-    const { error, status } = await supabase.from(TBL.events).delete().eq('id', id);
+    // Be om å få tilbake slettede rader – da ser vi om noe faktisk ble slettet.
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .delete()
+      .eq('id', id)
+      .select('id'); // <- viktig!
 
-    if(error){
+    if (error){
       console.warn('Sletting feilet', error);
       alert('Kunne ikke slette i skyen. Viser fortsatt slettet lokalt til du laster siden på nytt.');
       return;
     }
 
-    // status 204 = OK (ingen body). Kall e-postutsending umiddelbart.
+    // data er en array med slettede rader. Tom array = ingen rad matchet ID-en.
+    if (!data || data.length === 0){
+      console.warn('Ingen rader slettet. ID traff ikke noen rad i DB:', id);
+      alert('Fant ingen rad å slette i skyen (ID traff ikke). Sjekk at ID i klient = ID i databasen.');
+      return;
+    }
+
+    // Valgfritt: logg hva som ble slettet
+    console.log('Slettet rader:', data.map(r=>r.id));
+
+    // Send evt. varsel etter faktisk sletting
     await notifyPerChange(null);
   }catch(err){
     console.error('Delete exception:', err);
     alert('Uventet feil ved sletting (se konsoll).');
   }
 }
+
 
     async function supaUpsertWeek(year, week, code, note){
       const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
