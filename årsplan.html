@@ -1138,7 +1138,8 @@ function mapEventToDb(e){
       let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
       evts = sortEventsByDayOrder(key, evts);
 
-      const box = document.createElement('div'); box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
+      const box = document.createElement('div');box.className = 'daycell relative min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
+box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
       box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key }); });
       if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
 
