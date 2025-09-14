@@ -486,6 +486,7 @@
       YEAR:'lss:year:v1',
       DAYORDER:'lss:dayorder:v2',
       AGES:'lss:ages:v1'
+      VIEW:     'lss:view:v1' 
     };
 
     const $=(q,el=document)=>el.querySelector(q);
@@ -522,17 +523,20 @@
     const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order', settings:'settings' };
 
     // ---------- State ----------
-    let state = {
-      year: lsGet(KEY.YEAR, dayjs().year()),
-      month: dayjs().month() + 1,
-      events: [],
-      bank: [],
-      weeks: {},
-      dayOrder: lsGet(KEY.DAYORDER, {}),
-      ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
-  viewMode: lsGet(KEY.VIEW, 'rolling') // 'rolling' | 'full'
+let state = {
+  year:      lsGet(KEY.YEAR, dayjs().year()),
+  month:     dayjs().month() + 1,
+  viewMode:  lsGet(KEY.VIEW, 'rolling'), // 'rolling' | 'year'  ← NY
+  events:    [],
+  bank:      [],
+  weeks:     {},
+  dayOrder:  lsGet(KEY.DAYORDER, {}),
+  ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
 };
- const KEY = { /* ... */, AGES:'lss:ages:v1', VIEW:'lss:viewmode:v1' };
+
+// liten guard hvis gammel lagring inneholder noe rart
+if (!['rolling','year'].includes(state.viewMode)) state.viewMode = 'rolling';
+
 
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
@@ -606,6 +610,8 @@ async function notifyPerChange(eventId, change = 'upsert'){
   // C) Lagre og rerender
   lsSet(KEY.EVENTS, state.events);
   lsSet(KEY.DAYORDER, state.dayOrder);
+     lsSet(KEY.VIEW, state.viewMode);
+
   render();
 }
 
