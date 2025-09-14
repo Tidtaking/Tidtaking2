@@ -1235,14 +1235,18 @@ box.className = 'daycell relative min-h-[100px] rounded-xl border bg-white/70 p-
 
       box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key }); });
       if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
-// Ukechip på mandager
-if (d.day() === 1) { // 1 = mandag i JS/Dayjs
+// Ukechip nederst på mandager
+if (d.day() === 1) { // 1 = mandag
   const wk = d.isoWeek();
+  // gi litt bunnpadding så chipen ikke overlapper innhold
+  box.classList.add('pb-5');
+
   const chip = document.createElement('div');
-  chip.className = 'absolute -top-1.5 -left-1.5 rounded-md bg-slate-200 text-[10px] px-1.5 py-0.5 shadow-sm';
+  chip.className = 'absolute left-1 bottom-1 rounded-md bg-slate-200 text-[10px] px-1.5 py-0.5 shadow-sm';
   chip.textContent = `Uke ${wk}`;
   box.appendChild(chip);
 }
+
 
       const top = document.createElement('div'); top.className = 'flex items-center justify-between text-xs text-slate-600';
       const uniqueTypes = Array.from(new Set(evts.map(e => e.type))).slice(0,4);
