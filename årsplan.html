@@ -1096,44 +1096,51 @@ function mapEventToDb(e){
     }
 
  function renderCalendar(){
-  const grid = $('#calendar-grid'); 
+  const grid = $('#calendar-grid');
   grid.innerHTML = '';
 
-  // Legg inn overskrift med året
-  const yearHeader = document.createElement('h2');
-  yearHeader.textContent = state.year;
-  yearHeader.className = "text-xl font-bold text-center mb-4";
-  grid.parentNode.insertBefore(yearHeader, grid);
+  const systemYear  = dayjs().year();
+  const systemMonth = dayjs().month() + 1; // 1–12
+  const isDesk = !isMobile();
+
+  // Lag år-overskrift (først fjern ev. tidligere header)
+  const oldHeader = grid.previousElementSibling;
+  if (oldHeader && oldHeader.dataset?.role === 'year-header') oldHeader.remove();
+
+  let months = [];
+  let crossesYear = false;
 
   if (isMobile()){
+    // Mobil: én måned med piler – eksisterende logikk i renderMonth håndterer årsskiftet
     grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
-    return;
-  }
-
-  const systemYear = dayjs().year();
-  const systemMonth = dayjs().month() + 1; // 1–12
-
-  let months;
-  if (state.year === systemYear){
-    // Nåværende år → start på inneværende måned
-    months = [];
-    for (let m = systemMonth; m <= 12; m++) months.push(m);
-    for (let m = 1; m < systemMonth; m++) months.push(m);
   } else {
-    // Andre år → Jan til Des
-    months = Array.from({ length: 12 }, (_, i) => i + 1);
+    if (state.year === systemYear) {
+      // Nåværende år: rullende visning → resten av dette året + starten av neste
+      for (let m = systemMonth; m <= 12; m++) months.push({ y: state.year,     m });
+      for (let m = 1; m <  systemMonth; m++) months.push({ y: state.year + 1, m });
+      crossesYear = systemMonth !== 1; // krysser hvis vi ikke er i januar
+    } else {
+      // Andre år: vanlige jan–des for valgt år
+      for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
+    }
+
+    // År-overskrift
+    const h = document.createElement('h2');
+    h.dataset.role = 'year-header';
+    h.className = 'text-xl font-bold text-center mb-4';
+    h.textContent = crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`;
+    grid.parentNode.insertBefore(h, grid);
+
+    // Render alle månedene med korrekt år
+    months.forEach(({ y, m }) => {
+      const el = renderMonth(y, m);
+      const monthName = dayjs(`${y}-${String(m).padStart(2,'0')}-01`).format('MMMM');
+      el.title = `${monthName} ${y}`; // mouseover viser måned + år
+      grid.appendChild(el);
+    });
   }
-
-  months.forEach(m => {
-    const monthEl = renderMonth(state.year, m);
-
-    // Legg til tooltip med "Måned År"
-    const monthName = dayjs(`${state.year}-${m}-01`).format("MMMM");
-    monthEl.title = `${monthName} ${state.year}`;
-
-    grid.appendChild(monthEl);
-  });
 }
+
 
 
 
