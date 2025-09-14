@@ -479,15 +479,16 @@
     ];
     const AGE_MAP = { 'U12':'11-12', 'U14':'13-14', 'U16':'HL', 'JR':'HL' };
 
-    const KEY = {
-      EVENTS:'lss:events:v1',
-      BANK:'lss:bank:v3',
-      WEEKS:'lss:weeks:v1',
-      YEAR:'lss:year:v1',
-      DAYORDER:'lss:dayorder:v2',
-      AGES:'lss:ages:v1'
-      VIEW:     'lss:view:v1' 
-    };
+const KEY = {
+  EVENTS:   'lss:events:v1',
+  BANK:     'lss:bank:v3',
+  WEEKS:    'lss:weeks:v1',
+  YEAR:     'lss:year:v1',
+  DAYORDER: 'lss:dayorder:v2',
+  AGES:     'lss:ages:v1',
+  VIEW:     'lss:view:v1'      // lagrer visningsmodus
+};
+
 
     const $=(q,el=document)=>el.querySelector(q);
     const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
@@ -535,7 +536,9 @@ let state = {
 };
 
 // liten guard hvis gammel lagring inneholder noe rart
-if (!['rolling','year'].includes(state.viewMode)) state.viewMode = 'rolling';
+// liten guard + migrering av tidligere lagret verdi
+if (state.viewMode === 'year') state.viewMode = 'full';            // migrer gammel verdi
+if (!['rolling','full'].includes(state.viewMode)) state.viewMode = 'rolling'; // gyldige nå
 
 
     const MOBILE_BREAKPOINT = 768;
@@ -967,8 +970,9 @@ function mapEventToDb(e){
       el.addEventListener('touchcancel',endPress,   { passive:true });
     }
     function eventTooltipHTML(e){
-      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
-      const title = esc(e.title || e.type || '');
+const esc = s => (s||'').replace(/[&<>"']/g, m => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]
+));      const title = esc(e.title || e.type || '');
       const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
       const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
       const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
@@ -1224,9 +1228,11 @@ function mapEventToDb(e){
       const key = d.format('YYYY-MM-DD');
       let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
       evts = sortEventsByDayOrder(key, evts);
+const box = document.createElement('div');
+box.className = 'daycell relative min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
+// SLETT denne linja (du har den nå):
+// box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
 
-      const box = document.createElement('div');box.className = 'daycell relative min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
-box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
       box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key }); });
       if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
 // Ukechip på mandager
