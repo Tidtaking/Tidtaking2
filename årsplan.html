@@ -1096,12 +1096,19 @@ function mapEventToDb(e){
     }
 
     function renderCalendar(){
-      const grid = $('#calendar-grid'); grid.innerHTML = '';
-      if (isMobile()){ grid.appendChild(renderMonth(state.year, state.month, { withNav:true })); return; }
-      const nowMonth = dayjs().month() + 1;
-      const months = []; for(let m = nowMonth; m <= 12; m++) months.push(m); for(let m = 1; m < nowMonth; m++) months.push(m);
-      months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
-    }
+  const grid = $('#calendar-grid'); 
+  grid.innerHTML = '';
+
+  if (isMobile()){
+    grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
+    return;
+  }
+
+  // Alltid Januar → Desember for valgt år
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
+}
+
 
     function renderMonth(year, month, opts = { withNav:false }){
       const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm card';
