@@ -530,7 +530,15 @@
       weeks: {},
       dayOrder: lsGet(KEY.DAYORDER, {}),
       ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
-    };
+ const KEY = { /* ... */, AGES:'lss:ages:v1', VIEW:'lss:viewmode:v1' };
+
+let state = {
+  year: lsGet(KEY.YEAR, dayjs().year()),
+  month: dayjs().month() + 1,
+  /* ... */
+  viewMode: lsGet(KEY.VIEW, 'rolling') // 'rolling' | 'full'
+};
+
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
 
@@ -1069,21 +1077,55 @@ function mapEventToDb(e){
     }
 
     // ---------- Render ----------
-    function render(){
-      $('#year-label').textContent = state.year;
-      $('#event-year').textContent = state.year;
-      renderLegend(); renderCalendar(); renderList(); renderBank(); renderWeeks(); renderAgeEditor(); renderAdminEvents();
+   function render(){
+  // Brukes for å bestemme om “rullende” visning krysser nytt år
+  const systemYear  = dayjs().year();
+  const systemMonth = dayjs().month() + 1;
+  const crossesYear = (
+    !isMobile() &&
+    state.viewMode === 'rolling' &&
+    state.year === systemYear &&
+    systemMonth !== 1
+  );
 
-      const fAge = $('#f-age');
-      if(fAge){ fAge.innerHTML = `<option value="">Alle</option>` + (state.ageGroups||[]).map(g=>`<option value="${g.id}">${g.label}</option>`).join(''); }
+  // Teksten i år-etiketten (øverst i verktøylinjen)
+  const yearLabelText =
+    state.viewMode === 'rolling'
+      ? (crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`)
+      : `${state.year}`;
 
-      lsSet(KEY.YEAR,state.year);
-      lsSet(KEY.EVENTS,state.events);
-      lsSet(KEY.BANK,state.bank);
-      lsSet(KEY.WEEKS,state.weeks);
-      lsSet(KEY.DAYORDER,state.dayOrder);
-      lsSet(KEY.AGES,state.ageGroups);
-    }
+  // Oppdater etiketter
+  $('#year-label').textContent = yearLabelText;   // klikkbar “år”-label
+  $('#event-year').textContent = String(state.year); // “Hendelser <år>”-boksen følger valgt år
+
+  // Vanlig render-kjede
+  renderLegend();
+  renderCalendar();
+  renderList();
+  renderBank();
+  renderWeeks();
+  renderAgeEditor();
+  renderAdminEvents();
+
+  // Oppdater filteret i Øktbank (som før)
+  const fAge = $('#f-age');
+  if(fAge){
+    fAge.innerHTML = `<option value="">Alle</option>` +
+      (state.ageGroups||[])
+        .map(g=>`<option value="${g.id}">${g.label}</option>`)
+        .join('');
+  }
+
+  // Persister state (som før) + lagre viewMode
+  lsSet(KEY.YEAR, state.year);
+  lsSet(KEY.EVENTS, state.events);
+  lsSet(KEY.BANK, state.bank);
+  lsSet(KEY.WEEKS, state.weeks);
+  lsSet(KEY.DAYORDER, state.dayOrder);
+  lsSet(KEY.AGES, state.ageGroups);
+  lsSet(KEY.VIEW, state.viewMode); // ← ny linje, fint å ha
+}
+
 
     function renderLegend(){
       const el=$('#legend'); el.innerHTML='';
@@ -1100,50 +1142,52 @@ function mapEventToDb(e){
   grid.innerHTML = '';
 
   const systemYear  = dayjs().year();
-  const systemMonth = dayjs().month() + 1; // 1–12
-  const isDesk = !isMobile();
+  const systemMonth = dayjs().month() + 1;
 
-  // Lag år-overskrift (først fjern ev. tidligere header)
-  const oldHeader = grid.previousElementSibling;
-  if (oldHeader && oldHeader.dataset?.role === 'year-header') oldHeader.remove();
+  if (isMobile()){
+    // Mobil holder din eksisterende “én måned + piler”-logikk
+    grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
+    return;
+  }
 
   let months = [];
   let crossesYear = false;
 
-  if (isMobile()){
-    // Mobil: én måned med piler – eksisterende logikk i renderMonth håndterer årsskiftet
-    grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
+  if (state.viewMode === 'full'){
+    // Alltid jan–des i valgt år
+    for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
   } else {
-    if (state.year === systemYear) {
-      // Nåværende år: rullende visning → resten av dette året + starten av neste
-      for (let m = systemMonth; m <= 12; m++) months.push({ y: state.year,     m });
+    // Rullende når valgt år == faktisk år, ellers vanlig jan–des
+    if (state.year === systemYear){
+      for (let m = systemMonth; m <= 12; m++) months.push({ y: state.year, m });
       for (let m = 1; m <  systemMonth; m++) months.push({ y: state.year + 1, m });
-      crossesYear = systemMonth !== 1; // krysser hvis vi ikke er i januar
+      crossesYear = (systemMonth !== 1);
     } else {
-      // Andre år: vanlige jan–des for valgt år
       for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
     }
-
-    // År-overskrift
-    const h = document.createElement('h2');
-    h.dataset.role = 'year-header';
-    h.className = 'text-xl font-bold text-center mb-4';
-    h.textContent = crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`;
-    grid.parentNode.insertBefore(h, grid);
-
-    // Render alle månedene med korrekt år
-    months.forEach(({ y, m }) => {
-      const el = renderMonth(y, m);
-      const monthName = dayjs(`${y}-${String(m).padStart(2,'0')}-01`).format('MMMM');
-      el.title = `${monthName} ${y}`; // mouseover viser måned + år
-      grid.appendChild(el);
-    });
   }
+
+  // År-overskrift over grid
+  const oldHeader = grid.previousElementSibling;
+  if (oldHeader && oldHeader.dataset?.role === 'year-header') oldHeader.remove();
+
+  const h = document.createElement('h2');
+  h.dataset.role = 'year-header';
+  h.className = 'text-xl font-bold text-center mb-4';
+  const label =
+    state.viewMode === 'rolling'
+      ? (crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`)
+      : `${state.year}`;
+  h.textContent = label;
+  grid.parentNode.insertBefore(h, grid);
+
+  // Render månedene (med korrekt år i title)
+  months.forEach(({ y, m }) => {
+    const el = renderMonth(y, m);
+    el.title = dayjs(`${y}-${String(m).padStart(2,'0')}-01`).format('MMMM YYYY');
+    grid.appendChild(el);
+  });
 }
-
-
-
-
 
     function renderMonth(year, month, opts = { withNav:false }){
       const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm card';
@@ -1967,15 +2011,28 @@ function nfBindUI(){
         alert('Årsklasser lagret.');
       });
     }
+function bindYearLabel(){
+  const y = $('#year-label');
+  if(!y) return;
+  y.classList.add('cursor-pointer','select-none');
+  y.title = 'Klikk for å bytte visning (rullende ↔ hele året)';
+  y.onclick = ()=>{
+    state.viewMode = state.viewMode === 'rolling' ? 'full' : 'rolling';
+    lsSet(KEY.VIEW, state.viewMode);
+    render();
+  };
+}
 
     // ---------- Init ----------
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
-    async function init(){
-      bindDialogChrome();
-      bindUiHandlers();
-      setupSidebarToggle();
-      switchTab('calendar');
 
+
+      async function init(){
+  bindDialogChrome();
+  bindUiHandlers();
+  bindYearLabel(); // ← NY
+  setupSidebarToggle();
+  switchTab('calendar');
       await supaLoadAll(state.year);
       supaRealtimeInit();
 
