@@ -1104,22 +1104,23 @@ function mapEventToDb(e){
     return;
   }
 
-  const currentYear = dayjs().year();
-  const currentMonth = dayjs().month() + 1; // 1–12
+  const systemYear = dayjs().year();
+  const systemMonth = dayjs().month() + 1; // 1–12
 
   let months;
-  if (state.year === currentYear){
-    // rullerende logikk for inneværende år
+  if (state.year === systemYear){
+    // Nåværende år → start på inneværende måned
     months = [];
-    for (let m = currentMonth; m <= 12; m++) months.push(m);
-    for (let m = 1; m < currentMonth; m++) months.push(m);
+    for (let m = systemMonth; m <= 12; m++) months.push(m);
+    for (let m = 1; m < systemMonth; m++) months.push(m);
   } else {
-    // vanlig jan–des for andre år
+    // Andre år → Jan til Des
     months = Array.from({ length: 12 }, (_, i) => i + 1);
   }
 
   months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
 }
+
 
 
 
