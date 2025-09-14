@@ -1095,7 +1095,7 @@ function mapEventToDb(e){
       });
     }
 
-    function renderCalendar(){
+ function renderCalendar(){
   const grid = $('#calendar-grid'); 
   grid.innerHTML = '';
 
@@ -1104,10 +1104,23 @@ function mapEventToDb(e){
     return;
   }
 
-  // Alltid Januar → Desember for valgt år
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const currentYear = dayjs().year();
+  const currentMonth = dayjs().month() + 1; // 1–12
+
+  let months;
+  if (state.year === currentYear){
+    // rullerende logikk for inneværende år
+    months = [];
+    for (let m = currentMonth; m <= 12; m++) months.push(m);
+    for (let m = 1; m < currentMonth; m++) months.push(m);
+  } else {
+    // vanlig jan–des for andre år
+    months = Array.from({ length: 12 }, (_, i) => i + 1);
+  }
+
   months.forEach(m => grid.appendChild(renderMonth(state.year, m)));
 }
+
 
 
     function renderMonth(year, month, opts = { withNav:false }){
