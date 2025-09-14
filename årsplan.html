@@ -530,14 +530,9 @@
       weeks: {},
       dayOrder: lsGet(KEY.DAYORDER, {}),
       ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
- const KEY = { /* ... */, AGES:'lss:ages:v1', VIEW:'lss:viewmode:v1' };
-
-let state = {
-  year: lsGet(KEY.YEAR, dayjs().year()),
-  month: dayjs().month() + 1,
-  /* ... */
   viewMode: lsGet(KEY.VIEW, 'rolling') // 'rolling' | 'full'
 };
+ const KEY = { /* ... */, AGES:'lss:ages:v1', VIEW:'lss:viewmode:v1' };
 
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
