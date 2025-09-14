@@ -1319,14 +1319,26 @@ if (d.day() === 1) { // 1 = mandag i JS/Dayjs
         </div>`;
 
       function refreshTema(){
-        const holder=$('#tema-tags'); holder.innerHTML='';
-        (model.shooting.tema||[]).forEach((t,i)=>{
-          const b=document.createElement('span'); b.className='inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs'; b.text
-content=t;
-          const x=document.createElement('button'); x.textContent='×'; x.className='ml-1'; x.onclick=()=>{ model.shooting.tema.splice(i,1); refreshTema(); };
-          b.appendChild(x); holder.appendChild(b);
-        });
-      }
+  const holder = $('#tema-tags');
+  holder.innerHTML = '';
+  (model.shooting.tema || []).forEach((t, i) => {
+    const b = document.createElement('span');
+    b.className = 'inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
+    b.textContent = t; // ← viktig!
+
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.className = 'ml-1';
+    x.onclick = () => { 
+      model.shooting.tema.splice(i, 1);
+      refreshTema();
+    };
+
+    b.appendChild(x);
+    holder.appendChild(b);
+  });
+}
+
       refreshTema();
       $('#add-tema').onclick=()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
 
