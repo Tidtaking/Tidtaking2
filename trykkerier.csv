@@ -1,4 +1,4 @@
-trykkeri,adresse,postnummer,poststed
+navn,adresse,postnummer,poststed
 Polaris Trykk Alta,Myggveien 13,9514,Alta
 Polaris Trykk Harstad,Stangnesterminalen 3,9409,Harstad
 Polaris Trykk Orkanger,Grønørveien 54,7300,Orkanger
@@ -7,4 +7,5 @@ Schibsted Trykk Bergen,Janaflaten 24,5179,Godvik
 Polaris Trykk Arendal,Stoaveien 11,4848,Arendal
 Amedia Trykk Lillestrøm,Roseveien 1,2007,Kjeller
 Amedia Trykk Innlandet,Fautvegen 20,2836,Biri
+
 Dalane Trykk,Lindøyveien 2,4373,Egersund
