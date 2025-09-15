@@ -129,6 +129,12 @@
           <div class="rounded-2xl border bg-white shadow-sm card">
             <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
             <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <!-- under filter-grid'en i Bank-seksjonen -->
+<div class="p-4 pt-0">
+  <button id="bank-new" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Ny mal i Øktbank
+  </button>
+</div>
               <div>
                 <label class="text-sm font-medium">Søk</label>
                 <input id="q-bank" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Søk i øktbank…"/>
@@ -150,12 +156,7 @@
             <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
           </div>
         </section>
-<!-- under filter-grid'en i Bank-seksjonen -->
-<div class="p-4 pt-0">
-  <button id="bank-new" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
-    Ny mal i Øktbank
-  </button>
-</div>
+
 
         <!-- Admin Tab -->
         <section id="tab-admin" class="tab-section hidden">
