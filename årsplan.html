@@ -150,6 +150,12 @@
             <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
           </div>
         </section>
+<!-- under filter-grid'en i Bank-seksjonen -->
+<div class="p-4 pt-0">
+  <button id="bank-new" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Ny mal i Øktbank
+  </button>
+</div>
 
         <!-- Admin Tab -->
         <section id="tab-admin" class="tab-section hidden">
@@ -1315,35 +1321,63 @@ if (d.day() === 1) { // 1 = mandag
         .forEach(t=> box.appendChild(bankCard(t)) );
     }
 
-    function bankCard(t){
-      const c=document.createElement('div'); c.className='rounded-2xl border bg-white shadow-sm card';
-      c.innerHTML=`
-        <div class='border-b p-4 flex items-center justify-between'>
-          <h4 class='text-base font-semibold text-[color:var(--brand)]'><span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>${escapeHTML(t.name)}</h4>
-          <div class='flex gap-1 text-xs'>${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}</div>
-        </div>
-        <div class='p-4 text-sm space-y-1'>
-          <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
-          <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
-          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
-          <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
-          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)?`<div class='flex flex-wrap gap-1 mt-2'>${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}</div>`:''}
-          ${t.notes? `<p class='text-slate-600 whitespace-pre-wrap mt-2'>${escapeHTML(t.notes)}</p>`:''}
-          <div class='pt-2 flex flex-wrap gap-2'>
-            <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
-            <button class='btn-dup rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
-            <button class='btn-del text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
-          </div>
-        </div>`;
-      c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t)));
-      c.querySelector('.btn-dup').addEventListener('click', async ()=>{
-        const copy = {...t,id:uid(),name:t.name+' (kopi)'}; state.bank.unshift(copy); renderBank(); lsSet(KEY.BANK,state.bank); await supaUpsertBankTemplate(copy);
-      });
-      c.querySelector('.btn-del').addEventListener('click', async ()=>{
-        state.bank=state.bank.filter(x=>x.id!==t.id); renderBank(); lsSet(KEY.BANK,state.bank); await supaDeleteBankTemplate(t.id);
-      });
-      return c;
-    }
+  function bankCard(t){
+  const c=document.createElement('div'); 
+  c.className='rounded-2xl border bg-white shadow-sm card';
+
+  c.innerHTML=`
+    <div class='border-b p-4 flex items-center justify-between'>
+      <h4 class='text-base font-semibold text-[color:var(--brand)]'>
+        <span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>
+        ${escapeHTML(t.name)}
+      </h4>
+      <div class='flex gap-1 text-xs'>
+        ${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class='p-4 text-sm space-y-1'>
+      <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
+      <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
+      <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
+      <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
+      ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)
+        ? `<div class='flex flex-wrap gap-1 mt-2'>
+             ${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}
+           </div>` : ''}
+
+      <div class='pt-2 flex flex-wrap gap-2'>
+        <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
+        <button class='btn-edit rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Rediger</button>
+        <button class='btn-dup  rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
+        <button class='btn-del text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
+      </div>
+    </div>`;
+
+  // 1) Planlegg: lag en hendelse basert på malen
+  c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t)));
+
+  // 2) Rediger: åpne malen for redigering (lagres når du trykker "Lagre")
+  c.querySelector('.btn-edit').addEventListener('click', ()=> openBankDialog({...t}));
+
+  // 3) Dupliser: lag en kopi og åpne i redigeringsdialog (IKKE lagre før "Lagre")
+  c.querySelector('.btn-dup').addEventListener('click', ()=>{
+    const copy = { ...t, id: uid(), name: (t.name||'') + ' (kopi)' };
+    openBankDialog(copy);
+  });
+
+  // 4) Slett: som før
+  c.querySelector('.btn-del').addEventListener('click', async ()=>{
+    if(!confirm('Slette denne bank-malen?')) return;
+    state.bank = state.bank.filter(x=>x.id!==t.id);
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+    await supaDeleteBankTemplate(t.id);
+  });
+
+  return c;
+}
+
 
     function fromTemplate(t){
       return {
@@ -1509,6 +1543,155 @@ await supaDeleteEvent(model);
       $('#dialog').classList.remove('hidden'); 
       $('#dialog').classList.add('flex');
     }
+function openBankDialog(data = {}){
+  const existing = state.bank.find(x => x.id === data.id);
+  const isEdit = !!existing;
+
+  const model = Object.assign({
+    id: uid(),
+    name: '',
+    type: 'Trening',
+    modality: '',
+    intensity: '',
+    durationMin: 60,
+    age: [],
+    shooting: { stilling:'', skudd:0, tema:[] },
+    raceSubtype: '',
+    notes: ''
+  }, data);
+
+  const body = $('#dlg-body');
+  $('#dlg-title').textContent = isEdit ? 'Rediger bank-mal' : 'Ny bank-mal';
+  $('#btn-delete').classList.toggle('hidden', !isEdit);
+  $('#btn-save')?.classList.remove('hidden');
+  $('#btn-save')?.removeAttribute('disabled');
+
+  const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
+  const ageChks = (state.ageGroups||[])
+    .map(g=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'>
+               <input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/>
+               <span class='text-sm'>${g.label}</span>
+             </label>`).join('');
+
+  body.innerHTML = `
+    ${field('Navn', `<input id='bk-name' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.name)}" placeholder='F.eks. I3 bakkedrag + styrke'/>`)}
+
+    <div class='grid grid-cols-2 gap-3'>
+      ${field('Type', select('bk-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
+      ${field('Modalitet', select('bk-mod', MODALITETER, model.modality))}
+    </div>
+
+    <div class='grid grid-cols-2 gap-3'>
+      ${field('Intensitet', select('bk-int', INTENS, model.intensity))}
+      ${field('Varighet (min)', `<input id='bk-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
+    </div>
+
+    <div id="bk-race-row" class="${model.type==='Konkurranse'?'':'hidden'}">
+      ${field('Konkurranse-type', `<input id='bk-race' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.raceSubtype||'')}" placeholder='Sprint, Fellesstart …'/>`)}
+    </div>
+
+    <div class='grid grid-cols-3 gap-3'>
+      ${field('Skytestilling', select('bk-still', ['','Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
+      ${field('Skudd', `<input id='bk-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
+      <div></div>
+    </div>
+
+    <div>
+      <label class='text-sm font-medium'>Tema (skyting)</label>
+      <div class='mt-1 flex flex-wrap gap-1' id='bk-tema-tags'></div>
+      <div class='mt-1 flex gap-2'>
+        <input id='bk-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
+        <button id='bk-add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
+      </div>
+    </div>
+
+    <div>
+      <label class='text-sm font-medium'>Målgruppe</label>
+      <div class='mt-1 flex flex-wrap gap-2'>${ageChks}</div>
+    </div>
+
+    <div>
+      <label class='text-sm font-medium'>Notater</label>
+      <textarea id='bk-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Beskrivelse, progresjon, variasjoner…'>${escapeHTML(model.notes||'')}</textarea>
+    </div>
+  `;
+
+  function refreshTema(){
+    const holder = $('#bk-tema-tags');
+    holder.innerHTML = '';
+    (model.shooting.tema || []).forEach((t, i) => {
+      const b = document.createElement('span');
+      b.className = 'inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
+      b.textContent = t;
+      const x = document.createElement('button');
+      x.textContent = '×';
+      x.className = 'ml-1';
+      x.onclick = () => { model.shooting.tema.splice(i, 1); refreshTema(); };
+      b.appendChild(x);
+      holder.appendChild(b);
+    });
+  }
+  refreshTema();
+
+  $('#bk-add-tema').onclick = (e)=>{ e.preventDefault();
+    const v=$('#bk-tema').value.trim(); if(!v) return;
+    model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v]));
+    $('#bk-tema').value=''; refreshTema();
+  };
+
+  // vis/skjul konkurranse-feltet
+  $('#bk-type').addEventListener('change', (e)=>{
+    const isKonk = e.target.value === 'Konkurranse';
+    $('#bk-race-row').classList.toggle('hidden', !isKonk);
+  });
+
+  // Lagre
+  $('#btn-save').onclick = async ()=>{
+    const get = (id) => $('#'+id, body);
+
+    model.name        = get('bk-name').value.trim();
+    model.type        = get('bk-type').value;
+    model.modality    = get('bk-mod').value;
+    model.intensity   = get('bk-int').value;
+    model.durationMin = parseInt(get('bk-dur').value) || 60;
+    model.raceSubtype = (model.type==='Konkurranse') ? (get('bk-race')?.value.trim() || '') : '';
+    model.shooting    = {
+      stilling: get('bk-still').value,
+      skudd: parseInt(get('bk-skudd').value) || 0,
+      tema: model.shooting.tema || []
+    };
+    model.notes       = get('bk-notes').value;
+    model.age         = (state.ageGroups||[]).map(g => g.id).filter(id => $('[data-age="'+id+'"]', body).checked);
+
+    if(!model.name){
+      alert('Navn kan ikke være tomt.');
+      return;
+    }
+
+    const i = state.bank.findIndex(x => x.id === model.id);
+    if (i >= 0) state.bank[i] = model; else state.bank.unshift(model);
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+    await supaUpsertBankTemplate(model);
+
+    closeDialog();
+  };
+
+  // Slett
+  $('#btn-delete').onclick = async ()=>{
+    if(!confirm('Slette denne bank-malen?')) return;
+    state.bank = state.bank.filter(x => x.id !== model.id);
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+    await supaDeleteBankTemplate(model.id);
+    closeDialog();
+  };
+
+  $('#btn-cancel').onclick = closeDialog;
+  $('#dlg-close').onclick  = closeDialog;
+  $('#dialog').classList.remove('hidden');
+  $('#dialog').classList.add('flex');
+}
 
     // ---------- Utils ----------
     function select(id, options, selected){
@@ -1978,6 +2161,7 @@ function nfBindUI(){
       $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date:dayjs().format('YYYY-MM-DD') }));
       $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date:dayjs().format('YYYY-MM-DD'), shooting:{stilling:'Liggende',skudd:30,tema:[]} }));
       $('#quick-konk')?.addEventListener('click',   ()=> openDialog({ type:'Konkurranse', date:dayjs().format('YYYY-MM-DD') }));
+      $('#bank-new')?.addEventListener('click', ()=> openBankDialog({}));
       $('#btn-ics')?.addEventListener('click', exportICS);
       $('#btn-seed-bank')?.addEventListener('click', seedBankIfWanted);
       $('#file-import')?.addEventListener('change', async (ev)=>{
