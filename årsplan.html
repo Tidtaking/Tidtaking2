@@ -1992,284 +1992,220 @@
           });
         });
       });
-      if(rows.length===0){
+           if(rows.length===0){
         alert('Ingen rader å lagre.');
         return;
       }
-      try{
-        // Valgfritt: slett og re-skriv alt (enklest og robust).
-        // Alternativt: .upsert(rows, { onConflict: 'athlete,test_date' })
-        const { error: delErr } = await supabase.from('shoot_history').delete().neq('athlete', '__NOPE__');
-        if(delErr){ console.warn('Kunne ikke tømme shoot_history:', delErr); }
 
-        const chunk = 500;
-        for(let i=0; i<rows.length; i+=chunk){
-          const slice = rows.slice(i, i+chunk);
-          const { error } = await supabase.from('shoot_history').insert(slice);
-          if(error) throw error;
-        }
-        alert('Skytehistorikk lagret til sky.');
+      try{
+        // Upsert på (athlete, test_date). Legg gjerne en unik indeks på disse i DB.
+        const { error } = await supabase
+          .from('shoot_history')
+          .upsert(rows, { onConflict: 'athlete,test_date' });
+
+        if(error) throw error;
+        alert('Skytehistorikk lagret i skyen ✅');
       }catch(err){
         console.error('Lagring skytehistorikk feilet:', err);
-        alert('Kunne ikke lagre skytehistorikk til sky.');
+        alert('Kunne ikke lagre skytehistorikk i skyen.');
       }
     }
 
-    // Filtre + søk
-    function passesShootFilters(ai, di){
-      const q = ($('#shoot-q').value||'').trim().toLowerCase();
-      const from = $('#shoot-from').value;
-      const to   = $('#shoot-to').value;
-      const a = state.shoot.athletes[ai];
-      const dateISO = state.shoot.dates[di];
+    // --- Highlight helpers ---
+    function computeHighlights(){
+      // Finn PB per utøver (høyeste total)
+      const pb = new Map(); // ai -> max
+      state.shoot.athletes.forEach((_, ai)=>{
+        let max = null;
+        state.shoot.dates.forEach((_, di)=>{
+          const sc = state.shoot.grid[`${ai}|${di}`];
+          if(sc && Number.isFinite(sc.total)){
+            max = (max==null) ? sc.total : Math.max(max, sc.total);
+          }
+        });
+        if(max!=null) pb.set(ai, max);
+      });
 
-      if(q && !(a?.name||'').toLowerCase().includes(q)) return false;
-      if(from && dayjs(dateISO).isBefore(from)) return false;
-      if(to   && dayjs(dateISO).isAfter(to)) return false;
-      return true;
+      // Finn "dagens beste" per dato
+      const dayBest = new Map(); // di -> max
+      state.shoot.dates.forEach((_, di)=>{
+        let max = null;
+        state.shoot.athletes.forEach((_, ai)=>{
+          const sc = state.shoot.grid[`${ai}|${di}`];
+          if(sc && Number.isFinite(sc.total)){
+            max = (max==null) ? sc.total : Math.max(max, sc.total);
+          }
+        });
+        if(max!=null) dayBest.set(di, max);
+      });
+
+      // Klubbrekord (all time)
+      let clubMax = null;
+      Object.values(state.shoot.grid).forEach(sc=>{
+        if(sc && Number.isFinite(sc.total)){
+          clubMax = (clubMax==null) ? sc.total : Math.max(clubMax, sc.total);
+        }
+      });
+
+      return { pb, dayBest, clubMax };
     }
 
-    // Beregn rekorder (PB / best på dato / klubbrekord)
-    function computeShootHighlights(){
-      const { athletes, dates, grid } = state.shoot;
-
-      // PB per utøver
-      const pb = new Map();
-      athletes.forEach((a, ai)=>{
-        let best = -Infinity;
-        dates.forEach((_, di)=>{
-          const sc = grid[`${ai}|${di}`];
-          if(sc && Number.isFinite(sc.total)) best = Math.max(best, sc.total);
-        });
-        pb.set(ai, best> -Infinity ? best : null);
-      });
-
-      // Beste per dato
-      const dayBest = new Map();
-      dates.forEach((dt, di)=>{
-        let best = -Infinity;
-        athletes.forEach((_, ai)=>{
-          const sc = grid[`${ai}|${di}`];
-          if(sc && Number.isFinite(sc.total)) best = Math.max(best, sc.total);
-        });
-        dayBest.set(di, best> -Infinity ? best : null);
-      });
-
-      // Klubbrekord total
-      let clubBest = -Infinity;
-      Object.values(grid).forEach(sc=>{
-        if(sc && Number.isFinite(sc.total)) clubBest = Math.max(clubBest, sc.total);
-      });
-      const clubRecord = clubBest> -Infinity ? clubBest : null;
-
-      return { pb, dayBest, clubRecord };
-    }
-
-    // Bygg tabell
+    // --- Skytehistorikk: tabellrender ---
     function renderShootTable(){
-      const thead = $('#shoot-table thead');
-      const tbody = $('#shoot-table tbody');
+      const thead = document.querySelector('#shoot-table thead');
+      const tbody = document.querySelector('#shoot-table tbody');
       if(!thead || !tbody) return;
 
-      const { athletes, dates, grid } = state.shoot;
-      const { pb, dayBest, clubRecord } = computeShootHighlights();
-      const hMode = $('#shoot-highlight')?.value || 'all';
+      const { pb, dayBest, clubMax } = computeHighlights();
+      const hlMode = ($('#shoot-highlight')?.value)||'all';
 
       // Header
-      let h1 = `<tr class="text-left text-slate-600">
-                  <th class="p-2 sticky left-0 bg-slate-50 z-10">Utøver (fødselsår)</th>`;
-      dates.forEach((dt, di)=>{
-        const d = dayjs(dt);
-        const label = d.isValid()? d.format('DD.MM') : (dt||'');
-        h1 += `<th class="p-2 text-center">${label}<div class="text-[10px] text-slate-400">${d.format('YYYY')}</div></th>`;
-      });
-      h1 += `</tr>`;
-      thead.innerHTML = h1;
+      thead.innerHTML = '';
+      const trh = document.createElement('tr');
+      trh.innerHTML = `
+        <th class="sticky left-0 bg-slate-50 border-b p-2 text-left">Utøver (år)</th>
+        ${state.shoot.dates.map(dt => `<th class="border-b p-2 text-left whitespace-nowrap">${dayjs(dt).format('DD.MM.YYYY')}</th>`).join('')}
+      `;
+      thead.appendChild(trh);
 
       // Body
       tbody.innerHTML = '';
-      athletes.forEach((a, ai)=>{
-        const tr = document.createElement('tr');
-        tr.className = 'border-t';
-        const nameCell = document.createElement('td');
-        nameCell.className = 'p-2 sticky left-0 bg-white z-10 min-w-[220px]';
+      const q = ($('#shoot-q')?.value||'').toLowerCase();
+      const from = $('#shoot-from')?.value ? dayjs($('#shoot-from').value) : null;
+      const to   = $('#shoot-to')?.value ? dayjs($('#shoot-to').value) : null;
 
-        nameCell.innerHTML = `
-          <div class="flex items-center gap-2">
-            <input class="sh-name border rounded-lg px-2 py-1 w-[180px]" value="${escapeHTML(a.name||'')}" placeholder="Navn">
-            <input class="sh-by border rounded-lg px-2 py-1 w-[70px]" type="number" value="${a.birthYear ?? ''}" placeholder="År">
-            <button class="sh-del-ath rounded-lg border bg-white px-2 py-1 text-xs">✕</button>
-          </div>`;
-        tr.appendChild(nameCell);
+      state.shoot.athletes
+        .map((a, ai)=>({ ...a, ai }))
+        .filter(a => !q || a.name.toLowerCase().includes(q))
+        .forEach(a=>{
+          const tr = document.createElement('tr');
+          tr.className = 'border-t';
 
-        dates.forEach((dt, di)=>{
-          const key = `${ai}|${di}`;
-          const sc = grid[key] || { total:null, prone:null, stand:null, stand_hits:null };
-          const td = document.createElement('td');
-          td.className = 'p-1 text-center';
-          td.dataset.ai = String(ai);
-          td.dataset.di = String(di);
+          // Venstre label
+          const left = document.createElement('td');
+          left.className = 'sticky left-0 bg-white p-2 text-sm font-medium border-r';
+          left.textContent = a.name + (a.birthYear ? ` (${a.birthYear})` : '');
+          tr.appendChild(left);
 
-          // Uthevinger
-          const isPB   = pb.get(ai)!=null   && sc.total!=null && sc.total === pb.get(ai);
-          const isDay  = dayBest.get(di)!=null && sc.total!=null && sc.total === dayBest.get(di);
-          const isClub = clubRecord!=null   && sc.total!=null && sc.total === clubRecord;
+          // Celler
+          state.shoot.dates.forEach((dt, di)=>{
+            const d = dayjs(dt);
+            if((from && d.isBefore(from,'day')) || (to && d.isAfter(to,'day'))){
+              const td = document.createElement('td');
+              td.className = 'p-2 text-slate-300';
+              td.textContent = '–';
+              tr.appendChild(td);
+              return;
+            }
 
-          if(hMode==='all' || hMode==='pb')   if(isPB)   td.classList.add('sh-pb');
-          if(hMode==='all' || hMode==='day')  if(isDay)  td.classList.add('sh-daybest');
-          if(hMode==='all' || hMode==='club') if(isClub) td.classList.add('sh-clubrec');
+            const key = `${a.ai}|${di}`;
+            const sc = state.shoot.grid[key];
 
-          // Filtre
-          const visible = passesShootFilters(ai, di);
-          if(!visible) td.style.opacity = '0.25';
+            const td = document.createElement('td');
+            td.className = 'p-1';
 
-          td.innerHTML = `
-            <div class="flex items-center justify-center">
-              <input class="sh-cell border rounded-lg px-2 py-1 text-center w-[150px]"
-                     value="${escapeHTML(formatScoreCell(sc))}"
-                     placeholder="391 (264+127)">
-              <button class="sh-clear text-xs text-slate-500 ml-1">⌫</button>
-            </div>`;
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
+            // Editor
+            const inp = document.createElement('input');
+            inp.className = 'w-[160px] max-w-full rounded-lg border px-2 py-1 text-sm';
+            inp.placeholder = '391 (264+127) eller 386(...)';
+            inp.value = sc ? (formatScoreCell(sc) || '') : '';
+            inp.addEventListener('change', ()=>{
+              const parsed = parseScoreCell(inp.value);
+              if(parsed.total==null && parsed.prone==null && parsed.stand==null && parsed.stand_hits==null){
+                delete state.shoot.grid[key];
+                inp.value = '';
+              }else{
+                state.shoot.grid[key] = parsed;
+                // Normaliser skriveformatet
+                inp.value = formatScoreCell(parsed);
+              }
+              renderShootTable(); // re-apply highlights
+            });
+            td.appendChild(inp);
 
-      // Handlere for navn/fødselsår/slette
-      $$('.sh-name', tbody).forEach((inp, idx)=>{
-        inp.addEventListener('change', e=>{
-          const row = e.target.closest('tr');
-          const ai = Array.from(tbody.children).indexOf(row);
-          state.shoot.athletes[ai].name = String(e.target.value||'').trim();
-        });
-      });
-      $$('.sh-by', tbody).forEach(inp=>{
-        inp.addEventListener('change', e=>{
-          const row = e.target.closest('tr');
-          const ai = Array.from(tbody.children).indexOf(row);
-          const v = parseInt(e.target.value,10);
-          state.shoot.athletes[ai].birthYear = Number.isFinite(v)? v : null;
-        });
-      });
-      $$('.sh-del-ath', tbody).forEach(btn=>{
-        btn.addEventListener('click', e=>{
-          const row = e.target.closest('tr');
-          const ai = Array.from(tbody.children).indexOf(row);
-          if(ai<0) return;
-          // Fjern alle celler i grid for denne utøveren
-          const { dates } = state.shoot;
-          dates.forEach((_, di)=>{ delete state.shoot.grid[`${ai}|${di}`]; });
-          // Shift ned nøkler for høyere indekser
-          const newGrid = {};
-          Object.entries(state.shoot.grid).forEach(([k, val])=>{
-            const [aIdx, dIdx] = k.split('|').map(Number);
-            if(aIdx < ai) newGrid[k] = val;
-            else if(aIdx > ai) newGrid[`${aIdx-1}|${dIdx}`] = val;
+            // Utheving
+            if(sc && Number.isFinite(sc.total)){
+              const doPB   = (!hlMode || hlMode==='all' || hlMode==='pb')   && pb.get(a.ai) === sc.total;
+              const doDay  = (!hlMode || hlMode==='all' || hlMode==='day')  && dayBest.get(di) === sc.total;
+              const doClub = (!hlMode || hlMode==='all' || hlMode==='club') && clubMax === sc.total;
+
+              if(doPB)   td.classList.add('sh-pb');
+              if(doDay)  td.classList.add('sh-daybest');
+              if(doClub) td.classList.add('sh-clubrec');
+            }
+
+            tr.appendChild(td);
           });
-          state.shoot.grid = newGrid;
-          state.shoot.athletes.splice(ai,1);
-          renderShootTable();
-          populateChartAthletes();
-          updateShootChart();
-        });
-      });
 
-      // Handlere for celler
-      $$('.sh-cell', tbody).forEach(inp=>{
-        inp.addEventListener('change', e=>{
-          const td = e.target.closest('td');
-          const ai = +td.dataset.ai, di = +td.dataset.di;
-          const sc = parseScoreCell(e.target.value);
-          if(sc.total==null && sc.prone==null && sc.stand==null && sc.stand_hits==null){
-            delete state.shoot.grid[`${ai}|${di}`];
-            e.target.value = '';
-          }else{
-            state.shoot.grid[`${ai}|${di}`] = sc;
-            e.target.value = formatScoreCell(sc);
-          }
-          renderShootTable(); // re-render for å oppdatere uthevinger
-          updateShootChart();
+          tbody.appendChild(tr);
         });
-      });
-      $$('.sh-clear', tbody).forEach(btn=>{
-        btn.addEventListener('click', e=>{
-          e.preventDefault();
-          const td = e.target.closest('td');
-          const inp = $('.sh-cell', td);
-          const ai = +td.dataset.ai, di = +td.dataset.di;
-          delete state.shoot.grid[`${ai}|${di}`];
-          if(inp) inp.value='';
-          renderShootTable();
-          updateShootChart();
-        });
-      });
     }
 
+    // --- Skytehistorikk: legge til kolonne/rad ---
     function addShootDate(){
-      const v = prompt('Ny testdato (YYYY-MM-DD):', dayjs().format('YYYY-MM-DD'));
-      if(!v) return;
-      const d = dayjs(v);
+      const today = dayjs().format('YYYY-MM-DD');
+      const next = prompt('Ny testdato (YYYY-MM-DD):', today);
+      if(!next) return;
+      const d = dayjs(next);
       if(!d.isValid()){ alert('Ugyldig dato.'); return; }
-      const iso = d.format('YYYY-MM-DD');
-      if(state.shoot.dates.includes(iso)){ alert('Datoen finnes allerede.'); return; }
-      state.shoot.dates.push(iso);
-      state.shoot.dates.sort((a,b)=> dayjs(a)-dayjs(b));
-      // Re-map grid om sortering endrer indeksene
-      const oldDates = [...state.shoot.dates];
-      oldDates.sort((a,b)=> dayjs(a)-dayjs(b));
+      if(state.shoot.dates.includes(next)){ alert('Dato finnes allerede.'); return; }
+      state.shoot.dates.push(next);
+      state.shoot.dates.sort();
+      renderShootTable();
+      populateChartAthletes();
+      updateShootChart();
+    }
+    function addShootAthlete(){
+      const name = prompt('Navn på utøver:');
+      if(!name) return;
+      const by = prompt('Fødselsår (valgfritt, 4 siffer):','');
+      const birthYear = by && /^\d{4}$/.test(by) ? +by : null;
+      state.shoot.athletes.push({ name:name.trim(), birthYear });
       renderShootTable();
       populateChartAthletes();
       updateShootChart();
     }
 
-    function addShootAthlete(){
-      state.shoot.athletes.push({ name:'', birthYear:null });
-      renderShootTable();
-      populateChartAthletes();
-    }
-
-    // Eksporter Excel for skytehistorikk
+    // --- Skytehistorikk: eksport Excel ---
     function exportShootExcel(){
-      const { athletes, dates, grid } = state.shoot;
-      // Første rad: tom + datoer
       const rows = [];
-      const header = ['Utøver (navn, fødselsår)'].concat(dates);
+      // Bygger utdata (bredt): første kolonne = utøver, så en kolonne pr dato
+      const header = ['Utøver'];
+      state.shoot.dates.forEach(dt => header.push(dayjs(dt).format('YYYY-MM-DD')));
       rows.push(header);
 
-      athletes.forEach((a, ai)=>{
-        const label = a.birthYear ? `${a.name||''}, ${a.birthYear}` : (a.name||'');
-        const row = [label];
-        dates.forEach((_, di)=>{
-          const sc = grid[`${ai}|${di}`];
-          row.push(sc ? formatScoreCell(sc) : '');
+      state.shoot.athletes.forEach((a, ai)=>{
+        const r = [`${a.name}${a.birthYear? ', '+a.birthYear:''}`];
+        state.shoot.dates.forEach((_, di)=>{
+          const key = `${ai}|${di}`;
+          const sc = state.shoot.grid[key];
+          r.push(sc ? formatScoreCell(sc) : '');
         });
-        rows.push(row);
+        rows.push(r);
       });
 
-      const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Skytehistorikk');
       const stamp = dayjs().format('YYYYMMDD_HHmm');
       XLSX.writeFile(wb, `skytehistorikk_${stamp}.xlsx`);
     }
 
-    // Trendgraf
+    // --- Skytehistorikk: graf ---
     let shootChart = null;
     function populateChartAthletes(){
       const sel = $('#shoot-chart-ath'); if(!sel) return;
-      sel.innerHTML = '';
-      state.shoot.athletes.forEach((a, ai)=>{
-        const opt = document.createElement('option');
-        opt.value = String(ai);
-        opt.textContent = a.name || `Utøver ${ai+1}`;
-        sel.appendChild(opt);
-      });
+      const valueBefore = sel.value;
+      sel.innerHTML = state.shoot.athletes.map((a, i)=> `<option value="${i}">${escapeHTML(a.name)}</option>`).join('');
+      if(valueBefore && sel.querySelector(`option[value="${valueBefore}"]`)) sel.value = valueBefore;
     }
     function updateShootChart(){
-      const ctx = $('#shoot-chart'); if(!ctx) return;
-      const sel = $('#shoot-chart-ath'); 
+      const ctx = document.getElementById('shoot-chart');
+      if(!ctx) return;
+      const sel = $('#shoot-chart-ath');
       const ai = sel && sel.value ? parseInt(sel.value,10) : 0;
-      const labels = state.shoot.dates.map(dt => dayjs(dt).format('DD.MM.YYYY'));
+
+      const labels = state.shoot.dates.map(dt => dayjs(dt).format('DD.MM.YY'));
       const data = state.shoot.dates.map((_, di)=>{
         const sc = state.shoot.grid[`${ai}|${di}`];
         return sc && Number.isFinite(sc.total) ? sc.total : null;
@@ -2278,124 +2214,233 @@
       if(shootChart){ shootChart.destroy(); }
       shootChart = new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets: [{ label:'Total', data, tension:0.2, pointRadius:3 }] },
+        data: { labels, datasets: [{ label: 'Total', data }] },
         options: {
-          responsive:true,
-          maintainAspectRatio:false,
-          scales:{ y:{ beginAtZero:false } },
-          plugins:{ legend:{ display:true } }
+          responsive: true,
+          plugins: { legend:{ display:true } },
+          scales: { y: { beginAtZero:false } }
         }
       });
     }
 
-    // ---------- UI wiring for Skytehistorikk ----------
-    function setupShootUI(){
+    // ---------- Uke-tabellen i Admin ----------
+    function renderWeeks(){
+      const tbody = document.getElementById('tbl-weeks'); if(!tbody) return;
+      tbody.innerHTML = '';
+
+      // Sikre basis
+      if(!state.weeks || !Object.keys(state.weeks).length){
+        state.weeks = getDefaultWeeks(state.year);
+      }
+
+      // Sorterte uker
+      const weeks = Object.keys(state.weeks).map(n=>parseInt(n,10)).sort((a,b)=>a-b);
+      weeks.forEach(wk=>{
+        const row = state.weeks[wk] || { code:'BAS', note:'' };
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.innerHTML = `
+          <td class="p-2">Uke ${wk}</td>
+          <td class="p-2">
+            <select data-wk="${wk}" class="wk-code rounded-lg border px-2 py-1 text-sm">
+              ${WEEKCODES.map(c=> `<option value="${c}" ${c===row.code?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </td>
+          <td class="p-2">
+            <input data-wk="${wk}" class="wk-note rounded-lg border px-2 py-1 text-sm w-full" value="${escapeHTML(row.note||'')}" placeholder="Notat/tema for uken"/>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Lytt
+      tbody.querySelectorAll('.wk-code').forEach(sel=>{
+        sel.addEventListener('change', async (e)=>{
+          const wk = parseInt(e.target.getAttribute('data-wk'),10);
+          const code = e.target.value;
+          state.weeks[wk] = { ...(state.weeks[wk]||{}), code };
+          lsSet(KEY.WEEKS, state.weeks);
+          await supaUpsertWeek(state.year, wk, code, state.weeks[wk].note||'');
+        });
+      });
+      tbody.querySelectorAll('.wk-note').forEach(inp=>{
+        inp.addEventListener('change', async (e)=>{
+          const wk = parseInt(e.target.getAttribute('data-wk'),10);
+          const note = e.target.value;
+          state.weeks[wk] = { ...(state.weeks[wk]||{}), note };
+          lsSet(KEY.WEEKS, state.weeks);
+          await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', note);
+        });
+      });
+    }
+
+    // ---------- Aldersgrupper-editor ----------
+    function renderAgeEditor(){
+      const box = document.getElementById('age-editor'); if(!box) return;
+      box.innerHTML = '';
+      (state.ageGroups||[]).forEach((g, i)=>{
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-3 gap-2';
+        row.innerHTML = `
+          <input data-i="${i}" data-k="id" class="rounded-lg border px-2 py-1" value="${escapeHTML(g.id)}" placeholder="ID (eks. HL)" />
+          <input data-i="${i}" data-k="label" class="rounded-lg border px-2 py-1 col-span-2" value="${escapeHTML(g.label)}" placeholder="Etikett (eks. HL gruppe (15+))" />
+        `;
+        box.appendChild(row);
+      });
+    }
+
+    // ---------- Admin: hendelser (filtreringstabell) ----------
+    function renderAdminEvents(){
+      const tbody = document.getElementById('admin-events'); if(!tbody) return;
+      const q = ($('#admin-q')?.value||'').toLowerCase();
+      const dFrom = $('#admin-from')?.value ? dayjs($('#admin-from').value) : null;
+      const dTo   = $('#admin-to')?.value ? dayjs($('#admin-to').value) : null;
+
+      const rows = state.events
+        .filter(e=>{
+          const d = dayjs(e.date);
+          if(dFrom && d.isBefore(dFrom,'day')) return false;
+          if(dTo   && d.isAfter(dTo,'day'))   return false;
+          const text = `${e.title||''} ${e.type||''} ${e.location||''}`.toLowerCase();
+          return !q || text.includes(q);
+        })
+        .sort((a,b)=> dayjs(a.date)-dayjs(b.date));
+
+      tbody.innerHTML = '';
+      rows.forEach(e=>{
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.innerHTML = `
+          <td class="p-2 whitespace-nowrap">${dayjs(e.date).format('DD.MM.YYYY')}</td>
+          <td class="p-2 truncate max-w-[280px]">${escapeHTML(e.title||'(uten tittel)')}</td>
+          <td class="p-2">${escapeHTML(e.type||'')}</td>
+          <td class="p-2">${escapeHTML(e.location||'')}</td>
+          <td class="p-2">${escapeHTML(e.intensity||'')}</td>
+          <td class="p-2 text-right pr-2">
+            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]" data-act="edit">Rediger</button>
+          </td>
+        `;
+        tr.querySelector('[data-act="edit"]').addEventListener('click', ()=> openDialog({...e}));
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ---------- Diverse helpers ----------
+    function fallbackLogo(){
+      const span = document.createElement('span');
+      span.className = 'h-14 w-20 rounded-xl bg-white flex items-center justify-center text-[var(--brand)] font-bold';
+      span.textContent = 'LSK';
+      return span;
+    }
+
+    // ---------- Tabs / wiring / init ----------
+    function showTab(name){
+      $$('.tab-section').forEach(s => s.classList.add('hidden'));
+      $('#tab-'+name)?.classList.remove('hidden');
+      $$('.tab-btn').forEach(b => b.classList.toggle('bg-blue-50', b.dataset.tab===name));
+    }
+
+    async function init(){
+      // UI wiring
+      $('#btn-new')?.addEventListener('click', ()=> openDialog({}));
+      $('#btn-print')?.addEventListener('click', ()=> window.print());
+      $('#btn-export-xlsx')?.addEventListener('click', exportExcelAll);
+      $('#file-import')?.addEventListener('change', async (e)=>{
+        const f=e.target.files?.[0]; if(!f) return;
+        try{
+          const txt = await f.text();
+          const obj = JSON.parse(txt);
+          // Enkel import av events/bank (valgfri – behold struktur)
+          if(Array.isArray(obj.events)) state.events = obj.events.map(mapEventFromDb);
+          if(Array.isArray(obj.bank))   state.bank   = obj.bank.map(mapBankFromDb);
+          render();
+        }catch(err){ alert('Kunne ikke lese fil. Må være JSON.'); }
+        e.target.value = '';
+      });
+
+      // År-nav
+      $('#year-prev')?.addEventListener('click', ()=>{ state.year--; render(); supaLoadAll(state.year); });
+      $('#year-next')?.addEventListener('click', ()=>{ state.year++; render(); supaLoadAll(state.year); });
+
+      // Tabs
+      $$('.tab-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=> showTab(btn.dataset.tab));
+      });
+
+      // Sidepanel toggle
+      setupSidebarToggle();
+
+      // Øktbank-søk/filtre
+      $('#q-bank')?.addEventListener('input', debounce(renderBank, 150));
+      $('#f-age')?.addEventListener('change', renderBank);
+      $('#f-type')?.addEventListener('change', renderBank);
+      $('#bank-new')?.addEventListener('click', ()=> openBankDialog({}));
+
+      // Admin
+      $('#admin-search')?.addEventListener('click', renderAdminEvents);
+      $('#age-add')?.addEventListener('click', ()=>{
+        state.ageGroups.push({ id:'Ny', label:'Ny gruppe' });
+        renderAgeEditor();
+      });
+      $('#age-save')?.addEventListener('click', async ()=>{
+        // Les verdier fra editor
+        const rows = $$('#age-editor [data-i]');
+        const map = new Map();
+        rows.forEach(inp=>{
+          const i = parseInt(inp.getAttribute('data-i'),10);
+          const k = inp.getAttribute('data-k');
+          if(!map.has(i)) map.set(i, {});
+          map.get(i)[k] = inp.value.trim();
+        });
+        state.ageGroups = Array.from(map.values()).filter(g=> g.id && g.label);
+        lsSet(KEY.AGES, state.ageGroups);
+        await supaSaveAgeGroups();
+        render();
+        alert('Aldersgrupper lagret ✅');
+      });
+
+      // ICS-knapp
+      $('#btn-ics')?.addEventListener('click', exportICS);
+
+      // Week seeds (redigeres direkte i tabellen – bare render)
+      renderWeeks();
+
+      // Hurtig-knapper
+      $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening' }));
+      $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting' }));
+      $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse' }));
+
+      // Skytehistorikk: wiring
+      $('#link-shoot')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('shoot'); });
       $('#shoot-file')?.addEventListener('change', async (e)=>{
         const f = e.target.files?.[0]; if(!f) return;
-        try{
-          await shootImportFromExcel(f);
-          alert('Excel importert.');
-        }catch(err){
-          console.error('Import-feil:', err);
-          alert('Kunne ikke importere Excel.');
-        }finally{
-          e.target.value = '';
-        }
+        try{ await shootImportFromExcel(f); }
+        catch(err){ console.error(err); alert('Import feilet. Sjekk at Excel følger malen.'); }
+        e.target.value = '';
       });
       $('#shoot-add-date')?.addEventListener('click', addShootDate);
       $('#shoot-add-athlete')?.addEventListener('click', addShootAthlete);
       $('#shoot-save')?.addEventListener('click', shootSaveToSupabase);
       $('#shoot-export')?.addEventListener('click', exportShootExcel);
-
-      $('#shoot-q')?.addEventListener('input', debounce(()=> renderShootTable(), 200));
-      $('#shoot-from')?.addEventListener('change', ()=> renderShootTable());
-      $('#shoot-to')?.addEventListener('change', ()=> renderShootTable());
-      $('#shoot-highlight')?.addEventListener('change', ()=> renderShootTable());
+      $('#shoot-q')?.addEventListener('input', debounce(renderShootTable, 150));
+      $('#shoot-from')?.addEventListener('change', renderShootTable);
+      $('#shoot-to')?.addEventListener('change', renderShootTable);
+      $('#shoot-highlight')?.addEventListener('change', renderShootTable);
       $('#shoot-chart-ath')?.addEventListener('change', updateShootChart);
 
-      // Last fra sky ved åpning av fanen (første gang)
-      let loadedOnce = false;
-      $('#link-shoot')?.addEventListener('click', async (e)=>{
-        e.preventDefault();
-        switchTab('shoot');
-        if(!loadedOnce){
-          loadedOnce = true;
-          try{ await shootLoadFromSupabase(); }catch{}
-          renderShootTable();
-          populateChartAthletes();
-          updateShootChart();
-        }
-      });
-    }
-
-    // ---------- Øvrig UI (tabs, knapper) ----------
-    function switchTab(name){
-      $$('.tab-section').forEach(s => s.classList.add('hidden'));
-      $('#tab-'+name)?.classList.remove('hidden');
-      $$('.tab-btn').forEach(b => b.classList.remove('bg-blue-50','border-blue-300'));
-      $$(`.tab-btn[data-tab="${name}"]`).forEach(b => b.classList.add('bg-blue-50','border-blue-300'));
-    }
-
-    function setupTabs(){
-      $$('.tab-btn').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const t = btn.getAttribute('data-tab');
-          if(!t) return;
-          switchTab(t);
-        });
-      });
-      // Default: Årsplan
-      switchTab('calendar');
-    }
-
-    function setupHeaderButtons(){
-      $('#btn-print')?.addEventListener('click', ()=> window.print());
-      $('#btn-export-xlsx')?.addEventListener('click', exportExcelAll);
-      $('#file-import')?.addEventListener('change', (e)=>{
-        const f = e.target.files?.[0]; if(!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-          try{
-            const obj = JSON.parse(String(r.result||'{}'));
-            if(Array.isArray(obj.events)) state.events = obj.events;
-            if(Array.isArray(obj.bank))   state.bank   = obj.bank;
-            render();
-            alert('Importert.');
-          }catch(err){
-            alert('Kunne ikke importere JSON.');
-          }
-        };
-        r.readAsText(f);
-      });
-      $('#btn-new')?.addEventListener('click', ()=> openDialog({}));
-      $('#btn-ics')?.addEventListener('click', exportICS);
-      $('#toggle-list')?.addEventListener('click', ()=> $('#event-list').classList.toggle('hidden'));
-
-      // År-navigasjon
-      $('#year-prev')?.addEventListener('click', ()=>{ state.year--; render(); supaLoadAll(state.year); });
-      $('#year-next')?.addEventListener('click', ()=>{ state.year++; render(); supaLoadAll(state.year); });
-    }
-
-    // Hurtigknapper
-    function setupQuick(){
-      $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening' }));
-      $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting' }));
-      $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse' }));
-    }
-
-    // ---------- Init ----------
-    async function init(){
-      setupTabs();
-      setupSidebarToggle();
-      setupHeaderButtons();
-      setupQuick();
-      setupShootUI();
-      supaRealtimeInit();
+      // Last data
       await supaLoadAll(state.year);
-      render();
+      supaRealtimeInit();
+
+      // Forsøk å hente skytehistorikk fra sky (hvis tabellen finnes)
+      try{ await shootLoadFromSupabase(); }catch{}
+      // Init tab
+      showTab('calendar');
     }
 
-    window.addEventListener('load', init);
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
+
