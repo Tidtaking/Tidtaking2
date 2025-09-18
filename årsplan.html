@@ -20,13 +20,208 @@
       #dialog .dialog-card{ width:100%; max-width:none; height:92vh; border-radius:0; display:flex; flex-direction:column; }
       #dialog .dialog-body{ overflow:auto; -webkit-overflow-scrolling: touch; flex:1 1 auto; }
     }
-
-    .card{ border:1px solid rgb(226 232 240); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .card{ border:1px solid rgb(226 232 240); box-shadow:0 1px 2px rgba(0,0,0,.04); }
     .daycell{ transition: background-color .15s ease; }
     @media print{
       aside, nav, .no-print { display:none!important; }
       body { background:white; }
     }
+  </style>
+
+  <!-- Dayjs + plugins + norsk locale -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/nb.min.js"></script>
+
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <!-- XLSX (SheetJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <!-- Header / toolbar -->
+  <header class="no-print border-b bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
+      <h1 class="font-bold text-xl text-[color:var(--brand)]">
+        Lørenskog Skiskyting – <span id="year-label"></span>
+      </h1>
+      <div class="flex items-center gap-2">
+        <button id="year-prev" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">◀</button>
+        <span id="event-year" class="min-w-[3ch] text-center"></span>
+        <button id="year-next" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">▶</button>
+
+        <button id="btn-new" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Ny</button>
+        <button id="btn-ics" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Eksporter ICS</button>
+        <button id="btn-export-xlsx" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Eksporter Excel</button>
+        <label class="rounded-lg border bg-white px-3 py-1.5 shadow-sm cursor-pointer">
+          Import JSON <input id="file-import" type="file" class="hidden" accept=".json" />
+        </label>
+
+        <button id="btn-toggle-sidebar" class="rounded-lg border px-3 py-1.5 shadow-sm" aria-pressed="true">Skjul sidepanel</button>
+        <button id="btn-print" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Skriv ut</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <main class="mx-auto max-w-7xl p-4">
+    <div id="page-grid" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <!-- MAIN -->
+      <section class="space-y-4">
+        <!-- Kalender -->
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Liste (kan toggles) -->
+        <div id="event-list" class="rounded-2xl border bg-white shadow-sm">
+          <div class="p-3 flex items-center justify-between">
+            <div class="font-semibold">Liste</div>
+            <button id="toggle-list" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Skjul/vis</button>
+          </div>
+          <div class="overflow-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-100 text-left">
+                <tr>
+                  <th class="py-2 px-2">Dato</th>
+                  <th class="py-2 px-2">Tittel</th>
+                  <th class="py-2 px-2">Type</th>
+                  <th class="py-2 px-2">Sted</th>
+                  <th class="py-2 px-2">Modalitet</th>
+                  <th class="py-2 px-2">Intensitet</th>
+                  <th class="py-2 px-2">Skudd</th>
+                  <th class="py-2 px-2 text-right">Handling</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-events"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Øktbank -->
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="mb-3 flex gap-2 items-center">
+            <input id="q-bank" class="rounded-md border px-3 py-2" placeholder="Søk i øktbank…" />
+            <select id="f-age" class="rounded-md border px-3 py-2"></select>
+            <select id="f-type" class="rounded-md border px-3 py-2">
+              <option value="">Alle typer</option>
+              <option>Trening</option><option>Skyting</option><option>Konkurranse</option>
+              <option>Samling</option><option>Restitusjon</option><option>Annet</option>
+            </select>
+            <button id="bank-new" class="rounded-md border bg-white px-3 py-2 shadow-sm">Ny bank-mal</button>
+          </div>
+          <div id="bank-cards" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
+        </div>
+
+        <!-- Ukeplan-koder -->
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="font-semibold mb-2">Ukeplan</div>
+          <div class="overflow-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-100 text-left"><tr><th class="p-2">Uke</th><th class="p-2">Kode</th><th class="p-2">Notat</th></tr></thead>
+              <tbody id="tbl-weeks"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Admin-liste -->
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="mb-3 flex gap-2">
+            <input id="admin-q" class="rounded-md border px-3 py-2" placeholder="Søk…" />
+            <input id="admin-from" type="date" class="rounded-md border px-3 py-2" />
+            <input id="admin-to" type="date" class="rounded-md border px-3 py-2" />
+            <button id="admin-search" class="rounded-md border bg-white px-3 py-2 shadow-sm">Filtrer</button>
+          </div>
+          <div class="overflow-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-100 text-left">
+                <tr><th class="p-2">Dato</th><th class="p-2">Tittel</th><th class="p-2">Type</th><th class="p-2">Sted</th><th class="p-2">Intensitet</th><th class="p-2"></th></tr>
+              </thead>
+              <tbody id="admin-events"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside id="sidebar" class="space-y-4">
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="font-semibold mb-2">Forklaring</div>
+          <div id="legend" class="space-y-1"></div>
+        </div>
+
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="font-semibold mb-2">Aldersgrupper</div>
+          <div id="age-editor" class="space-y-2"></div>
+          <div class="mt-3 flex gap-2">
+            <button id="age-add" class="rounded-md border bg-white px-3 py-2 shadow-sm">Legg til</button>
+            <button id="age-save" class="rounded-md border bg-white px-3 py-2 shadow-sm">Lagre</button>
+          </div>
+        </div>
+
+        <!-- Skytehistorikk (minimum) -->
+        <div class="rounded-2xl border bg-white shadow-sm p-4">
+          <div class="font-semibold mb-2">Skytehistorikk</div>
+          <div class="mb-2 flex flex-wrap gap-2">
+            <input id="shoot-q" class="rounded-md border px-2 py-1" placeholder="Søk utøver…" />
+            <input id="shoot-from" type="date" class="rounded-md border px-2 py-1" />
+            <input id="shoot-to" type="date" class="rounded-md border px-2 py-1" />
+            <select id="shoot-highlight" class="rounded-md border px-2 py-1">
+              <option value="all">Uthev alt</option>
+              <option value="pb">PB</option>
+              <option value="day">Dagens beste</option>
+              <option value="club">Klubbrekord</option>
+            </select>
+          </div>
+          <div class="mb-2 flex flex-wrap gap-2">
+            <input id="shoot-file" type="file" accept=".xlsx,.xls" />
+            <button id="shoot-add-date" class="rounded-md border bg-white px-2 py-1 shadow-sm">Ny dato</button>
+            <button id="shoot-add-athlete" class="rounded-md border bg-white px-2 py-1 shadow-sm">Ny utøver</button>
+            <button id="shoot-save" class="rounded-md border bg-white px-2 py-1 shadow-sm">Lagre til sky</button>
+            <button id="shoot-export" class="rounded-md border bg-white px-2 py-1 shadow-sm">Eksporter Excel</button>
+          </div>
+          <div class="mb-2">
+            <select id="shoot-chart-ath" class="rounded-md border px-2 py-1 w-full"></select>
+          </div>
+          <canvas id="shoot-chart" height="160"></canvas>
+
+          <div class="mt-3 overflow-auto">
+            <table id="shoot-table" class="min-w-full text-xs">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Tooltip -->
+  <div id="lss-tooltip" class="hidden rounded-md border bg-white p-2 text-xs shadow-lg"></div>
+
+  <!-- Dialog -->
+  <div id="dialog" class="fixed inset-0 hidden items-start justify-center bg-black/40 p-3 z-50">
+    <div class="dialog-card w-full max-w-3xl rounded-2xl border bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b p-3">
+        <div id="dlg-title" class="font-semibold">Dialog</div>
+        <button id="dlg-close" class="rounded-md border px-2 py-1 text-sm">×</button>
+      </div>
+      <div id="dlg-body" class="dialog-body p-3"></div>
+      <div class="flex items-center justify-end gap-2 border-t p-3">
+        <button id="btn-delete" class="hidden rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-red-700">Slett</button>
+        <button id="btn-cancel" class="rounded-md border bg-white px-3 py-1.5">Avbryt</button>
+        <button id="btn-save" class="rounded-md border bg-white px-3 py-1.5 shadow-sm">Lagre</button>
+      </div>
+    </div>
+  </div>
+
   <script>
   // ---------- Dayjs ----------
   dayjs.extend(dayjs_plugin_isoWeek);
@@ -802,18 +997,19 @@
 
   function renderList(){
     const tbody=$('#tbl-events'); if(!tbody) return; tbody.innerHTML='';
-    const yearEvents = state.events
-      .filter(e => dayjs(e.date).year() === state.year
-      .sort((a,b)=>{
-        const da = dayjs(a.date), db = dayjs(b.date);
-        if (!da.isSame(db, 'day')) return da - db;
-        const order = getOrderForDate(da.format('YYYY-MM-DD'));
-        const ia = order.indexOf(a.id); const ib = order.indexOf(b.id);
-        const A = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
-        const B = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
-        if (A !== B) return A - B;
-        return (a.title||'').localeCompare(b.title||'');
-      });
+const yearEvents = state.events
+  .filter(e => dayjs(e.date).year() === state.year)
+  .sort((a,b)=>{
+    const da = dayjs(a.date), db = dayjs(b.date);
+    if (!da.isSame(db, 'day')) return da - db;
+    const order = getOrderForDate(da.format('YYYY-MM-DD'));
+    const ia = order.indexOf(a.id); const ib = order.indexOf(b.id);
+    const A = ia === -1 ? Number.MAX_SAFE_INTEGER : ia;
+    const B = ib === -1 ? Number.MAX_SAFE_INTEGER : ib;
+    if (A !== B) return A - B;
+    return (a.title||'').localeCompare(b.title||'');
+  });
+
 
     yearEvents.forEach(e=>{
       const tr=document.createElement('tr'); tr.className='border-t';
