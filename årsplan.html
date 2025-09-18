@@ -26,13 +26,7 @@
     @media print{
       aside, nav, .no-print { display:none!important; }
       body { background:white; }
-      .daycell{ border-color:#cbd5e1!important; page-break-inside: avoid; }
     }
-
-    /* Skytehistorikk – uthevinger */
-    .sh-pb { background: #dcfce7; }   /* personlig rekord */
-    .sh-daybest { background:#dbeafe;}/* beste på dato */
-    .sh-clubrec { background:#ede9fe;}/* klubb-rekord all time */
   </style>
 
   <!-- Dayjs -->
@@ -40,6 +34,7 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
+  <!-- Norsk locale for Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/nb.min.js"></script>
 
   <!-- Supabase JS v2 -->
@@ -47,9 +42,6 @@
 
   <!-- SheetJS (XLSX) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <!-- Chart.js for trendgraf -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 
 <body class="bg-gray-100 min-h-screen">
@@ -100,14 +92,8 @@
            class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
           View-Only
         </a>
-
-        <!-- Ny lenke: Skytehistorikk -->
-        <a href="#" id="link-shoot" class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
-          Skytehistorikk
-        </a>
-
-        <!-- Toggle sidepanel -->
-        <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm" aria-pressed="true">Sidepanel</button>
+        <!-- Ny knapp for å vise/skjule sidepanel -->
+        <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Sidepanel</button>
       </nav>
     </div>
 
@@ -143,9 +129,12 @@
           <div class="rounded-2xl border bg-white shadow-sm card">
             <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
             <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div class="p-4 pt-0">
-                <button id="bank-new" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny mal i Øktbank</button>
-              </div>
+              <!-- under filter-grid'en i Bank-seksjonen -->
+<div class="p-4 pt-0">
+  <button id="bank-new" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Ny mal i Øktbank
+  </button>
+</div>
               <div>
                 <label class="text-sm font-medium">Søk</label>
                 <input id="q-bank" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Søk i øktbank…"/>
@@ -159,7 +148,6 @@
                 <select id="f-type" class="mt-1 w-full h-10 rounded-xl border px-3">
                   <option value="">Alle</option>
                   <option>Trening</option>
-                  <option>Skyting</option>
                   <option>Konkurranse</option>
                   <option>Restitusjon</option>
                 </select>
@@ -168,6 +156,7 @@
             <div id="bank-cards" class="p-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
           </div>
         </section>
+
 
         <!-- Admin Tab -->
         <section id="tab-admin" class="tab-section hidden">
@@ -241,24 +230,24 @@
                 <p class="text-xs text-slate-500 mt-1">Trygg å kjøre flere ganger – hopper over maler som allerede finnes (matcher på navn).</p>
               </div>
 
-              <!-- F: Varslinger -->
+              <!-- F: Varslinger (NY) -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Varslinger</h4>
                 <p class="text-xs text-slate-600 mb-3">
                   Abonnenter mottar e-post ved <b>per endring</b>, som <b>sum dag</b> (daglig digest) eller <b>sum uke</b> (ukentlig digest).
                 </p>
-
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <button id="nf-drain" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
-                    Send ventende (per endring)
-                  </button>
-                  <button id="nf-send-daily" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
-                    Send daglig oppsummering (nå)
-                  </button>
-                  <button id="nf-send-weekly" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
-                    Send ukentlig oppsummering (nå)
-                  </button>
-                </div>
+</button>
+<div class="mt-3 flex flex-wrap gap-2">
+  <button id="nf-drain" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Send ventende (per endring)
+  </button>
+  <button id="nf-send-daily" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Send daglig oppsummering (nå)
+  </button>
+  <button id="nf-send-weekly" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
+    Send ukentlig oppsummering (nå)
+  </button>
+</div>
 
                 <!-- Avsender -->
                 <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -316,86 +305,14 @@
                   </table>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Skytehistorikk Tab -->
-        <section id="tab-shoot" class="tab-section hidden">
-          <div class="rounded-2xl border bg-white shadow-sm card">
-            <div class="border-b p-4">
-              <h3 class="text-lg font-semibold">Skytehistorikk</h3>
-              <p class="text-sm text-slate-600">Importer Excel, rediger direkte, lagre til sky, vis trender og rekorder.</p>
-            </div>
-
-            <div class="p-4 space-y-4">
-              <!-- Filter/handlinger -->
-              <div class="flex flex-wrap items-end gap-3">
-                <div>
-                  <label class="text-sm font-medium">Søk (navn)</label>
-                  <input id="shoot-q" class="mt-1 w-56 h-10 rounded-xl border px-3" placeholder="F.eks. Sofie">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Fra dato</label>
-                  <input id="shoot-from" type="date" class="mt-1 h-10 rounded-xl border px-3">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Til dato</label>
-                  <input id="shoot-to" type="date" class="mt-1 h-10 rounded-xl border px-3">
-                </div>
-                <div>
-                  <label class="text-sm font-medium">Uthev</label>
-                  <select id="shoot-highlight" class="mt-1 h-10 rounded-xl border px-3">
-                    <option value="all">Alt (PB / Beste på dato / Klubbrekord)</option>
-                    <option value="pb">Kun personlig rekord</option>
-                    <option value="day">Kun beste på dato</option>
-                    <option value="club">Kun klubbrekord</option>
-                    <option value="none">Ingen</option>
-                  </select>
-                </div>
-
-                <label class="rounded-xl border bg-white px-3 py-2 shadow-sm cursor-pointer">
-                  <input id="shoot-file" type="file" accept=".xlsx,.xls" class="hidden" />
-                  Importer Excel
-                </label>
-                <button id="shoot-add-date" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny testdato</button>
-                <button id="shoot-add-athlete" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Ny utøver</button>
-                <button id="shoot-save" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Lagre til sky</button>
-                <button id="shoot-export" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Eksporter Excel</button>
-              </div>
-
-              <!-- Tabell -->
-              <div class="rounded-xl border overflow-auto">
-                <table class="min-w-[900px] w-full text-sm" id="shoot-table">
-                  <thead class="bg-slate-50 sticky top-0"></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-
-              <!-- Trendgraf -->
-              <div class="rounded-xl border p-4">
-                <div class="flex items-center justify-between">
-                  <h4 class="font-semibold">Trendgraf (total)</h4>
-                  <div class="flex items-center gap-2">
-                    <label class="text-sm">Utøver</label>
-                    <select id="shoot-chart-ath" class="rounded-xl border px-3 py-2"></select>
-                  </div>
-                </div>
-                <div class="mt-3">
-                  <canvas id="shoot-chart" height="120"></canvas>
-                </div>
-              </div>
-
-              <div class="text-xs text-slate-500">
-                Støttede celleformater: <code>391 (264+127)</code> eller <code>386 (262+124)(24)</code> (24 = treff stående).
-              </div>
+              <!-- /Varslinger -->
             </div>
           </div>
         </section>
       </main>
 
       <!-- Sidepanel -->
-      <aside id="sidebar" class="space-y-4">
+      <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
           <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
           <div id="legend" class="p-4 space-y-1 text-sm"></div>
@@ -464,8 +381,10 @@
                 </tr>
                 <tr class="border-t">
                   <td class="py-2">
-                    <span>⚡</span>
-                    <span>I5 Maks</span>
+                    <span class="inline-flex items-center gap-2">
+                      <span>⚡</span>
+                      <span>I5 Maks</span>
+                    </span>
                   </td>
                   <td class="py-2">Alt du har! Klarer bare noen sekunder–minutter</td>
                 </tr>
@@ -487,11 +406,11 @@
   </div><!-- /container -->
 
   <!-- Dialog -->
-  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
+  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-4">
         <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
-        <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100" aria-label="Lukk">✕</button>
+        <button id="dlg-close" class="rounded-full p-1 hover:bg-slate-100">✕</button>
       </div>
       <div class="dialog-body p-4 space-y-3" id="dlg-body"></div>
       <div class="border-t p-4 flex justify-end gap-2">
@@ -512,28 +431,16 @@
     dayjs.extend(dayjs_plugin_localizedFormat);
     dayjs.locale('nb');
 
-    // ---------- Utils ----------
-    const $=(q,el=document)=>el.querySelector(q);
-    const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
-    const uid=()=> (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));
-    const lsGet=(k,d)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch{return d;} };
-    const lsSet=(k,v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} };
-    function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-    function escapeHTML(str){
-      return (str ?? '').replace(/[&<>"']/g, m => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"
-      }[m]));
-    }
-
     // --- Sidebar toggle (med knappestil) ---
     function setSidebarButtonStyle(isVisible){
       const btn = document.getElementById('btn-toggle-sidebar');
       if(!btn) return;
-      btn.classList.toggle('bg-blue-50', !isVisible);
-      btn.classList.toggle('border-blue-300', !isVisible);
-      btn.classList.toggle('text-[var(--brand)]', !isVisible);
-      btn.setAttribute('aria-pressed', String(isVisible));
-      btn.textContent = isVisible ? 'Skjul sidepanel' : 'Vis sidepanel';
+      const isHidden = !isVisible;
+      btn.classList.toggle('bg-blue-50', isHidden);
+      btn.classList.toggle('border-blue-300', isHidden);
+      btn.classList.toggle('text-[var(--brand)]', isHidden);
+      btn.setAttribute('aria-pressed', String(isHidden));
+      btn.textContent = isHidden ? 'Sidepanel (skjult)' : 'Sidepanel';
     }
     function applySidebarLayout(visible){
       const grid = document.getElementById('page-grid');
@@ -579,15 +486,43 @@
     ];
     const AGE_MAP = { 'U12':'11-12', 'U14':'13-14', 'U16':'HL', 'JR':'HL' };
 
-    const KEY = {
-      EVENTS:   'lss:events:v1',
-      BANK:     'lss:bank:v3',
-      WEEKS:    'lss:weeks:v1',
-      YEAR:     'lss:year:v1',
-      DAYORDER: 'lss:dayorder:v2',
-      AGES:     'lss:ages:v1',
-      VIEW:     'lss:view:v1'
-    };
+const KEY = {
+  EVENTS:   'lss:events:v1',
+  BANK:     'lss:bank:v3',
+  WEEKS:    'lss:weeks:v1',
+  YEAR:     'lss:year:v1',
+  DAYORDER: 'lss:dayorder:v2',
+  AGES:     'lss:ages:v1',
+  VIEW:     'lss:view:v1'      // lagrer visningsmodus
+};
+
+
+    const $=(q,el=document)=>el.querySelector(q);
+    const $$=(q,el=document)=>Array.from(el.querySelectorAll(q));
+    const uid=()=> (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));
+    const lsGet=(k,d)=>{ try{const v=localStorage.getItem(k); return v?JSON.parse(v):d;}catch{return d;} };
+    const lsSet=(k,v)=>{ try{localStorage.setItem(k, JSON.stringify(v));}catch{} };
+
+    function fallbackLogo(){
+      const img=document.createElement('div');
+      img.className='h-14 w-20 rounded-xl bg-white grid place-items-center text-xs text-slate-500';
+      img.textContent='Logo';
+      return img;
+    }
+    function bindDialogChrome(){
+      const dlg = $('#dialog');
+      const doClose = (e) => { e?.preventDefault?.(); closeDialog(); };
+      $('#btn-cancel')?.addEventListener('click', doClose);
+      $('#dlg-close')?.addEventListener('click', doClose);
+      dlg?.addEventListener('click', (e) => {
+        if (e.target === dlg) {
+          if (confirm("Vil du lukke uten å lagre endringer?")) {
+            closeDialog();
+          }
+        }
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlg.classList.contains('hidden')) closeDialog(); });
+    }
 
     // ---------- Supabase ----------
     const SUPA_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -596,25 +531,22 @@
     const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order', settings:'settings' };
 
     // ---------- State ----------
-    let state = {
-      year:      lsGet(KEY.YEAR, dayjs().year()),
-      month:     dayjs().month() + 1,
-      viewMode:  lsGet(KEY.VIEW, 'rolling'), // 'rolling' | 'full'
-      events:    [],
-      bank:      [],
-      weeks:     {},
-      dayOrder:  lsGet(KEY.DAYORDER, {}),
-      ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS),
+let state = {
+  year:      lsGet(KEY.YEAR, dayjs().year()),
+  month:     dayjs().month() + 1,
+  viewMode:  lsGet(KEY.VIEW, 'rolling'), // 'rolling' | 'year'  ← NY
+  events:    [],
+  bank:      [],
+  weeks:     {},
+  dayOrder:  lsGet(KEY.DAYORDER, {}),
+  ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
+};
 
-      // Skytehistorikk
-      shoot: {
-        athletes: [],   // [{name, birthYear}]
-        dates: [],      // ['YYYY-MM-DD', ...]
-        grid: {}        // key `${ai}|${di}` -> { total, prone, stand, stand_hits }
-      }
-    };
-    if (state.viewMode === 'year') state.viewMode = 'full';
-    if (!['rolling','full'].includes(state.viewMode)) state.viewMode = 'rolling';
+// liten guard hvis gammel lagring inneholder noe rart
+// liten guard + migrering av tidligere lagret verdi
+if (state.viewMode === 'year') state.viewMode = 'full';            // migrer gammel verdi
+if (!['rolling','full'].includes(state.viewMode)) state.viewMode = 'rolling'; // gyldige nå
+
 
     const MOBILE_BREAKPOINT = 768;
     const isMobile = () => window.innerWidth < MOBILE_BREAKPOINT;
@@ -622,18 +554,18 @@
     // ---------- I/O ----------
     async function supaLoadAll(year = state.year){
       // Events
-      const { data: ev } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
-      if(ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
+      const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
+      if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
       // Bank
-      const { data: bk } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
-      if(bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
+      const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
+      if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
       else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
 
       // Weeks
-      const { data: wks } = await supabase.from(TBL.weeks).select('*').eq('year', year);
-      if(wks){
+      const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
+      if(!wErr && wks){
         const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
         state.weeks = dict;
       } else {
@@ -651,8 +583,8 @@
     }
 
     async function supaLoadAgeGroups(){
-      const { data } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
-      if(data && Array.isArray(data.value)){ state.ageGroups = data.value; }
+      const { data, error } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      if(!error && data && Array.isArray(data.value)){ state.ageGroups = data.value; }
       else { state.ageGroups = DEFAULT_AGE_GROUPS; await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups }); }
       lsSet(KEY.AGES, state.ageGroups);
     }
@@ -660,161 +592,197 @@
       const { error } = await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups });
       if(error){ console.warn('Lagre age_groups feilet', error); alert('Kunne ikke lagre grupper til skyen.'); }
     }
+async function notifyPerChange(eventId, change = 'upsert'){
+  try {
+    const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+      body: { mode: 'per_change', change, eventId }
+    });
+    if (error) throw error;
+    console.log('[notify] OK', data);
+  } catch (err) {
+    console.error('[notify] FEIL', err);
+  }
+}
 
-    async function notifyPerChange(eventId, change = 'upsert'){
-      try {
-        const { data, error } = await supabase.functions.invoke('notify-dispatch', {
-          body: { mode: 'per_change', change, eventId }
-        });
-        if (error) throw error;
-        console.log('[notify] OK', data);
-      } catch (err) {
-        console.error('[notify] FEIL', err);
-      }
+   function replaceIdEverywhere(oldId, newId, dateISO){
+  if (!oldId || !newId || oldId === newId) return;
+
+  // A) Bytt i events-lista
+  const i = state.events.findIndex(x => x.id === oldId);
+  if (i >= 0) { state.events[i] = { ...state.events[i], id: newId }; }
+
+  // B) Bytt i dayOrder for aktuell dato
+  const key = dateISO || (state.events[i]?.date);
+  if (key && state.dayOrder[key]) {
+    state.dayOrder[key] = state.dayOrder[key].map(x => x === oldId ? newId : x);
+  }
+
+  // C) Lagre og rerender
+  lsSet(KEY.EVENTS, state.events);
+  lsSet(KEY.DAYORDER, state.dayOrder);
+     lsSet(KEY.VIEW, state.viewMode);
+
+  render();
+}
+
+async function supaUpsertEvent(model){
+  const row = mapEventToDb(model);
+  try{
+    // Hent tilbake raden som ble skrevet – inkludert serverens id
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .upsert(row, { onConflict: 'id' })
+      .select('id, date')   // hent minst id (og gjerne date for dayOrder)
+      .single();
+
+    if (error){
+      console.warn('Upsert event feilet', error);
+      alert('Kunne ikke lagre til skyen. Lagret lokalt.');
+      return;
     }
 
-    function replaceIdEverywhere(oldId, newId, dateISO){
-      if (!oldId || !newId || oldId === newId) return;
-      const i = state.events.findIndex(x => x.id === oldId);
-      if (i >= 0) { state.events[i] = { ...state.events[i], id: newId }; }
-      const key = dateISO || (state.events[i]?.date);
-      if (key && state.dayOrder[key]) {
-        state.dayOrder[key] = state.dayOrder[key].map(x => x === oldId ? newId : x);
-      }
-      lsSet(KEY.EVENTS, state.events);
-      lsSet(KEY.DAYORDER, state.dayOrder);
-      lsSet(KEY.VIEW, state.viewMode);
-      render();
+    // Hvis DB ga oss en annen id enn modellen, bytt den inn i all klient-state
+    if (data && data.id && data.id !== model.id){
+      replaceIdEverywhere(model.id, data.id, data.date || model.date);
+      model.id = data.id; // sørg for at videre bruk av modellen har riktig id
     }
 
-    async function supaUpsertEvent(model){
-      const row = mapEventToDb(model);
-      try{
-        const { data, error } = await supabase
-          .from(TBL.events)
-          .upsert(row, { onConflict: 'id' })
-          .select('id, date')
-          .single();
+    await notifyPerChange(model.id);
+  }catch(err){
+    console.error('Upsert event exception:', err);
+    alert('Uventet feil ved lagring (se konsoll).');
+  }
+}
 
-        if (error){
-          console.warn('Upsert event feilet', error);
-          alert('Kunne ikke lagre til skyen. Lagret lokalt.');
-          return;
-        }
-        if (data && data.id && data.id !== model.id){
-          replaceIdEverywhere(model.id, data.id, data.date || model.date);
-          model.id = data.id;
-        }
-        await notifyPerChange(model.id);
-      }catch(err){
-        console.error('Upsert event exception:', err);
-        alert('Uventet feil ved lagring (se konsoll).');
-      }
+
+  async function findServerCandidates(ev){
+  const title = (ev.title || '').trim();
+
+  // Primær: eksakt match på mange felt
+  {
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, modality, location, intensity, duration_min, race_subtype, shooting, notes, updated_at, created_at')
+      .eq('date', ev.date)
+      .eq('title', title)
+      .eq('type', ev.type || null)
+      .eq('location', ev.location || null)
+      .eq('modality', ev.modality || null)
+      .eq('intensity', ev.intensity || null)
+      .eq('duration_min', ev.durationMin ?? null)
+      .limit(10);
+    if (!error && data && data.length) return data;
+  }
+
+  // Sekundær: eksakt på (date,title,type), sorter nyest oppdatert øverst
+  {
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, modality, location, updated_at, created_at')
+      .eq('date', ev.date)
+      .eq('title', title)
+      .eq('type', ev.type || null)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+    if (!error && data && data.length) return data;
+  }
+
+  // Tertiær: bare på (date,title~ilike)
+  if (title.length >= 3){
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, updated_at, created_at')
+      .eq('date', ev.date)
+      .ilike('title', `%${title}%`)
+      .order('updated_at', { ascending: false })
+      .limit(10);
+    if (!error && data && data.length) return data;
+  }
+
+  // Siste utvei: nyeste rad på datoen
+  {
+    const { data, error } = await supabase
+      .from(TBL.events)
+      .select('id, title, type, date, updated_at, created_at')
+      .eq('date', ev.date)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (!error && data && data.length) return data;
+  }
+
+  return [];
+}
+
+
+async function supaDeleteEvent(ev){
+  try{
+    // 1) Forsøk direkte på klient-ID
+    let { data, error } = await supabase
+      .from(TBL.events)
+      .delete()
+      .eq('id', ev.id)
+      .select('id');
+
+    if (error){ console.warn('Sletting feilet', error); alert('Kunne ikke slette i skyen.'); return; }
+    if (data && data.length){ await verifyDeletion(ev); await notifyPerChange(null); return; }
+
+    // 2) Fallback: finn kandidater i DB
+    const candidates = await findServerCandidates(ev);
+    if (!candidates.length){
+      console.warn('Ingen kandidater funnet for sletting', ev);
+      alert('Fant ingen match i skyen for sletting.');
+      return;
     }
 
-    async function findServerCandidates(ev){
-      const title = (ev.title || '').trim();
-      {
-        const { data } = await supabase
-          .from(TBL.events)
-          .select('id, title, type, date, modality, location, intensity, duration_min, race_subtype, shooting, notes, updated_at, created_at')
-          .eq('date', ev.date)
-          .eq('title', title)
-          .eq('type', ev.type || null)
-          .eq('location', ev.location || null)
-          .eq('modality', ev.modality || null)
-          .eq('intensity', ev.intensity || null)
-          .eq('duration_min', ev.durationMin ?? null)
-          .limit(10);
-        if (data && data.length) return data;
-      }
-      {
-        const { data } = await supabase
-          .from(TBL.events)
-          .select('id, title, type, date, modality, location, updated_at, created_at')
-          .eq('date', ev.date)
-          .eq('title', title)
-          .eq('type', ev.type || null)
-          .order('updated_at', { ascending: false })
-          .limit(10);
-        if (data && data.length) return data;
-      }
-      if (title.length >= 3){
-        const { data } = await supabase
-          .from(TBL.events)
-          .select('id, title, type, date, updated_at, created_at')
-          .eq('date', ev.date)
-          .ilike('title', `%${title}%`)
-          .order('updated_at', { ascending: false })
-          .limit(10);
-        if (data && data.length) return data;
-      }
-      {
-        const { data } = await supabase
-          .from(TBL.events)
-          .select('id, title, type, date, updated_at, created_at')
-          .eq('date', ev.date)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        if (data && data.length) return data;
-      }
-      return [];
+    // Velg kandidat: eksakt title+type først, ellers første
+    const chosen = candidates.find(r => (r.title||'') === (ev.title||'') && (r.type||'') === (ev.type||'')) || candidates[0];
+
+    const res2 = await supabase
+      .from(TBL.events)
+      .delete()
+      .eq('id', chosen.id)
+      .select('id');
+
+    if (res2.error){ console.warn('Sletting via fallback feilet', res2.error); alert('Kunne ikke slette i skyen via fallback.'); return; }
+
+    if (chosen.id !== ev.id){
+      replaceIdEverywhere(ev.id, chosen.id, ev.date);
+      console.log('Reparerte klient-ID → server-ID ved sletting:', ev.id, '→', chosen.id);
     }
 
-    async function supaDeleteEvent(ev){
-      try{
-        let { data, error } = await supabase
-          .from(TBL.events)
-          .delete()
-          .eq('id', ev.id)
-          .select('id');
+    // 3) Ekstra verifikasjon (se neste punkt)
+    await verifyDeletion(ev);
 
-        if (error){ console.warn('Sletting feilet', error); alert('Kunne ikke slette i skyen.'); return; }
-        if (data && data.length){ await verifyDeletion(ev); await notifyPerChange(null); return; }
+    await notifyPerChange(null);
+  }catch(err){
+    console.error('Delete exception:', err);
+    alert('Uventet feil ved sletting (se konsoll).');
+  }
+}
+async function verifyDeletion(ev){
+  const title = (ev.title || '').trim();
+  const { data, error } = await supabase
+    .from(TBL.events)
+    .select('id, title, type, date, location, modality')
+    .eq('date', ev.date)
+    .eq('title', title)
+    .eq('type', ev.type || null)
+    .limit(5);
 
-        const candidates = await findServerCandidates(ev);
-        if (!candidates.length){
-          console.warn('Ingen kandidater funnet for sletting', ev);
-          alert('Fant ingen match i skyen for sletting.');
-          return;
-        }
-        const chosen = candidates.find(r => (r.title||'') === (ev.title||'') && (r.type||'') === (ev.type||'')) || candidates[0];
+  if (error){
+    console.warn('Verifisering feilet', error);
+    return;
+  }
 
-        const res2 = await supabase
-          .from(TBL.events)
-          .delete()
-          .eq('id', chosen.id)
-          .select('id');
+  if (data && data.length){
+    console.warn('Advarsel: Det finnes fortsatt rader som matcher etter sletting:', data);
+    alert('Obs: Det finnes fortsatt en (eller flere) rader i skyen med samme dato/tittel/type. Se konsollen for detaljer.');
+  }
+}
 
-        if (res2.error){ console.warn('Sletting via fallback feilet', res2.error); alert('Kunne ikke slette i skyen via fallback.'); return; }
 
-        if (chosen.id !== ev.id){
-          replaceIdEverywhere(ev.id, chosen.id, ev.date);
-          console.log('Reparerte klient-ID → server-ID ved sletting:', ev.id, '→', chosen.id);
-        }
-        await verifyDeletion(ev);
-        await notifyPerChange(null);
-      }catch(err){
-        console.error('Delete exception:', err);
-        alert('Uventet feil ved sletting (se konsoll).');
-      }
-    }
-    async function verifyDeletion(ev){
-      const title = (ev.title || '').trim();
-      const { data, error } = await supabase
-        .from(TBL.events)
-        .select('id, title, type, date, location, modality')
-        .eq('date', ev.date)
-        .eq('title', title)
-        .eq('type', ev.type || null)
-        .limit(5);
 
-      if (error){ console.warn('Verifisering feilet', error); return; }
-      if (data && data.length){
-        console.warn('Advarsel: Det finnes fortsatt rader som matcher etter sletting:', data);
-        alert('Obs: Det finnes fortsatt en (eller flere) rader i skyen med samme dato/tittel/type. Se konsollen for detaljer.');
-      }
-    }
+
 
     async function supaUpsertWeek(year, week, code, note){
       const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
@@ -884,24 +852,26 @@
         .subscribe();
     }
 
-    // ---------- Mapper ----------
-    function mapEventToDb(e){
-      return {
-        id: e.id,
-        date: e.date,
-        title: e.title || null,
-        type: e.type || null,
-        modality: e.modality || null,
-        intensity: e.intensity || null,
-        duration_min: e.durationMin ?? null,
-        age: e.age || [],
-        shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
-        race_subtype: e.raceSubtype || null,
-        notes: e.notes || null,
-        roles: e.roles || {},
-        location: e.location || null
-      };
-    }
+// --- ERSTATT HELE mapEventToDb MED DENNE ---
+function mapEventToDb(e){
+  return {
+    id: e.id,
+    date: e.date,
+    // year: IKKE send! Den er generated i DB
+    title: e.title || null,
+    type: e.type || null,
+    modality: e.modality || null,
+    intensity: e.intensity || null,
+    duration_min: e.durationMin ?? null,
+    age: e.age || [],
+    shooting: e.shooting || { stilling:'', skudd:0, tema:[] },
+    race_subtype: e.raceSubtype || null,
+    notes: e.notes || null,
+    roles: e.roles || {},
+    location: e.location || null
+  };
+}
+
     function mapEventFromDb(r){
       const t = r.type ?? r.event_type ?? 'Trening';
       return {
@@ -1007,8 +977,9 @@
       el.addEventListener('touchcancel',endPress,   { passive:true });
     }
     function eventTooltipHTML(e){
-      const esc = escapeHTML;
-      const title = esc(e.title || e.type || '');
+const esc = s => (s||'').replace(/[&<>"']/g, m => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]
+));      const title = esc(e.title || e.type || '');
       const rolesList = Object.entries(e.roles||{}).filter(([,v])=> (v||'').trim().length).map(([k,v])=> `<div><span class="font-medium">${esc(k)}:</span> ${esc(v)}</div>`).join('');
       const ageChips = (e.age||[]).map(a=>`<span class="rounded-full border px-1.5 py-0.5 text-[10px] mr-1">${esc(a)}</span>`).join('');
       const race = e.type==='Konkurranse' && (e.raceSubtype||'').trim() ? `<div><span class="font-medium">Konkurranse:</span> ${esc(e.raceSubtype)}</div>` : '';
@@ -1046,7 +1017,7 @@
 
     // ---------- Dagsvisning (DnD) ----------
     function previewCardHTML(e){
-      const esc = escapeHTML;
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const dot = `<span class="inline-block h-2.5 w-2.5 rounded-full" style="background:${COLORS[e.type]||'#6b7280'}"></span>`;
       const title = esc(e.title || (e.type + (e.raceSubtype? ' – '+e.raceSubtype : '')));
       const meta = [
@@ -1070,10 +1041,10 @@
             ${notes}
           </div>
           <div class="shrink-0 flex gap-1">
-            <button data-act="view" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]">Vis</button>
-            <button data-act="edit" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]">Rediger</button>
-            <button data-act="dup"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]">Dupliser</button>
-            <button data-act="del"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm min-w-[72px]">Slett</button>
+            <button data-act="view" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
+            <button data-act="edit" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
+            <button data-act="dup"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
+            <button data-act="del"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
           </div>
         </div>
       `;
@@ -1101,7 +1072,7 @@
       let dragEl = null;
       list.addEventListener('dragstart', (ev)=>{ const item = ev.target.closest('.dnd-item'); if(!item) return; dragEl = item; item.classList.add('opacity-60'); ev.dataTransfer.effectAllowed = 'move'; try { ev.dataTransfer.setData('text/plain', item.dataset.id || ''); } catch {} });
       list.addEventListener('dragover', (ev)=>{ ev.preventDefault(); const over = ev.target.closest('.dnd-item'); if(!over || over === dragEl) return; const rect = over.getBoundingClientRect(); const before = (ev.clientY - rect.top) < rect.height / 2; if (before) list.insertBefore(dragEl, over); else list.insertBefore(dragEl, over.nextSibling); });
-      list.addEventListener('drop', ()=>{ const ids = Array.from(list.querySelectorAll('.dnd-item')).map(el => el.dataset.id).filter(Boolean); setOrderForDate(dateISO, ids); render(); });
+      list.addEventListener('drop', ()=>{ const ids = Array.from(list.querySelectorAll('.dnd-item')).map(el => el.dataset.id); setOrderForDate(dateISO, ids); render(); });
       list.addEventListener('dragend', ()=>{ if(dragEl){ dragEl.classList.remove('opacity-60'); dragEl = null; } });
 
       list.addEventListener('click', async (e)=>{
@@ -1118,38 +1089,58 @@
     }
 
     // ---------- Render ----------
-    function render(){
-      const systemYear  = dayjs().year();
-      const systemMonth = dayjs().month() + 1;
-      const crossesYear = (!isMobile() && state.viewMode === 'rolling' && state.year === systemYear && systemMonth !== 1);
-      const yearLabelText = state.viewMode === 'rolling' ? (crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`) : `${state.year}`;
-      $('#year-label').textContent = yearLabelText;
-      $('#event-year').textContent = String(state.year);
+   function render(){
+  // Brukes for å bestemme om “rullende” visning krysser nytt år
+  const systemYear  = dayjs().year();
+  const systemMonth = dayjs().month() + 1;
+  const crossesYear = (
+    !isMobile() &&
+    state.viewMode === 'rolling' &&
+    state.year === systemYear &&
+    systemMonth !== 1
+  );
 
-      renderLegend();
-      renderCalendar();
-      renderList();
-      renderBank();
-      renderWeeks();
-      renderAgeEditor();
-      renderAdminEvents();
+  // Teksten i år-etiketten (øverst i verktøylinjen)
+  const yearLabelText =
+    state.viewMode === 'rolling'
+      ? (crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`)
+      : `${state.year}`;
 
-      const fAge = $('#f-age');
-      if(fAge){
-        fAge.innerHTML = `<option value="">Alle</option>` + (state.ageGroups||[]).map(g=>`<option value="${g.id}">${g.label}</option>`).join('');
-      }
+  // Oppdater etiketter
+  $('#year-label').textContent = yearLabelText;   // klikkbar “år”-label
+  $('#event-year').textContent = String(state.year); // “Hendelser <år>”-boksen følger valgt år
 
-      lsSet(KEY.YEAR, state.year);
-      lsSet(KEY.EVENTS, state.events);
-      lsSet(KEY.BANK, state.bank);
-      lsSet(KEY.WEEKS, state.weeks);
-      lsSet(KEY.DAYORDER, state.dayOrder);
-      lsSet(KEY.AGES, state.ageGroups);
-      lsSet(KEY.VIEW, state.viewMode);
-    }
+  // Vanlig render-kjede
+  renderLegend();
+  renderCalendar();
+  renderList();
+  renderBank();
+  renderWeeks();
+  renderAgeEditor();
+  renderAdminEvents();
+
+  // Oppdater filteret i Øktbank (som før)
+  const fAge = $('#f-age');
+  if(fAge){
+    fAge.innerHTML = `<option value="">Alle</option>` +
+      (state.ageGroups||[])
+        .map(g=>`<option value="${g.id}">${g.label}</option>`)
+        .join('');
+  }
+
+  // Persister state (som før) + lagre viewMode
+  lsSet(KEY.YEAR, state.year);
+  lsSet(KEY.EVENTS, state.events);
+  lsSet(KEY.BANK, state.bank);
+  lsSet(KEY.WEEKS, state.weeks);
+  lsSet(KEY.DAYORDER, state.dayOrder);
+  lsSet(KEY.AGES, state.ageGroups);
+  lsSet(KEY.VIEW, state.viewMode); // ← ny linje, fint å ha
+}
+
 
     function renderLegend(){
-      const el=$('#legend'); if(!el) return; el.innerHTML='';
+      const el=$('#legend'); el.innerHTML='';
       Object.entries(COLORS).forEach(([k,c])=>{
         const row=document.createElement('div');
         row.className='flex items-center justify-between';
@@ -1158,49 +1149,57 @@
       });
     }
 
-    function renderCalendar(){
-      const grid = $('#calendar-grid');
-      grid.innerHTML = '';
+ function renderCalendar(){
+  const grid = $('#calendar-grid');
+  grid.innerHTML = '';
 
-      const systemYear  = dayjs().year();
-      const systemMonth = dayjs().month() + 1;
+  const systemYear  = dayjs().year();
+  const systemMonth = dayjs().month() + 1;
 
-      if (isMobile()){
-        grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
-        return;
-      }
+  if (isMobile()){
+    // Mobil holder din eksisterende “én måned + piler”-logikk
+    grid.appendChild(renderMonth(state.year, state.month, { withNav:true }));
+    return;
+  }
 
-      let months = [];
-      let crossesYear = false;
+  let months = [];
+  let crossesYear = false;
 
-      if (state.viewMode === 'full'){
-        for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
-      } else {
-        if (state.year === systemYear){
-          for (let m = systemMonth; m <= 12; m++) months.push({ y: state.year, m });
-          for (let m = 1; m <  systemMonth; m++) months.push({ y: state.year + 1, m });
-          crossesYear = (systemMonth !== 1);
-        } else {
-          for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
-        }
-      }
-
-      const oldHeader = grid.previousElementSibling;
-      if (oldHeader && oldHeader.dataset?.role === 'year-header') oldHeader.remove();
-
-      const h = document.createElement('h2');
-      h.dataset.role = 'year-header';
-      h.className = 'text-xl font-bold text-center mb-4';
-      const label = state.viewMode === 'rolling' ? (crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`) : `${state.year}`;
-      h.textContent = label;
-      grid.parentNode.insertBefore(h, grid);
-
-      months.forEach(({ y, m }) => {
-        const el = renderMonth(y, m);
-        el.title = dayjs(`${y}-${String(m).padStart(2,'0')}-01`).format('MMMM YYYY');
-        grid.appendChild(el);
-      });
+  if (state.viewMode === 'full'){
+    // Alltid jan–des i valgt år
+    for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
+  } else {
+    // Rullende når valgt år == faktisk år, ellers vanlig jan–des
+    if (state.year === systemYear){
+      for (let m = systemMonth; m <= 12; m++) months.push({ y: state.year, m });
+      for (let m = 1; m <  systemMonth; m++) months.push({ y: state.year + 1, m });
+      crossesYear = (systemMonth !== 1);
+    } else {
+      for (let m = 1; m <= 12; m++) months.push({ y: state.year, m });
     }
+  }
+
+  // År-overskrift over grid
+  const oldHeader = grid.previousElementSibling;
+  if (oldHeader && oldHeader.dataset?.role === 'year-header') oldHeader.remove();
+
+  const h = document.createElement('h2');
+  h.dataset.role = 'year-header';
+  h.className = 'text-xl font-bold text-center mb-4';
+  const label =
+    state.viewMode === 'rolling'
+      ? (crossesYear ? `${state.year}–${state.year + 1}` : `${state.year}`)
+      : `${state.year}`;
+  h.textContent = label;
+  grid.parentNode.insertBefore(h, grid);
+
+  // Render månedene (med korrekt år i title)
+  months.forEach(({ y, m }) => {
+    const el = renderMonth(y, m);
+    el.title = dayjs(`${y}-${String(m).padStart(2,'0')}-01`).format('MMMM YYYY');
+    grid.appendChild(el);
+  });
+}
 
     function renderMonth(year, month, opts = { withNav:false }){
       const wrap=document.createElement('div'); wrap.className='rounded-2xl border bg-white shadow-sm card';
@@ -1236,22 +1235,25 @@
       const key = d.format('YYYY-MM-DD');
       let evts = state.events.filter(e => dayjs(e.date).isSame(d, 'day'));
       evts = sortEventsByDayOrder(key, evts);
-
-      const box = document.createElement('div');
-      box.className = 'daycell relative min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
+const box = document.createElement('div');
+box.className = 'daycell relative min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
+// SLETT denne linja (du har den nå):
+// box.className = 'daycell min-h-[100px] rounded-xl border bg-white/70 p-1.5 hover:bg-blue-50 cursor-pointer';
 
       box.addEventListener('click', () => { hideTooltip(); if (evts.length > 0) openDayView(key, evts); else openDialog({ date: key }); });
       if(evts.length === 0){ const html = `<div class="font-semibold">${d.format('dddd D. MMMM')}</div>`; attachTipHandlers(box, html); }
+// Ukechip nederst på mandager
+if (d.day() === 1) { // 1 = mandag
+  const wk = d.isoWeek();
+  // gi litt bunnpadding så chipen ikke overlapper innhold
+  box.classList.add('pb-5');
 
-      // Ukechip nederst på mandager
-      if (d.day() === 1) {
-        const wk = d.isoWeek();
-        box.classList.add('pb-5');
-        const chip = document.createElement('div');
-        chip.className = 'absolute left-1 bottom-1 rounded-md bg-slate-200 text-[10px] px-1.5 py-0.5 shadow-sm';
-        chip.textContent = `Uke ${wk}`;
-        box.appendChild(chip);
-      }
+  const chip = document.createElement('div');
+  chip.className = 'absolute left-1 bottom-1 rounded-md bg-slate-200 text-[10px] px-1.5 py-0.5 shadow-sm';
+  chip.textContent = `Uke ${wk}`;
+  box.appendChild(chip);
+}
+
 
       const top = document.createElement('div'); top.className = 'flex items-center justify-between text-xs text-slate-600';
       const uniqueTypes = Array.from(new Set(evts.map(e => e.type))).slice(0,4);
@@ -1272,7 +1274,7 @@
     }
 
     function renderList(){
-      const tbody=$('#tbl-events'); if(!tbody) return; tbody.innerHTML='';
+      const tbody=$('#tbl-events'); tbody.innerHTML='';
       const yearEvents = state.events
         .filter(e => dayjs(e.date).year() === state.year)
         .sort((a,b)=>{
@@ -1299,8 +1301,8 @@
           <td>${(e.shooting&&e.shooting.skudd)||0}</td>
           <td class='text-right'>
             <div class="inline-flex gap-1">
-              <button class='btn-view rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]'>Vis</button>
-              <button class='btn-edit rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]'>Rediger</button>
+              <button class='btn-view rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Vis</button>
+              <button class='btn-edit rounded-xl border bg-white px-2 py-1 text-xs shadow-sm'>Rediger</button>
             </div>
           </td>`;
         tr.querySelector('.btn-edit').addEventListener('click', ()=> openDialog({...e}));
@@ -1314,61 +1316,69 @@
       const q=($('#q-bank').value||'').toLowerCase();
       const age=$('#f-age').value;
       const type=$('#f-type').value;
-      const box=$('#bank-cards'); if(!box) return; box.innerHTML='';
+      const box=$('#bank-cards'); box.innerHTML='';
       state.bank
         .filter(t=> (!q||t.name.toLowerCase().includes(q)) && (!age||(t.age||[]).includes(age)) && (!type||t.type===type))
         .forEach(t=> box.appendChild(bankCard(t)) );
     }
 
-    function bankCard(t){
-      const c=document.createElement('div'); 
-      c.className='rounded-2xl border bg-white shadow-sm card';
+  function bankCard(t){
+  const c=document.createElement('div'); 
+  c.className='rounded-2xl border bg-white shadow-sm card';
 
-      c.innerHTML=`
-        <div class='border-b p-4 flex items-center justify-between'>
-          <h4 class='text-base font-semibold text-[color:var(--brand)]'>
-            <span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>
-            ${escapeHTML(t.name)}
-          </h4>
-          <div class='flex gap-1 text-xs'>
-            ${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}
-          </div>
-        </div>
+  c.innerHTML=`
+    <div class='border-b p-4 flex items-center justify-between'>
+      <h4 class='text-base font-semibold text-[color:var(--brand)]'>
+        <span class='inline-block h-2.5 w-2.5 rounded-full mr-2' style='background:${COLORS[t.type]||'#6b7280'}'></span>
+        ${escapeHTML(t.name)}
+      </h4>
+      <div class='flex gap-1 text-xs'>
+        ${(t.age||[]).map(a=>`<span class='rounded-full border px-2 py-0.5'>${escapeHTML(a)}</span>`).join('')}
+      </div>
+    </div>
 
-        <div class='p-4 text-sm space-y-1'>
-          <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
-          <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
-          <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
-          <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
-          ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)
-            ? `<div class='flex flex-wrap gap-1 mt-2'>
-                 ${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}
-               </div>` : ''}
+    <div class='p-4 text-sm space-y-1'>
+      <div><span class='font-medium'>Modalitet:</span> ${escapeHTML(t.modality||'–')}</div>
+      <div><span class='font-medium'>Intensitet:</span> ${escapeHTML(t.intensity||'–')}</div>
+      <div><span class='font-medium'>Varighet:</span> ${t.durationMin? escapeHTML(String(t.durationMin))+' min':'–'}</div>
+      <div><span class='font-medium'>Skudd:</span> ${(t.shooting&&t.shooting.skudd)||0}</div>
+      ${(t.shooting&&t.shooting.tema&&t.shooting.tema.length)
+        ? `<div class='flex flex-wrap gap-1 mt-2'>
+             ${t.shooting.tema.map(x=>`<span class='rounded-full border px-2 py-0.5 text-xs'>${escapeHTML(x)}</span>`).join('')}
+           </div>` : ''}
 
-          <div class='pt-2 flex flex-wrap gap-2'>
-            <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
-            <button class='btn-edit rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Rediger</button>
-            <button class='btn-dup  rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
-            <button class='btn-del text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
-          </div>
-        </div>`;
+      <div class='pt-2 flex flex-wrap gap-2'>
+        <button class='btn-plan rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Planlegg denne</button>
+        <button class='btn-edit rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Rediger</button>
+        <button class='btn-dup  rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Dupliser</button>
+        <button class='btn-del text-red-700 border-red-300 bg-red-50 rounded-xl border px-3 py-1.5 shadow-sm'>Slett</button>
+      </div>
+    </div>`;
 
-      c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t)));
-      c.querySelector('.btn-edit').addEventListener('click', ()=> openBankDialog({...t}));
-      c.querySelector('.btn-dup').addEventListener('click', ()=>{
-        const copy = { ...t, id: uid(), name: (t.name||'') + ' (kopi)' };
-        openBankDialog(copy);
-      });
-      c.querySelector('.btn-del').addEventListener('click', async ()=>{
-        if(!confirm('Slette denne bank-malen?')) return;
-        state.bank = state.bank.filter(x=>x.id!==t.id);
-        lsSet(KEY.BANK, state.bank);
-        renderBank();
-        await supaDeleteBankTemplate(t.id);
-      });
+  // 1) Planlegg: lag en hendelse basert på malen
+  c.querySelector('.btn-plan').addEventListener('click', ()=> openDialog(fromTemplate(t)));
 
-      return c;
-    }
+  // 2) Rediger: åpne malen for redigering (lagres når du trykker "Lagre")
+  c.querySelector('.btn-edit').addEventListener('click', ()=> openBankDialog({...t}));
+
+  // 3) Dupliser: lag en kopi og åpne i redigeringsdialog (IKKE lagre før "Lagre")
+  c.querySelector('.btn-dup').addEventListener('click', ()=>{
+    const copy = { ...t, id: uid(), name: (t.name||'') + ' (kopi)' };
+    openBankDialog(copy);
+  });
+
+  // 4) Slett: som før
+  c.querySelector('.btn-del').addEventListener('click', async ()=>{
+    if(!confirm('Slette denne bank-malen?')) return;
+    state.bank = state.bank.filter(x=>x.id!==t.id);
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+    await supaDeleteBankTemplate(t.id);
+  });
+
+  return c;
+}
+
 
     function fromTemplate(t){
       return {
@@ -1382,12 +1392,7 @@
       };
     }
 
-    // ---------- Dialoger (kortversjon – identisk funksjonalitet som før) ----------
-    function select(id, options, selected){
-      return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>
-        ${options.map(opt=>`<option ${opt===selected?'selected':''}>${opt}</option>`).join('')}
-      </select>`;
-    }
+    // ---------- Dialoger ----------
     function openDialog(data){
       const existing = state.events.find(x=>x.id===data.id);
       const isEdit = !!existing;
@@ -1446,23 +1451,26 @@
         </div>`;
 
       function refreshTema(){
-        const holder = $('#tema-tags');
-        holder.innerHTML = '';
-        (model.shooting.tema || []).forEach((t, i) => {
-          const b = document.createElement('span');
-          b.className = 'inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
-          b.textContent = t;
-          const x = document.createElement('button');
-          x.textContent = '×';
-          x.className = 'ml-1';
-          x.onclick = () => { 
-            model.shooting.tema.splice(i, 1);
-            refreshTema();
-          };
-          b.appendChild(x);
-          holder.appendChild(b);
-        });
-      }
+  const holder = $('#tema-tags');
+  holder.innerHTML = '';
+  (model.shooting.tema || []).forEach((t, i) => {
+    const b = document.createElement('span');
+    b.className = 'inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
+    b.textContent = t; // ← viktig!
+
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.className = 'ml-1';
+    x.onclick = () => { 
+      model.shooting.tema.splice(i, 1);
+      refreshTema();
+    };
+
+    b.appendChild(x);
+    holder.appendChild(b);
+  });
+}
+
       refreshTema();
       $('#add-tema').onclick=()=>{ const v=$('#f-tema').value.trim(); if(!v) return; model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v])); $('#f-tema').value=''; refreshTema(); };
 
@@ -1496,7 +1504,7 @@
 
       $('#btn-delete').onclick=async ()=>{
         state.events=state.events.filter(x=>x.id!==model.id); lsSet(KEY.EVENTS,state.events); render();
-        await supaDeleteEvent(model);
+await supaDeleteEvent(model);
         const ids = getOrderForDate(model.date).filter(x=> x !== model.id); setOrderForDate(model.date, ids);
         closeDialog();
       };
@@ -1509,7 +1517,7 @@
       const body = $('#dlg-body');
       $('#dlg-title').textContent = 'Vis hendelse';
       $('#btn-delete').classList.add('hidden'); $('#btn-save').classList.add('hidden');
-      const esc = escapeHTML;
+      const esc = s => (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;'}[m]));
       const row = (label, value) => `<div class="grid grid-cols-3 gap-3 items-start"><div class="text-sm font-medium text-slate-700 col-span-1">${label}</div><div class="text-sm col-span-2">${value||'–'}</div></div>`;
       const ageChips = (model.age||[]).map(a=>`<span class="rounded-full border px-2 py-0.5 text-xs mr-1">${esc(a)}</span>`).join('');
       const tema = (model.shooting?.tema||[]).length
@@ -1536,155 +1544,279 @@
       $('#dialog').classList.remove('hidden'); 
       $('#dialog').classList.add('flex');
     }
+function openBankDialog(data = {}){
+  const existing = state.bank.find(x => x.id === data.id);
+  const isEdit = !!existing;
 
-    function openBankDialog(data = {}){
-      const existing = state.bank.find(x => x.id === data.id);
-      const isEdit = !!existing;
+  const model = Object.assign({
+    id: uid(),
+    name: '',
+    type: 'Trening',
+    modality: '',
+    intensity: '',
+    durationMin: 60,
+    age: [],
+    shooting: { stilling:'', skudd:0, tema:[] },
+    raceSubtype: '',
+    notes: ''
+  }, data);
 
-      const model = Object.assign({
-        id: uid(),
-        name: '',
-        type: 'Trening',
-        modality: '',
-        intensity: '',
-        durationMin: 60,
-        age: [],
-        shooting: { stilling:'', skudd:0, tema:[] },
-        raceSubtype: '',
-        notes: ''
-      }, data);
+  const body = $('#dlg-body');
+  $('#dlg-title').textContent = isEdit ? 'Rediger bank-mal' : 'Ny bank-mal';
+  $('#btn-delete').classList.toggle('hidden', !isEdit);
+  $('#btn-save')?.classList.remove('hidden');
+  $('#btn-save')?.removeAttribute('disabled');
 
-      const body = $('#dlg-body');
-      $('#dlg-title').textContent = isEdit ? 'Rediger bank-mal' : 'Ny bank-mal';
-      $('#btn-delete').classList.toggle('hidden', !isEdit);
-      $('#btn-save')?.classList.remove('hidden');
-      $('#btn-save')?.removeAttribute('disabled');
+  const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
+  const ageChks = (state.ageGroups||[])
+    .map(g=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'>
+               <input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/>
+               <span class='text-sm'>${g.label}</span>
+             </label>`).join('');
 
-      const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
-      const ageChks = (state.ageGroups||[])
-        .map(g=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'>
-                   <input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/>
-                   <span class='text-sm'>${g.label}</span>
-                 </label>`).join('');
+  body.innerHTML = `
+    ${field('Navn', `<input id='bk-name' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.name)}" placeholder='F.eks. I3 bakkedrag + styrke'/>`)}
 
-      body.innerHTML = `
-        ${field('Navn', `<input id='bk-name' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.name)}" placeholder='F.eks. I3 bakkedrag + styrke'/>`)}
+    <div class='grid grid-cols-2 gap-3'>
+      ${field('Type', select('bk-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
+      ${field('Modalitet', select('bk-mod', MODALITETER, model.modality))}
+    </div>
 
-        <div class='grid grid-cols-2 gap-3'>
-          ${field('Type', select('bk-type', ['Trening','Skyting','Konkurranse','Samling','Restitusjon','Annet'], model.type))}
-          ${field('Modalitet', select('bk-mod', MODALITETER, model.modality))}
-        </div>
+    <div class='grid grid-cols-2 gap-3'>
+      ${field('Intensitet', select('bk-int', INTENS, model.intensity))}
+      ${field('Varighet (min)', `<input id='bk-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
+    </div>
 
-        <div class='grid grid-cols-2 gap-3'>
-          ${field('Intensitet', select('bk-int', INTENS, model.intensity))}
-          ${field('Varighet (min)', `<input id='bk-dur' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.durationMin||60}'/>`)}
-        </div>
+    <div id="bk-race-row" class="${model.type==='Konkurranse'?'':'hidden'}">
+      ${field('Konkurranse-type', `<input id='bk-race' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.raceSubtype||'')}" placeholder='Sprint, Fellesstart …'/>`)}
+    </div>
 
-        <div id="bk-race-row" class="${model.type==='Konkurranse'?'':'hidden'}">
-          ${field('Konkurranse-type', `<input id='bk-race' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.raceSubtype||'')}" placeholder='Sprint, Fellesstart …'/>`)}
-        </div>
+    <div class='grid grid-cols-3 gap-3'>
+      ${field('Skytestilling', select('bk-still', ['','Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
+      ${field('Skudd', `<input id='bk-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
+      <div></div>
+    </div>
 
-        <div class='grid grid-cols-3 gap-3'>
-          ${field('Skytestilling', select('bk-still', ['','Liggende','Stående','Kombinert','Variert','Konk'], model.shooting.stilling||''))}
-          ${field('Skudd', `<input id='bk-skudd' type='number' class='mt-1 w-full rounded-xl border px-3 py-2' value='${model.shooting.skudd||0}'/>`)}
-          <div></div>
-        </div>
+    <div>
+      <label class='text-sm font-medium'>Tema (skyting)</label>
+      <div class='mt-1 flex flex-wrap gap-1' id='bk-tema-tags'></div>
+      <div class='mt-1 flex gap-2'>
+        <input id='bk-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
+        <button id='bk-add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
+      </div>
+    </div>
 
-        <div>
-          <label class='text-sm font-medium'>Tema (skyting)</label>
-          <div class='mt-1 flex flex-wrap gap-1' id='bk-tema-tags'></div>
-          <div class='mt-1 flex gap-2'>
-            <input id='bk-tema' class='w-full rounded-xl border px-3 py-2' placeholder='Skriv tema og Enter (f.eks. Overganger (inn/ut))'/>
-            <button id='bk-add-tema' class='rounded-xl border bg-white px-3 py-1.5 shadow-sm'>Legg til</button>
-          </div>
-        </div>
+    <div>
+      <label class='text-sm font-medium'>Målgruppe</label>
+      <div class='mt-1 flex flex-wrap gap-2'>${ageChks}</div>
+    </div>
 
-        <div>
-          <label class='text-sm font-medium'>Målgruppe</label>
-          <div class='mt-1 flex flex-wrap gap-2'>${ageChks}</div>
-        </div>
+    <div>
+      <label class='text-sm font-medium'>Notater</label>
+      <textarea id='bk-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Beskrivelse, progresjon, variasjoner…'>${escapeHTML(model.notes||'')}</textarea>
+    </div>
+  `;
 
-        <div>
-          <label class='text-sm font-medium'>Notater</label>
-          <textarea id='bk-notes' rows='4' class='mt-1 w-full rounded-xl border px-3 py-2' placeholder='Beskrivelse, progresjon, variasjoner…'>${escapeHTML(model.notes||'')}</textarea>
-        </div>
-      `;
+  function refreshTema(){
+    const holder = $('#bk-tema-tags');
+    holder.innerHTML = '';
+    (model.shooting.tema || []).forEach((t, i) => {
+      const b = document.createElement('span');
+      b.className = 'inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
+      b.textContent = t;
+      const x = document.createElement('button');
+      x.textContent = '×';
+      x.className = 'ml-1';
+      x.onclick = () => { model.shooting.tema.splice(i, 1); refreshTema(); };
+      b.appendChild(x);
+      holder.appendChild(b);
+    });
+  }
+  refreshTema();
 
-      function refreshTema(){
-        const holder = $('#bk-tema-tags');
-        holder.innerHTML = '';
-        (model.shooting.tema || []).forEach((t, i) => {
-          const b = document.createElement('span');
-          b.className = 'inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs';
-          b.textContent = t;
-          const x = document.createElement('button');
-          x.textContent = '×';
-          x.className = 'ml-1';
-          x.onclick = () => { model.shooting.tema.splice(i, 1); refreshTema(); };
-          b.appendChild(x);
-          holder.appendChild(b);
-        });
-      }
-      refreshTema();
+  $('#bk-add-tema').onclick = (e)=>{ e.preventDefault();
+    const v=$('#bk-tema').value.trim(); if(!v) return;
+    model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v]));
+    $('#bk-tema').value=''; refreshTema();
+  };
 
-      $('#bk-add-tema').onclick = (e)=>{ e.preventDefault();
-        const v=$('#bk-tema').value.trim(); if(!v) return;
-        model.shooting.tema = Array.from(new Set([...(model.shooting.tema||[]), v]));
-        $('#bk-tema').value=''; refreshTema();
-      };
+  // vis/skjul konkurranse-feltet
+  $('#bk-type').addEventListener('change', (e)=>{
+    const isKonk = e.target.value === 'Konkurranse';
+    $('#bk-race-row').classList.toggle('hidden', !isKonk);
+  });
 
-      $('#bk-type').addEventListener('change', (e)=>{
-        const isKonk = e.target.value === 'Konkurranse';
-        $('#bk-race-row').classList.toggle('hidden', !isKonk);
-      });
+  // Lagre
+  $('#btn-save').onclick = async ()=>{
+    const get = (id) => $('#'+id, body);
 
-      $('#btn-save').onclick = async ()=>{
-        const get = (id) => $('#'+id, body);
+    model.name        = get('bk-name').value.trim();
+    model.type        = get('bk-type').value;
+    model.modality    = get('bk-mod').value;
+    model.intensity   = get('bk-int').value;
+    model.durationMin = parseInt(get('bk-dur').value) || 60;
+    model.raceSubtype = (model.type==='Konkurranse') ? (get('bk-race')?.value.trim() || '') : '';
+    model.shooting    = {
+      stilling: get('bk-still').value,
+      skudd: parseInt(get('bk-skudd').value) || 0,
+      tema: model.shooting.tema || []
+    };
+    model.notes       = get('bk-notes').value;
+    model.age         = (state.ageGroups||[]).map(g => g.id).filter(id => $('[data-age="'+id+'"]', body).checked);
 
-        model.name        = get('bk-name').value.trim();
-        model.type        = get('bk-type').value;
-        model.modality    = get('bk-mod').value;
-        model.intensity   = get('bk-int').value;
-        model.durationMin = parseInt(get('bk-dur').value) || 60;
-        model.raceSubtype = (model.type==='Konkurranse') ? (get('bk-race')?.value.trim() || '') : '';
-        model.shooting    = {
-          stilling: get('bk-still').value,
-          skudd: parseInt(get('bk-skudd').value) || 0,
-          tema: model.shooting.tema || []
-        };
-        model.notes       = get('bk-notes').value;
-        model.age         = (state.ageGroups||[]).map(g => g.id).filter(id => $('[data-age="'+id+'"]', body).checked);
-
-        if(!model.name){
-          alert('Navn kan ikke være tomt.');
-          return;
-        }
-
-        const i = state.bank.findIndex(x => x.id === model.id);
-        if (i >= 0) state.bank[i] = model; else state.bank.unshift(model);
-        lsSet(KEY.BANK, state.bank);
-        renderBank();
-        await supaUpsertBankTemplate(model);
-
-        closeDialog();
-      };
-
-      $('#btn-delete').onclick = async ()=>{
-        if(!confirm('Slette denne bank-malen?')) return;
-        state.bank = state.bank.filter(x => x.id !== model.id);
-        lsSet(KEY.BANK, state.bank);
-        renderBank();
-        await supaDeleteBankTemplate(model.id);
-        closeDialog();
-      };
-
-      $('#btn-cancel').onclick = closeDialog;
-      $('#dlg-close').onclick  = closeDialog;
-      $('#dialog').classList.remove('hidden');
-      $('#dialog').classList.add('flex');
+    if(!model.name){
+      alert('Navn kan ikke være tomt.');
+      return;
     }
 
-    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
+    const i = state.bank.findIndex(x => x.id === model.id);
+    if (i >= 0) state.bank[i] = model; else state.bank.unshift(model);
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+    await supaUpsertBankTemplate(model);
+
+    closeDialog();
+  };
+
+  // Slett
+  $('#btn-delete').onclick = async ()=>{
+    if(!confirm('Slette denne bank-malen?')) return;
+    state.bank = state.bank.filter(x => x.id !== model.id);
+    lsSet(KEY.BANK, state.bank);
+    renderBank();
+    await supaDeleteBankTemplate(model.id);
+    closeDialog();
+  };
+
+  $('#btn-cancel').onclick = closeDialog;
+  $('#dlg-close').onclick  = closeDialog;
+  $('#dialog').classList.remove('hidden');
+  $('#dialog').classList.add('flex');
+}
+
+    // ---------- Utils ----------
+    function select(id, options, selected){
+      return `<select id='${id}' class='mt-1 w-full rounded-xl border px-3 py-2'>
+        ${options.map(opt=>`<option ${opt===selected?'selected':''}>${opt}</option>`).join('')}
+      </select>`;
+    }
+    function escapeHTML(str){
+      return (str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+    }
+
+    // ---------- Weeks UI ----------
+    function renderWeeks(){
+      const tbody = $('#tbl-weeks'); 
+      if(!tbody) return;
+      tbody.innerHTML = '';
+
+      const weeks = {};
+      let d = dayjs(state.year+'-01-01').startOf('isoWeek');
+      const end = dayjs(state.year+'-12-31');
+      while(d.isBefore(end.add(1,'day'))){
+        weeks[d.isoWeek()] = true;
+        d = d.add(7,'day');
+      }
+
+      Object.keys(weeks).map(n=>+n).sort((a,b)=>a-b).forEach(wk=>{
+        const code = (state.weeks[wk]?.code) || 'BAS';
+        const note = (state.weeks[wk]?.note) || '';
+        const tr = document.createElement('tr');
+        tr.className = 'border-t';
+        tr.innerHTML = `
+          <td class="p-2">${wk}</td>
+          <td>
+            <select data-wk="${wk}" class="rounded-xl border px-2 py-1">
+              ${WEEKCODES.map(c=>`<option ${c===code?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </td>
+          <td>
+            <input data-wkn="${wk}" class="w-full rounded-xl border px-2 py-1" value="${escapeHTML(note)}"/>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+
+      $$('select[data-wk]').forEach(el=>{
+        el.onchange = async ()=>{
+          const wk = +el.getAttribute('data-wk');
+          state.weeks[wk] = state.weeks[wk] || {};
+          state.weeks[wk].code = el.value;
+          lsSet(KEY.WEEKS, state.weeks);
+          renderCalendar();
+          await supaUpsertWeek(state.year, wk, el.value, state.weeks[wk].note || '');
+        };
+      });
+      $$('input[data-wkn]').forEach(el=>{
+        el.oninput = async ()=>{
+          const wk = +el.getAttribute('data-wkn');
+          state.weeks[wk] = state.weeks[wk] || {};
+          state.weeks[wk].note = el.value;
+          lsSet(KEY.WEEKS, state.weeks);
+          await supaUpsertWeek(state.year, wk, state.weeks[wk].code || 'BAS', el.value);
+        };
+      });
+    }
+
+    // ---------- Admin: årsklasser ----------
+    function renderAgeEditor(){
+      const holder = $('#age-editor');
+      if(!holder) return;
+
+      holder.innerHTML = (state.ageGroups||[]).map((g,i)=>`
+        <div class="grid grid-cols-5 gap-2 items-center">
+          <input data-age-id="${i}" class="col-span-2 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.id)}" placeholder="ID (f.eks. 13-14)">
+          <input data-age-label="${i}" class="col-span-3 rounded-xl border px-3 py-1.5" value="${escapeHTML(g.label)}" placeholder="Label (f.eks. 13–14 år)">
+          <button data-age-del="${i}" class="rounded-xl border bg-white px-3 py-1.5 text-red-700 border-red-300">Slett</button>
+        </div>
+      `).join('');
+
+      holder.querySelectorAll('[data-age-del]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const i = +btn.getAttribute('data-age-del');
+          state.ageGroups.splice(i,1);
+          lsSet(KEY.AGES, state.ageGroups);
+          renderAgeEditor();
+          renderBank();
+        };
+      });
+    }
+
+    // ---------- Admin: hendelser ----------
+    function renderAdminEvents(){
+      const tb = $('#admin-events'); 
+      if(!tb) return;
+      const q = ($('#admin-q')?.value||'').toLowerCase().trim();
+      const from = $('#admin-from')?.value;
+      const to   = $('#admin-to')?.value;
+
+      let rows = [...state.events];
+      if(from) rows = rows.filter(e => e.date >= from);
+      if(to)   rows = rows.filter(e => e.date <= to);
+      if(q)    rows = rows.filter(e => [e.title,e.type,e.location,e.modality,e.intensity].some(x => (x||'').toLowerCase().includes(q)));
+
+      rows.sort((a,b)=> a.date.localeCompare(b.date));
+
+      tb.innerHTML = rows.map(e=>`
+        <tr class="border-t">
+          <td class="p-2 whitespace-nowrap">${dayjs(e.date).format('DD.MM.YYYY')}</td>
+          <td class="p-2 max-w-[240px] truncate">${escapeHTML(e.title||'(uten tittel)')}</td>
+          <td class="p-2">${escapeHTML(e.type||'')}</td>
+          <td class="p-2 max-w-[180px] truncate">${escapeHTML(e.location||'')}</td>
+          <td class="p-2">${escapeHTML(e.intensity||'')}</td>
+          <td class="p-2 text-right">
+            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-edit="${e.id}">Rediger</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tb.querySelectorAll('[data-edit]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const id = btn.getAttribute('data-edit');
+          const ev = state.events.find(x=>x.id===id);
+          if(ev) openDialog({...ev});
+        };
+      });
+    }
 
     // ---------- ICS ----------
     function exportICS(){
@@ -1858,589 +1990,264 @@
       }
     }
 
-    // ---------- Øktbank seed / defaults (utvidet for skiskyting 10–20 år) ----------
+    // ---------- Øktbank seed / defaults ----------
     function getDefaultTemplates(){
-      const base = [
+      return [
         { id: uid(), name:'Rolig langkjøring', type:'Trening', modality:'Løp', intensity:'I1', durationMin:60, age:['11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Rolig pratetempo.' },
         { id: uid(), name:'Styrke helkropp', type:'Trening', modality:'Styrke', intensity:'I2', durationMin:45, age:['9-10','11-12','13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Kroppsvekt + stabilitet.' },
-        { id: uid(), name:'Skyte­teknikk basis LIG', type:'Skyting', modality:'', intensity:'I1', durationMin:50, age:['9-10','11-12'], shooting:{stilling:'Liggende', skudd:60, tema:['Stilling: støtte/kontakt', 'Avtrekksrutine 5-pkt', 'Siktebilde ro']}, notes:'6×5 skudd serier med tørrtrening mellom.' },
-        { id: uid(), name:'Overganger inn/ut (stå+ligg)', type:'Skyting', modality:'', intensity:'I2', durationMin:60, age:['11-12','13-14'], shooting:{stilling:'Variert', skudd:80, tema:['Inn på matte', 'Utplassering staver', 'Rytme ut']}, notes:'3 blokker à 4×5 skudd.' },
-        { id: uid(), name:'I3 rulleski + stående presisjon', type:'Trening', modality:'Rulleski skøyting', intensity:'I3', durationMin:60, age:['13-14','HL'], shooting:{stilling:'Stående', skudd:40, tema:['Stabil kjerne','Pust/avtrekk under puls']}, notes:'4×5 min I3. 2×10 skudd stående mellom drag.' },
-        { id: uid(), name:'Konk-simulering Sprint', type:'Konkurranse', modality:'Rulleski skøyting', intensity:'I4', durationMin:45, age:['HL'], shooting:{stilling:'Konk', skudd:20, tema:['Veksling ligg/stå','Skyteplan','Strafrunder']}, raceSubtype:'Sprint', notes:'Oppvarming 15 min. 2 skytinger m/strafrunde.' },
+        { id: uid(), name:'Skyting teknikk', type:'Skyting', modality:'', intensity:'I1', durationMin:60, age:['11-12','13-14','HL'], shooting:{stilling:'Liggende',skudd:60,tema:['Avtrekk','Skytestilling']}, notes:'Fokus på ro og rytme.' },
+        { id: uid(), name:'Intervall I3 bakke', type:'Trening', modality:'Løp', intensity:'I3', durationMin:50, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'4–6×4 min I3, 2 min pause.' },
         { id: uid(), name:'Restitusjon lett', type:'Restitusjon', modality:'Sykkel', intensity:'I1', durationMin:40, age:['13-14','HL'], shooting:{stilling:'',skudd:0,tema:[]}, notes:'Veldig rolig trilling.' }
       ];
-      return base;
     }
 
-    // ---------- SKYTEHISTORIKK (import, visning, utheving, lagring, graf) ----------
-    // Parser/formatter
-    function parseAthleteCell(s){
-      const t = (s||'').trim();
-      if(!t) return { name:'', birthYear:null };
-      const m = t.match(/^(.+?)(?:,\s*(\d{4}))?$/);
-      return { name:(m? m[1].trim() : t), birthYear: m && m[2] ? +m[2] : null };
-    }
-    function parseScoreCell(s){
-      const t=(s||'').toString().trim();
-      if(!t) return { total:null, prone:null, stand:null, stand_hits:null };
-      const m = t.match(/^(\d+)\s*\((\d+)\+(\d+)\)(?:\((\d+)\))?$/);
-      if (!m) {
-        const n = parseInt(t,10);
-        if(Number.isFinite(n)) return { total:n, prone:null, stand:null, stand_hits:null };
-        return { total:null, prone:null, stand:null, stand_hits:null };
-      }
-      return { total:+m[1], prone:+m[2], stand:+m[3], stand_hits: m[4]? +m[4] : null };
-    }
-    function formatScoreCell(v){
-      const { total, prone, stand, stand_hits } = v || {};
-      if(total==null && prone==null && stand==null) return '';
-      const base = `${total ?? ''} (${prone ?? 0}+${stand ?? 0})`;
-      return (stand_hits!=null) ? `${base}(${stand_hits})` : base;
+    async function seedBankIfWanted(){
+      const defaults = getDefaultTemplates();
+      const existingNames = new Set((state.bank||[]).map(b=> (b.name||'').toLowerCase()));
+      const toAdd = defaults.filter(t => !existingNames.has((t.name||'').toLowerCase()));
+      if(toAdd.length===0){ alert('Ingen nye maler å legge til.'); return; }
+      state.bank = [...toAdd, ...(state.bank||[])];
+      lsSet(KEY.BANK, state.bank);
+      renderBank();
+      for(const t of toAdd){ await supaUpsertBankTemplate(t); }
+      alert(`La til ${toAdd.length} mal(er) i Øktbank.`);
     }
 
-    // Import fra Excel
-    async function shootImportFromExcel(file){
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { type:'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true });
-
-      const headerRow = rows[1] || [];
-      const dates = headerRow.map((v, i)=> i===0 ? null : v).filter(v=>v);
-      const normDates = dates.map(v=>{
-        const d = dayjs(v);
-        return d.isValid()? d.format('YYYY-MM-DD') : null;
-      }).filter(Boolean);
-
-      const athletes = [];
-      const grid = {};
-      for(let r=3; r<rows.length; r++){
-        const row = rows[r] || [];
-        const a = parseAthleteCell(row[0]);
-        if(!a.name) continue;
-        const aIdx = athletes.push(a) - 1;
-        for(let c=1; c<=normDates.length; c++){
-          const raw = row[c];
-          const sc = parseScoreCell(raw);
-          if(sc.total!=null || sc.prone!=null || sc.stand!=null || sc.stand_hits!=null){
-            const key = `${aIdx}|${c-1}`;
-            grid[key] = sc;
-          }
-        }
-      }
-
-      state.shoot.athletes = athletes;
-      state.shoot.dates = normDates;
-      state.shoot.grid = grid;
-      renderShootTable();
-      populateChartAthletes();
-      updateShootChart();
+    // ---------- Varslinger (Admin) ----------
+    async function nfLoadSender(){
+      const { data } = await supabase.from(TBL.settings).select('value').eq('key','notify_sender').maybeSingle();
+      $('#nf-from-name').value  = data?.value?.from_name  || 'Lørenskog Skiskyting';
+      $('#nf-from-email').value = data?.value?.from_email || 'noreply@din-domene.no';
     }
-
-    // Lese/lagre i Supabase
-    async function shootLoadFromSupabase(){
-      const { data, error } = await supabase
-        .from('shoot_history')
-        .select('*')
-        .order('test_date', { ascending:true })
-        .order('athlete', { ascending:true });
-
-      if(error){ console.warn(error); return; }
-      const dates = Array.from(new Set((data||[]).map(r=> r.test_date))).sort();
-      const athletesList = [];
-      const aIndex = new Map();
-      const grid = {};
-
-      for(const r of (data||[])){
-        if(!aIndex.has(r.athlete)){
-          aIndex.set(r.athlete, athletesList.length);
-          athletesList.push({ name:r.athlete, birthYear:r.birth_year ?? null });
-        }
-      }
-
-      dates.forEach((dt, di)=>{
-        (data||[]).filter(r=>r.test_date===dt).forEach(r=>{
-          const ai = aIndex.get(r.athlete);
-          const key = `${ai}|${di}`;
-          grid[key] = { total:r.total, prone:r.prone, stand:r.stand, stand_hits:r.stand_hits };
-        });
-      });
-
-      state.shoot.athletes = athletesList;
-      state.shoot.dates = dates;
-      state.shoot.grid = grid;
-      renderShootTable();
-      populateChartAthletes();
-      updateShootChart();
+    async function nfSaveSender(){
+      const from_name  = $('#nf-from-name').value.trim();
+      const from_email = $('#nf-from-email').value.trim();
+      await supabase.from(TBL.settings).upsert({ key:'notify_sender', value: { from_name, from_email } });
+      alert('Avsender lagret.');
     }
-
-    async function shootSaveToSupabase(){
-      const rows = [];
-      state.shoot.athletes.forEach((a, ai)=>{
-        state.shoot.dates.forEach((dt, di)=>{
-          const key = `${ai}|${di}`;
-          const sc = state.shoot.grid[key];
-          if(!sc) return;
-          rows.push({
-            athlete: (a.name||'').trim(),
-            birth_year: a.birthYear ?? null,
-            test_date: dt,
-            total: sc.total ?? null,
-            prone: sc.prone ?? null,
-            stand: sc.stand ?? null,
-            stand_hits: sc.stand_hits ?? null
-          });
-        });
-      });
-           if(rows.length===0){
-        alert('Ingen rader å lagre.');
-        return;
-      }
-
-      try{
-        // Upsert på (athlete, test_date). Legg gjerne en unik indeks på disse i DB.
-        const { error } = await supabase
-          .from('shoot_history')
-          .upsert(rows, { onConflict: 'athlete,test_date' });
-
-        if(error) throw error;
-        alert('Skytehistorikk lagret i skyen ✅');
-      }catch(err){
-        console.error('Lagring skytehistorikk feilet:', err);
-        alert('Kunne ikke lagre skytehistorikk i skyen.');
-      }
+    function nfGetSelectedOptions(sel){ return Array.from(sel.options).filter(o=>o.selected).map(o=>o.value); }
+    async function nfLoadAgesIntoSelect(){
+      const sel = $('#nf-ages'); if(!sel) return;
+      const { data } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      const list = Array.isArray(data?.value) ? data.value : state.ageGroups;
+      sel.innerHTML = (list||[]).map(g=>`<option value="${escapeHTML(g.id)}">${escapeHTML(g.label)}</option>`).join('');
     }
-
-    // --- Highlight helpers ---
-    function computeHighlights(){
-      // Finn PB per utøver (høyeste total)
-      const pb = new Map(); // ai -> max
-      state.shoot.athletes.forEach((_, ai)=>{
-        let max = null;
-        state.shoot.dates.forEach((_, di)=>{
-          const sc = state.shoot.grid[`${ai}|${di}`];
-          if(sc && Number.isFinite(sc.total)){
-            max = (max==null) ? sc.total : Math.max(max, sc.total);
-          }
-        });
-        if(max!=null) pb.set(ai, max);
-      });
-
-      // Finn "dagens beste" per dato
-      const dayBest = new Map(); // di -> max
-      state.shoot.dates.forEach((_, di)=>{
-        let max = null;
-        state.shoot.athletes.forEach((_, ai)=>{
-          const sc = state.shoot.grid[`${ai}|${di}`];
-          if(sc && Number.isFinite(sc.total)){
-            max = (max==null) ? sc.total : Math.max(max, sc.total);
-          }
-        });
-        if(max!=null) dayBest.set(di, max);
-      });
-
-      // Klubbrekord (all time)
-      let clubMax = null;
-      Object.values(state.shoot.grid).forEach(sc=>{
-        if(sc && Number.isFinite(sc.total)){
-          clubMax = (clubMax==null) ? sc.total : Math.max(clubMax, sc.total);
-        }
-      });
-
-      return { pb, dayBest, clubMax };
-    }
-
-    // --- Skytehistorikk: tabellrender ---
-    function renderShootTable(){
-      const thead = document.querySelector('#shoot-table thead');
-      const tbody = document.querySelector('#shoot-table tbody');
-      if(!thead || !tbody) return;
-
-      const { pb, dayBest, clubMax } = computeHighlights();
-      const hlMode = ($('#shoot-highlight')?.value)||'all';
-
-      // Header
-      thead.innerHTML = '';
-      const trh = document.createElement('tr');
-      trh.innerHTML = `
-        <th class="sticky left-0 bg-slate-50 border-b p-2 text-left">Utøver (år)</th>
-        ${state.shoot.dates.map(dt => `<th class="border-b p-2 text-left whitespace-nowrap">${dayjs(dt).format('DD.MM.YYYY')}</th>`).join('')}
-      `;
-      thead.appendChild(trh);
-
-      // Body
-      tbody.innerHTML = '';
-      const q = ($('#shoot-q')?.value||'').toLowerCase();
-      const from = $('#shoot-from')?.value ? dayjs($('#shoot-from').value) : null;
-      const to   = $('#shoot-to')?.value ? dayjs($('#shoot-to').value) : null;
-
-      state.shoot.athletes
-        .map((a, ai)=>({ ...a, ai }))
-        .filter(a => !q || a.name.toLowerCase().includes(q))
-        .forEach(a=>{
-          const tr = document.createElement('tr');
-          tr.className = 'border-t';
-
-          // Venstre label
-          const left = document.createElement('td');
-          left.className = 'sticky left-0 bg-white p-2 text-sm font-medium border-r';
-          left.textContent = a.name + (a.birthYear ? ` (${a.birthYear})` : '');
-          tr.appendChild(left);
-
-          // Celler
-          state.shoot.dates.forEach((dt, di)=>{
-            const d = dayjs(dt);
-            if((from && d.isBefore(from,'day')) || (to && d.isAfter(to,'day'))){
-              const td = document.createElement('td');
-              td.className = 'p-2 text-slate-300';
-              td.textContent = '–';
-              tr.appendChild(td);
-              return;
-            }
-
-            const key = `${a.ai}|${di}`;
-            const sc = state.shoot.grid[key];
-
-            const td = document.createElement('td');
-            td.className = 'p-1';
-
-            // Editor
-            const inp = document.createElement('input');
-            inp.className = 'w-[160px] max-w-full rounded-lg border px-2 py-1 text-sm';
-            inp.placeholder = '391 (264+127) eller 386(...)';
-            inp.value = sc ? (formatScoreCell(sc) || '') : '';
-            inp.addEventListener('change', ()=>{
-              const parsed = parseScoreCell(inp.value);
-              if(parsed.total==null && parsed.prone==null && parsed.stand==null && parsed.stand_hits==null){
-                delete state.shoot.grid[key];
-                inp.value = '';
-              }else{
-                state.shoot.grid[key] = parsed;
-                // Normaliser skriveformatet
-                inp.value = formatScoreCell(parsed);
-              }
-              renderShootTable(); // re-apply highlights
-            });
-            td.appendChild(inp);
-
-            // Utheving
-            if(sc && Number.isFinite(sc.total)){
-              const doPB   = (!hlMode || hlMode==='all' || hlMode==='pb')   && pb.get(a.ai) === sc.total;
-              const doDay  = (!hlMode || hlMode==='all' || hlMode==='day')  && dayBest.get(di) === sc.total;
-              const doClub = (!hlMode || hlMode==='all' || hlMode==='club') && clubMax === sc.total;
-
-              if(doPB)   td.classList.add('sh-pb');
-              if(doDay)  td.classList.add('sh-daybest');
-              if(doClub) td.classList.add('sh-clubrec');
-            }
-
-            tr.appendChild(td);
-          });
-
-          tbody.appendChild(tr);
-        });
-    }
-
-    // --- Skytehistorikk: legge til kolonne/rad ---
-    function addShootDate(){
-      const today = dayjs().format('YYYY-MM-DD');
-      const next = prompt('Ny testdato (YYYY-MM-DD):', today);
-      if(!next) return;
-      const d = dayjs(next);
-      if(!d.isValid()){ alert('Ugyldig dato.'); return; }
-      if(state.shoot.dates.includes(next)){ alert('Dato finnes allerede.'); return; }
-      state.shoot.dates.push(next);
-      state.shoot.dates.sort();
-      renderShootTable();
-      populateChartAthletes();
-      updateShootChart();
-    }
-    function addShootAthlete(){
-      const name = prompt('Navn på utøver:');
-      if(!name) return;
-      const by = prompt('Fødselsår (valgfritt, 4 siffer):','');
-      const birthYear = by && /^\d{4}$/.test(by) ? +by : null;
-      state.shoot.athletes.push({ name:name.trim(), birthYear });
-      renderShootTable();
-      populateChartAthletes();
-      updateShootChart();
-    }
-
-    // --- Skytehistorikk: eksport Excel ---
-    function exportShootExcel(){
-      const rows = [];
-      // Bygger utdata (bredt): første kolonne = utøver, så en kolonne pr dato
-      const header = ['Utøver'];
-      state.shoot.dates.forEach(dt => header.push(dayjs(dt).format('YYYY-MM-DD')));
-      rows.push(header);
-
-      state.shoot.athletes.forEach((a, ai)=>{
-        const r = [`${a.name}${a.birthYear? ', '+a.birthYear:''}`];
-        state.shoot.dates.forEach((_, di)=>{
-          const key = `${ai}|${di}`;
-          const sc = state.shoot.grid[key];
-          r.push(sc ? formatScoreCell(sc) : '');
-        });
-        rows.push(r);
-      });
-
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Skytehistorikk');
-      const stamp = dayjs().format('YYYYMMDD_HHmm');
-      XLSX.writeFile(wb, `skytehistorikk_${stamp}.xlsx`);
-    }
-
-    // --- Skytehistorikk: graf ---
-    let shootChart = null;
-    function populateChartAthletes(){
-      const sel = $('#shoot-chart-ath'); if(!sel) return;
-      const valueBefore = sel.value;
-      sel.innerHTML = state.shoot.athletes.map((a, i)=> `<option value="${i}">${escapeHTML(a.name)}</option>`).join('');
-      if(valueBefore && sel.querySelector(`option[value="${valueBefore}"]`)) sel.value = valueBefore;
-    }
-    function updateShootChart(){
-      const ctx = document.getElementById('shoot-chart');
-      if(!ctx) return;
-      const sel = $('#shoot-chart-ath');
-      const ai = sel && sel.value ? parseInt(sel.value,10) : 0;
-
-      const labels = state.shoot.dates.map(dt => dayjs(dt).format('DD.MM.YY'));
-      const data = state.shoot.dates.map((_, di)=>{
-        const sc = state.shoot.grid[`${ai}|${di}`];
-        return sc && Number.isFinite(sc.total) ? sc.total : null;
-      });
-
-      if(shootChart){ shootChart.destroy(); }
-      shootChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: 'Total', data }] },
-        options: {
-          responsive: true,
-          plugins: { legend:{ display:true } },
-          scales: { y: { beginAtZero:false } }
-        }
-      });
-    }
-
-    // ---------- Uke-tabellen i Admin ----------
-    function renderWeeks(){
-      const tbody = document.getElementById('tbl-weeks'); if(!tbody) return;
-      tbody.innerHTML = '';
-
-      // Sikre basis
-      if(!state.weeks || !Object.keys(state.weeks).length){
-        state.weeks = getDefaultWeeks(state.year);
-      }
-
-      // Sorterte uker
-      const weeks = Object.keys(state.weeks).map(n=>parseInt(n,10)).sort((a,b)=>a-b);
-      weeks.forEach(wk=>{
-        const row = state.weeks[wk] || { code:'BAS', note:'' };
-        const tr = document.createElement('tr');
-        tr.className = 'border-t';
-        tr.innerHTML = `
-          <td class="p-2">Uke ${wk}</td>
-          <td class="p-2">
-            <select data-wk="${wk}" class="wk-code rounded-lg border px-2 py-1 text-sm">
-              ${WEEKCODES.map(c=> `<option value="${c}" ${c===row.code?'selected':''}>${c}</option>`).join('')}
-            </select>
+    async function nfLoadSubs(){
+      const { data, error } = await supabase.from('notify_subscribers').select('*').order('email');
+      const tb = $('#nf-table');
+      if (error) { console.warn(error); tb.innerHTML = `<tr><td colspan="6" class="p-3 text-slate-500">Kunne ikke hente.</td></tr>`; return; }
+      tb.innerHTML = (data||[]).map(s=>`
+        <tr class="border-t">
+          <td class="p-2">${escapeHTML(s.email)}</td>
+          <td class="p-2">${escapeHTML(s.frequency)}</td>
+          <td class="p-2">${(s.types||[]).join(', ') || '—'}</td>
+          <td class="p-2">${(s.ages||[]).join(', ')  || '—'}</td>
+          <td class="p-2">${s.active ? 'Ja' : 'Nei'}</td>
+          <td class="p-2 text-right">
+            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-nf-edit="${escapeHTML(s.email)}">Rediger</button>
+            <button class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm" data-nf-del="${escapeHTML(s.email)}">Slett</button>
+            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm" data-nf-toggle="${escapeHTML(s.email)}">${s.active?'Deaktiver':'Aktiver'}</button>
           </td>
-          <td class="p-2">
-            <input data-wk="${wk}" class="wk-note rounded-lg border px-2 py-1 text-sm w-full" value="${escapeHTML(row.note||'')}" placeholder="Notat/tema for uken"/>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+        </tr>
+      `).join('');
 
-      // Lytt
-      tbody.querySelectorAll('.wk-code').forEach(sel=>{
-        sel.addEventListener('change', async (e)=>{
-          const wk = parseInt(e.target.getAttribute('data-wk'),10);
-          const code = e.target.value;
-          state.weeks[wk] = { ...(state.weeks[wk]||{}), code };
-          lsSet(KEY.WEEKS, state.weeks);
-          await supaUpsertWeek(state.year, wk, code, state.weeks[wk].note||'');
-        });
+      tb.querySelectorAll('[data-nf-edit]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const email = btn.getAttribute('data-nf-edit');
+          const s = (data||[]).find(x=>x.email===email);
+          if(!s) return;
+          $('#nf-email').value = s.email;
+          $('#nf-frequency').value = s.frequency;
+          const selT = $('#nf-types'); Array.from(selT.options).forEach(o=> o.selected = (s.types||[]).includes(o.value));
+          const selA = $('#nf-ages');  Array.from(selA.options).forEach(o=> o.selected = (s.ages||[]).includes(o.value));
+        };
       });
-      tbody.querySelectorAll('.wk-note').forEach(inp=>{
-        inp.addEventListener('change', async (e)=>{
-          const wk = parseInt(e.target.getAttribute('data-wk'),10);
-          const note = e.target.value;
-          state.weeks[wk] = { ...(state.weeks[wk]||{}), note };
-          lsSet(KEY.WEEKS, state.weeks);
-          await supaUpsertWeek(state.year, wk, state.weeks[wk].code||'BAS', note);
-        });
+      tb.querySelectorAll('[data-nf-del]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const email = btn.getAttribute('data-nf-del');
+          if(!confirm(`Slette ${email}?`)) return;
+          await supabase.from('notify_subscribers').delete().eq('email', email);
+          nfLoadSubs();
+        };
       });
-    }
-
-    // ---------- Aldersgrupper-editor ----------
-    function renderAgeEditor(){
-      const box = document.getElementById('age-editor'); if(!box) return;
-      box.innerHTML = '';
-      (state.ageGroups||[]).forEach((g, i)=>{
-        const row = document.createElement('div');
-        row.className = 'grid grid-cols-3 gap-2';
-        row.innerHTML = `
-          <input data-i="${i}" data-k="id" class="rounded-lg border px-2 py-1" value="${escapeHTML(g.id)}" placeholder="ID (eks. HL)" />
-          <input data-i="${i}" data-k="label" class="rounded-lg border px-2 py-1 col-span-2" value="${escapeHTML(g.label)}" placeholder="Etikett (eks. HL gruppe (15+))" />
-        `;
-        box.appendChild(row);
+      tb.querySelectorAll('[data-nf-toggle]').forEach(btn=>{
+        btn.onclick = async ()=>{
+          const email = btn.getAttribute('data-nf-toggle');
+          const row = (data||[]).find(x=>x.email===email);
+          if(!row) return;
+          await supabase.from('notify_subscribers').update({ active: !row.active }).eq('email', email);
+          nfLoadSubs();
+        };
       });
     }
+    async function nfAddOrUpdate(){
+      const email = $('#nf-email').value.trim().toLowerCase();
+      if(!email){ alert('Skriv inn e-post.'); return; }
+      const frequency = $('#nf-frequency').value;
+      const types = nfGetSelectedOptions($('#nf-types'));
+      const ages  = nfGetSelectedOptions($('#nf-ages'));
+      await supabase.from('notify_subscribers').upsert({ email, frequency, types, ages, active:true });
+      $('#nf-email').value = '';
+      Array.from($('#nf-types').options).forEach(o=>o.selected=false);
+      Array.from($('#nf-ages').options).forEach(o=>o.selected=false);
+      nfLoadSubs();
+    }
+function nfBindUI(){
+  $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
+  $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
 
-    // ---------- Admin: hendelser (filtreringstabell) ----------
-    function renderAdminEvents(){
-      const tbody = document.getElementById('admin-events'); if(!tbody) return;
-      const q = ($('#admin-q')?.value||'').toLowerCase();
-      const dFrom = $('#admin-from')?.value ? dayjs($('#admin-from').value) : null;
-      const dTo   = $('#admin-to')?.value ? dayjs($('#admin-to').value) : null;
-
-      const rows = state.events
-        .filter(e=>{
-          const d = dayjs(e.date);
-          if(dFrom && d.isBefore(dFrom,'day')) return false;
-          if(dTo   && d.isAfter(dTo,'day'))   return false;
-          const text = `${e.title||''} ${e.type||''} ${e.location||''}`.toLowerCase();
-          return !q || text.includes(q);
-        })
-        .sort((a,b)=> dayjs(a.date)-dayjs(b.date));
-
-      tbody.innerHTML = '';
-      rows.forEach(e=>{
-        const tr = document.createElement('tr');
-        tr.className = 'border-t';
-        tr.innerHTML = `
-          <td class="p-2 whitespace-nowrap">${dayjs(e.date).format('DD.MM.YYYY')}</td>
-          <td class="p-2 truncate max-w-[280px]">${escapeHTML(e.title||'(uten tittel)')}</td>
-          <td class="p-2">${escapeHTML(e.type||'')}</td>
-          <td class="p-2">${escapeHTML(e.location||'')}</td>
-          <td class="p-2">${escapeHTML(e.intensity||'')}</td>
-          <td class="p-2 text-right pr-2">
-            <button class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm min-w-[72px]" data-act="edit">Rediger</button>
-          </td>
-        `;
-        tr.querySelector('[data-act="edit"]').addEventListener('click', ()=> openDialog({...e}));
-        tbody.appendChild(tr);
+  // Drain per-change kø (venterader)
+  $('#nf-drain')?.addEventListener('click', async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+        body: { mode: 'per_change', drain: true, batchSize: 50 }
       });
+      if (error) throw error;
+      alert(`Per-endring drain: ${JSON.stringify(data)}`);
+      // Oppdater tabellen så du ser status-oppdateringer (sent/skipped/error)
+      nfLoadSubs();
+    } catch (e) {
+      console.error('[notify drain] FEIL', e);
+      alert('Feil ved utsending (per-change). Se konsoll.');
     }
+  });
 
-    // ---------- Diverse helpers ----------
-    function fallbackLogo(){
-      const span = document.createElement('span');
-      span.className = 'h-14 w-20 rounded-xl bg-white flex items-center justify-center text-[var(--brand)] font-bold';
-      span.textContent = 'LSK';
-      return span;
+  // Tving DAGLIG digest nå (siste 24h)
+  $('#nf-send-daily')?.addEventListener('click', async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+        body: { mode: 'digest', digest: { frequency: 'daily' } }
+      });
+      if (error) throw error;
+      alert(`Daglig digest: ${JSON.stringify(data)}`);
+    } catch (e) {
+      console.error('[notify daily] FEIL', e);
+      alert('Feil ved daglig oppsummering. Se konsoll.');
     }
+  });
 
-    // ---------- Tabs / wiring / init ----------
-    function showTab(name){
-      $$('.tab-section').forEach(s => s.classList.add('hidden'));
+  // Tving UKENTLIG digest nå (siste 7 dager)
+  $('#nf-send-weekly')?.addEventListener('click', async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+        body: { mode: 'digest', digest: { frequency: 'weekly' } }
+      });
+      if (error) throw error;
+      alert(`Ukentlig digest: ${JSON.stringify(data)}`);
+    } catch (e) {
+      console.error('[notify weekly] FEIL', e);
+      alert('Feil ved ukentlig oppsummering. Se konsoll.');
+    }
+  });
+}
+
+
+    // ---------- Tabs / UI-hendelser ----------
+    function switchTab(name){
+      $$('.tab-section').forEach(s=> s.classList.add('hidden'));
       $('#tab-'+name)?.classList.remove('hidden');
-      $$('.tab-btn').forEach(b => b.classList.toggle('bg-blue-50', b.dataset.tab===name));
+      $$('.tab-btn').forEach(b=>{
+        b.classList.toggle('bg-slate-50', b.dataset.tab===name);
+        b.classList.toggle('border-blue-300', b.dataset.tab===name);
+      });
     }
 
-    async function init(){
-      // UI wiring
-      $('#btn-new')?.addEventListener('click', ()=> openDialog({}));
-      $('#btn-print')?.addEventListener('click', ()=> window.print());
-      $('#btn-export-xlsx')?.addEventListener('click', exportExcelAll);
-      $('#file-import')?.addEventListener('change', async (e)=>{
-        const f=e.target.files?.[0]; if(!f) return;
-        try{
-          const txt = await f.text();
-          const obj = JSON.parse(txt);
-          // Enkel import av events/bank (valgfri – behold struktur)
-          if(Array.isArray(obj.events)) state.events = obj.events.map(mapEventFromDb);
-          if(Array.isArray(obj.bank))   state.bank   = obj.bank.map(mapBankFromDb);
-          render();
-        }catch(err){ alert('Kunne ikke lese fil. Må være JSON.'); }
-        e.target.value = '';
+    function bindUiHandlers(){
+      $$('.tab-btn').forEach(b=> b.addEventListener('click', ()=> switchTab(b.dataset.tab)));
+      $('#toggle-list')?.addEventListener('click', ()=>{
+        const el = $('#event-list');
+        if(!el) return;
+        el.classList.toggle('hidden');
       });
-
-      // År-nav
-      $('#year-prev')?.addEventListener('click', ()=>{ state.year--; render(); supaLoadAll(state.year); });
-      $('#year-next')?.addEventListener('click', ()=>{ state.year++; render(); supaLoadAll(state.year); });
-
-      // Tabs
-      $$('.tab-btn').forEach(btn=>{
-        btn.addEventListener('click', ()=> showTab(btn.dataset.tab));
-      });
-
-      // Sidepanel toggle
-      setupSidebarToggle();
-
-      // Øktbank-søk/filtre
-      $('#q-bank')?.addEventListener('input', debounce(renderBank, 150));
-      $('#f-age')?.addEventListener('change', renderBank);
-      $('#f-type')?.addEventListener('change', renderBank);
+      $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening', date:dayjs().format('YYYY-MM-DD') }));
+      $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting', date:dayjs().format('YYYY-MM-DD'), shooting:{stilling:'Liggende',skudd:30,tema:[]} }));
+      $('#quick-konk')?.addEventListener('click',   ()=> openDialog({ type:'Konkurranse', date:dayjs().format('YYYY-MM-DD') }));
       $('#bank-new')?.addEventListener('click', ()=> openBankDialog({}));
-
-      // Admin
+      $('#btn-ics')?.addEventListener('click', exportICS);
+      $('#btn-seed-bank')?.addEventListener('click', seedBankIfWanted);
+      $('#file-import')?.addEventListener('change', async (ev)=>{
+        const f = ev.target.files?.[0]; if(!f) return;
+        try{
+          const text = await f.text();
+          const json = JSON.parse(text);
+          if(Array.isArray(json.events)) state.events = json.events.map(mapEventFromDb);
+          if(Array.isArray(json.bank))   state.bank   = json.bank.map(mapBankFromDb);
+          if(json.weeks && typeof json.weeks==='object') state.weeks = json.weeks;
+          lsSet(KEY.EVENTS,state.events); lsSet(KEY.BANK,state.bank); lsSet(KEY.WEEKS,state.weeks);
+          render();
+          alert('Import fullført.');
+        }catch(e){
+          console.error(e); alert('Import feilet. Sørg for at fila er gyldig JSON.');
+        }finally{
+          ev.target.value='';
+        }
+      });
+      $('#btn-export-xlsx')?.addEventListener('click', exportExcelAll);
       $('#admin-search')?.addEventListener('click', renderAdminEvents);
+      $('#admin-q')?.addEventListener('input', renderAdminEvents);
+      $('#admin-from')?.addEventListener('change', renderAdminEvents);
+      $('#admin-to')?.addEventListener('change', renderAdminEvents);
       $('#age-add')?.addEventListener('click', ()=>{
-        state.ageGroups.push({ id:'Ny', label:'Ny gruppe' });
-        renderAgeEditor();
+        state.ageGroups.push({ id:'ny', label:'Ny gruppe' });
+        lsSet(KEY.AGES, state.ageGroups);
+        render();
       });
       $('#age-save')?.addEventListener('click', async ()=>{
-        // Les verdier fra editor
-        const rows = $$('#age-editor [data-i]');
-        const map = new Map();
-        rows.forEach(inp=>{
-          const i = parseInt(inp.getAttribute('data-i'),10);
-          const k = inp.getAttribute('data-k');
-          if(!map.has(i)) map.set(i, {});
-          map.get(i)[k] = inp.value.trim();
+        const newList = [];
+        $('#age-editor').querySelectorAll('[data-age-id]').forEach((inp, idx)=>{
+          const id = inp.value.trim();
+          const label = $('#age-editor').querySelector(`[data-age-label="${idx}"]`).value.trim();
+          if(id && label) newList.push({ id, label });
         });
-        state.ageGroups = Array.from(map.values()).filter(g=> g.id && g.label);
+        if(newList.length===0){ alert('Legg inn minst én gruppe.'); return; }
+        state.ageGroups = newList;
         lsSet(KEY.AGES, state.ageGroups);
         await supaSaveAgeGroups();
         render();
-        alert('Aldersgrupper lagret ✅');
+        alert('Årsklasser lagret.');
       });
+    }
+function bindYearLabel(){
+  const y = $('#year-label');
+  if(!y) return;
+  y.classList.add('cursor-pointer','select-none');
+  y.title = 'Klikk for å bytte visning (rullende ↔ hele året)';
+  y.onclick = ()=>{
+    state.viewMode = state.viewMode === 'rolling' ? 'full' : 'rolling';
+    lsSet(KEY.VIEW, state.viewMode);
+    render();
+  };
+}
 
-      // ICS-knapp
-      $('#btn-ics')?.addEventListener('click', exportICS);
+    // ---------- Init ----------
+    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
-      // Week seeds (redigeres direkte i tabellen – bare render)
-      renderWeeks();
 
-      // Hurtig-knapper
-      $('#quick-trening')?.addEventListener('click', ()=> openDialog({ type:'Trening' }));
-      $('#quick-skyting')?.addEventListener('click', ()=> openDialog({ type:'Skyting' }));
-      $('#quick-konk')?.addEventListener('click', ()=> openDialog({ type:'Konkurranse' }));
-
-      // Skytehistorikk: wiring
-      $('#link-shoot')?.addEventListener('click', (e)=>{ e.preventDefault(); showTab('shoot'); });
-      $('#shoot-file')?.addEventListener('change', async (e)=>{
-        const f = e.target.files?.[0]; if(!f) return;
-        try{ await shootImportFromExcel(f); }
-        catch(err){ console.error(err); alert('Import feilet. Sjekk at Excel følger malen.'); }
-        e.target.value = '';
-      });
-      $('#shoot-add-date')?.addEventListener('click', addShootDate);
-      $('#shoot-add-athlete')?.addEventListener('click', addShootAthlete);
-      $('#shoot-save')?.addEventListener('click', shootSaveToSupabase);
-      $('#shoot-export')?.addEventListener('click', exportShootExcel);
-      $('#shoot-q')?.addEventListener('input', debounce(renderShootTable, 150));
-      $('#shoot-from')?.addEventListener('change', renderShootTable);
-      $('#shoot-to')?.addEventListener('change', renderShootTable);
-      $('#shoot-highlight')?.addEventListener('change', renderShootTable);
-      $('#shoot-chart-ath')?.addEventListener('change', updateShootChart);
-
-      // Last data
+      async function init(){
+  bindDialogChrome();
+  bindUiHandlers();
+  bindYearLabel(); // ← NY
+  setupSidebarToggle();
+  switchTab('calendar');
       await supaLoadAll(state.year);
       supaRealtimeInit();
 
-      // Forsøk å hente skytehistorikk fra sky (hvis tabellen finnes)
-      try{ await shootLoadFromSupabase(); }catch{}
-      // Init tab
-      showTab('calendar');
+      $('#year-prev').onclick=()=>{ state.year--; render(); supaLoadAll(state.year); };
+      $('#year-next').onclick=()=>{ state.year++; render(); supaLoadAll(state.year); };
+
+      $$('#q-bank, #f-age, #f-type').forEach(el=> el.addEventListener('input', renderBank));
+
+      $('#btn-new').onclick=()=> openDialog({date:dayjs().format('YYYY-MM-DD')});
+      $('#btn-print').onclick=()=> window.print();
+
+      // Varslinger (Admin)
+      nfBindUI();
+      await nfLoadAgesIntoSelect();
+      await nfLoadSender();
+      await nfLoadSubs();
     }
 
-    // Start
-    document.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
-
