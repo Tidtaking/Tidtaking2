@@ -47,28 +47,36 @@
 
 <body class="bg-slate-50 text-slate-900">
   <!-- Header / toolbar -->
-  <header class="no-print border-b bg-white">
-    <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
-      <h1 class="font-bold text-xl text-[color:var(--brand)]">
-        Lørenskog Skiskyting – <span id="year-label"></span>
-      </h1>
-      <div class="flex items-center gap-2">
-        <button id="year-prev" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">◀</button>
-        <span id="event-year" class="min-w-[3ch] text-center"></span>
-        <button id="year-next" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">▶</button>
+  <!-- Header / toolbar -->
+<header class="no-print border-b bg-white">
+  <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
+    <h1 class="font-bold text-xl text-[color:var(--brand)]">
+      Lørenskog Skiskyting – <span id="year-label"></span>
+    </h1>
+    <div class="flex items-center gap-2">
+      <button id="year-prev" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">◀</button>
+      <span id="event-year" class="min-w-[3ch] text-center"></span>
+      <button id="year-next" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">▶</button>
 
-        <button id="btn-new" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Ny</button>
-        <button id="btn-ics" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Eksporter ICS</button>
-        <button id="btn-export-xlsx" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Eksporter Excel</button>
-        <label class="rounded-lg border bg-white px-3 py-1.5 shadow-sm cursor-pointer">
-          Import JSON <input id="file-import" type="file" class="hidden" accept=".json" />
-        </label>
+      <button id="btn-new" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Ny</button>
+      <button id="btn-ics" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Eksporter ICS</button>
+      <button id="btn-export-xlsx" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Eksporter Excel</button>
+      <label class="rounded-lg border bg-white px-3 py-1.5 shadow-sm cursor-pointer">
+        Import JSON <input id="file-import" type="file" class="hidden" accept=".json" />
+      </label>
 
-        <button id="btn-toggle-sidebar" class="rounded-lg border px-3 py-1.5 shadow-sm" aria-pressed="true">Skjul sidepanel</button>
-        <button id="btn-print" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Skriv ut</button>
-      </div>
+      <!-- Nye knapper -->
+      <a id="link-admin" href="#"
+         class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Admin</a>
+      <a id="link-shoot" href="#"
+         class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Skytehistorikk</a>
+
+      <button id="btn-toggle-sidebar" class="rounded-lg border px-3 py-1.5 shadow-sm" aria-pressed="true">Skjul sidepanel</button>
+      <button id="btn-print" class="rounded-lg border bg-white px-3 py-1.5 shadow-sm">Skriv ut</button>
     </div>
-  </header>
+  </div>
+</header>
+
 
   <!-- Layout -->
   <main class="mx-auto max-w-7xl p-4">
@@ -2186,6 +2194,18 @@ async function shootLoadFromSupabase(){
       if(obj.bank)   state.bank = obj.bank;
       render();
     });
+    // Admin-knapp
+$('#link-admin')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  switchTab('admin'); // viser admin-seksjonen
+});
+
+// Skytehistorikk-knapp
+$('#link-shoot')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  switchTab('shoot'); // viser skytehistorikk
+});
+
 
     // årsnavigasjon
     $('#year-prev')?.addEventListener('click', ()=>{ state.year--; render(); supaLoadAll(state.year); });
