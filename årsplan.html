@@ -1783,49 +1783,66 @@ const yearEvents = state.events
   }
 
   // Supabase (lagre/lese)
-  async function shootLoadFromSupabase(){
-    const { data, error } = await supabase
-      .from(TBL.shoot)
-      .select('*')
-      .order('group_label', { ascending:true })
-      .order('test_date', { ascending:true })
-      .order('athlete', { ascending:true });
+  // Supabase (lagre/lese) — robust mot 400 pga order=
+async function shootLoadFromSupabase(){
+  const { data, error } = await supabase
+    .from(TBL.shoot)
+    .select('*'); // <- ingen order i SQL
 
-    if(error){ console.warn(error); return; }
+  if(error){ console.warn('[shoot] fetch error', error); return; }
 
-    const dates = Array.from(new Set((data||[]).map(r=> r.test_date))).sort();
-    const groups = Array.from(new Set((data||[]).map(r=> r.group_label || 'Uten gruppe')));
-    const athletesList = [];
-    const aIndex = new Map();
+  // Sorter stabilt i JS: group_label -> test_date -> athlete
+  const rows = (data||[]).slice().sort((a,b)=>{
+    const ga = (a.group_label || 'Uten gruppe').localeCompare(b.group_label || 'Uten gruppe', 'nb');
+    if (ga) return ga;
+    const da = (a.test_date || '').localeCompare(b.test_date || '');
+    if (da) return da;
+    return (a.athlete || '').localeCompare(b.athlete || '', 'nb');
+  });
 
-    (data||[]).forEach(r=>{
-      if(!aIndex.has(r.athlete)){
-        aIndex.set(r.athlete, athletesList.length);
-        athletesList.push({ name:r.athlete, birthYear:r.birth_year ?? null });
-      }
-    });
+  // Normaliser til state
+  const dates  = Array.from(new Set(rows.map(r => r.test_date))).filter(Boolean).sort();
+  const groups = Array.from(new Set(rows.map(r => r.group_label || 'Uten gruppe')));
 
-    const gIndex = new Map(groups.map((g,i)=>[g,i]));
-    const dIndex = new Map(dates.map((d,i)=>[d,i]));
-    const grid = {};
+  const athletesList = [];
+  const aIndex = new Map();
+  rows.forEach(r=>{
+    const key = r.athlete || '';
+    if(!aIndex.has(key)){
+      aIndex.set(key, athletesList.length);
+      athletesList.push({ name: key, birthYear: r.birth_year ?? null });
+    }
+  });
 
-    (data||[]).forEach(r=>{
-      const ai = aIndex.get(r.athlete);
-      const di = dIndex.get(r.test_date);
-      const gi = gIndex.get(r.group_label || 'Uten gruppe');
-      const key = `${ai}|${di}|${gi}`;
-      grid[key] = { total:r.total, prone:r.prone, stand:r.stand, stand_hits:r.stand_hits };
-    });
+  const gIndex = new Map(groups.map((g,i)=>[g,i]));
+  const dIndex = new Map(dates.map((d,i)=>[d,i]));
+  const grid = {};
 
-    state.shoot.athletes = athletesList;
-    state.shoot.dates = dates;
-    state.shoot.groups = groups;
-    state.shoot.grid = grid;
-    lsSet(KEY.SHOOT, state.shoot);
-    renderShootTable();
-    populateChartAthletes();
-    updateShootChart();
-  }
+  rows.forEach(r=>{
+    const ai = aIndex.get(r.athlete || '');
+    const di = dIndex.get(r.test_date);
+    const gi = gIndex.get(r.group_label || 'Uten gruppe');
+    if (ai==null || di==null || gi==null) return;
+    const key = `${ai}|${di}|${gi}`;
+    grid[key] = {
+      total: r.total ?? null,
+      prone: r.prone ?? null,
+      stand: r.stand ?? null,
+      stand_hits: r.stand_hits ?? null
+    };
+  });
+
+  state.shoot.athletes = athletesList;
+  state.shoot.dates    = dates;
+  state.shoot.groups   = groups;
+  state.shoot.grid     = grid;
+  lsSet(KEY.SHOOT, state.shoot);
+
+  renderShootTable();
+  populateChartAthletes();
+  updateShootChart();
+}
+
   async function shootSaveToSupabase(){
     const rows = [];
     state.shoot.athletes.forEach((a, ai)=>{
