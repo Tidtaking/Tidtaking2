@@ -250,7 +250,77 @@
 </div>
 
 
-    <!-- Skjema -->
+   
+
+                <!-- Avsender -->
+                <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-sm font-medium">Avsender navn</label>
+                    <input id="nf-from-name" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Lørenskog Skiskyting"/>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Avsender e-post</label>
+                    <input id="nf-from-email" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="noreply@din-domene.no"/>
+                  </div>
+                  <div class="md:col-span-2">
+                    <button id="nf-save-sender" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Lagre avsender</button>
+                  </div>
+                </div>
+
+                <!-- Abonnenter -->
+                <div class="flex flex-wrap items-end gap-2 mb-2">
+                  <div>
+                    <label class="text-sm font-medium">E-post</label>
+                    <input id="nf-email" class="mt-1 w-64 h-10 rounded-xl border px-3" placeholder="person@eksempel.no">
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Frekvens</label>
+                    <select id="nf-frequency" class="mt-1 h-10 rounded-xl border px-3">
+                      <option value="per_change">Per endring</option>
+                      <option value="daily">Sum dag</option>
+                      <option value="weekly">Sum uke</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Typer (valgfritt)</label>
+                    <select id="nf-types" multiple class="mt-1 h-24 rounded-xl border px-3 min-w-[12rem]">
+                      <option>Trening</option><option>Skyting</option><option>Konkurranse</option>
+                      <option>Samling</option><option>Restitusjon</option><option>Annet</option>
+                    </select>
+                    <div class="text-[11px] text-slate-500">Hold Ctrl/Cmd for flere</div>
+                  </div>
+                  <div>
+                    <label class="text-sm font-medium">Aldersgrupper (valgfritt)</label>
+                    <select id="nf-ages" multiple class="mt-1 h-24 rounded-xl border px-3 min-w-[12rem]"></select>
+                    <div class="text-[11px] text-slate-500">Hold Ctrl/Cmd for flere</div>
+                  </div>
+                  <button id="nf-add" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Legg til/oppdater</button>
+                </div>
+
+                <div class="mt-2 max-h-[300px] overflow-auto rounded-xl border">
+                  <table class="w-full text-sm">
+                    <thead class="bg-slate-50 sticky top-0">
+                      <tr class="text-left text-slate-600">
+                        <th class="p-2">E-post</th><th>Frekvens</th><th>Typer</th><th>Aldersgrupper</th><th>Aktiv</th><th class="text-right pr-2">…</th>
+                      </tr>
+                    </thead>
+                    <tbody id="nf-table"></tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- /Varslinger -->
+            </div>
+        </section>
+        
+      </main>
+<!-- Results Tab -->
+<section id="tab-results" class="tab-section hidden">
+  <div class="rounded-2xl border bg-white shadow-sm card">
+    <div class="border-b p-4 flex items-center justify-between">
+      <h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
+      <span class="text-xs text-slate-500">Mobilvennlig • lagres til skyen</span>
+    </div>
+     <!-- Skjema -->
     <div class="p-4 grid grid-cols-1 gap-3">
       <div>
         <label class="text-sm font-medium">Utøver</label>
@@ -325,75 +395,6 @@
       </div>
     </div>
   </div>
-
-                <!-- Avsender -->
-                <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label class="text-sm font-medium">Avsender navn</label>
-                    <input id="nf-from-name" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="Lørenskog Skiskyting"/>
-                  </div>
-                  <div>
-                    <label class="text-sm font-medium">Avsender e-post</label>
-                    <input id="nf-from-email" class="mt-1 w-full h-10 rounded-xl border px-3" placeholder="noreply@din-domene.no"/>
-                  </div>
-                  <div class="md:col-span-2">
-                    <button id="nf-save-sender" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Lagre avsender</button>
-                  </div>
-                </div>
-
-                <!-- Abonnenter -->
-                <div class="flex flex-wrap items-end gap-2 mb-2">
-                  <div>
-                    <label class="text-sm font-medium">E-post</label>
-                    <input id="nf-email" class="mt-1 w-64 h-10 rounded-xl border px-3" placeholder="person@eksempel.no">
-                  </div>
-                  <div>
-                    <label class="text-sm font-medium">Frekvens</label>
-                    <select id="nf-frequency" class="mt-1 h-10 rounded-xl border px-3">
-                      <option value="per_change">Per endring</option>
-                      <option value="daily">Sum dag</option>
-                      <option value="weekly">Sum uke</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="text-sm font-medium">Typer (valgfritt)</label>
-                    <select id="nf-types" multiple class="mt-1 h-24 rounded-xl border px-3 min-w-[12rem]">
-                      <option>Trening</option><option>Skyting</option><option>Konkurranse</option>
-                      <option>Samling</option><option>Restitusjon</option><option>Annet</option>
-                    </select>
-                    <div class="text-[11px] text-slate-500">Hold Ctrl/Cmd for flere</div>
-                  </div>
-                  <div>
-                    <label class="text-sm font-medium">Aldersgrupper (valgfritt)</label>
-                    <select id="nf-ages" multiple class="mt-1 h-24 rounded-xl border px-3 min-w-[12rem]"></select>
-                    <div class="text-[11px] text-slate-500">Hold Ctrl/Cmd for flere</div>
-                  </div>
-                  <button id="nf-add" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Legg til/oppdater</button>
-                </div>
-
-                <div class="mt-2 max-h-[300px] overflow-auto rounded-xl border">
-                  <table class="w-full text-sm">
-                    <thead class="bg-slate-50 sticky top-0">
-                      <tr class="text-left text-slate-600">
-                        <th class="p-2">E-post</th><th>Frekvens</th><th>Typer</th><th>Aldersgrupper</th><th>Aktiv</th><th class="text-right pr-2">…</th>
-                      </tr>
-                    </thead>
-                    <tbody id="nf-table"></tbody>
-                  </table>
-                </div>
-              </div>
-              <!-- /Varslinger -->
-            </div>
-        </section>
-        
-      </main>
-<!-- Results Tab -->
-<section id="tab-results" class="tab-section hidden">
-  <div class="rounded-2xl border bg-white shadow-sm card">
-    <div class="border-b p-4 flex items-center justify-between">
-      <h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
-      <span class="text-xs text-slate-500">Mobilvennlig • lagres til skyen</span>
-    </div>
       <!-- Sidepanel -->
       <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
