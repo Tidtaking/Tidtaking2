@@ -621,14 +621,15 @@ const KEY = {
 let state = {
   year:      lsGet(KEY.YEAR, dayjs().year()),
   month:     dayjs().month() + 1,
-  viewMode:  lsGet(KEY.VIEW, 'rolling'), // 'rolling' | 'year'  ← NY
+  viewMode:  lsGet(KEY.VIEW, 'rolling'), // 'rolling' | 'year'
   events:    [],
   bank:      [],
   weeks:     {},
   dayOrder:  lsGet(KEY.DAYORDER, {}),
-  ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS)
-  results: [] // siste skyteresultater
+  ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS),
+  results:   []   // ← lagt til for skyteresultat
 };
+
 
 // liten guard hvis gammel lagring inneholder noe rart
 // liten guard + migrering av tidligere lagret verdi
