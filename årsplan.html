@@ -2490,9 +2490,9 @@ document.getElementById('res-export-csv')?.addEventListener('click', exportFilte
 
 
     // ---------- Init ----------
-function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
+ function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
- async function init(){
+  async function init(){
     bindDialogChrome();
     bindUiHandlers();
     bindYearLabel();
@@ -2500,22 +2500,17 @@ function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').class
 
     switchTab('calendar');
 
-    // Last data for valgt år + start realtime
     await supaLoadAll(state.year);
     supaRealtimeInit();
 
-    // Årsnavigasjon
     $('#year-prev').onclick = () => { state.year--; render(); supaLoadAll(state.year); };
     $('#year-next').onclick = () => { state.year++; render(); supaLoadAll(state.year); };
 
-    // Øktbank filter
     $$('#q-bank, #f-age, #f-type').forEach(el => el.addEventListener('input', renderBank));
-
-    // Hurtigknapper
     $('#btn-new').onclick   = () => openDialog({ date: dayjs().format('YYYY-MM-DD') });
     $('#btn-print').onclick = () => window.print();
 
-    // Varslinger (Admin)
+    // Varslinger
     nfBindUI();
     await nfLoadAgesIntoSelect();
     await nfLoadSender();
@@ -2526,7 +2521,7 @@ function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').class
     bindResultsUIEnhanced();
     applyResultsFilterAndSort();
     renderResults();
-  } // ← VIKTIG: avslutter init()
+  }
 
   window.addEventListener('DOMContentLoaded', init);
  
