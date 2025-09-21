@@ -2384,19 +2384,114 @@ function bindYearLabel(){
     render();
   };
 }
-state.resultsAll = state.resultsAll || [];
-state.resultsAll = data.map(mapResultFromDb);
-const names = Array.from(new Set(state.resultsAll.map(r=>r.athlete).filter(Boolean))).sort();
-const dlA = document.getElementById('res-athlete-list'); if(dlA) dlA.innerHTML = names.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
-const exs = Array.from(new Set(state.resultsAll.map(r=>r.exercise).filter(Boolean))).sort();
-const dlE = document.getElementById('res-exercise-list'); if(dlE) dlE.innerHTML = exs.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
-applyResultsFilterAndSort();
-renderResults();
-  }else{
-    console.warn('Kunne ikke hente resultater', error);
-}
+
+
+// --- SKYTERESULTAT: last + filtrer + «historiske beste» ---
+
+async function supaLoadResults(limit = 1000){
+  const { data, error } = await supabase
+    .from(TBL.results)
+    .select('*')
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) { console.warn('Kunne ikke hente resultater', error); return; }
+
+  state.resultsAll = (data || []).map(mapResultFromDb);
+
+  // Fyll datalister (navn/øvelse for autoutfylling)
+  const names = Array.from(new Set(state.resultsAll.map(r => r.athlete).filter(Boolean))).sort();
+  const dlA = document.getElementById('res-athlete-list');
+  if (dlA) dlA.innerHTML = names.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
+
+  const exs = Array.from(new Set(state.resultsAll.map(r => r.exercise).filter(Boolean))).sort();
+  const dlE = document.getElementById('res-exercise-list');
+  if (dlE) dlE.innerHTML = exs.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
+
+  applyResultsFilterAndSort();
+  renderResults();
+  renderResultsBests();
 }
 
+function applyResultsFilterAndSort(){
+  const qName = (document.getElementById('res-filter-name')?.value || '').toLowerCase().trim();
+  const qEx   = (document.getElementById('res-filter-ex')?.value   || '').toLowerCase().trim();
+  const from  = document.getElementById('res-filter-from')?.value;
+  const to    = document.getElementById('res-filter-to')?.value;
+  const sort  = document.getElementById('res-sort')?.value || 'date_desc';
+  const lim   = state.resultsLimit || 100;
+
+  let rows = [...(state.resultsAll || [])];
+  if (qName) rows = rows.filter(r => (r.athlete||'').toLowerCase().includes(qName));
+  if (qEx)   rows = rows.filter(r => (r.exercise||'').toLowerCase().includes(qEx));
+  if (from)  rows = rows.filter(r => r.date >= from);
+  if (to)    rows = rows.filter(r => r.date <= to);
+
+  const cmp = {
+    date_desc:   (a,b)=> b.date.localeCompare(a.date),
+    date_asc:    (a,b)=> a.date.localeCompare(b.date),
+    total_desc:  (a,b)=> (b.pointsTotal||0) - (a.pointsTotal||0),
+    total_asc:   (a,b)=> (a.pointsTotal||0) - (b.pointsTotal||0),
+    prone_desc:  (a,b)=> (b.pointsProne||0) - (a.pointsProne||0),
+    stand_desc:  (a,b)=> (b.pointsStand||0) - (a.pointsStand||0),
+    name_asc:    (a,b)=> (a.athlete||'').localeCompare(b.athlete||'')
+  }[sort] || ((a,b)=> b.date.localeCompare(a.date));
+  rows.sort(cmp);
+
+  const countEl = document.getElementById('res-count');
+  if (countEl) countEl.textContent = `Viser ${Math.min(lim, rows.length)} av ${rows.length} (totalt ${state.resultsAll.length})`;
+
+  state.results = rows.slice(0, lim);
+  return rows;
+}
+
+function renderResultsBests(){
+  const rows = state.resultsAll || [];
+
+  const meta = document.getElementById('res-best-meta');
+  if (meta) meta.textContent = `${rows.length} registreringer totalt`;
+
+  // Topp 5 – totalsum
+  const top5 = [...rows].sort((a,b)=> (b.pointsTotal||0)-(a.pointsTotal||0)).slice(0,5);
+  const ul = document.getElementById('res-best-top5');
+  if (ul) ul.innerHTML = top5.map(r =>
+    `<li>${escapeHTML(r.athlete)} – ${r.pointsTotal} <span class="text-slate-500">(${escapeHTML(r.exercise||'')})</span></li>`
+  ).join('');
+
+  // PB per utøver
+  const bestByAthlete = new Map();
+  for (const r of rows){
+    const k = r.athlete || '';
+    if (!k) continue;
+    if (!bestByAthlete.has(k) || (r.pointsTotal||0) > (bestByAthlete.get(k).pointsTotal||0)) bestByAthlete.set(k, r);
+  }
+  const tbPb = document.getElementById('res-best-pb');
+  if (tbPb) tbPb.innerHTML = Array.from(bestByAthlete.values())
+    .sort((a,b)=> (b.pointsTotal||0)-(a.pointsTotal||0))
+    .map(r => `<tr class="border-t">
+      <td class="p-2">${escapeHTML(r.athlete)}</td>
+      <td class="p-2 text-right">${r.pointsTotal}</td>
+      <td class="p-2">${escapeHTML(r.exercise||'')}</td>
+      <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+    </tr>`).join('');
+
+  // PB per øvelse
+  const bestByExercise = new Map();
+  for (const r of rows){
+    const k = r.exercise || '';
+    if (!k) continue;
+    if (!bestByExercise.has(k) || (r.pointsTotal||0) > (bestByExercise.get(k).pointsTotal||0)) bestByExercise.set(k, r);
+  }
+  const tbEx = document.getElementById('res-best-pb-ex');
+  if (tbEx) tbEx.innerHTML = Array.from(bestByExercise.values())
+    .sort((a,b)=> (a.exercise||'').localeCompare(b.exercise||''))
+    .map(r => `<tr class="border-t">
+      <td class="p-2">${escapeHTML(r.exercise||'')}</td>
+      <td class="p-2">${escapeHTML(r.athlete||'')}</td>
+      <td class="p-2 text-right">${r.pointsTotal}</td>
+      <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+    </tr>`).join('');
+}
 
 function renderResults(){
 const dEl = document.getElementById('res-date');
