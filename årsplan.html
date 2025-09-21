@@ -312,55 +312,90 @@
             </div>
             </section> 
       </main>
- <section id="tab-results" class="tab-section hidden">
-<label class="text-sm font-medium">Fra</label>
-<input id="res-filter-from" type="date" class="mt-1 h-10 rounded-xl border px-3" />
-</div>
-<div>
-<label class="text-sm font-medium">Til</label>
-<input id="res-filter-to" type="date" class="mt-1 h-10 rounded-xl border px-3" />
-</div>
-<div>
-<label class="text-sm font-medium">Sorter</label>
-<select id="res-sort" class="mt-1 h-10 rounded-xl border px-3">
-<option value="date_desc">Dato ↓</option>
-<option value="date_asc">Dato ↑</option>
-<option value="total_desc">Sum ↓</option>
-<option value="total_asc">Sum ↑</option>
-<option value="prone_desc">Liggende ↓</option>
-<option value="stand_desc">Stående ↓</option>
-<option value="name_asc">Navn A–Å</option>
-</select>
-</div>
-<button id="res-clear" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Tøm</button>
-<button id="res-refresh" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Oppdater</button>
-<button id="res-export-csv" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Eksporter filtrert CSV</button>
+<!-- 1) 🔄 HTML: Bytt ut hele "Results Tab"-seksjonen med denne -->
+<section id="tab-results" class="tab-section hidden">
+<div class="rounded-2xl border bg-white shadow-sm card">
+<div class="border-b p-4 flex items-center justify-between">
+<h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
+<span class="text-xs text-slate-500">Mobilvennlig • lagres til skyen</span>
 </div>
 
 
-<div class="max-h-[420px] overflow-auto rounded-xl border">
+<!-- 🔝 TOPP-BOKS: Historiske beste (topp 5 + PB per øvelse) -->
+<div class="p-4 grid grid-cols-1 gap-3">
+<div class="rounded-xl border bg-slate-50 p-4">
+<div class="flex items-center justify-between mb-2">
+<h4 class="font-semibold">Historiske beste</h4>
+<div class="text-xs text-slate-600" id="res-best-meta"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<!-- Topp 5 totalsummer -->
+<div>
+<div class="text-sm font-medium mb-1">Topp 5 – totalsum</div>
+<ol id="res-best-top5" class="list-decimal list-inside text-sm space-y-1"></ol>
+</div>
+<!-- Personlige rekorder (total) -->
+<div>
+<div class="text-sm font-medium mb-1">Personlige rekorder (PB)</div>
+<div class="max-h-[180px] overflow-auto rounded-lg border bg-white">
 <table class="w-full text-sm">
-<thead class="bg-slate-50 sticky top-0">
+<thead class="bg-slate-100 sticky top-0">
 <tr class="text-left text-slate-600">
-<th class="p-2">Dato</th>
 <th class="p-2">Utøver</th>
+<th class="p-2 text-right">PB</th>
 <th class="p-2">Øvelse</th>
-<th class="p-2 text-right">Lig.</th>
-<th class="p-2 text-right">Stå.</th>
-<th class="p-2 text-right">Sum</th>
+<th class="p-2">Dato</th>
 </tr>
 </thead>
-<tbody id="res-table"></tbody>
+<tbody id="res-best-pb"></tbody>
 </table>
 </div>
-
-
-<div class="mt-2 flex items-center justify-between">
-<div class="text-xs text-slate-600" id="res-count"></div>
-<button id="res-load-more" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Last inn flere</button>
 </div>
-</section> 
+<!-- PB per øvelse -->
+<div>
+<div class="text-sm font-medium mb-1">PB per øvelse</div>
+<div class="max-h-[180px] overflow-auto rounded-lg border bg-white">
+<table class="w-full text-sm">
+<thead class="bg-slate-100 sticky top-0">
+<tr class="text-left text-slate-600">
+<th class="p-2">Øvelse</th>
+<th class="p-2">Utøver</th>
+<th class="p-2 text-right">PB</th>
+</tr>
+</thead>
+<tbody id="res-best-ex"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
 
+
+<!-- 📝 SKJEMA -->
+<div class="p-4 grid grid-cols-1 gap-3">
+<div>
+<label class="text-sm font-medium">Utøver</label>
+<input id="res-athlete" class="mt-1 w-full h-11 rounded-xl border px-3"
+placeholder="F.eks. Ola Nordmann" list="res-athlete-list"/>
+<datalist id="res-athlete-list"></datalist>
+</div>
+<div>
+<label class="text-sm font-medium">Skyteøvelse</label>
+<select id="res-ex" class="mt-1 w-full h-11 rounded-xl border px-3">
+<option value="">Velg øvelse…</option>
+<option>30 ligg (bukk)</option>
+<option>30 ligg (reim)</option>
+<option>30 ligg + 10 stå</option>
+<option>30 ligg + 30 stå</option>
+</select>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="text-sm font-medium">Dato</label>
+<input id="res-date" type="date" class="mt-1 w-full h-11 rounded-xl border px-3"/>
+</div>
+</section>
       <!-- Sidepanel -->
       <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
@@ -2461,10 +2496,11 @@ async function supaLoadResults(limit = 1000){
 function renderResults(){
   const dEl = document.getElementById('res-date');
   if(dEl && !dEl.value){ dEl.value = dayjs().format('YYYY-MM-DD'); }
+
   const p = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
   const s = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
   const totEl = document.getElementById('res-total');
-  if(totEl) totEl.value = String(p+s);
+  if(totEl) totEl.value = String(p + s);
 
   const tb = document.getElementById('res-table');
   if(!tb) return;
@@ -2480,41 +2516,54 @@ function renderResults(){
   `).join('');
 }
 
+
 function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
 
 function bindResultsUIEnhanced(){
+  // Oppdater sum fortløpende
   document.getElementById('res-prone')?.addEventListener('input', renderResults);
   document.getElementById('res-stand')?.addEventListener('input', renderResults);
 
+  // Lagre resultat til Supabase
   document.getElementById('res-save')?.addEventListener('click', async ()=>{
     const athlete = document.getElementById('res-athlete')?.value.trim();
-    const exercise = document.getElementById('res-ex')?.value.trim();
+    const exercise = document.getElementById('res-ex')?.value.trim(); // <select>
     const date = document.getElementById('res-date')?.value;
     const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
     const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
+
     if(!athlete){ alert('Skriv inn utøver.'); return; }
     if(!date){ alert('Velg dato.'); return; }
+
     const model = { id: uid(), date, athlete, exercise: exercise || '', pointsProne, pointsStand };
     try{
-      const saved = await supaInsertResult(model);
+      const saved = await supaInsertResult(model);   // bruker dine eksisterende map/supabase-funksjoner
       state.resultsAll = [saved, ...(state.resultsAll||[])];
       applyResultsFilterAndSort();
       renderResults();
+
+      // Tøm felter
       document.getElementById('res-athlete').value='';
       document.getElementById('res-ex').value='';
       document.getElementById('res-prone').value='';
       document.getElementById('res-stand').value='';
       renderResults();
-    }catch(err){ console.error('Lagre resultat feilet', err); alert('Kunne ikke lagre resultat til skyen.'); }
+    }catch(err){
+      console.error('Lagre resultat feilet', err);
+      alert('Kunne ikke lagre resultat til skyen.');
+    }
   });
 
+  // Filtre, sortering, “vis flere” og eksport
   const onFilter = debounce(()=>{ applyResultsFilterAndSort(); renderResults(); }, 120);
   ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to','res-sort']
     .forEach(id => document.getElementById(id)?.addEventListener('input', onFilter));
 
   document.getElementById('res-clear')?.addEventListener('click', ()=>{
-    ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    document.getElementById('res-sort').value = 'date_desc';
+    ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    const sel = document.getElementById('res-sort'); if(sel) sel.value = 'date_desc';
     applyResultsFilterAndSort(); renderResults();
   });
 
@@ -2526,6 +2575,7 @@ function bindResultsUIEnhanced(){
 
   document.getElementById('res-export-csv')?.addEventListener('click', exportFilteredCSV);
 }
+
 
     // ---------- Init ----------
 function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
