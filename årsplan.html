@@ -2457,39 +2457,43 @@ document.getElementById('res-export-csv')?.addEventListener('click', exportFilte
     // ---------- Init ----------
 function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
-async function init(){
-  bindDialogChrome();
-  bindUiHandlers();
-  bindYearLabel();
-  setupSidebarToggle();
+ async function init(){
+    bindDialogChrome();
+    bindUiHandlers();
+    bindYearLabel();
+    setupSidebarToggle();
 
-  switchTab('calendar');
+    switchTab('calendar');
 
-  await supaLoadAll(state.year);
-  supaRealtimeInit();
+    // Last data for valgt år + start realtime
+    await supaLoadAll(state.year);
+    supaRealtimeInit();
 
-  $('#year-prev').onclick = () => { state.year--; render(); supaLoadAll(state.year); };
-  $('#year-next').onclick = () => { state.year++; render(); supaLoadAll(state.year); };
+    // Årsnavigasjon
+    $('#year-prev').onclick = () => { state.year--; render(); supaLoadAll(state.year); };
+    $('#year-next').onclick = () => { state.year++; render(); supaLoadAll(state.year); };
 
-  $$('#q-bank, #f-age, #f-type').forEach(el => el.addEventListener('input', renderBank));
+    // Øktbank filter
+    $$('#q-bank, #f-age, #f-type').forEach(el => el.addEventListener('input', renderBank));
 
-  $('#btn-new').onclick   = () => openDialog({date:dayjs().format('YYYY-MM-DD')});
-  $('#btn-print').onclick = () => window.print();
+    // Hurtigknapper
+    $('#btn-new').onclick   = () => openDialog({ date: dayjs().format('YYYY-MM-DD') });
+    $('#btn-print').onclick = () => window.print();
 
-  // Varslinger (Admin)
-  nfBindUI();
-  await nfLoadAgesIntoSelect();
-  await nfLoadSender();
-  await nfLoadSubs();
+    // Varslinger (Admin)
+    nfBindUI();
+    await nfLoadAgesIntoSelect();
+    await nfLoadSender();
+    await nfLoadSubs();
 
-  // Skyteresultater
-  await supaLoadResults(1000);
-  bindResultsUIEnhanced();
-  applyResultsFilterAndSort();
-  renderResults();
-}
+    // Skyteresultat
+    await supaLoadResults(1000);
+    bindResultsUIEnhanced();
+    applyResultsFilterAndSort();
+    renderResults();
+  } // ← VIKTIG: avslutter init()
 
-window.addEventListener('DOMContentLoaded', init);
+  window.addEventListener('DOMContentLoaded', init);
 
   </script>
 </body>
