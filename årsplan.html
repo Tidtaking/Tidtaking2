@@ -2533,8 +2533,8 @@ String(r.pointsTotal||0)
 ].map(v => '"' + String(v).replaceAll('"','""') + '"').join(';');
 lines.push(line);
 });
-const blob = new Blob([lines.join('
-')], { type:'text/csv;charset=utf-8' });
+const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
+
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
 a.href = url; a.download = `skyteresultater_filtrert_${dayjs().format('YYYYMMDD_HHmm')}.csv`;
