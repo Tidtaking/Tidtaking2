@@ -314,90 +314,55 @@
         
       </main>
 <section id="tab-results" class="tab-section hidden">
-<div class="rounded-2xl border bg-white shadow-sm card">
-<div class="border-b p-4 flex items-center justify-between">
-<h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
-<span class="text-xs text-slate-500">Mobilvennlig • lagres til skyen</span>
-</div>
-
-
-<!-- 🔝 TOPP-BOKS: Historiske beste -->
-<div class="p-4 grid grid-cols-1 gap-3">
-<div class="rounded-xl border bg-slate-50 p-4">
-<div class="flex items-center justify-between mb-2">
-<h4 class="font-semibold">Historiske beste</h4>
-<div class="text-xs text-slate-600" id="res-best-meta"></div>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-<!-- Topp 5 totalsummer -->
-<div>
-<div class="text-sm font-medium mb-1">Topp 5 – totalsum</div>
-<ol id="res-best-top5" class="list-decimal list-inside text-sm space-y-1"></ol>
-</div>
-<!-- Personlige rekorder -->
-<div>
-<div class="text-sm font-medium mb-1">Personlige rekorder (PB – total)</div>
-<div class="max-h-[180px] overflow-auto rounded-lg border bg-white">
-<table class="w-full text-sm">
-<thead class="bg-slate-100 sticky top-0">
-<tr class="text-left text-slate-600">
-<th class="p-2">Utøver</th>
-<th class="p-2 text-right">PB</th>
-<th class="p-2">Øvelse</th>
-<th class="p-2">Dato</th>
-</tr>
-</thead>
-<tbody id="res-best-pb"></tbody>
-</table>
-</div>
-</div>
-<!-- PB per øvelse -->
-<div>
-<div class="text-sm font-medium mb-1">PB per øvelse</div>
-<div class="max-h-[180px] overflow-auto rounded-lg border bg-white">
-<table class="w-full text-sm">
-<thead class="bg-slate-100 sticky top-0">
-<tr class="text-left text-slate-600">
-<th class="p-2">Utøver</th>
-<th class="p-2">Øvelse</th>
-<th class="p-2 text-right">PB</th>
-<th class="p-2">Dato</th>
-</tr>
-</thead>
-<tbody id="res-best-pb-ex"></tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</div>
-
-
-<!-- 📝 SKJEMA -->
-<div class="p-4 grid grid-cols-1 gap-3">
-<div>
-<label class="text-sm font-medium">Utøver</label>
-<input id="res-athlete" class="mt-1 w-full h-11 rounded-xl border px-3"
-placeholder="F.eks. Ola Nordmann" list="res-athlete-list"/>
-<datalist id="res-athlete-list"></datalist>
+<label class="text-sm font-medium">Fra</label>
+<input id="res-filter-from" type="date" class="mt-1 h-10 rounded-xl border px-3" />
 </div>
 <div>
-<label class="text-sm font-medium">Skyteøvelse</label>
-<select id="res-ex" class="mt-1 w-full h-11 rounded-xl border px-3">
-<option value="">Velg øvelse…</option>
-<option>30 ligg (bukk)</option>
-<option>30 ligg (reim)</option>
-<option>30 ligg + 10 stå</option>
-<option>30 ligg + 30 stå</option>
+<label class="text-sm font-medium">Til</label>
+<input id="res-filter-to" type="date" class="mt-1 h-10 rounded-xl border px-3" />
+</div>
+<div>
+<label class="text-sm font-medium">Sorter</label>
+<select id="res-sort" class="mt-1 h-10 rounded-xl border px-3">
+<option value="date_desc">Dato ↓</option>
+<option value="date_asc">Dato ↑</option>
+<option value="total_desc">Sum ↓</option>
+<option value="total_asc">Sum ↑</option>
+<option value="prone_desc">Liggende ↓</option>
+<option value="stand_desc">Stående ↓</option>
+<option value="name_asc">Navn A–Å</option>
 </select>
 </div>
-<div class="grid grid-cols-2 gap-3">
-<div>
-<label class="text-sm font-medium">Dato</label>
-<input id="res-date" type="date" class="mt-1 w-full h-11 rounded-xl border px-3"/>
+<button id="res-clear" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Tøm</button>
+<button id="res-refresh" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Oppdater</button>
+<button id="res-export-csv" class="rounded-xl border bg-white px-3 py-2 shadow-sm">Eksporter filtrert CSV</button>
 </div>
-<div class="grid grid-cols-2 gap-3">
-<div>
+
+
+<div class="max-h-[420px] overflow-auto rounded-xl border">
+<table class="w-full text-sm">
+<thead class="bg-slate-50 sticky top-0">
+<tr class="text-left text-slate-600">
+<th class="p-2">Dato</th>
+<th class="p-2">Utøver</th>
+<th class="p-2">Øvelse</th>
+<th class="p-2 text-right">Lig.</th>
+<th class="p-2 text-right">Stå.</th>
+<th class="p-2 text-right">Sum</th>
+</tr>
+</thead>
+<tbody id="res-table"></tbody>
+</table>
+</div>
+
+
+<div class="mt-2 flex items-center justify-between">
+<div class="text-xs text-slate-600" id="res-count"></div>
+<button id="res-load-more" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Last inn flere</button>
+</div>
+</div>
+</div>
+</section>
       <!-- Sidepanel -->
       <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
@@ -2343,94 +2308,228 @@ function bindYearLabel(){
     render();
   };
 }
+<script>
 // --- Resultat-state ---
-renderResults();
-}else{
-console.warn('Kunne ikke hente resultater', error);
+state.resultsAll = state.resultsAll || []; // rå fra skyen
+state.resultsLimit = state.resultsLimit || 100;
+
+function normalize(str){ return (str||'').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); }
+
+function computeHistoricalBests(rows){
+  const list = rows || [];
+  const byAthlete = new Map();
+  for(const r of list){
+    if(!r.athlete) continue;
+    const key = r.athlete.trim();
+    const prev = byAthlete.get(key);
+    if(!prev || r.pointsTotal > prev.pointsTotal){ byAthlete.set(key, r); }
+  }
+  const pb = Array.from(byAthlete.values()).sort((a,b)=> b.pointsTotal - a.pointsTotal);
+  const top5 = [...list].sort((a,b)=> b.pointsTotal - a.pointsTotal).slice(0,5);
+  return { pb, top5 };
 }
 
+function computePBPerExercise(rows){
+  const map = new Map(); // athlete||exercise → best row
+  for(const r of rows||[]){
+    const a = (r.athlete||'').trim();
+    const e = (r.exercise||'').trim();
+    if(!a || !e) continue;
+    const k = a + '||' + e;
+    const prev = map.get(k);
+    if(!prev || r.pointsTotal > prev.pointsTotal){ map.set(k, r); }
+  }
+  return Array.from(map.values()).sort((a,b)=> b.pointsTotal - a.pointsTotal);
+}
 
-// Oppdatert render
+function applyResultsFilterAndSort(){
+  const qName = normalize(document.getElementById('res-filter-name')?.value || '');
+  const qEx   = normalize(document.getElementById('res-filter-ex')?.value || '');
+  const dFrom = document.getElementById('res-filter-from')?.value || '';
+  const dTo   = document.getElementById('res-filter-to')?.value || '';
+  const sort  = document.getElementById('res-sort')?.value || 'date_desc';
+
+  let rows = [...(state.resultsAll || state.results || [])];
+
+  if(qName) rows = rows.filter(r => normalize(r.athlete).includes(qName));
+  if(qEx)   rows = rows.filter(r => normalize(r.exercise).includes(qEx));
+  if(dFrom) rows = rows.filter(r => (r.date||'') >= dFrom);
+  if(dTo)   rows = rows.filter(r => (r.date||'') <= dTo);
+
+  const cmp = {
+    'date_desc': (a,b)=> (b.date||'').localeCompare(a.date||''),
+    'date_asc' : (a,b)=> (a.date||'').localeCompare(b.date||''),
+    'total_desc':(a,b)=> (b.pointsTotal - a.pointsTotal),
+    'total_asc' :(a,b)=> (a.pointsTotal - b.pointsTotal),
+    'prone_desc':(a,b)=> (b.pointsProne - a.pointsProne),
+    'stand_desc':(a,b)=> (b.pointsStand - a.pointsStand),
+    'name_asc'  :(a,b)=> (a.athlete||'').localeCompare(b.athlete||'')
+  }[sort] || ((a,b)=> (b.date||'').localeCompare(a.date||''));
+  rows.sort(cmp);
+
+  const limited = rows.slice(0, state.resultsLimit || 100);
+  state.results = limited;
+
+  const { pb, top5 } = computeHistoricalBests(rows);
+  const pbEx = computePBPerExercise(rows);
+  renderBestBox(pb, top5, pbEx, rows.length);
+
+  const cnt = document.getElementById('res-count');
+  if(cnt) cnt.textContent = `${limited.length} av ${rows.length} treff vises`;
+
+  return limited;
+}
+
+function renderBestBox(pbRows, topRows, pbExRows, totalCount){
+  const meta = document.getElementById('res-best-meta');
+  if(meta) meta.textContent = `${totalCount||0} registreringer totalt`;
+
+  const top5El = document.getElementById('res-best-top5');
+  if(top5El){
+    top5El.innerHTML = (topRows||[]).map(r => `
+      <li class="flex items-center justify-between">
+        <span>${escapeHTML(r.athlete)}${r.exercise? ` – <span class='text-slate-500'>${escapeHTML(r.exercise)}</span>`:''}</span>
+        <span class="font-semibold">${r.pointsTotal}</span>
+      </li>`).join('');
+  }
+
+  const pbEl = document.getElementById('res-best-pb');
+  if(pbEl){
+    pbEl.innerHTML = (pbRows||[]).map(r => `
+      <tr class="border-t">
+        <td class="p-2">${escapeHTML(r.athlete)}</td>
+        <td class="p-2 text-right font-medium">${r.pointsTotal}</td>
+        <td class="p-2 truncate">${escapeHTML(r.exercise||'')}</td>
+        <td class="p-2 whitespace-nowrap">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+      </tr>
+    `).join('');
+  }
+
+  const pbExEl = document.getElementById('res-best-pb-ex');
+  if(pbExEl){
+    pbExEl.innerHTML = (pbExRows||[]).map(r => `
+      <tr class="border-t">
+        <td class="p-2">${escapeHTML(r.athlete)}</td>
+        <td class="p-2">${escapeHTML(r.exercise||'')}</td>
+        <td class="p-2 text-right font-medium">${r.pointsTotal}</td>
+        <td class="p-2 whitespace-nowrap">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+function exportFilteredCSV(){
+  const rows = applyResultsFilterAndSort();
+  const header = ['Dato','Utøver','Øvelse','Liggende','Stående','Sum'];
+  const lines = [header.join(';')];
+  (rows||[]).forEach(r => {
+    const line = [
+      dayjs(r.date).format('YYYY-MM-DD'),
+      r.athlete||'',
+      r.exercise||'',
+      String(r.pointsProne||0),
+      String(r.pointsStand||0),
+      String(r.pointsTotal||0)
+    ].map(v => '"' + String(v).replaceAll('"','""') + '"').join(';');
+    lines.push(line);
+  });
+  const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `skyteresultater_filtrert_${dayjs().format('YYYYMMDD_HHmm')}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function supaLoadResults(limit = 1000){
+  const { data, error } = await supabase
+    .from(TBL.results)
+    .select('*')
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if(!error && data){
+    state.resultsAll = data.map(mapResultFromDb);
+    const names = Array.from(new Set(state.resultsAll.map(r=>r.athlete).filter(Boolean))).sort();
+    const dlA = document.getElementById('res-athlete-list'); if(dlA) dlA.innerHTML = names.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
+    const exs = Array.from(new Set(state.resultsAll.map(r=>r.exercise).filter(Boolean))).sort();
+    const dlE = document.getElementById('res-exercise-list'); if(dlE) dlE.innerHTML = exs.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
+    applyResultsFilterAndSort();
+    renderResults();
+  }else{
+    console.warn('Kunne ikke hente resultater', error);
+  }
+}
+
 function renderResults(){
-const dEl = document.getElementById('res-date');
-if(dEl && !dEl.value){ dEl.value = dayjs().format('YYYY-MM-DD'); }
-const p = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
-const s = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
-const totEl = document.getElementById('res-total');
-if(totEl) totEl.value = String(p+s);
+  const dEl = document.getElementById('res-date');
+  if(dEl && !dEl.value){ dEl.value = dayjs().format('YYYY-MM-DD'); }
+  const p = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
+  const s = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
+  const totEl = document.getElementById('res-total');
+  if(totEl) totEl.value = String(p+s);
 
-
-const tb = document.getElementById('res-table');
-if(!tb) return;
-tb.innerHTML = (state.results||[]).map(r=>`
-<tr class=\"border-t\">
-<td class=\"p-2 whitespace-nowrap\">${dayjs(r.date).format('DD.MM.YYYY')}</td>
-<td class=\"p-2\">${escapeHTML(r.athlete)}</td>
-<td class=\"p-2\">${escapeHTML(r.exercise)}</td>
-<td class=\"p-2 text-right\">${r.pointsProne}</td>
-<td class=\"p-2 text-right\">${r.pointsStand}</td>
-<td class=\"p-2 text-right font-medium\">${r.pointsTotal}</td>
-</tr>
-`).join('');
+  const tb = document.getElementById('res-table');
+  if(!tb) return;
+  tb.innerHTML = (state.results||[]).map(r=>`
+    <tr class="border-t">
+      <td class="p-2 whitespace-nowrap">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+      <td class="p-2">${escapeHTML(r.athlete)}</td>
+      <td class="p-2">${escapeHTML(r.exercise)}</td>
+      <td class="p-2 text-right">${r.pointsProne}</td>
+      <td class="p-2 text-right">${r.pointsStand}</td>
+      <td class="p-2 text-right font-medium">${r.pointsTotal}</td>
+    </tr>
+  `).join('');
 }
-
 
 function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
 
-
 function bindResultsUIEnhanced(){
-// live sum
-document.getElementById('res-prone')?.addEventListener('input', renderResults);
-document.getElementById('res-stand')?.addEventListener('input', renderResults);
+  document.getElementById('res-prone')?.addEventListener('input', renderResults);
+  document.getElementById('res-stand')?.addEventListener('input', renderResults);
 
+  document.getElementById('res-save')?.addEventListener('click', async ()=>{
+    const athlete = document.getElementById('res-athlete')?.value.trim();
+    const exercise = document.getElementById('res-ex')?.value.trim();
+    const date = document.getElementById('res-date')?.value;
+    const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
+    const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
+    if(!athlete){ alert('Skriv inn utøver.'); return; }
+    if(!date){ alert('Velg dato.'); return; }
+    const model = { id: uid(), date, athlete, exercise: exercise || '', pointsProne, pointsStand };
+    try{
+      const saved = await supaInsertResult(model);
+      state.resultsAll = [saved, ...(state.resultsAll||[])];
+      applyResultsFilterAndSort();
+      renderResults();
+      document.getElementById('res-athlete').value='';
+      document.getElementById('res-ex').value='';
+      document.getElementById('res-prone').value='';
+      document.getElementById('res-stand').value='';
+      renderResults();
+    }catch(err){ console.error('Lagre resultat feilet', err); alert('Kunne ikke lagre resultat til skyen.'); }
+  });
 
-// lagre
-document.getElementById('res-save')?.addEventListener('click', async ()=>{
-const athlete = document.getElementById('res-athlete')?.value.trim();
-const exercise = document.getElementById('res-ex')?.value.trim();
-const date = document.getElementById('res-date')?.value;
-const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
-const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
-if(!athlete){ alert('Skriv inn utøver.'); return; }
-if(!date){ alert('Velg dato.'); return; }
-const model = { id: uid(), date, athlete, exercise: exercise || '', pointsProne, pointsStand };
-try{
-const saved = await supaInsertResult(model);
-state.resultsAll = [saved, ...(state.resultsAll||[])];
-applyResultsFilterAndSort();
-renderResults();
-// clear inputs (behold dato)
-document.getElementById('res-athlete').value='';
-document.getElementById('res-ex').value='';
-document.getElementById('res-prone').value='';
-document.getElementById('res-stand').value='';
-renderResults();
-}catch(err){ console.error('Lagre resultat feilet', err); alert('Kunne ikke lagre resultat til skyen.'); }
-});
+  const onFilter = debounce(()=>{ applyResultsFilterAndSort(); renderResults(); }, 120);
+  ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to','res-sort']
+    .forEach(id => document.getElementById(id)?.addEventListener('input', onFilter));
 
+  document.getElementById('res-clear')?.addEventListener('click', ()=>{
+    ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('res-sort').value = 'date_desc';
+    applyResultsFilterAndSort(); renderResults();
+  });
 
-// filter-handlere
-const onFilter = debounce(()=>{ applyResultsFilterAndSort(); renderResults(); }, 120);
-['res-filter-name','res-filter-ex','res-filter-from','res-filter-to','res-sort']
-.forEach(id => document.getElementById(id)?.addEventListener('input', onFilter));
+  document.getElementById('res-refresh')?.addEventListener('click', ()=> supaLoadResults(Math.max(1000, state.resultsLimit||100)));
+  document.getElementById('res-load-more')?.addEventListener('click', ()=>{
+    state.resultsLimit = (state.resultsLimit||100) + 200;
+    applyResultsFilterAndSort(); renderResults();
+  });
 
-
-document.getElementById('res-clear')?.addEventListener('click', ()=>{
-['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-document.getElementById('res-sort').value = 'date_desc';
-applyResultsFilterAndSort(); renderResults();
-});
-
-
-document.getElementById('res-refresh')?.addEventListener('click', ()=> supaLoadResults(Math.max(1000, state.resultsLimit||100)));
-document.getElementById('res-load-more')?.addEventListener('click', ()=>{
-state.resultsLimit = (state.resultsLimit||100) + 200; // vis flere i tabellen
-applyResultsFilterAndSort(); renderResults();
-});
-
-
-document.getElementById('res-export-csv')?.addEventListener('click', exportFilteredCSV);
+  document.getElementById('res-export-csv')?.addEventListener('click', exportFilteredCSV);
 }
+
     // ---------- Init ----------
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
@@ -2463,9 +2562,11 @@ await supaLoadAll(state.year);
 supaRealtimeInit();
 
 // Laste skyteresultater + binde UI:
-await supaLoadResults(50);
+await supaLoadResults(1000);
+bindResultsUIEnhanced();
+applyResultsFilterAndSort();
 renderResults();
-    }
+
 
     window.addEventListener('DOMContentLoaded', init);
   </script>
