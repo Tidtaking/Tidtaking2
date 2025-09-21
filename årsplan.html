@@ -310,7 +310,9 @@
               </div>
               <!-- /Varslinger -->
             </div>
-      <section id="tab-results" class="tab-section hidden">
+            </section> 
+      </main>
+ <section id="tab-results" class="tab-section hidden">
 <label class="text-sm font-medium">Fra</label>
 <input id="res-filter-from" type="date" class="mt-1 h-10 rounded-xl border px-3" />
 </div>
@@ -357,8 +359,7 @@
 <div class="text-xs text-slate-600" id="res-count"></div>
 <button id="res-load-more" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Last inn flere</button>
 </div>
-</section>  
-      </main>
+</section> 
 
       <!-- Sidepanel -->
       <aside id="sidebar" class="space-y-4 hidden">
@@ -2401,7 +2402,7 @@ function renderBestBox(pbRows, topRows, pbExRows, totalCount){
     `).join('');
   }
 
-  const pbExEl = document.getElementById('res-best-pb-ex');
+const pbExEl = document.getElementById('res-best-ex');
   if(pbExEl){
     pbExEl.innerHTML = (pbExRows||[]).map(r => `
       <tr class="border-t">
@@ -2527,44 +2528,42 @@ function bindResultsUIEnhanced(){
 }
 
     // ---------- Init ----------
-    function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
+function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
-
-      async function init(){
+async function init(){
   bindDialogChrome();
   bindUiHandlers();
-  bindYearLabel(); // ← NY
+  bindYearLabel();
   setupSidebarToggle();
+
   switchTab('calendar');
-      await supaLoadAll(state.year);
-      supaRealtimeInit();
 
-      $('#year-prev').onclick=()=>{ state.year--; render(); supaLoadAll(state.year); };
-      $('#year-next').onclick=()=>{ state.year++; render(); supaLoadAll(state.year); };
+  await supaLoadAll(state.year);
+  supaRealtimeInit();
 
-      $$('#q-bank, #f-age, #f-type').forEach(el=> el.addEventListener('input', renderBank));
+  $('#year-prev').onclick = () => { state.year--; render(); supaLoadAll(state.year); };
+  $('#year-next').onclick = () => { state.year++; render(); supaLoadAll(state.year); };
 
-      $('#btn-new').onclick=()=> openDialog({date:dayjs().format('YYYY-MM-DD')});
-      $('#btn-print').onclick=()=> window.print();
+  $$('#q-bank, #f-age, #f-type').forEach(el => el.addEventListener('input', renderBank));
 
-      // Varslinger (Admin)
-      nfBindUI();
-      await nfLoadAgesIntoSelect();
-      await nfLoadSender();
-      await nfLoadSubs();
-        switchTab('calendar');
-// last alt
-await supaLoadAll(state.year);
-supaRealtimeInit();
+  $('#btn-new').onclick   = () => openDialog({date:dayjs().format('YYYY-MM-DD')});
+  $('#btn-print').onclick = () => window.print();
 
-// Laste skyteresultater + binde UI:
-await supaLoadResults(1000);
-bindResultsUIEnhanced();
-applyResultsFilterAndSort();
-renderResults();
+  // Varslinger (Admin)
+  nfBindUI();
+  await nfLoadAgesIntoSelect();
+  await nfLoadSender();
+  await nfLoadSubs();
 
+  // Skyteresultater
+  await supaLoadResults(1000);
+  bindResultsUIEnhanced();
+  applyResultsFilterAndSort();
+  renderResults();
+}
 
-    window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', init);
+
   </script>
 </body>
 </html>
