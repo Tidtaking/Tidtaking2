@@ -2357,8 +2357,8 @@ const exs = Array.from(new Set(state.resultsAll.map(r=>r.exercise).filter(Boolea
 const dlE = document.getElementById('res-exercise-list'); if(dlE) dlE.innerHTML = exs.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
 applyResultsFilterAndSort();
 renderResults();
-}else{
-console.warn('Kunne ikke hente resultater', error);
+  }else{
+    console.warn('Kunne ikke hente resultater', error);
 }
 }
 
