@@ -313,87 +313,91 @@
         </section>
         
       </main>
-<!-- Results Tab -->
 <section id="tab-results" class="tab-section hidden">
-  <div class="rounded-2xl border bg-white shadow-sm card">
-    <div class="border-b p-4 flex items-center justify-between">
-      <h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
-      <span class="text-xs text-slate-500">Mobilvennlig • lagres til skyen</span>
-    </div>
-     <!-- Skjema -->
-    <div class="p-4 grid grid-cols-1 gap-3">
-      <div>
-        <label class="text-sm font-medium">Utøver</label>
-        <input id="res-athlete" class="mt-1 w-full h-11 rounded-xl border px-3"
-               placeholder="F.eks. Ola Nordmann" list="res-athlete-list"/>
-        <datalist id="res-athlete-list"></datalist>
-      </div>
-
-      <div>
-  <label class="text-sm font-medium">Skyteøvelse</label>
-  <select id="res-ex" class="mt-1 w-full h-11 rounded-xl border px-3">
-    <option value="">Velg øvelse…</option>
-    <option>30 ligg (bukk)</option>
-    <option>30 ligg (reim)</option>
-    <option>30 ligg + 10 stå</option>
-    <option>30 ligg + 30 stå</option>
-  </select>
+<div class="rounded-2xl border bg-white shadow-sm card">
+<div class="border-b p-4 flex items-center justify-between">
+<h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
+<span class="text-xs text-slate-500">Mobilvennlig • lagres til skyen</span>
 </div>
 
 
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-sm font-medium">Dato</label>
-          <input id="res-date" type="date" class="mt-1 w-full h-11 rounded-xl border px-3"/>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="text-sm font-medium">Liggende (poeng)</label>
-            <input id="res-prone" type="number" inputmode="numeric" min="0" class="mt-1 w-full h-11 rounded-xl border px-3" placeholder="0"/>
-          </div>
-          <div>
-            <label class="text-sm font-medium">Stående (poeng)</label>
-            <input id="res-stand" type="number" inputmode="numeric" min="0" class="mt-1 w-full h-11 rounded-xl border px-3" placeholder="0"/>
-          </div>
-        </div>
-      </div>
+<!-- 🔝 TOPP-BOKS: Historiske beste -->
+<div class="p-4 grid grid-cols-1 gap-3">
+<div class="rounded-xl border bg-slate-50 p-4">
+<div class="flex items-center justify-between mb-2">
+<h4 class="font-semibold">Historiske beste</h4>
+<div class="text-xs text-slate-600" id="res-best-meta"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<!-- Topp 5 totalsummer -->
+<div>
+<div class="text-sm font-medium mb-1">Topp 5 – totalsum</div>
+<ol id="res-best-top5" class="list-decimal list-inside text-sm space-y-1"></ol>
+</div>
+<!-- Personlige rekorder -->
+<div>
+<div class="text-sm font-medium mb-1">Personlige rekorder (PB – total)</div>
+<div class="max-h-[180px] overflow-auto rounded-lg border bg-white">
+<table class="w-full text-sm">
+<thead class="bg-slate-100 sticky top-0">
+<tr class="text-left text-slate-600">
+<th class="p-2">Utøver</th>
+<th class="p-2 text-right">PB</th>
+<th class="p-2">Øvelse</th>
+<th class="p-2">Dato</th>
+</tr>
+</thead>
+<tbody id="res-best-pb"></tbody>
+</table>
+</div>
+</div>
+<!-- PB per øvelse -->
+<div>
+<div class="text-sm font-medium mb-1">PB per øvelse</div>
+<div class="max-h-[180px] overflow-auto rounded-lg border bg-white">
+<table class="w-full text-sm">
+<thead class="bg-slate-100 sticky top-0">
+<tr class="text-left text-slate-600">
+<th class="p-2">Utøver</th>
+<th class="p-2">Øvelse</th>
+<th class="p-2 text-right">PB</th>
+<th class="p-2">Dato</th>
+</tr>
+</thead>
+<tbody id="res-best-pb-ex"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
 
-      <div class="grid grid-cols-3 gap-3 items-end">
-        <div>
-          <label class="text-sm font-medium">Sum (auto)</label>
-          <input id="res-total" disabled class="mt-1 w-full h-11 rounded-xl border px-3 bg-slate-50" placeholder="0"/>
-        </div>
-        <div class="col-span-2 text-right">
-          <button id="res-save" class="rounded-2xl border bg-white px-4 py-2 shadow-sm">
-            Lagre resultat
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Liste -->
-    <div class="border-t p-4">
-      <div class="flex items-center justify-between mb-2">
-        <h4 class="font-semibold">Siste registreringer</h4>
-        <button id="res-refresh" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Oppdater</button>
-      </div>
-      <div class="max-h-[360px] overflow-auto rounded-xl border">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-50 sticky top-0">
-            <tr class="text-left text-slate-600">
-              <th class="p-2">Dato</th>
-              <th class="p-2">Utøver</th>
-              <th class="p-2">Øvelse</th>
-              <th class="p-2 text-right">Lig.</th>
-              <th class="p-2 text-right">Stå.</th>
-              <th class="p-2 text-right">Sum</th>
-            </tr>
-          </thead>
-          <tbody id="res-table"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<!-- 📝 SKJEMA -->
+<div class="p-4 grid grid-cols-1 gap-3">
+<div>
+<label class="text-sm font-medium">Utøver</label>
+<input id="res-athlete" class="mt-1 w-full h-11 rounded-xl border px-3"
+placeholder="F.eks. Ola Nordmann" list="res-athlete-list"/>
+<datalist id="res-athlete-list"></datalist>
+</div>
+<div>
+<label class="text-sm font-medium">Skyteøvelse</label>
+<select id="res-ex" class="mt-1 w-full h-11 rounded-xl border px-3">
+<option value="">Velg øvelse…</option>
+<option>30 ligg (bukk)</option>
+<option>30 ligg (reim)</option>
+<option>30 ligg + 10 stå</option>
+<option>30 ligg + 30 stå</option>
+</select>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="text-sm font-medium">Dato</label>
+<input id="res-date" type="date" class="mt-1 w-full h-11 rounded-xl border px-3"/>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
       <!-- Sidepanel -->
       <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
@@ -712,16 +716,7 @@ function mapResultFromDb(r){
   };
 }
 
-async function supaLoadResults(limit = 50){
-  const { data, error } = await supabase
-    .from(TBL.results)
-    .select('*')
-    .order('date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if(!error && data){ state.results = data.map(mapResultFromDb); renderResults(); }
-  else { console.warn('Kunne ikke hente resultater', error); }
-}
+
 
 async function supaInsertResult(row){
   const dbRow = mapResultToDb(row);
@@ -1946,86 +1941,7 @@ function openBankDialog(data = {}){
         };
       });
     }
-function renderResults(){
-  // Sett dagens dato som default
-  const dEl = document.getElementById('res-date');
-  if(dEl && !dEl.value){
-    dEl.value = dayjs().format('YYYY-MM-DD');
-  }
 
-  // Oppdater sum-feltet
-  const p = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
-  const s = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
-  const tot = p + s;
-  const totEl = document.getElementById('res-total');
-  if(totEl) totEl.value = String(tot);
-
-  // Fyll tabell
-  const tb = document.getElementById('res-table');
-  if(!tb) return;
-  tb.innerHTML = (state.results||[]).map(r=>`
-    <tr class="border-t">
-      <td class="p-2 whitespace-nowrap">${dayjs(r.date).format('DD.MM.YYYY')}</td>
-      <td class="p-2">${escapeHTML(r.athlete)}</td>
-      <td class="p-2">${escapeHTML(r.exercise)}</td>
-      <td class="p-2 text-right">${r.pointsProne}</td>
-      <td class="p-2 text-right">${r.pointsStand}</td>
-      <td class="p-2 text-right font-medium">${r.pointsTotal}</td>
-    </tr>
-  `).join('');
-
-  // Forslag/datalist for utøver basert på tidligere rader
-  const names = Array.from(new Set((state.results||[]).map(r=>r.athlete).filter(Boolean))).sort();
-  const dl = document.getElementById('res-athlete-list');
-  if(dl) dl.innerHTML = names.map(n=>`<option value="${escapeHTML(n)}"></option>`).join('');
-}
-
-function bindResultsUI(){
-  // Live oppdater sum
-  document.getElementById('res-prone')?.addEventListener('input', renderResults);
-  document.getElementById('res-stand')?.addEventListener('input', renderResults);
-
-  // Lagre
-  document.getElementById('res-save')?.addEventListener('click', async ()=>{
-    const athlete = document.getElementById('res-athlete')?.value.trim();
-    const exercise = document.getElementById('res-ex')?.value.trim();
-    const date = document.getElementById('res-date')?.value;
-    const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
-    const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
-
-    if(!athlete){ alert('Skriv inn utøver.'); return; }
-    if(!date){ alert('Velg dato.'); return; }
-
-    const model = {
-      id: uid(),
-      date,
-      athlete,
-      exercise: exercise || '',
-      pointsProne,
-      pointsStand
-    };
-
-    try{
-      const saved = await supaInsertResult(model);
-      // legg øverst lokalt
-      state.results = [saved, ...(state.results||[])].slice(0, 50);
-      renderResults();
-
-      // Rens felter (behold dato)
-      document.getElementById('res-athlete').value = '';
-      document.getElementById('res-ex').value = '';
-      document.getElementById('res-prone').value = '';
-      document.getElementById('res-stand').value = '';
-      renderResults();
-    }catch(err){
-      console.error('Lagre resultat feilet', err);
-      alert('Kunne ikke lagre resultat til skyen.');
-    }
-  });
-
-  // Manuell refresh
-  document.getElementById('res-refresh')?.addEventListener('click', ()=> supaLoadResults(50));
-}
 
     // ---------- ICS ----------
     function exportICS(){
@@ -2427,7 +2343,95 @@ function bindYearLabel(){
     render();
   };
 }
+// --- Resultat-state ---
+renderResults();
+}else{
+console.warn('Kunne ikke hente resultater', error);
+}
+}
 
+
+// Oppdatert render
+function renderResults(){
+const dEl = document.getElementById('res-date');
+if(dEl && !dEl.value){ dEl.value = dayjs().format('YYYY-MM-DD'); }
+const p = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
+const s = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
+const totEl = document.getElementById('res-total');
+if(totEl) totEl.value = String(p+s);
+
+
+const tb = document.getElementById('res-table');
+if(!tb) return;
+tb.innerHTML = (state.results||[]).map(r=>`
+<tr class=\"border-t\">
+<td class=\"p-2 whitespace-nowrap\">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+<td class=\"p-2\">${escapeHTML(r.athlete)}</td>
+<td class=\"p-2\">${escapeHTML(r.exercise)}</td>
+<td class=\"p-2 text-right\">${r.pointsProne}</td>
+<td class=\"p-2 text-right\">${r.pointsStand}</td>
+<td class=\"p-2 text-right font-medium\">${r.pointsTotal}</td>
+</tr>
+`).join('');
+}
+
+
+function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
+
+
+function bindResultsUIEnhanced(){
+// live sum
+document.getElementById('res-prone')?.addEventListener('input', renderResults);
+document.getElementById('res-stand')?.addEventListener('input', renderResults);
+
+
+// lagre
+document.getElementById('res-save')?.addEventListener('click', async ()=>{
+const athlete = document.getElementById('res-athlete')?.value.trim();
+const exercise = document.getElementById('res-ex')?.value.trim();
+const date = document.getElementById('res-date')?.value;
+const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
+const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
+if(!athlete){ alert('Skriv inn utøver.'); return; }
+if(!date){ alert('Velg dato.'); return; }
+const model = { id: uid(), date, athlete, exercise: exercise || '', pointsProne, pointsStand };
+try{
+const saved = await supaInsertResult(model);
+state.resultsAll = [saved, ...(state.resultsAll||[])];
+applyResultsFilterAndSort();
+renderResults();
+// clear inputs (behold dato)
+document.getElementById('res-athlete').value='';
+document.getElementById('res-ex').value='';
+document.getElementById('res-prone').value='';
+document.getElementById('res-stand').value='';
+renderResults();
+}catch(err){ console.error('Lagre resultat feilet', err); alert('Kunne ikke lagre resultat til skyen.'); }
+});
+
+
+// filter-handlere
+const onFilter = debounce(()=>{ applyResultsFilterAndSort(); renderResults(); }, 120);
+['res-filter-name','res-filter-ex','res-filter-from','res-filter-to','res-sort']
+.forEach(id => document.getElementById(id)?.addEventListener('input', onFilter));
+
+
+document.getElementById('res-clear')?.addEventListener('click', ()=>{
+['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+document.getElementById('res-sort').value = 'date_desc';
+applyResultsFilterAndSort(); renderResults();
+});
+
+
+document.getElementById('res-refresh')?.addEventListener('click', ()=> supaLoadResults(Math.max(1000, state.resultsLimit||100)));
+document.getElementById('res-load-more')?.addEventListener('click', ()=>{
+state.resultsLimit = (state.resultsLimit||100) + 200; // vis flere i tabellen
+applyResultsFilterAndSort(); renderResults();
+});
+
+
+document.getElementById('res-export-csv')?.addEventListener('click', exportFilteredCSV);
+}
     // ---------- Init ----------
     function closeDialog(){ $('#dialog').classList.add('hidden'); $('#dialog').classList.remove('flex'); }
 
@@ -2461,7 +2465,6 @@ supaRealtimeInit();
 
 // Laste skyteresultater + binde UI:
 await supaLoadResults(50);
-bindResultsUI();
 renderResults();
     }
 
