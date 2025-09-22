@@ -2571,6 +2571,56 @@ function renderResultsBests(){
   if (ul) ul.innerHTML = top5.map(r =>
     `<li>${escapeHTML(r.athlete)} – ${r.pointsTotal} <span class="text-slate-500">(${escapeHTML(r.exercise||'')})</span></li>`
   ).join('');
+function computeTop5Unique(){
+  const rows = state.resultsAll || [];
+  const bestByAthlete = new Map();
+
+  for (const r of rows){
+    const athlete = (r.athlete || '').trim();
+    if (!athlete) continue;
+
+    const p = Number(r.pointsProne || 0);
+    const s = Number(r.pointsStand || 0);
+    if (p === 0 && s === 0) continue;           // skjul 0+0
+
+    const total = r.pointsTotal ?? (p + s);
+    const cur = bestByAthlete.get(athlete);
+    if (!cur || total > cur.total){
+      bestByAthlete.set(athlete, {
+        athlete,
+        total,
+        exercise: r.exercise || '',
+        date: r.date
+      });
+    }
+  }
+
+  state.bestTop5 = Array.from(bestByAthlete.values())
+    .sort((a,b)=> b.total - a.total)
+    .slice(0, 5);
+
+  return state.bestTop5;
+}
+
+function renderBestTop5(){
+  const ul = document.getElementById('res-best-top5');
+  if (!ul) return;
+
+  const list = state.bestTop5 || computeTop5Unique();
+  if (!list.length){
+    ul.innerHTML = `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
+    return;
+  }
+
+  ul.innerHTML = list.map(x => `
+    <li class="flex items-center justify-between">
+      <span class="truncate">
+        ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
+      </span>
+      <span class="tabular-nums font-semibold">${x.total}</span>
+    </li>
+  `).join('');
+}
 
   // PB per utøver
   const bestByAthlete = new Map();
@@ -2725,6 +2775,8 @@ const saved = await supaInsertResult(model);
 state.resultsAll = [saved, ...(state.resultsAll||[])];
 applyResultsFilterAndSort();
 renderResults();
+  computeTop5Unique();
+renderBestTop5();
 document.getElementById('res-athlete').value='';
 document.getElementById('res-ex').value='';
 document.getElementById('res-prone').value='';
@@ -2775,6 +2827,7 @@ document.getElementById('res-export-csv')?.addEventListener('click', exportFilte
     await nfLoadAgesIntoSelect();
     await nfLoadSender();
     await nfLoadSubs();
+    
 
     // Skyteresultat
     await supaLoadResults(1000);
@@ -2782,6 +2835,8 @@ document.getElementById('res-export-csv')?.addEventListener('click', exportFilte
     applyResultsFilterAndSort();
     computePBIndex();
 renderPBSearch();
+    computeTop5Unique();
+renderBestTop5();
 
     renderResults();
   }
