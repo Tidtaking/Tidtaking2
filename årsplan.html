@@ -2427,13 +2427,13 @@ function applyResultsFilterAndSort(){
   if (from)  rows = rows.filter(r => r.date >= from);
   if (to)    rows = rows.filter(r => r.date <= to);
 
-+ // Skjul rader der ALLE feltene er 0 (ligg, står, sum)
-+ rows = rows.filter(r => {
-+   const p = Number(r.pointsProne) || 0;
-+   const s = Number(r.pointsStand) || 0;
-+   const t = Number(r.pointsTotal ?? (p + s)) || 0; // fallback hvis total ikke satt
-+   return !(p === 0 && s === 0 && t === 0);
-+ });
+// Skjul rader der ALLE feltene er 0 (ligg, står, sum)
+ rows = rows.filter(r => {
+   const p = Number(r.pointsProne) || 0;
+   const s = Number(r.pointsStand) || 0;
+   const t = Number(r.pointsTotal ?? (p + s)) || 0; // fallback hvis total ikke satt
+   return !(p === 0 && s === 0 && t === 0);
+ });
 
   // sortering (som før; eksempel)
   rows.sort((a,b)=>{
