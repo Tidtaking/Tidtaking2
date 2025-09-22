@@ -326,13 +326,21 @@
         <div class="p-3 font-semibold">Topp 5 – totalsum</div>
         <ul id="res-best-top5" class="p-3 space-y-1 text-sm"></ul>
       </div>
-      <div class="rounded-xl border bg-white">
-        <div class="p-3 font-semibold">Personlige rekorder (PB)</div>
-        <table class="w-full text-sm">
-          <thead class="bg-slate-50"><tr><th class="p-2">Utøver</th><th class="p-2 text-right">PB</th><th class="p-2">Øvelse</th><th class="p-2">Dato</th></tr></thead>
-          <tbody id="res-best-pb"></tbody>
-        </table>
-      </div>
+  <div class="rounded-xl border bg-white">
+  <div class="p-3 font-semibold flex items-center justify-between gap-2">
+    <span>Personlige rekorder (PB)</span>
+    <input id="res-pb-q" class="h-8 w-48 rounded-lg border px-2 text-sm" placeholder="Søk utøver…"/>
+  </div>
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50">
+      <tr><th class="p-2">Utøver</th><th class="p-2 text-right">PB</th><th class="p-2">Øvelse</th><th class="p-2">Dato</th></tr>
+    </thead>
+    <tbody id="res-best-pb">
+      <tr><td colspan="4" class="p-3 text-slate-500">Søk etter en utøver for å se PB.</td></tr>
+    </tbody>
+  </table>
+</div>
+
       <div class="rounded-xl border bg-white">
         <div class="p-3 font-semibold">PB per øvelse</div>
         <table class="w-full text-sm">
@@ -2598,6 +2606,55 @@ function renderResultsBests(){
       <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
     </tr>`).join('');
 }
+    function computePBIndex(){
+  const rows = state.resultsAll || [];
+  const byAth = new Map();
+
+  for (const r of rows){
+    const athlete = (r.athlete || '').trim();
+    if (!athlete) continue;
+
+    const p = r.pointsProne || 0;
+    const s = r.pointsStand || 0;
+    // Skjul rader som er 0+0
+    if (p === 0 && s === 0) continue;
+
+    const tot = r.pointsTotal ?? (p + s);
+    const cur = byAth.get(athlete);
+    if (!cur || tot > cur.pb){
+      byAth.set(athlete, { athlete, pb: tot, exercise: r.exercise || '', date: r.date });
+    }
+  }
+
+  state.pbIndex = Array.from(byAth.values())
+    .sort((a,b)=> (b.pb - a.pb) || a.athlete.localeCompare(b.athlete));
+
+  return state.pbIndex;
+}
+
+function renderPBSearch(){
+  const q  = (document.getElementById('res-pb-q')?.value || '').toLowerCase().trim();
+  const tb = document.getElementById('res-best-pb');
+  if (!tb) return;
+
+  const list = state.pbIndex || computePBIndex();
+  const filtered = q ? list.filter(x => (x.athlete||'').toLowerCase().includes(q)) : [];
+
+  if (filtered.length === 0){
+    tb.innerHTML = `<tr><td colspan="4" class="p-3 text-slate-500">Søk etter en utøver for å se PB.</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = filtered.slice(0,50).map(r=>`
+    <tr class="border-t">
+      <td class="p-2">${escapeHTML(r.athlete)}</td>
+      <td class="p-2 text-right">${r.pb}</td>
+      <td class="p-2">${escapeHTML(r.exercise || '')}</td>
+      <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+    </tr>
+  `).join('');
+}
+
 
 function renderResults(){
 const dEl = document.getElementById('res-date');
@@ -2652,6 +2709,8 @@ URL.revokeObjectURL(url);
 function bindResultsUIEnhanced(){
 document.getElementById('res-prone')?.addEventListener('input', renderResults);
 document.getElementById('res-stand')?.addEventListener('input', renderResults);
+  document.getElementById('res-pb-q')?.addEventListener('input', renderPBSearch);
+
 document.getElementById('res-save')?.addEventListener('click', async ()=>{
 const athlete = document.getElementById('res-athlete')?.value.trim();
 const exercise = document.getElementById('res-ex')?.value.trim();
@@ -2721,6 +2780,9 @@ document.getElementById('res-export-csv')?.addEventListener('click', exportFilte
     await supaLoadResults(1000);
     bindResultsUIEnhanced();
     applyResultsFilterAndSort();
+    computePBIndex();
+renderPBSearch();
+
     renderResults();
   }
 
