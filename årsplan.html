@@ -2427,22 +2427,37 @@ function applyResultsFilterAndSort(){
   if (from)  rows = rows.filter(r => r.date >= from);
   if (to)    rows = rows.filter(r => r.date <= to);
 
-  const cmp = {
-    date_desc:   (a,b)=> b.date.localeCompare(a.date),
-    date_asc:    (a,b)=> a.date.localeCompare(b.date),
-    total_desc:  (a,b)=> (b.pointsTotal||0) - (a.pointsTotal||0),
-    total_asc:   (a,b)=> (a.pointsTotal||0) - (b.pointsTotal||0),
-    prone_desc:  (a,b)=> (b.pointsProne||0) - (a.pointsProne||0),
-    stand_desc:  (a,b)=> (b.pointsStand||0) - (a.pointsStand||0),
-    name_asc:    (a,b)=> (a.athlete||'').localeCompare(b.athlete||'')
-  }[sort] || ((a,b)=> b.date.localeCompare(a.date));
-  rows.sort(cmp);
++ // Skjul rader der ALLE feltene er 0 (ligg, står, sum)
++ rows = rows.filter(r => {
++   const p = Number(r.pointsProne) || 0;
++   const s = Number(r.pointsStand) || 0;
++   const t = Number(r.pointsTotal ?? (p + s)) || 0; // fallback hvis total ikke satt
++   return !(p === 0 && s === 0 && t === 0);
++ });
 
-  const countEl = document.getElementById('res-count');
-  if (countEl) countEl.textContent = `Viser ${Math.min(lim, rows.length)} av ${rows.length} (totalt ${state.resultsAll.length})`;
+  // sortering (som før; eksempel)
+  rows.sort((a,b)=>{
+    const A = a, B = b;
+    switch (sort){
+      case 'date_asc':   return A.date.localeCompare(B.date);
+      case 'total_desc': return (B.pointsTotal||((B.pointsProne||0)+(B.pointsStand||0))) - (A.pointsTotal||((A.pointsProne||0)+(A.pointsStand||0)));
+      case 'total_asc':  return (A.pointsTotal||((A.pointsProne||0)+(A.pointsStand||0))) - (B.pointsTotal||((B.pointsProne||0)+(B.pointsStand||0)));
+      case 'prone_desc': return (B.pointsProne||0) - (A.pointsProne||0);
+      case 'stand_desc': return (B.pointsStand||0) - (A.pointsStand||0);
+      case 'name_asc':   return (A.athlete||'').localeCompare(B.athlete||'');
+      // default: date_desc
+      default:           return B.date.localeCompare(A.date);
+    }
+  });
 
+  // begrensning + state
   state.results = rows.slice(0, lim);
-  return rows;
+
+  // oppdater teller
+  const el = document.getElementById('res-count');
+  if(el) el.textContent = `${rows.length} treff`;
+
+  return state.results;
 }
 
 function renderResultsBests(){
