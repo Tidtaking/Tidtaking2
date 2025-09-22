@@ -1205,15 +1205,25 @@ const esc = s => (s||'').replace(/[&<>"']/g, m => (
             ${ages}
             ${notes}
           </div>
-          <div class="shrink-0 flex gap-1">
-            <button data-act="view" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
-            <button data-act="edit" class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
-            <button data-act="dup"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
-            <button data-act="del"  class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
-          </div>
+<div class="shrink-0 flex gap-1">
+   <button data-act="view"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
+   <button data-act="edit"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
+   <button data-act="dup"   class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
+   <button data-act="copy"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Kopier</button>
+   <button data-act="del"   class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
+ </div>
         </div>
       `;
     }
+
++ <div class="shrink-0 flex gap-1">
++   <button data-act="view"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Vis</button>
++   <button data-act="edit"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Rediger</button>
++   <button data-act="dup"   class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Dupliser</button>
++   <button data-act="copy"  class="rounded-xl border bg-white px-2 py-1 text-xs shadow-sm">Kopier</button>
++   <button data-act="del"   class="rounded-xl border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 shadow-sm">Slett</button>
++ </div>
+
     function openDayView(dateISO, eventsForDay){
       const d = dayjs(dateISO);
       const items = sortEventsByDayOrder(dateISO, eventsForDay);
@@ -1232,6 +1242,24 @@ const esc = s => (s||'').replace(/[&<>"']/g, m => (
           </div>
         </div>
       `;
+      // Etter body.innerHTML = `...`;
+const bar = document.createElement('div');
+bar.className = 'flex items-center justify-between';
+bar.innerHTML = `
+  <div class="text-sm text-slate-500">${items.length} hendelse${items.length===1?'':'r'}</div>
+  <div class="flex gap-2">
+    <button id="btn-copy-day" class="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">
+      Kopier dagens innhold
+    </button>
+  </div>
+`;
+body.querySelector('.space-y-3')?.prepend(bar);
+
+document.getElementById('btn-copy-day')?.addEventListener('click', async (ev)=>{
+  const txt = formatDayForCopy(dateISO, items);
+  await copyTextToClipboard(txt, ev.currentTarget);
+});
+
 
       const list = $('#dnd-list');
       let dragEl = null;
@@ -1247,6 +1275,11 @@ const esc = s => (s||'').replace(/[&<>"']/g, m => (
         if(btn.dataset.act === 'edit') return openDialog({...evObj});
         if(btn.dataset.act === 'dup'){ const copy = { ...evObj, id: uid(), title: (evObj.title||evObj.type)+' (kopi)' }; state.events.push(copy); lsSet(KEY.EVENTS, state.events); render(); await supaUpsertEvent(copy); const order = getOrderForDate(dateISO); setOrderForDate(dateISO, [...order, copy.id]); return; }
         if(btn.dataset.act === 'del'){ if(!confirm('Slette denne hendelsen?')) return; state.events = state.events.filter(x=> x.id !== evObj.id); lsSet(KEY.EVENTS, state.events); render(); await supaDeleteEvent(evObj); const ids = getOrderForDate(dateISO).filter(x=> x !== evObj.id); setOrderForDate(dateISO, ids); const remaining = state.events.filter(x=> dayjs(x.date).isSame(dateISO,'day')); return openDayView(dateISO, remaining); }
+        if(btn.dataset.act === 'copy'){ 
+        const text = formatEventForCopy(evObj);
+         await copyTextToClipboard(text, btn);
+         return;
+       }
       });
 
       $('#btn-new-on-day')?.addEventListener('click', ()=> openDialog({ date: dateISO }));
@@ -1921,6 +1954,70 @@ function openBankDialog(data = {}){
         };
       });
     }
+// --- KOPIERING: formater tekst for ett event / en dag ---
+function formatEventForCopy(e){
+  const title = (e.title || (e.type + (e.raceSubtype ? ' – ' + e.raceSubtype : ''))).trim();
+  const meta = [
+    e.type || '',
+    e.location || '',
+    e.modality || '',
+    e.intensity || '',
+    e.durationMin ? `${e.durationMin} min` : ''
+  ].filter(Boolean).join(' • ');
+
+  const parts = [];
+  parts.push(`• ${title}`);
+  if (meta) parts.push(`  – ${meta}`);
+  if ((e.age||[]).length) parts.push(`  – Aldersgrupper: ${(e.age||[]).join(', ')}`);
+
+  if (e.shooting && (e.shooting.stilling || e.shooting.skudd)){
+    let line = `  – Skyting: ${e.shooting.stilling || ''}`.trim();
+    if (e.shooting.skudd) line += (e.shooting.stilling ? ', ' : ' ') + `${e.shooting.skudd} skudd`;
+    parts.push(line);
+    if ((e.shooting.tema||[]).length) parts.push(`  – Tema: ${(e.shooting.tema||[]).join(', ')}`);
+  }
+
+  if (e.type === 'Konkurranse' && (e.raceSubtype||'').trim()){
+    parts.push(`  – Konkurranse: ${e.raceSubtype.trim()}`);
+  }
+
+  if ((e.notes||'').trim()){
+    // ryddig innrykk på flerlinje
+    const note = String(e.notes).trim().replace(/\r?\n/g, '\n    ');
+    parts.push(`  – Notat: ${note}`);
+  }
+
+  return parts.join('\n');
+}
+
+function formatDayForCopy(dateISO, events){
+  const header = dayjs(dateISO).format('dddd D. MMMM YYYY');
+  const lines = [header, ''];
+  events.forEach(e => { lines.push(formatEventForCopy(e), ''); });
+  return lines.join('\n');
+}
+
+async function copyTextToClipboard(text, btn){
+  try{
+    await navigator.clipboard.writeText(text);
+  }catch{
+    // fallback for eldre browsere
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  if(btn){
+    const old = btn.textContent;
+    btn.textContent = 'Kopiert!';
+    btn.disabled = true;
+    setTimeout(()=>{ btn.textContent = old; btn.disabled = false; }, 1200);
+  }
+}
 
     // ---------- Admin: årsklasser ----------
     function renderAgeEditor(){
