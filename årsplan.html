@@ -2531,13 +2531,16 @@ async function supaLoadResults(limit = 1000){
   renderResults();
   renderResultsBests();
 }
+// Globalt (legg dette sammen med andre "state"/konstanter)
+let overrideSort = null; // kan settes av header-klikk
 
 function applyResultsFilterAndSort(){
   const qName = (document.getElementById('res-filter-name')?.value || '').toLowerCase().trim();
   const qEx   = (document.getElementById('res-filter-ex')?.value   || '').toLowerCase().trim();
   const from  = document.getElementById('res-filter-from')?.value;
   const to    = document.getElementById('res-filter-to')?.value;
-    const sort  = overrideSort || document.getElementById('res-sort')?.value || 'date_desc';
+const selectSort = document.getElementById('res-sort')?.value || 'date_desc';
+const sort = overrideSort || selectSort;  
   const lim   = state.resultsLimit || 100;
 
   let rows = [...(state.resultsAll || [])];
