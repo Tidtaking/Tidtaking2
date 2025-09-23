@@ -2537,7 +2537,7 @@ function applyResultsFilterAndSort(){
   const qEx   = (document.getElementById('res-filter-ex')?.value   || '').toLowerCase().trim();
   const from  = document.getElementById('res-filter-from')?.value;
   const to    = document.getElementById('res-filter-to')?.value;
-  const sort  = document.getElementById('res-sort')?.value || 'date_desc';
+    const sort  = overrideSort || document.getElementById('res-sort')?.value || 'date_desc';
   const lim   = state.resultsLimit || 100;
 
   let rows = [...(state.resultsAll || [])];
@@ -2554,20 +2554,34 @@ function applyResultsFilterAndSort(){
    return !(p === 0 && s === 0 && t === 0);
  });
 
-  // sortering (som før; eksempel)
+  // sortering
   rows.sort((a,b)=>{
     const A = a, B = b;
     switch (sort){
-      case 'date_asc':   return A.date.localeCompare(B.date);
-      case 'total_desc': return (B.pointsTotal||((B.pointsProne||0)+(B.pointsStand||0))) - (A.pointsTotal||((A.pointsProne||0)+(A.pointsStand||0)));
-      case 'total_asc':  return (A.pointsTotal||((A.pointsProne||0)+(A.pointsStand||0))) - (B.pointsTotal||((B.pointsProne||0)+(B.pointsStand||0)));
-      case 'prone_desc': return (B.pointsProne||0) - (A.pointsProne||0);
-      case 'stand_desc': return (B.pointsStand||0) - (A.pointsStand||0);
-      case 'name_asc':   return (A.athlete||'').localeCompare(B.athlete||'');
-      // default: date_desc
-      default:           return B.date.localeCompare(A.date);
+      case 'date_asc':     return A.date.localeCompare(B.date);
+      case 'date_desc':    return B.date.localeCompare(A.date);
+
+      case 'total_desc':   return (B.pointsTotal ?? ((B.pointsProne||0)+(B.pointsStand||0)))
+                           - (A.pointsTotal ?? ((A.pointsProne||0)+(A.pointsStand||0)));
+      case 'total_asc':    return (A.pointsTotal ?? ((A.pointsProne||0)+(A.pointsStand||0)))
+                           - (B.pointsTotal ?? ((B.pointsProne||0)+(B.pointsStand||0)));
+
+      case 'prone_desc':   return (B.pointsProne||0) - (A.pointsProne||0);
+      case 'prone_asc':    return (A.pointsProne||0) - (B.pointsProne||0);
+
+      case 'stand_desc':   return (B.pointsStand||0) - (A.pointsStand||0);
+      case 'stand_asc':    return (A.pointsStand||0) - (B.pointsStand||0);
+
+      case 'name_asc':     return (A.athlete||'').localeCompare(B.athlete||'');
+      case 'name_desc':    return (B.athlete||'').localeCompare(A.athlete||'');
+
+      case 'exercise_asc': return (A.exercise||'').localeCompare(B.exercise||'');
+      case 'exercise_desc':return (B.exercise||'').localeCompare(A.exercise||'');
+
+      default:             return B.date.localeCompare(A.date); // fallback
     }
   });
+
 
   // begrensning + state
   state.results = rows.slice(0, lim);
@@ -2840,54 +2854,149 @@ a.href = url; a.download = `skyteresultater_filtrert_${dayjs().format('YYYYMMDD_
 document.body.appendChild(a); a.click(); a.remove();
 URL.revokeObjectURL(url);
 }
+function ensureSortOptionExists(value){
+  const sel = document.getElementById('res-sort');
+  if(!sel || Array.from(sel.options).some(o => o.value === value)) return;
+
+  const labelMap = {
+    'date_desc':'Dato ↓','date_asc':'Dato ↑',
+    'name_asc':'Navn A–Å','name_desc':'Navn Å–A',
+    'exercise_asc':'Øvelse A–Å','exercise_desc':'Øvelse Å–A',
+    'prone_desc':'Liggende ↓','prone_asc':'Liggende ↑',
+    'stand_desc':'Stående ↓','stand_asc':'Stående ↑',
+    'total_desc':'Sum ↓','total_asc':'Sum ↑'
+  };
+  const opt = document.createElement('option');
+  opt.value = value; opt.textContent = labelMap[value] || value;
+  sel.appendChild(opt);
+}
+
+let resultsHeaderSortBound = false;
+
+function updateSortIndicators(){
+  const sel = document.getElementById('res-sort');
+  const key = sel?.value || 'date_desc';
+
+  const ths = document.querySelectorAll('#tab-results thead th');
+  ths.forEach(th=>{
+    const base = th.dataset.baseLabel || th.textContent.trim();
+    th.dataset.baseLabel = base;
+    const isThis =
+      (key.startsWith('date')     && base.startsWith('Dato'))     ||
+      (key.startsWith('name')     && base.startsWith('Utøver'))   ||
+      (key.startsWith('exercise') && base.startsWith('Øvelse'))   ||
+      (key.startsWith('prone')    && base.startsWith('Lig.'))     ||
+      (key.startsWith('stand')    && base.startsWith('Stå.'))     ||
+      (key.startsWith('total')    && base.startsWith('Sum'));
+
+    const dir = key.endsWith('_asc') ? '↑' : (key.endsWith('_desc') ? '↓' : '');
+    const arrow = isThis ? ` <span class="opacity-60">${dir}</span>` : '';
+    const right = th.classList.contains('text-right') ? 'justify-end' : 'justify-start';
+    th.innerHTML = `<div class="flex ${right} items-center gap-1"><span>${base}</span>${arrow}</div>`;
+  });
+}
+
+function setupResultsHeaderSorting(){
+  if (resultsHeaderSortBound) return;
+  resultsHeaderSortBound = true;
+
+  const ths = document.querySelectorAll('#tab-results thead th');
+  const map = [
+    { idx:0, asc:'date_asc',     desc:'date_desc'     }, // Dato
+    { idx:1, asc:'name_asc',     desc:'name_desc'     }, // Utøver
+    { idx:2, asc:'exercise_asc', desc:'exercise_desc' }, // Øvelse
+    { idx:3, asc:'prone_asc',    desc:'prone_desc'    }, // Lig.
+    { idx:4, asc:'stand_asc',    desc:'stand_desc'    }, // Stå.
+    { idx:5, asc:'total_asc',    desc:'total_desc'    }, // Sum
+  ];
+
+  map.forEach(m=>{
+    const th = ths[m.idx];
+    if(!th) return;
+    th.classList.add('cursor-pointer', 'select-none');
+    th.addEventListener('click', ()=>{
+      const sel = document.getElementById('res-sort');
+      const current = sel?.value || 'date_desc';
+      const next = (current === m.desc) ? m.asc : m.desc;
+
+      ensureSortOptionExists(next);
+      if (sel) sel.value = next;
+
+      applyResultsFilterAndSort(next);
+      renderResults();
+      updateSortIndicators();
+    });
+  });
+
+  updateSortIndicators();
+}
 
 
 function bindResultsUIEnhanced(){
-document.getElementById('res-prone')?.addEventListener('input', renderResults);
-document.getElementById('res-stand')?.addEventListener('input', renderResults);
+  document.getElementById('res-prone')?.addEventListener('input', renderResults);
+  document.getElementById('res-stand')?.addEventListener('input', renderResults);
   document.getElementById('res-pb-q')?.addEventListener('input', renderPBSearch);
 
-document.getElementById('res-save')?.addEventListener('click', async ()=>{
-const athlete = document.getElementById('res-athlete')?.value.trim();
-const exercise = document.getElementById('res-ex')?.value.trim();
-const date = document.getElementById('res-date')?.value;
-const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
-const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
-if(!athlete){ alert('Skriv inn utøver.'); return; }
-if(!date){ alert('Velg dato.'); return; }
-const model = { id: uid(), date, athlete, exercise: exercise || '', pointsProne, pointsStand };
-try{
-const saved = await supaInsertResult(model);
-state.resultsAll = [saved, ...(state.resultsAll||[])];
-applyResultsFilterAndSort();
-renderResults();
+  document.getElementById('res-save')?.addEventListener('click', async ()=>{
+    const athlete = document.getElementById('res-athlete')?.value.trim();
+    const exercise = document.getElementById('res-ex')?.value.trim();
+    const date = document.getElementById('res-date')?.value;
+    const pointsProne = parseInt(document.getElementById('res-prone')?.value || '0', 10) || 0;
+    const pointsStand = parseInt(document.getElementById('res-stand')?.value || '0', 10) || 0;
+    if(!athlete){ alert('Skriv inn utøver.'); return; }
+    if(!date){ alert('Velg dato.'); return; }
+    const model = { id: uid(), date, athlete, exercise: exercise || '', pointsProne, pointsStand };
+    try{
+      const saved = await supaInsertResult(model);
+      state.resultsAll = [saved, ...(state.resultsAll||[])];
+      applyResultsFilterAndSort();
+      renderResults();
 
-// Oppdater ALLE “historiske beste”-boksene og PB-tabellene
-renderResultsBests();
-computePBIndex();
-renderPBSearch();
+      // Oppdater ALLE “historiske beste”-boksene og PB-tabellene
+      renderResultsBests();
+      computePBIndex();
+      renderPBSearch();
 
-document.getElementById('res-athlete').value='';
-document.getElementById('res-ex').value='';
-document.getElementById('res-prone').value='';
-document.getElementById('res-stand').value='';
-renderResults();
-}catch(err){ console.error('Lagre resultat feilet', err); alert('Kunne ikke lagre resultat til skyen.'); }
-});
-const onFilter = debounce(()=>{ applyResultsFilterAndSort(); renderResults(); }, 120);
-['res-filter-name','res-filter-ex','res-filter-from','res-filter-to','res-sort']
-.forEach(id => document.getElementById(id)?.addEventListener('input', onFilter));
-document.getElementById('res-clear')?.addEventListener('click', ()=>{
-['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-const srt=document.getElementById('res-sort'); if(srt) srt.value='date_desc';
-applyResultsFilterAndSort(); renderResults();
-});
-document.getElementById('res-refresh')?.addEventListener('click', ()=> supaLoadResults(Math.max(1000, state.resultsLimit||100)));
-document.getElementById('res-load-more')?.addEventListener('click', ()=>{
-state.resultsLimit = (state.resultsLimit||100) + 200;
-applyResultsFilterAndSort(); renderResults();
-});
-document.getElementById('res-export-csv')?.addEventListener('click', exportFilteredCSV);
+      document.getElementById('res-athlete').value='';
+      document.getElementById('res-ex').value='';
+      document.getElementById('res-prone').value='';
+      document.getElementById('res-stand').value='';
+      renderResults();
+    }catch(err){ console.error('Lagre resultat feilet', err); alert('Kunne ikke lagre resultat til skyen.'); }
+  });
+
+  // NB: ta med updateSortIndicators() her så pilene oppdateres når <select> endres
+  const onFilter = debounce(()=>{
+    applyResultsFilterAndSort();
+    renderResults();
+    updateSortIndicators();   // ← NY
+  }, 120);
+
+  ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to','res-sort']
+    .forEach(id => document.getElementById(id)?.addEventListener('input', onFilter));
+
+  document.getElementById('res-clear')?.addEventListener('click', ()=>{
+    ['res-filter-name','res-filter-ex','res-filter-from','res-filter-to'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    const srt=document.getElementById('res-sort'); if(srt) srt.value='date_desc';
+    applyResultsFilterAndSort(); renderResults(); updateSortIndicators(); // ← legg til piler her også
+  });
+
+  document.getElementById('res-refresh')?.addEventListener('click', ()=> 
+    supaLoadResults(Math.max(1000, state.resultsLimit||100))
+  );
+
+  document.getElementById('res-load-more')?.addEventListener('click', ()=>{
+    state.resultsLimit = (state.resultsLimit||100) + 200;
+    applyResultsFilterAndSort(); renderResults(); updateSortIndicators();
+  });
+
+  document.getElementById('res-export-csv')?.addEventListener('click', exportFilteredCSV);
+
+  // === (3) KOLONNE-KLIKK + PILER I HEADER ===
+  setupResultsHeaderSorting();   // binder klikk på Dato/Utøver/Øvelse/Lig./Stå./Sum
+  updateSortIndicators();        // tegner første pil i header basert på valgt sort
 }
 
 
