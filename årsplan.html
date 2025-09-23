@@ -325,6 +325,12 @@
         <div class="p-3 font-semibold">Topp 5 – totalsum</div>
         <ul id="res-best-top5" class="p-3 space-y-1 text-sm"></ul>
       </div>
+      <div class="p-3 font-semibold border-t mt-2">Topp 5 – liggende</div>
+<ul id="res-best-top5-prone" class="px-3 pb-2 space-y-1 text-sm"></ul>
+
+<div class="p-3 font-semibold border-t mt-2">Topp 5 – stående</div>
+<ul id="res-best-top5-stand" class="px-3 pb-3 space-y-1 text-sm"></ul>
+      
   <div class="rounded-xl border bg-white">
   <div class="p-3 font-semibold flex items-center justify-between gap-2">
     <span>Personlige rekorder (PB)</span>
@@ -2622,6 +2628,71 @@ function renderBestTop5(){
     </li>
   `).join('');
 }
+function computeTop5ByFieldUnique(field){ // field: 'pointsProne' | 'pointsStand'
+  const rows = state.resultsAll || [];
+  const bestByAthlete = new Map();
+
+  for (const r of rows){
+    const athlete = (r.athlete || '').trim();
+    if (!athlete) continue;
+
+    const v = Number(r[field] || 0);
+    if (v <= 0) continue; // ignorer nuller
+
+    const cur = bestByAthlete.get(athlete);
+    if (!cur || v > cur.value){
+      bestByAthlete.set(athlete, {
+        athlete,
+        value: v,
+        exercise: r.exercise || '',
+        date: r.date
+      });
+    }
+  }
+
+  return Array.from(bestByAthlete.values())
+    .sort((a,b)=> b.value - a.value)
+    .slice(0, 5);
+}
+
+function computeTop5ProneUnique(){
+  state.bestTop5Prone = computeTop5ByFieldUnique('pointsProne');
+  return state.bestTop5Prone;
+}
+function computeTop5StandUnique(){
+  state.bestTop5Stand = computeTop5ByFieldUnique('pointsStand');
+  return state.bestTop5Stand;
+}
+
+function renderBestTop5Prone(){
+  const ul = document.getElementById('res-best-top5-prone');
+  if (!ul) return;
+  const list = state.bestTop5Prone || computeTop5ProneUnique();
+  ul.innerHTML = list.length
+    ? list.map(x => `
+        <li class="flex items-center justify-between">
+          <span class="truncate">
+            ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
+          </span>
+          <span class="tabular-nums font-semibold">${x.value}</span>
+        </li>`).join('')
+    : `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
+}
+
+function renderBestTop5Stand(){
+  const ul = document.getElementById('res-best-top5-stand');
+  if (!ul) return;
+  const list = state.bestTop5Stand || computeTop5StandUnique();
+  ul.innerHTML = list.length
+    ? list.map(x => `
+        <li class="flex items-center justify-between">
+          <span class="truncate">
+            ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
+          </span>
+          <span class="tabular-nums font-semibold">${x.value}</span>
+        </li>`).join('')
+    : `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
+}
 
   // PB per utøver
   const bestByAthlete = new Map();
@@ -2827,8 +2898,9 @@ const saved = await supaInsertResult(model);
 state.resultsAll = [saved, ...(state.resultsAll||[])];
 applyResultsFilterAndSort();
 renderResults();
-  computeTop5Unique();
-renderBestTop5();
+computeTop5ProneUnique();  renderBestTop5Prone();
+computeTop5StandUnique();  renderBestTop5Stand();
+
 document.getElementById('res-athlete').value='';
 document.getElementById('res-ex').value='';
 document.getElementById('res-prone').value='';
@@ -2889,6 +2961,8 @@ document.getElementById('res-export-csv')?.addEventListener('click', exportFilte
 renderPBSearch();
     computeTop5Unique();
 renderBestTop5();
+computeTop5ProneUnique();  renderBestTop5Prone();
+computeTop5StandUnique();  renderBestTop5Stand();
 
     renderResults();
   }
