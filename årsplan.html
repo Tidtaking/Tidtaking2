@@ -2728,6 +2728,73 @@ function renderBestTop5Stand(){
       <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
     </tr>`).join('');
 }
+    // === TOPP5: liggende og stående (unik per utøver) ===
+function computeTop5ByFieldUnique(field){ // 'pointsProne' | 'pointsStand'
+  const rows = state.resultsAll || [];
+  const bestByAthlete = new Map();
+
+  for (const r of rows){
+    const athlete = (r.athlete || '').trim();
+    if (!athlete) continue;
+
+    const v = Number(r[field] || 0);
+    if (v <= 0) continue; // ignorer 0
+
+    const cur = bestByAthlete.get(athlete);
+    if (!cur || v > cur.value){
+      bestByAthlete.set(athlete, {
+        athlete,
+        value: v,
+        exercise: r.exercise || '',
+        date: r.date
+      });
+    }
+  }
+
+  return Array.from(bestByAthlete.values())
+    .sort((a,b)=> b.value - a.value)
+    .slice(0, 5);
+}
+
+function computeTop5ProneUnique(){
+  state.bestTop5Prone = computeTop5ByFieldUnique('pointsProne');
+  return state.bestTop5Prone;
+}
+function computeTop5StandUnique(){
+  state.bestTop5Stand = computeTop5ByFieldUnique('pointsStand');
+  return state.bestTop5Stand;
+}
+
+function renderBestTop5Prone(){
+  const ul = document.getElementById('res-best-top5-prone');
+  if (!ul) return;
+  const list = state.bestTop5Prone || computeTop5ProneUnique();
+  ul.innerHTML = list.length
+    ? list.map(x => `
+        <li class="flex items-center justify-between">
+          <span class="truncate">
+            ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
+          </span>
+          <span class="tabular-nums font-semibold">${x.value}</span>
+        </li>`).join('')
+    : `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
+}
+
+function renderBestTop5Stand(){
+  const ul = document.getElementById('res-best-top5-stand');
+  if (!ul) return;
+  const list = state.bestTop5Stand || computeTop5StandUnique();
+  ul.innerHTML = list.length
+    ? list.map(x => `
+        <li class="flex items-center justify-between">
+          <span class="truncate">
+            ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
+          </span>
+          <span class="tabular-nums font-semibold">${x.value}</span>
+        </li>`).join('')
+    : `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
+}
+
     function computePBIndex(){
   const rows = state.resultsAll || [];
   const byAth = new Map();
