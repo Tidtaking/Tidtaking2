@@ -2880,8 +2880,7 @@ function updateSortIndicators(){
   const sel = document.getElementById('res-sort');
   const key = sel?.value || 'date_desc';
 
-  const ths = document.querySelectorAll('#tab-results thead th');
-  ths.forEach(th=>{
+const ths = getResultsHeaderTHs();  ths.forEach(th=>{
     const base = th.dataset.baseLabel || th.textContent.trim();
     th.dataset.baseLabel = base;
     const isThis =
@@ -2898,12 +2897,16 @@ function updateSortIndicators(){
     th.innerHTML = `<div class="flex ${right} items-center gap-1"><span>${base}</span>${arrow}</div>`;
   });
 }
+function getResultsHeaderTHs(){
+  const thead = document.querySelector('#res-table')?.closest('table')?.querySelector('thead');
+  return thead ? Array.from(thead.querySelectorAll('th')) : [];
+}
 
 function setupResultsHeaderSorting(){
   if (resultsHeaderSortBound) return;
   resultsHeaderSortBound = true;
 
-  const ths = document.querySelectorAll('#tab-results thead th');
+const ths = getResultsHeaderTHs();
   const map = [
     { idx:0, asc:'date_asc',     desc:'date_desc'     }, // Dato
     { idx:1, asc:'name_asc',     desc:'name_desc'     }, // Utøver
@@ -2925,7 +2928,7 @@ function setupResultsHeaderSorting(){
       ensureSortOptionExists(next);
       if (sel) sel.value = next;
 
-      applyResultsFilterAndSort(next);
+applyResultsFilterAndSort();
       renderResults();
       updateSortIndicators();
     });
