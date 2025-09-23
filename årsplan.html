@@ -319,41 +319,54 @@
       <div class="text-xs text-slate-500"><span id="res-best-meta"></span></div>
     </div>
 
-    <!-- Historiske beste -->
-    <div class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="rounded-xl border bg-white">
-        <div class="p-3 font-semibold">Topp 5 – totalsum</div>
-        <ul id="res-best-top5" class="p-3 space-y-1 text-sm"></ul>
-      </div>
-      <div class="p-3 font-semibold border-t mt-2">Topp 5 – liggende</div>
-<ul id="res-best-top5-prone" class="px-3 pb-2 space-y-1 text-sm"></ul>
-
-<div class="p-3 font-semibold border-t mt-2">Topp 5 – stående</div>
-<ul id="res-best-top5-stand" class="px-3 pb-3 space-y-1 text-sm"></ul>
-      
+   <!-- Historiske beste -->
+<div class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <!-- Topp 5 – totalsum -->
   <div class="rounded-xl border bg-white">
-  <div class="p-3 font-semibold flex items-center justify-between gap-2">
-    <span>Personlige rekorder (PB)</span>
-    <input id="res-pb-q" class="h-8 w-48 rounded-lg border px-2 text-sm" placeholder="Søk utøver…"/>
+    <div class="p-3 font-semibold">Topp 5 – totalsum</div>
+    <ul id="res-best-top5" class="p-3 space-y-1 text-sm"></ul>
   </div>
-  <table class="w-full text-sm">
-    <thead class="bg-slate-50">
-      <tr><th class="p-2">Utøver</th><th class="p-2 text-right">PB</th><th class="p-2">Øvelse</th><th class="p-2">Dato</th></tr>
-    </thead>
-    <tbody id="res-best-pb">
-      <tr><td colspan="4" class="p-3 text-slate-500">Søk etter en utøver for å se PB.</td></tr>
-    </tbody>
-  </table>
+
+  <!-- Topp 5 – liggende -->
+  <div class="rounded-xl border bg-white">
+    <div class="p-3 font-semibold">Topp 5 – liggende</div>
+    <ul id="res-best-top5-prone" class="p-3 space-y-1 text-sm"></ul>
+  </div>
+
+  <!-- Topp 5 – stående -->
+  <div class="rounded-xl border bg-white">
+    <div class="p-3 font-semibold">Topp 5 – stående</div>
+    <ul id="res-best-top5-stand" class="p-3 space-y-1 text-sm"></ul>
+  </div>
+
+  <!-- PB per øvelse (bredt kort) -->
+  <div class="rounded-xl border bg-white lg:col-span-2">
+    <div class="p-3 font-semibold">PB per øvelse</div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr><th class="p-2">Utøver</th><th class="p-2">Øvelse</th><th class="p-2 text-right">PB</th><th class="p-2">Dato</th></tr>
+      </thead>
+      <tbody id="res-best-pb-ex"></tbody>
+    </table>
+  </div>
+
+  <!-- PB-søk (smalt kort) -->
+  <div class="rounded-xl border bg-white">
+    <div class="p-3 font-semibold flex items-center justify-between gap-2">
+      <span>Personlige rekorder (PB)</span>
+      <input id="res-pb-q" class="h-8 w-48 rounded-lg border px-2 text-sm" placeholder="Søk utøver…"/>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr><th class="p-2">Utøver</th><th class="p-2 text-right">PB</th><th class="p-2">Øvelse</th><th class="p-2">Dato</th></tr>
+      </thead>
+      <tbody id="res-best-pb">
+        <tr><td colspan="4" class="p-3 text-slate-500">Søk etter en utøver for å se PB.</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
-      <div class="rounded-xl border bg-white">
-        <div class="p-3 font-semibold">PB per øvelse</div>
-        <table class="w-full text-sm">
-          <thead class="bg-slate-50"><tr><th class="p-2">Utøver</th><th class="p-2">Øvelse</th><th class="p-2 text-right">PB</th><th class="p-2">Dato</th></tr></thead>
-          <tbody id="res-best-pb-ex"></tbody>
-        </table>
-      </div>
-    </div>
 
     <!-- Skjema: legg inn resultat -->
     <div class="border-t p-4 grid grid-cols-1 gap-3">
@@ -2569,45 +2582,36 @@ function applyResultsFilterAndSort(){
 function renderResultsBests(){
   const rows = state.resultsAll || [];
 
+  // Meta
   const meta = document.getElementById('res-best-meta');
   if (meta) meta.textContent = `${rows.length} registreringer totalt`;
 
-  // Topp 5 – totalsum
-  const top5 = [...rows].sort((a,b)=> (b.pointsTotal||0)-(a.pointsTotal||0)).slice(0,5);
-  const ul = document.getElementById('res-best-top5');
-  if (ul) ul.innerHTML = top5.map(r =>
-    `<li>${escapeHTML(r.athlete)} – ${r.pointsTotal} <span class="text-slate-500">(${escapeHTML(r.exercise||'')})</span></li>`
-  ).join('');
-function computeTop5Unique(){
-  const rows = state.resultsAll || [];
-  const bestByAthlete = new Map();
+  // Topp 5 (totalsum, liggende, stående) – identisk stil
+  computeTop5Unique();       renderBestTop5();
+  computeTop5ProneUnique();  renderBestTop5Prone();
+  computeTop5StandUnique();  renderBestTop5Stand();
 
+  // PB per øvelse (én beste rad per øvelse)
+  const bestByExercise = new Map();
   for (const r of rows){
-    const athlete = (r.athlete || '').trim();
-    if (!athlete) continue;
-
-    const p = Number(r.pointsProne || 0);
-    const s = Number(r.pointsStand || 0);
-    if (p === 0 && s === 0) continue;           // skjul 0+0
-
-    const total = r.pointsTotal ?? (p + s);
-    const cur = bestByAthlete.get(athlete);
-    if (!cur || total > cur.total){
-      bestByAthlete.set(athlete, {
-        athlete,
-        total,
-        exercise: r.exercise || '',
-        date: r.date
-      });
-    }
+    const ex = (r.exercise || '').trim();
+    if (!ex) continue;
+    const total = r.pointsTotal ?? ((r.pointsProne||0) + (r.pointsStand||0));
+    const prev = bestByExercise.get(ex);
+    if (!prev || total > prev.pointsTotal) bestByExercise.set(ex, r);
   }
-
-  state.bestTop5 = Array.from(bestByAthlete.values())
-    .sort((a,b)=> b.total - a.total)
-    .slice(0, 5);
-
-  return state.bestTop5;
+  const tbEx = document.getElementById('res-best-pb-ex');
+  if (tbEx) tbEx.innerHTML = Array.from(bestByExercise.values())
+    .sort((a,b)=> (a.exercise||'').localeCompare(b.exercise||''))
+    .map(r => `
+      <tr class="border-t">
+        <td class="p-2">${escapeHTML(r.athlete||'')}</td>
+        <td class="p-2">${escapeHTML(r.exercise||'')}</td>
+        <td class="p-2 text-right">${r.pointsTotal}</td>
+        <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
+      </tr>`).join('');
 }
+
 
 function renderBestTop5(){
   const ul = document.getElementById('res-best-top5');
