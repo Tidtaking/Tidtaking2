@@ -2632,106 +2632,19 @@ function renderBestTop5(){
     </li>
   `).join('');
 }
-function computeTop5ByFieldUnique(field){ // field: 'pointsProne' | 'pointsStand'
-  const rows = state.resultsAll || [];
-  const bestByAthlete = new Map();
 
-  for (const r of rows){
-    const athlete = (r.athlete || '').trim();
-    if (!athlete) continue;
-
-    const v = Number(r[field] || 0);
-    if (v <= 0) continue; // ignorer nuller
-
-    const cur = bestByAthlete.get(athlete);
-    if (!cur || v > cur.value){
-      bestByAthlete.set(athlete, {
-        athlete,
-        value: v,
-        exercise: r.exercise || '',
-        date: r.date
-      });
-    }
-  }
-
-  return Array.from(bestByAthlete.values())
-    .sort((a,b)=> b.value - a.value)
-    .slice(0, 5);
-}
 
 function computeTop5ProneUnique(){
   state.bestTop5Prone = computeTop5ByFieldUnique('pointsProne');
   return state.bestTop5Prone;
 }
-function computeTop5StandUnique(){
-  state.bestTop5Stand = computeTop5ByFieldUnique('pointsStand');
-  return state.bestTop5Stand;
-}
 
-function renderBestTop5Prone(){
-  const ul = document.getElementById('res-best-top5-prone');
-  if (!ul) return;
-  const list = state.bestTop5Prone || computeTop5ProneUnique();
-  ul.innerHTML = list.length
-    ? list.map(x => `
-        <li class="flex items-center justify-between">
-          <span class="truncate">
-            ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
-          </span>
-          <span class="tabular-nums font-semibold">${x.value}</span>
-        </li>`).join('')
-    : `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
-}
 
-function renderBestTop5Stand(){
-  const ul = document.getElementById('res-best-top5-stand');
-  if (!ul) return;
-  const list = state.bestTop5Stand || computeTop5StandUnique();
-  ul.innerHTML = list.length
-    ? list.map(x => `
-        <li class="flex items-center justify-between">
-          <span class="truncate">
-            ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
-          </span>
-          <span class="tabular-nums font-semibold">${x.value}</span>
-        </li>`).join('')
-    : `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
-}
 
-  // PB per utøver
-  const bestByAthlete = new Map();
-  for (const r of rows){
-    const k = r.athlete || '';
-    if (!k) continue;
-    if (!bestByAthlete.has(k) || (r.pointsTotal||0) > (bestByAthlete.get(k).pointsTotal||0)) bestByAthlete.set(k, r);
-  }
-  const tbPb = document.getElementById('res-best-pb');
-  if (tbPb) tbPb.innerHTML = Array.from(bestByAthlete.values())
-    .sort((a,b)=> (b.pointsTotal||0)-(a.pointsTotal||0))
-    .map(r => `<tr class="border-t">
-      <td class="p-2">${escapeHTML(r.athlete)}</td>
-      <td class="p-2 text-right">${r.pointsTotal}</td>
-      <td class="p-2">${escapeHTML(r.exercise||'')}</td>
-      <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
-    </tr>`).join('');
 
-  // PB per øvelse
-  const bestByExercise = new Map();
-  for (const r of rows){
-    const k = r.exercise || '';
-    if (!k) continue;
-    if (!bestByExercise.has(k) || (r.pointsTotal||0) > (bestByExercise.get(k).pointsTotal||0)) bestByExercise.set(k, r);
-  }
-  const tbEx = document.getElementById('res-best-pb-ex');
-  if (tbEx) tbEx.innerHTML = Array.from(bestByExercise.values())
-    .sort((a,b)=> (a.exercise||'').localeCompare(b.exercise||''))
-    .map(r => `<tr class="border-t">
-      <td class="p-2">${escapeHTML(r.exercise||'')}</td>
-      <td class="p-2">${escapeHTML(r.athlete||'')}</td>
-      <td class="p-2 text-right">${r.pointsTotal}</td>
-      <td class="p-2">${dayjs(r.date).format('DD.MM.YYYY')}</td>
-    </tr>`).join('');
-}
+
+
+  
     // === TOPP5: liggende og stående (unik per utøver) ===
 function computeTop5ByFieldUnique(field){ // 'pointsProne' | 'pointsStand'
   const rows = state.resultsAll || [];
@@ -2760,10 +2673,7 @@ function computeTop5ByFieldUnique(field){ // 'pointsProne' | 'pointsStand'
     .slice(0, 5);
 }
 
-function computeTop5ProneUnique(){
-  state.bestTop5Prone = computeTop5ByFieldUnique('pointsProne');
-  return state.bestTop5Prone;
-}
+
 function computeTop5StandUnique(){
   state.bestTop5Stand = computeTop5ByFieldUnique('pointsStand');
   return state.bestTop5Stand;
@@ -2879,25 +2789,7 @@ function computeTop5Unique(){
   return state.bestTop5;
 }
 
-function renderBestTop5(){
-  const ul = document.getElementById('res-best-top5');
-  if (!ul) return;
 
-  const list = state.bestTop5 || computeTop5Unique();
-  if (!list.length){
-    ul.innerHTML = `<li class="text-slate-500">Ingen registreringer ennå.</li>`;
-    return;
-  }
-
-  ul.innerHTML = list.map(x => `
-    <li class="flex items-center justify-between">
-      <span class="truncate">
-        ${escapeHTML(x.athlete)}${x.exercise ? ' – ' + escapeHTML(x.exercise) : ''}
-      </span>
-      <span class="tabular-nums font-semibold">${x.total}</span>
-    </li>
-  `).join('');
-}
 
 
 function renderResults(){
@@ -2969,8 +2861,11 @@ const saved = await supaInsertResult(model);
 state.resultsAll = [saved, ...(state.resultsAll||[])];
 applyResultsFilterAndSort();
 renderResults();
-computeTop5ProneUnique();  renderBestTop5Prone();
-computeTop5StandUnique();  renderBestTop5Stand();
+
+// Oppdater ALLE “historiske beste”-boksene og PB-tabellene
+renderResultsBests();
+computePBIndex();
+renderPBSearch();
 
 document.getElementById('res-athlete').value='';
 document.getElementById('res-ex').value='';
