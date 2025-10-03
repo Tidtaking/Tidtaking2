@@ -1634,7 +1634,7 @@
       $('#btn-ics')?.addEventListener('click', ()=>{/* ICS eksport logikk her */});
       $('#btn-seed-bank')?.addEventListener('click', ()=>{/* Seed logikk her */});
       $('#btn-export-xlsx')?.addEventListener('click', ()=>{/* Excel eksport logikk her */});
-      $('#admin-search, #admin-q, #admin-from, #admin-to').forEach(el => el.addEventListener('input', renderAdminEvents));
+$$('#admin-search, #admin-q, #admin-from, #admin-to').forEach(el => el.addEventListener('input', renderAdminEvents));
       $('#age-add')?.addEventListener('click', ()=>{
         state.ageGroups.push({ id:'ny', label:'Ny gruppe' }); render();
       });
