@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hurtigkombinasjon Tidtaking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        :root { --brand: #18469a; }
+        body { background: #f5f7fb; }
+        .card { background: #fff; border-radius: 1rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: .75rem; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+        .btn-primary { background: var(--brand); color: white; }
+        .btn-secondary { background: #e2e8f0; color: #1e293b; }
+        .btn-danger { background: #fee2e2; color: #b91c1c; }
+        .btn-running { background: #dcfce7; color: #166534; }
+        .input-misses { width: 60px; text-align: center; padding: 4px; border: 1px solid #cbd5e1; border-radius: .5rem; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="bg-[var(--brand)] text-white p-3 shadow-md">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-xl font-bold">Hurtigkombinasjon</h1>
+            <p class="text-sm opacity-90">Onsdag 15. oktober 2025</p>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 space-y-4">
+
+        <section class="card">
+            <h3 class="font-semibold mb-3">1. Legg til deltakere</h3>
+            <div class="grid sm:grid-cols-[1fr_auto] gap-2">
+                <input type="text" id="newParticipantName" class="w-full border rounded-lg px-3 py-2" placeholder="Navn på utøver" />
+                <button id="btnAddParticipant" class="btn btn-primary">Legg til</button>
+            </div>
+            <div class="mt-4">
+                <button id="btnResetCompetition" class="btn btn-danger">Nullstill konkurranse</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-lg">2. Tidtaking og Skyting</h3>
+                <div class="flex items-center gap-4">
+                    <span id="currentRound" class="font-bold text-xl">Runde: 1 / 10</span>
+                    <button id="btnNextRound" class="btn btn-secondary">Neste Runde</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <h4 class="font-semibold mb-2">Startet denne runden:</h4>
+                    <div id="runningParticipants" class="space-y-2">
+                        </div>
+                </div>
+
+                <div class="flex-1">
+                    <h4 class="font-semibold mb-2">Klar til start:</h4>
+                    <div id="waitingParticipants" class="space-y-2">
+                        </div>
+                    <button id="btnStartGroup" class="btn btn-primary mt-3 w-full">Start gruppe</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h3 class="font-semibold mb-3">3. Resultater</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="p-2 text-left">Plass</th>
+                            <th class="p-2 text-left">Navn</th>
+                            <th class="p-2 text-left">Total Tid</th>
+                            <th class="p-2 text-left">Detaljer (Rundetid + Straff)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- SUPABASE CLIENT ---
+        const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const COMPETITION_ID = 'hurtigkomb_20251015'; // Unik ID for denne konkurransen
+
+        // --- GLOBAL STATE ---
+        let participants = [];
+        let currentRound = 1;
+        const PENALTY_SECONDS = 5;
+        const TOTAL_ROUNDS = 10;
+
+        // --- FUNKSJONER ---
+
+        /** Formaterer sekunder til et lesbart format (mm:ss.s) */
+        function formatTime(totalSeconds) {
+            if (totalSeconds === null || typeof totalSeconds === 'undefined') return '-';
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = (totalSeconds % 60).toFixed(1);
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(4, '0')}`;
+        }
+
+        /** Henter alle deltakere fra Supabase */
+        async function fetchParticipants() {
+            const { data, error } = await supabase
+                .from('participants')
+                .select('*')
+                .eq('competition_id', COMPETITION_ID)
+                .order('id');
+
+            if (error) {
+                console.error("Feil ved henting av deltakere:", error);
+                return;
+            }
+            participants = data.map(p => ({
+                ...p,
+                laps: Array.isArray(p.laps) ? p.laps : [] // Sikrer at laps er et array
+            }));
+            render();
+        }
+
+        /** Viser data på skjermen */
+        function render() {
+            renderParticipantLists();
+            renderResults();
+            document.getElementById('currentRound').innerText = `Runde: ${currentRound} / ${TOTAL_ROUNDS}`;
+        }
+
+        /** Viser listene over løpere som venter og som er i gang */
+        function renderParticipantLists() {
+            const waitingDiv = document.getElementById('waitingParticipants');
+            const runningDiv = document.getElementById('runningParticipants');
+            waitingDiv.innerHTML = '';
+            runningDiv.innerHTML = '';
+
+            // Sorterer ventende basert på forrige rundes resultat (sist først)
+            const lastRoundResults = participants.map(p => {
+                const lastLap = p.laps.find(l => l.round === currentRound - 1);
+                return { ...p, lastTime: lastLap ? lastLap.totalTime : Infinity };
+            }).sort((a, b) => b.lastTime - a.lastTime);
+
+
+            lastRoundResults.forEach(p => {
+                const hasStartedRound = p.laps.some(lap => lap.round === currentRound && lap.startTime);
+                const hasFinishedRound = p.laps.some(lap => lap.round === currentRound && lap.time);
+
+                if (hasFinishedRound) {
+                    // Hvis ferdig med runden, ikke vis i listene
+                    return;
+                }
+
+                if (hasStartedRound) {
+                    // Er i gang
+                    const card = document.createElement('div');
+                    card.className = 'p-2 border rounded-lg flex justify-between items-center';
+                    card.innerHTML = `
+                        <span>${p.name}</span>
+                        <button data-id="${p.id}" class="btn btn-running btn-stop">Stopp</button>
+                    `;
+                    runningDiv.appendChild(card);
+                } else {
+                    // Venter på start
+                    const card = document.createElement('div');
+                    card.className = 'p-2 border rounded-lg';
+                    card.innerText = p.name;
+                    waitingDiv.appendChild(card);
+                }
+            });
+        }
+
+        /** Viser den totale resultatlisten */
+        function renderResults() {
+            const resultsBody = document.getElementById('resultsTableBody');
+            resultsBody.innerHTML = '';
+
+            const rankedParticipants = participants.map(p => {
+                const totalTime = p.laps.reduce((sum, lap) => sum + (lap.totalTime || 0), 0);
+                return { ...p, totalTime };
+            }).sort((a, b) => a.totalTime - b.totalTime);
+
+            rankedParticipants.forEach((p, index) => {
+                const row = document.createElement('tr');
+                const roundDetails = p.laps.map(l => {
+                    const penalty = (l.misses || 0) * PENALTY_SECONDS;
+                    return `R${l.round}: ${formatTime(l.time)} + ${penalty}s`;
+                }).join(' / ');
+
+                row.innerHTML = `
+                    <td class="p-2">${index + 1}</td>
+                    <td class="p-2">${p.name}</td>
+                    <td class="p-2 font-semibold">${formatTime(p.totalTime)}</td>
+                    <td class="p-2 text-xs">${roundDetails || 'Ingen fullførte runder'}</td>
+                `;
+                resultsBody.appendChild(row);
+            });
+        }
+
+        /** Legger til en ny deltaker */
+        async function addParticipant() {
+            const nameInput = document.getElementById('newParticipantName');
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const { data, error } = await supabase
+                .from('participants')
+                .insert([{ name: name, competition_id: COMPETITION_ID, laps: [] }])
+                .select();
+
+            if (error) {
+                console.error("Feil ved lagring av deltaker:", error);
+            } else {
+                participants.push(data[0]);
+                nameInput.value = '';
+                render();
+            }
+        }
+
+        /** Starter alle utøvere som ikke er ferdige med runden */
+        async function startGroup() {
+            const startTime = new Date().toISOString();
+            const updates = [];
+
+            participants.forEach(p => {
+                const hasFinishedRound = p.laps.some(lap => lap.round === currentRound && lap.time);
+                if (!hasFinishedRound) {
+                    const existingLapIndex = p.laps.findIndex(l => l.round === currentRound);
+                    if (existingLapIndex > -1) {
+                        p.laps[existingLapIndex].startTime = startTime;
+                    } else {
+                        p.laps.push({ round: currentRound, startTime: startTime, misses: 0 });
+                    }
+                    updates.push({ ...p });
+                }
+            });
+            
+            for(const p of updates) {
+                await supabase.from('participants').update({ laps: p.laps }).eq('id', p.id);
+            }
+            fetchParticipants();
+        }
+
+        /** Stopper tiden for en deltaker og ber om antall bom */
+        async function stopParticipant(id) {
+            const participant = participants.find(p => p.id === id);
+            if (!participant) return;
+
+            const lap = participant.laps.find(l => l.round === currentRound);
+            if (!lap || !lap.startTime) return;
+
+            const finishTime = new Date();
+            const startTime = new Date(lap.startTime);
+            const lapTimeSeconds = (finishTime - startTime) / 1000;
+
+            const misses = parseInt(prompt(`Registrer antall bom for ${participant.name} (0-5):`, "0"));
+            if (isNaN(misses) || misses < 0 || misses > 5) {
+                alert("Ugyldig antall bom. Prøv igjen.");
+                return;
+            }
+
+            lap.time = lapTimeSeconds;
+            lap.misses = misses;
+            lap.totalTime = lapTimeSeconds + (misses * PENALTY_SECONDS);
+
+            const { error } = await supabase
+                .from('participants')
+                .update({ laps: participant.laps })
+                .eq('id', participant.id);
+
+            if (error) console.error("Feil ved oppdatering av rundetid:", error);
+
+            fetchParticipants();
+        }
+
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('btnAddParticipant').addEventListener('click', addParticipant);
+        document.getElementById('btnStartGroup').addEventListener('click', startGroup);
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-stop')) {
+                const id = parseInt(e.target.getAttribute('data-id'));
+                stopParticipant(id);
+            }
+        });
+
+        document.getElementById('btnNextRound').addEventListener('click', () => {
+            if (currentRound < TOTAL_ROUNDS) {
+                currentRound++;
+                render();
+            } else {
+                alert("Konkurransen er ferdig!");
+            }
+        });
+
+        document.getElementById('btnResetCompetition').addEventListener('click', async () => {
+            if (confirm("Er du sikker på at du vil slette alle data for denne konkurransen?")) {
+                const { error } = await supabase
+                    .from('participants')
+                    .delete()
+                    .eq('competition_id', COMPETITION_ID);
+                if (error) console.error("Feil ved nullstilling:", error);
+                else {
+                    participants = [];
+                    currentRound = 1;
+                    render();
+                }
+            }
+        });
+
+        // --- INITIALISERING ---
+        fetchParticipants(); // Hent data når siden lastes
+        setInterval(fetchParticipants, 30000); // Oppdater data hvert 30. sekund
+    </script>
+</body>
+</html>
