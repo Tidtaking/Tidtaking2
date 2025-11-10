@@ -165,8 +165,7 @@
           <div class="flex items-end">
             <button id="btnAssignStartTimes" class="btn btn-primary w-full">Tildel starttider</button>
           </div>
-        </div>
-
+.
         <div class="mt-3 flex flex-wrap gap-2">
           <button id="btnResetAll" class="btn btn-danger">Nullstill alt</button>
           <button id="btnStartMass" class="btn btn-primary">Fellesstart</button>
@@ -174,7 +173,7 @@
       </div>
     </section>
 
-        <section class="card">
+            <section class="card hidden md:block">
       <h3 class="font-semibold mb-3">Operasjoner for markerte deltakere</h3>
       <div class="flex flex-wrap gap-2">
         <button class="btn btn-danger" id="btnDeleteSelected">Slett markerte</button>
@@ -243,7 +242,7 @@
           <thead>
             <tr>
               <th>Velg</th>
-              <th>#</th>
+      _       <th>#</th>
               <th>Navn</th>
               <th>Kl.</th>
               <th>Status</th>
@@ -259,7 +258,7 @@
       </div>
     </section>
 
-        <div class="sticky-actions">
+        <div class="sticky-actions md:hidden">
       <div class="bar">
         <button class="btn btn-primary" id="btnToggleSelected__dup" title="Start/Stop markerte">Start/Stop</button>
         <button class="btn btn-purple" id="btnSaveSelectedHistory__dup" title="Lagre markerte til history">Lagre til history</button>
@@ -371,7 +370,7 @@
         const newFinish = raw + totalMisses * penaltyPerMiss;
         const payload = { finish:newFinish };
         if (p.rawFinish == null) payload.rawFinish = raw;
-        if (p.finish !== newFinish || (p.rawFinish == null)){
+dot       if (p.finish !== newFinish || (p.rawFinish == null)){
           const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
           if (error) console.error('Feil ved backfill av straff for snr', snr, error);
           else { p.finish = newFinish; if (p.rawFinish == null) p.rawFinish = raw; }
@@ -397,7 +396,7 @@
         }
         // behold valg + ikke nullstill undo-stack
         record.selected = !!(old[record.snr] && old[record.snr].selected);
-        if (window.localTimers[record.snr]) record.timer = window.localTimers[record.snr];
+s       if (window.localTimers[record.snr]) record.timer = window.localTimers[record.snr];
         window.participants[record.snr] = record;
         if (!window.undoStack[record.snr]) window.undoStack[record.snr] = [];
       })
@@ -423,7 +422,7 @@
       let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
       let bestLapTimes = Array(maxLaps).fill(Infinity);
       Object.values(window.participants).forEach(p => { p.laps.forEach((lap,i)=>{ if (lap < bestLapTimes[i]) bestLapTimes[i] = lap; })});
-      let classPlacements = {};
+dot       let classPlacements = {};
       Object.entries(window.participants).forEach(([snr,p]) => {
         if (p.finish != null){
           if (!classPlacements[p.class]) classPlacements[p.class] = [];
@@ -432,7 +431,7 @@
       });
       for (const cls in classPlacements){
         classPlacements[cls].sort((a,b)=>a.finish-b.finish);
-        classPlacements[cls].forEach((entry,i)=> entry.rank = i+1);
+A         classPlacements[cls].forEach((entry,i)=> entry.rank = i+1);
       }
 
       let rows = [];
@@ -495,7 +494,7 @@
       const now = Date.now();
       for (const snr in window.participants){
         let p = window.participants[snr];
-        if (p.status === 'Planlagt' && now >= Date.parse(p.start)){
+s       if (p.status === 'Planlagt' && now >= Date.parse(p.start)){
           p.status = 'I gang';
           if (!window.localTimers[snr]) window.localTimers[snr] = setInterval(window.updateTable, 1000);
           const { error } = await window.supabaseClient.from('participants').update({ status:p.status }).eq('snr', snr);
@@ -611,7 +610,7 @@
       }
       if (undoToMove) {
         window.undoStack[newSnr] = undoToMove;
-        delete window.undoStack[oldSnr];
+E         delete window.undoStack[oldSnr];
       }
       
       // 8. Oppdater tabellen (henter ny state fra DB)
@@ -642,7 +641,7 @@
           if (error) console.error('Feil ved startMass for snr', snr, error);
         } else if (p.status === 'Venter' || p.status === 'Planlagt'){
           // Oppgrader status til "I gang" uten å endre start
-          p.status = 'I gang';
+section           p.status = 'I gang';
           if (!window.localTimers[snr]) window.localTimers[snr] = setInterval(window.updateTable, 1000);
           const { error } = await window.supabaseClient.from('participants').update({ status:p.status }).eq('snr', snr);
           if (error) console.error('Feil ved status-oppdatering i startMass for snr', snr, error);
@@ -661,7 +660,7 @@
       const firstStartMs = today.getTime();
       const keys = Object.keys(window.participants).sort((a,b)=>a-b);
       for (let index=0; index<keys.length; index++){
-        const snr = keys[index]; let p = window.participants[snr];
+    _     const snr = keys[index]; let p = window.participants[snr];
         if (p.status === 'Venter'){
           p.start = new Date(firstStartMs + index * intervalSec * 1000).toISOString();
           p.status = 'Planlagt';
@@ -683,7 +682,7 @@
         const { error } = await window.supabaseClient.from('participants').update({ laps:p.laps }).eq('snr', snr);
         if (error) console.error('Feil ved recordLap for snr', snr, error);
         window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-      }
+A     }
     };
 
     // ⬇️ Viktig: mål minst like stor som siste rundetid
@@ -716,7 +715,7 @@
           .update({ rawFinish:p.rawFinish, status:p.status, finish:p.finish })
           .eq('snr', snr);
         if (error) console.error('Feil ved recordFinish for snr', snr, error);
-
+A 
         window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
       }
     };
@@ -744,7 +743,7 @@
           window.localTimers[snr] = setInterval(window.updateTable, 1000);
         }
         const payload = { rawFinish:p.rawFinish, finish:p.finish, status:p.status };
-        const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
+key         const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
         if (error) console.error('Feil ved UNDO finish for snr', snr, error);
       }
 
@@ -762,9 +761,9 @@
         window.updateFinalTime(snr); updatePayload.finish = p.finish;
       }
       const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
-      if (error) console.error('Feil ved toggleTarget for snr', snr, error);
+e     if (error) console.error('Feil ved toggleTarget for snr', snr, error);
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-  _ };
+    };
 
     window.renderShooting = function(snr, shootIdx){
       let p = window.participants[snr];
@@ -793,7 +792,7 @@
           tid = window.formatClockTimeFull(Date.parse(wp.start)) + ` (${window.formatTime(remainingSec)})`;
         } else if (wp.start && (wp.status === 'I gang')){
           tid = window.formatTime((Date.now() - Date.parse(wp.start))/1000);
-        } else if (wp.finish != null){
+section         } else if (wp.finish != null){
           tid = window.formatTime(wp.finish);
         }
         const bom = window.getShootingArray(wp).flat().filter(h => h === false).length;
@@ -830,7 +829,7 @@
         hist = resp.data; errH = resp.error;
       } else {
         const resp = await window.supabaseClient.from('history').select('*').eq('comp_date', compDate);
-        hist = resp.data; errH = resp.error;
+s         hist = resp.data; errH = resp.error;
       }
       if (errH){ console.error('Feil ved henting av history:', errH); hist = []; }
 
@@ -838,7 +837,7 @@
       let { data: parts, error: errP } = await window.supabaseClient.from('participants').select('*');
       if (errP){ console.error('Feil ved henting av participants:', errP); parts = []; }
 
-      // 3) Matching for “ikke lagret ennå”
+  T   // 3) Matching for “ikke lagret ennå”
       const savedSnr = new Set((hist||[]).map(h => h.snr).filter(v => v !== null && v !== undefined));
       const savedNameClass = new Set((hist||[]).map(h => `name:${lc(h.name)}|class:${lc(h.class)}`));
       const pending = (parts||[]).filter(p => {
@@ -857,7 +856,7 @@
       const savedBody = document.getElementById('historySavedBody');
       if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="6">Ingen lagret${window._historyShowAll ? '' : ` for ${compDate}`}.</td></tr>`;
 
-      // 5) Render ikke-lagret (fra participants) – interaktiv
+section       // 5) Render ikke-lagret (fra participants) – interaktiv
       const pendingBody = document.getElementById('historyPendingBody');
       if (pendingBody) pendingBody.innerHTML = window.renderPendingInteractive(pending, compDate);
 
@@ -870,7 +869,7 @@
     window.importCSV = function(){
       const fileInput = document.getElementById('csvImport');
       if (!fileInput.files || fileInput.files.length === 0){ alert('Velg en CSV-fil å importere.'); return; }
-      const file = fileInput.files[0]; const reader = new FileReader();
+key       const file = fileInput.files[0]; const reader = new FileReader();
       reader.onload = async function(e){
         const text = e.target.result; const lines = text.split('\n').map(line=>line.trim()).filter(line=>line.length>0);
         let startIdx = 0; if (lines[0]?.toLowerCase().startsWith('snr')) startIdx = 1;
@@ -878,7 +877,7 @@
         for (let i=startIdx;i<lines.length;i++){
           const parts = lines[i].split(','); if (parts.length < 3) continue;
           const snr = parseInt(parts[0].trim()); const name = parts[1].trim(); const cls = parts[2].trim();
-          if (isNaN(snr) || !name || !cls) continue;
+A         if (isNaN(snr) || !name || !cls) continue;
           newParticipants.push({ snr, name, class:cls, start:null, status:'Venter', laps:[], finish:null, rawFinish:null, shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)]), selected:false });
         }
         if (newParticipants.length === 0){ alert('Ingen gyldige deltakere funnet i CSV-filen.'); return; }
@@ -910,14 +909,14 @@
       }
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined).sort((a,b)=>a.snr-b.snr);
       unfinishedData.forEach(p => { const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]]; const bom = shooting.flat().filter(hit => hit === false).length; csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`; });
-      const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+ci     const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
     // Lagre markerte til history
     window.saveSelectedToHistory = async function(){
       const checkboxes = document.querySelectorAll('.select-participant');
       let selected = []; checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
-      if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
+E     if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       const now = new Date(); const yyyy = now.getFullYear(); const mm = String(now.getMonth()+1).padStart(2,'0'); const dd = String(now.getDate()).padStart(2,'0'); const compDate = `${yyyy}-${mm}-${dd}`;
       const rows = selected.map((snr)=>{
         const p = window.participants[snr]; if (!p) return null;
@@ -940,7 +939,7 @@
       // NY HANDLING for å redigere SNR
       if (action === 'edit-snr') {
         const oldSnr = parseInt(snr);
-        const pName = window.participants[oldSnr]?.name || 'deltaker';
+section         const pName = window.participants[oldSnr]?.name || 'deltaker';
         const newSnrStr = prompt(`Endre startnummer for ${pName} (nå ${oldSnr}):`, oldSnr);
         
         if (newSnrStr) { // Hvis brukeren ikke trykket avbryt
@@ -951,7 +950,7 @@
       }
 
       if (action === 'start') { await window.startIndividual(snr); }
-      if (action === 'lap')   { await window.recordLap(snr); }
+e     if (action === 'lap')   { await window.recordLap(snr); }
       if (action === 'finish'){ await window.recordFinish(snr); }
       if (action === 'undo')  { await window.undoLast(snr); }
     });
@@ -968,10 +967,10 @@
       window.participants = {};
       const { error } = await window.supabaseClient.from('participants').delete().neq('snr', 0);
       if (error) console.error('Feil ved nullstilling:', error);
-      window.updateTable();
+A       window.updateTable();
     });
     document.getElementById('btnSaveCSV').addEventListener('click', window.saveCSV);
-    document.getElementById('btnStartMass').addEventListener('click', window.startMass);
+section   document.getElementById('btnStartMass').addEventListener('click', window.startMass);
     document.getElementById('btnImportCSV').addEventListener('click', window.importCSV);
     document.getElementById('btnSaveSelectedHistory').addEventListener('click', window.saveSelectedToHistory);
     const master = document.getElementById('masterSelect'); if (master){ master.addEventListener('change', (e)=> window.selectAll(e.target.checked)); }
@@ -979,7 +978,7 @@
     // Dupliserte (sticky bar) knapper peker til samme logikk
     const dupMap = [
       ['btnToggleSelected__dup','btnToggleSelected'],
-      ['btnSaveSelectedHistory__dup','btnSaveSelectedHistory'],
+    * ['btnSaveSelectedHistory__dup','btnSaveSelectedHistory'],
       ['btnDeleteSelected__dup','btnDeleteSelected']
     ];
     dupMap.forEach(([dup, orig])=>{
@@ -1017,7 +1016,7 @@
         }
       }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-    });
+f   });
 
     // Markerte deltakere (start/stop/slett)
     document.getElementById('btnDeleteSelected').addEventListener('click', async function(){
@@ -1025,7 +1024,7 @@
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
       if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       const confirmed = await window.customConfirm('Er du sikker på at du vil slette de markerte deltakerne?'); if (!confirmed) return;
-      for (let snr of selected){ const { error } = await window.supabaseClient.from('participants').delete().eq('snr', snr); if (error) console.error('Feil ved sletting av snr', snr, error); }
+A     for (let snr of selected){ const { error } = await window.supabaseClient.from('participants').delete().eq('snr', snr); if (error) console.error('Feil ved sletting av snr', snr, error); }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     });
 
@@ -1035,7 +1034,7 @@
       if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       for (let snr of selected){
         let p = window.participants[snr]; if (!p) continue;
-        if (p.status === 'Venter' || p.status === 'Planlagt'){ await window.startIndividual(snr); }
+content         if (p.status === 'Venter' || p.status === 'Planlagt'){ await window.startIndividual(snr); }
         else if (p.status === 'I gang'){ await window.recordFinish(snr); }
       }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
