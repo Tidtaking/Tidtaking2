@@ -5,23 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lørenskog Skiklubb – Tidtaking</title>
 
-  <!-- Tailwind-konfig må stå FØR cdn-scriptet -->
-<!-- Tailwind-konfig MÅ komme før cdn-scriptet -->
-<script>
-  window.tailwind = window.tailwind || {};
-  window.tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          brand:  '#18469a', // Lørenskog blå
-          brand2: '#dbe723', // Lørenskog gul
+  <!-- Tailwind-konfig MÅ komme før cdn-scriptet -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand:  '#18469a', // Lørenskog blå
+            brand2: '#dbe723', // Lørenskog gul
+          },
+          boxShadow: {
+            soft: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+            card: '0 8px 24px rgba(15,23,42,0.06)',
+          },
+          borderRadius: {
+            xl: '1rem',
+            '2xl': '1.25rem',
+          }
         }
       }
-    }
-  };
-</script>
-<script src="https://cdn.tailwindcss.com@3.4.10"></script>
-
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com@3.4.10"></script>
 
   <style>
     :root{
@@ -30,22 +36,69 @@
     }
 
     body{ background:#f5f7fb; color:#0f172a; }
-    .card{ background:#fff; border:1px solid #e2e8f0; border-radius:1rem; padding:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+
+    /* Kort */
+    .card{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:1rem;
+      padding:1rem;
+      box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+    @media (min-width:768px){
+      .card{ padding:1.25rem; }
+    }
+
     .subtle{ color:#475569 }
     .soft{ background:#f8fafc }
 
+    /* Inputs/selects for “Tailwind Forms”-look uten plugin */
+    input[type="text"],
+    input[type="number"],
+    input[type="time"],
+    input[type="date"],
+    input[type="file"],
+    select {
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:0.75rem;
+      padding:0.5rem 0.75rem;
+      font-size:0.95rem;
+      line-height:1.4;
+      box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
+      transition: box-shadow .15s, border-color .15s;
+    }
+    input[type="time"]{ padding-right:2.25rem; } /* plass til klokke-ikonet på noen browsere */
+    input:focus, select:focus {
+      outline:2px solid transparent;
+      border-color:#93c5fd;
+      box-shadow: 0 0 0 3px rgba(24,70,154,.18);
+    }
+
+    /* Tabeller */
     table{ width:100%; border-collapse:collapse; background:white; }
     th,td{ padding:10px 12px; border-bottom:1px solid #e2e8f0; text-align:left; font-size:14px; }
-    thead th{ background:#f1f5f9; font-weight:600; font-size:13px; position:sticky; top:0; z-index:1; }
+    thead th{
+      background:#f1f5f9;
+      font-weight:600; font-size:13px;
+      position:sticky; top:0; z-index:1;
+    }
 
-    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px; border-radius:.75rem; font-size:14px; font-weight:600; border:1px solid #e2e8f0; cursor:pointer; transition: background .15s, transform .04s; }
+    /* Knapper */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      padding:8px 12px; border-radius:9999px; font-size:14px; font-weight:600;
+      border:1px solid #e2e8f0; cursor:pointer; transition: background .15s, transform .04s, box-shadow .15s;
+      background:#fff;
+    }
     .btn:hover{ background:#f1f5f9; }
     .btn:active{ transform:translateY(1px); }
-    .btn-primary{ background:#fff; color:var(--brand); border-color:#cbd5e1; }
+    .btn-primary{ color:var(--brand); border-color:#cbd5e1; }
     .btn-danger{ background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
     .btn-purple{ background:#ede9fe; color:#6d28d9; border-color:#ddd6fe; }
     .btn-ghost{ background:transparent; }
 
+    /* Status-piller */
     .status{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; letter-spacing:.2px }
     .status.wait{ background:#f3f4f6; color:#64748b; }
     .status.plan{ background:#dbeafe; color:#1d4ed8; }
@@ -94,13 +147,13 @@
 <body class="min-h-screen flex flex-col">
 
   <!-- Header -->
-  <header class="bg-brand text-white p-3 shadow-md sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
+  <header class="bg-brand text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
       <div class="flex items-center gap-3">
         <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb" class="h-12 w-16 rounded bg-white p-1 object-contain">
         <div>
           <h1 class="text-xl font-bold leading-tight">Lørenskog Skiklubb</h1>
-          <p class="text-sm opacity-90">Tidtaking for ski-konkurranser</p>
+          <p class="text-sm/5 opacity-90">Tidtaking for ski-konkurranser</p>
         </div>
       </div>
       <div id="liveClock" class="font-bold text-lg"></div>
@@ -109,21 +162,22 @@
 
   <main class="flex-1 max-w-6xl mx-auto w-full p-4 space-y-6">
 
+    <!-- Toppkort -->
     <section class="grid md:grid-cols-2 gap-4">
       <div class="card">
         <h3 class="font-semibold mb-3">Manuell registrering</h3>
         <div class="grid sm:grid-cols-2 gap-3">
           <div>
             <label class="text-sm subtle">Startnummer</label>
-            <input type="number" id="newStartNumber" class="w-full border rounded-lg px-3 py-2" placeholder="Startnr." />
+            <input type="number" id="newStartNumber" placeholder="Startnr." />
           </div>
           <div>
             <label class="text-sm subtle">Navn</label>
-            <input type="text" id="newParticipant" class="w-full border rounded-lg px-3 py-2" placeholder="Navn" />
+            <input type="text" id="newParticipant" placeholder="Navn" />
           </div>
           <div>
             <label class="text-sm subtle">Klasse</label>
-            <select id="newParticipantClass" class="w-full border rounded-lg px-3 py-2">
+            <select id="newParticipantClass">
               <option value="">Velg klasse…</option>
               <option>G10 Nybeg og yngre</option>
               <option>K19</option>
@@ -157,7 +211,7 @@
         <div class="mt-3 grid sm:grid-cols-3 gap-2 items-end">
           <div>
             <label class="text-sm subtle">CSV-import</label>
-            <input type="file" id="csvImport" accept=".csv" class="w-full border rounded-lg px-3 py-2" />
+            <input type="file" id="csvImport" accept=".csv" />
           </div>
           <button id="btnImportCSV" class="btn btn-primary">Importer CSV</button>
           <button id="btnSaveCSV" class="btn">Lagre CSV</button>
@@ -169,15 +223,15 @@
         <div class="grid sm:grid-cols-2 gap-3">
           <div>
             <label class="text-sm subtle">Tilleggstid pr bom (sek)</label>
-            <input type="number" id="penaltyTime" value="30" class="w-full border rounded-lg px-3 py-2" />
+            <input type="number" id="penaltyTime" value="30" />
           </div>
           <div>
             <label class="text-sm subtle">Første starttid</label>
-            <input type="time" id="firstStartTime" step="1" class="w-full border rounded-lg px-3 py-2" />
+            <input type="time" id="firstStartTime" step="1" />
           </div>
           <div>
             <label class="text-sm subtle">Intervall (sek)</label>
-            <input type="number" id="startInterval" value="30" class="w-full border rounded-lg px-3 py-2" />
+            <input type="number" id="startInterval" value="30" />
           </div>
           <div class="flex items-end">
             <button id="btnAssignStartTimes" class="btn btn-primary w-full">Tildel starttider</button>
@@ -191,6 +245,7 @@
       </div>
     </section>
 
+    <!-- Operasjoner -->
     <section class="card hidden md:block">
       <h3 class="font-semibold mb-3">Operasjoner for markerte deltakere</h3>
       <div class="flex flex-wrap gap-2">
@@ -200,6 +255,7 @@
       </div>
     </section>
 
+    <!-- Resultater -->
     <section class="card">
       <h3 class="font-semibold mb-3">Resultater</h3>
       <div class="overflow-x-auto">
@@ -227,11 +283,12 @@
       </div>
     </section>
 
+    <!-- Historikk -->
     <section id="historySection" class="card">
       <h3 class="font-semibold mb-3">Historikk – lagret vs. ikke lagret</h3>
       <div class="flex flex-wrap gap-2 items-center mb-2">
         <label for="historyDate" class="text-sm subtle">Dato:</label>
-        <input type="date" id="historyDate" class="border rounded-lg px-3 py-2" />
+        <input type="date" id="historyDate" />
         <button class="btn btn-primary" id="btnRefreshHistory">Oppdater historikk</button>
         <button class="btn" id="btnShowAllHistory" title="Vis all lagret historikk uansett dato">Vis all historikk</button>
         <small id="historySummary" class="subtle"></small>
@@ -257,7 +314,7 @@
       <div class="overflow-x-auto mt-4">
         <table>
           <caption class="text-left font-semibold px-2 py-2">Ikke lagret ennå (fra participants)</caption>
-          <thead>
+        <thead>
             <tr>
               <th>Velg</th>
               <th>#</th>
@@ -274,15 +331,16 @@
           <tbody id="historyPendingBody"></tbody>
         </table>
       </div>
-    </section>
 
-    <div class="sticky-actions md:hidden">
-      <div class="bar">
-        <button class="btn btn-primary" id="btnToggleSelected__dup" title="Start/Stop markerte">Start/Stop</button>
-        <button class="btn btn-purple" id="btnSaveSelectedHistory__dup" title="Lagre markerte til history">Lagre til history</button>
-        <button class="btn btn-danger" id="btnDeleteSelected__dup" title="Slett markerte">Slett</button>
+      <!-- Mobil sticky actions -->
+      <div class="sticky-actions md:hidden mt-3">
+        <div class="bar">
+          <button class="btn btn-primary" id="btnToggleSelected__dup" title="Start/Stop markerte">Start/Stop</button>
+          <button class="btn btn-purple" id="btnSaveSelectedHistory__dup" title="Lagre markerte til history">Lagre til history</button>
+          <button class="btn btn-danger" id="btnDeleteSelected__dup" title="Slett markerte">Slett</button>
+        </div>
       </div>
-    </div>
+    </section>
 
   </main>
 
@@ -290,6 +348,7 @@
     © 2025 Lørenskog Skiklubb – Tidtaking
   </footer>
 
+  <!-- Dialog -->
   <dialog id="confirmDialog">
     <p id="confirmText">Er du sikker på at du vil nullstille alt?</p>
     <div class="mt-3 flex gap-2">
@@ -298,17 +357,16 @@
     </div>
   </dialog>
 
+  <!-- App-logikk (uendret bortsett fra små kosmetiske ting) -->
   <script>
     // Global state
     window.participants = {};
     window.localTimers = {};
     window._didBackfillPenalties = false;
-    window._historyShowAll = false; // viser all historikk når true
-    // UNDO-stack per deltaker
-    window.undoStack = {}; // { [snr]: [ {type, prev:{...}} ] }
+    window._historyShowAll = false;
+    window.undoStack = {};
     const UNDO_MAX = 5;
 
-    // Hjelper for undo
     function pushUndo(snr, item){
       if (!window.undoStack[snr]) window.undoStack[snr] = [];
       window.undoStack[snr].push(item);
@@ -318,7 +376,6 @@
       return Array.isArray(window.undoStack[snr]) && window.undoStack[snr].length > 0;
     }
 
-    // Markering
     window.updateSelection = function(snr, isSelected) {
       if (window.participants[snr]) window.participants[snr].selected = isSelected;
     };
@@ -331,15 +388,12 @@
       });
     };
 
-    // Helpers
     window.getShootingArray = function(p) {
       if (!p || !p.shooting) return [Array(5).fill(false), Array(5).fill(false)];
       if (Array.isArray(p.shooting)) return (p.shooting.length >= 2) ? p.shooting : [Array(5).fill(false), Array(5).fill(false)];
       if (typeof p.shooting === 'string') {
-        try {
-          const parsed = JSON.parse(p.shooting);
-          return (Array.isArray(parsed) && parsed.length >= 2) ? parsed : [Array(5).fill(false), Array(5).fill(false)];
-        } catch { return [Array(5).fill(false), Array(5).fill(false)]; }
+        try { const parsed = JSON.parse(p.shooting); return (Array.isArray(parsed) && parsed.length >= 2) ? parsed : [Array(5).fill(false), Array(5).fill(false)]; }
+        catch { return [Array(5).fill(false), Array(5).fill(false)]; }
       }
       return [Array(5).fill(false), Array(5).fill(false)];
     };
@@ -368,7 +422,6 @@
       })
     };
 
-    // Beregning av sluttid
     window.updateFinalTime = function(snr){
       let p = window.participants[snr];
       const penaltyPerMiss = Number(document.getElementById('penaltyTime').value) || 0;
@@ -412,7 +465,6 @@
           const totalMisses = record.shooting.flat().filter(h => h === false).length;
           record.finish = Number(record.rawFinish) + totalMisses * penaltyPerMiss;
         }
-        // behold valg + ikke nullstill undo-stack
         record.selected = !!(old[record.snr] && old[record.snr].selected);
         if (window.localTimers[record.snr]) record.timer = window.localTimers[record.snr];
         window.participants[record.snr] = record;
@@ -521,7 +573,6 @@
       }
     };
 
-    // ⬇️ Viktig: ikke overskriv start når det allerede finnes start/laps/finish
     window.startIndividual = async function(snr){
       let p = window.participants[snr];
       if (!p) return;
@@ -531,7 +582,7 @@
       const hasFinish = p.rawFinish != null || p.finish != null;
 
       if (!alreadyStarted && !hasLaps && !hasFinish){
-        p.start = new Date().toISOString();  // bare første gang
+        p.start = new Date().toISOString();
         const { error } = await window.supabaseClient
           .from('participants')
           .update({ start: p.start })
@@ -568,82 +619,36 @@
       setTimeout(window.updateTable, 500);
     };
 
-    // Funksjon for å endre startnummer
     window.changeStartNumber = async function(oldSnr, newSnr) {
-      // 1. Valideringer
-      if (isNaN(newSnr) || newSnr <= 0) {
-        alert('Ugyldig nytt startnummer.');
-        return;
-      }
-      if (oldSnr === newSnr) return; // Ingen endring
+      if (isNaN(newSnr) || newSnr <= 0) { alert('Ugyldig nytt startnummer.'); return; }
+      if (oldSnr === newSnr) return;
 
-      // Sjekk om det nye nummeret er opptatt (både lokalt og i DB)
-      if (window.participants[newSnr]) {
-        alert(`Startnummer ${newSnr} er allerede i bruk.`);
-        return;
-      }
+      if (window.participants[newSnr]) { alert(`Startnummer ${newSnr} er allerede i bruk.`); return; }
       let { data: existing } = await window.supabaseClient.from('participants').select('snr').eq('snr', newSnr);
-      if (existing && existing.length > 0) {
-        alert(`Startnummer ${newSnr} er allerede i bruk i databasen.`);
-        return;
-      }
+      if (existing && existing.length > 0) { alert(`Startnummer ${newSnr} er allerede i bruk i databasen.`); return; }
 
-      // 2. Hent lokal data
-      const p = window.participants[oldSnr];
-      if (!p) {
-        console.error(`Fant ikke deltaker ${oldSnr} lokalt.`);
-        return;
-      }
+      const p = window.participants[oldSnr]; if (!p) { console.error(`Fant ikke deltaker ${oldSnr} lokalt.`); return; }
 
-      // 3. Hent data som kun finnes lokalt (timer, undo, valg)
       const timerToMove = window.localTimers[oldSnr];
       const undoToMove = window.undoStack[oldSnr];
       const selectedState = p.selected;
 
-      // 4. Klargjør data for databasen (fjern lokale props)
       const { timer, selected, ...dbData } = p;
-      dbData.snr = newSnr; // Sett det nye startnummeret
-      dbData.shooting = JSON.stringify(window.getShootingArray(dbData)); // Sørg for at shooting er string
+      dbData.snr = newSnr;
+      dbData.shooting = JSON.stringify(window.getShootingArray(dbData));
 
-      // 5. DB: Sett inn ny rad
       const { error: insertError } = await window.supabaseClient.from('participants').insert([dbData]);
-      if (insertError) {
-        console.error('Feil ved innsetting (endre snr):', insertError);
-        alert('Feil ved bytte av startnummer (insert).');
-        return;
-      }
-      
-      // 6. DB: Slett gammel rad
+      if (insertError) { console.error('Feil ved innsetting (endre snr):', insertError); alert('Feil ved bytte av startnummer (insert).'); return; }
       const { error: deleteError } = await window.supabaseClient.from('participants').delete().eq('snr', oldSnr);
-      if (deleteError) {
-        console.error('Feil ved sletting (endre snr):', deleteError);
-        // Dette er en kritisk feil, da vi har duplikater.
-        alert('Kritisk feil: Klarte ikke slette det gamle startnummeret. Du har nå duplikater.');
-      }
+      if (deleteError) { console.error('Feil ved sletting (endre snr):', deleteError); alert('Kritisk feil: Klarte ikke slette det gamle startnummeret. Du har nå duplikater.'); }
 
-      // 7. Overfør lokal-only data til det nye nummeret
-      if (timerToMove) {
-        window.localTimers[newSnr] = timerToMove;
-        delete window.localTimers[oldSnr];
-      }
-      if (undoToMove) {
-        window.undoStack[newSnr] = undoToMove;
-        delete window.undoStack[oldSnr];
-      }
-      
-      // 8. Oppdater tabellen (henter ny state fra DB)
+      if (timerToMove) { window.localTimers[newSnr] = timerToMove; delete window.localTimers[oldSnr]; }
+      if (undoToMove)  { window.undoStack[newSnr] = undoToMove; delete window.undoStack[oldSnr]; }
       await window.updateTable();
-
-      // 9. Gjenopprett 'selected'-status (som mistes av fetch)
-      if (window.participants[newSnr]) {
-        window.participants[newSnr].selected = selectedState;
-      }
-      
-      // 10. Oppdater visningen IGJEN for å vise korrekt 'selected'-status
+      if (window.participants[newSnr]) { window.participants[newSnr].selected = selectedState; }
       window.updateLocalDisplay();
     };
 
-    // Ikke overskriv eksisterende start ved fellesstart
     window.startMass = async function(){
       const nowISO = new Date().toISOString();
       for (const snr in window.participants){
@@ -658,7 +663,6 @@
           const { error } = await window.supabaseClient.from('participants').update({ start:p.start, status:p.status }).eq('snr', snr);
           if (error) console.error('Feil ved startMass for snr', snr, error);
         } else if (p.status === 'Venter' || p.status === 'Planlagt'){
-          // Oppgrader status til "I gang" uten å endre start
           p.status = 'I gang';
           if (!window.localTimers[snr]) window.localTimers[snr] = setInterval(window.updateTable, 1000);
           const { error } = await window.supabaseClient.from('participants').update({ status:p.status }).eq('snr', snr);
@@ -692,9 +696,7 @@
     window.recordLap = async function(snr){
       let p = window.participants[snr];
       if (p && p.start){
-        // push undo før endring
         pushUndo(snr, { type:'lap', prev:{ laps:[...p.laps] } });
-
         const lapTime = (Date.now() - Date.parse(p.start))/1000;
         p.laps.push(lapTime);
         const { error } = await window.supabaseClient.from('participants').update({ laps:p.laps }).eq('snr', snr);
@@ -703,42 +705,21 @@
       }
     };
 
-    // ⬇️ Viktig: mål minst like stor som siste rundetid
     window.recordFinish = async function(snr){
       let p = window.participants[snr];
       if (p && p.start){
-        // push undo før endring (ta vare på forrige verdier)
-        pushUndo(snr, { type:'finish', prev:{
-          rawFinish: p.rawFinish ?? null,
-          status: p.status,
-          finish: p.finish ?? null,
-          hadTimer: !!window.localTimers[snr]
-        }});
-
+        pushUndo(snr, { type:'finish', prev:{ rawFinish: p.rawFinish ?? null, status: p.status, finish: p.finish ?? null, hadTimer: !!window.localTimers[snr] }});
         if (window.localTimers[snr]){ clearInterval(window.localTimers[snr]); delete window.localTimers[snr]; }
-
-        // beregn måltid fra opprinnelig start
         let raw = (Date.now() - Date.parse(p.start))/1000;
-
-        // ikke tillat at mål < siste rundetid
         const lastLap = (Array.isArray(p.laps) && p.laps.length) ? p.laps[p.laps.length-1] : 0;
         if (raw < lastLap) raw = lastLap;
-
-        p.rawFinish = raw;
-        p.status = 'Fullført';
-        window.updateFinalTime(snr);
-
-        const { error } = await window.supabaseClient
-          .from('participants')
-          .update({ rawFinish:p.rawFinish, status:p.status, finish:p.finish })
-          .eq('snr', snr);
+        p.rawFinish = raw; p.status = 'Fullført'; window.updateFinalTime(snr);
+        const { error } = await window.supabaseClient.from('participants').update({ rawFinish:p.rawFinish, status:p.status, finish:p.finish }).eq('snr', snr);
         if (error) console.error('Feil ved recordFinish for snr', snr, error);
-
         window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
       }
     };
 
-    // UNDO – angre siste rundetid/mål
     window.undoLast = async function(snr){
       const stack = window.undoStack[snr];
       if (!stack || stack.length === 0) return;
@@ -751,33 +732,24 @@
         const { error } = await window.supabaseClient.from('participants').update({ laps:p.laps }).eq('snr', snr);
         if (error) console.error('Feil ved UNDO lap for snr', snr, error);
       } else if (last.type === 'finish'){
-        // Reåpne hvis den var fullført
         p.rawFinish = last.prev.rawFinish;
         p.finish = last.prev.finish;
         p.status = last.prev.status || 'I gang';
-
-        // Start timer igjen hvis vi er i gang
-        if (p.status === 'I gang' && !window.localTimers[snr]){
-          window.localTimers[snr] = setInterval(window.updateTable, 1000);
-        }
+        if (p.status === 'I gang' && !window.localTimers[snr]){ window.localTimers[snr] = setInterval(window.updateTable, 1000); }
         const payload = { rawFinish:p.rawFinish, finish:p.finish, status:p.status };
         const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
         if (error) console.error('Feil ved UNDO finish for snr', snr, error);
       }
-
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     };
 
-    // Lagrer finish når blink endres etter målgang (ikke inkludert i undo, men kan legges til senere)
     window.toggleTarget = async function(snr, shootIdx, idx){
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
       shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
       p.shooting = JSON.stringify(shootingArr);
       const updatePayload = { shooting:p.shooting };
-      if (p.status === 'Fullført' || p.rawFinish != null){
-        window.updateFinalTime(snr); updatePayload.finish = p.finish;
-      }
+      if (p.status === 'Fullført' || p.rawFinish != null){ window.updateFinalTime(snr); updatePayload.finish = p.finish; }
       const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
       if (error) console.error('Feil ved toggleTarget for snr', snr, error);
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
@@ -792,7 +764,6 @@
       }).join('');
     };
 
-    // Historikk
     window.getTodayCompDate = function(){
       const now = new Date(); const yyyy = now.getFullYear(); const mm = String(now.getMonth()+1).padStart(2,'0'); const dd = String(now.getDate()).padStart(2,'0');
       return `${yyyy}-${mm}-${dd}`;
@@ -836,11 +807,9 @@
       }).join('');
     };
 
-    // Støtter både valgt dato og "all historikk"
     window.updateHistoryView = async function(dateStr){
       const compDate = dateStr || (document.getElementById('historyDate')?.value || window.getTodayCompDate());
 
-      // 1) Hent history – enten for valgt dato, eller alle datoer
       let hist, errH;
       if (window._historyShowAll){
         const resp = await window.supabaseClient.from('history').select('*').order('comp_date', { ascending:false });
@@ -851,11 +820,9 @@
       }
       if (errH){ console.error('Feil ved henting av history:', errH); hist = []; }
 
-      // 2) Hent participants
       let { data: parts, error: errP } = await window.supabaseClient.from('participants').select('*');
       if (errP){ console.error('Feil ved henting av participants:', errP); parts = []; }
 
-      // 3) Matching for “ikke lagret ennå”
       const savedSnr = new Set((hist||[]).map(h => h.snr).filter(v => v !== null && v !== undefined));
       const savedNameClass = new Set((hist||[]).map(h => `name:${lc(h.name)}|class:${lc(h.class)}`));
       const pending = (parts||[]).filter(p => {
@@ -864,7 +831,6 @@
         return !(bySnr || byNC);
       });
 
-      // 4) Render lagret (med dato-kolonne)
       const savedRows = (hist||[]).map(h => {
         const tid  = (h.finish != null) ? window.formatTime(h.finish) : '-';
         const snr  = (h.snr   != null) ? h.snr : '-';
@@ -874,16 +840,13 @@
       const savedBody = document.getElementById('historySavedBody');
       if (savedBody) savedBody.innerHTML = savedRows || `<tr><td colspan="6">Ingen lagret${window._historyShowAll ? '' : ` for ${compDate}`}.</td></tr>`;
 
-      // 5) Render ikke-lagret (fra participants) – interaktiv
       const pendingBody = document.getElementById('historyPendingBody');
       if (pendingBody) pendingBody.innerHTML = window.renderPendingInteractive(pending, compDate);
 
-      // 6) Oppsummering
       const summaryEl = document.getElementById('historySummary');
       if (summaryEl) summaryEl.textContent = `${(hist||[]).length} lagret${window._historyShowAll ? ' (alle datoer)' : ''} · ${pending.length} ikke lagret`;
     };
 
-    // CSV-import
     window.importCSV = function(){
       const fileInput = document.getElementById('csvImport');
       if (!fileInput.files || fileInput.files.length === 0){ alert('Velg en CSV-fil å importere.'); return; }
@@ -906,7 +869,6 @@
       reader.readAsText(file);
     };
 
-    // CSV-eksport
     window.saveCSV = async function(){
       const { data, error } = await window.supabaseClient.from('participants').select('*');
       if (error){ console.error('Feil ved CSV-export:', error); return; }
@@ -930,7 +892,6 @@
       const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
-    // Lagre markerte til history
     window.saveSelectedToHistory = async function(){
       const checkboxes = document.querySelectorAll('.select-participant');
       let selected = []; checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
@@ -946,7 +907,6 @@
       else { alert(`Lagret ${rows.length} markerte til history for ${compDate}.`); if (window.updateHistoryView){ window.updateHistoryView(); } }
     };
 
-    // Delegert knapphåndtering → fungerer på første klikk selv etter re-render
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action]');
       if (!btn) return;
@@ -954,17 +914,15 @@
       const snr = btn.getAttribute('data-snr');
       if (!snr) return;
 
-      // NY HANDLING for å redigere SNR
       if (action === 'edit-snr') {
         const oldSnr = parseInt(snr);
         const pName = window.participants[oldSnr]?.name || 'deltaker';
         const newSnrStr = prompt(`Endre startnummer for ${pName} (nå ${oldSnr}):`, oldSnr);
-        
-        if (newSnrStr) { // Hvis brukeren ikke trykket avbryt
+        if (newSnrStr) {
           const newSnr = parseInt(newSnrStr);
           await window.changeStartNumber(oldSnr, newSnr);
         }
-        return; // Stopp her
+        return;
       }
 
       if (action === 'start') { await window.startIndividual(snr); }
@@ -973,10 +931,8 @@
       if (action === 'undo')  { await window.undoLast(snr); }
     });
 
-    // Timere og init
     setInterval(()=>{ window.updateLiveClock(); window.updateTable(); }, 1000);
 
-    // Event listeners
     document.getElementById('btnAddParticipant').addEventListener('click', window.addParticipant);
     document.getElementById('btnAssignStartTimes').addEventListener('click', window.assignStartTimes);
     document.getElementById('btnResetAll').addEventListener('click', async function(){
@@ -993,7 +949,6 @@
     document.getElementById('btnSaveSelectedHistory').addEventListener('click', window.saveSelectedToHistory);
     const master = document.getElementById('masterSelect'); if (master){ master.addEventListener('change', (e)=> window.selectAll(e.target.checked)); }
 
-    // Dupliserte (sticky bar) knapper peker til samme logikk
     const dupMap = [
       ['btnToggleSelected__dup','btnToggleSelected'],
       ['btnSaveSelectedHistory__dup','btnSaveSelectedHistory'],
@@ -1004,27 +959,19 @@
       if (d && o){ d.addEventListener('click', ()=> o.click()); }
     });
 
-    // Historikk – initialiser & knapper
     (function(){
       const dateInput = document.getElementById('historyDate'); if (dateInput) { dateInput.value = window.getTodayCompDate(); }
       const btnRefr = document.getElementById('btnRefreshHistory');
       if (btnRefr){
-        btnRefr.addEventListener('click', ()=> {
-          window._historyShowAll = false;
-          window.updateHistoryView();
-        });
+        btnRefr.addEventListener('click', ()=> { window._historyShowAll = false; window.updateHistoryView(); });
       }
       const btnAll = document.getElementById('btnShowAllHistory');
       if (btnAll){
-        btnAll.addEventListener('click', ()=> {
-          window._historyShowAll = true;
-          window.updateHistoryView();
-        });
+        btnAll.addEventListener('click', ()=> { window._historyShowAll = true; window.updateHistoryView(); });
       }
       if (dateInput || btnRefr || btnAll){ window.updateHistoryView(); }
     })();
 
-    // Når straffetid endres → reberegn og persister
     document.getElementById('penaltyTime').addEventListener('change', async function(){
       for (const [snr,p] of Object.entries(window.participants)){
         if (p.rawFinish != null){
@@ -1036,7 +983,6 @@
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     });
 
-    // Markerte deltakere (start/stop/slett)
     document.getElementById('btnDeleteSelected').addEventListener('click', async function(){
       const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
