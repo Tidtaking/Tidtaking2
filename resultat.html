@@ -232,8 +232,7 @@
             shootingArr = participant.shooting;
           }
         }
-        const shootingStr = parseShootingArray(shootingArr);
-
+const shootingStr = row.shooting ? parseShootingArray(row.shooting) : "";
         // Skytetid for runde 1 og 2
         const shootingTimeStr1 = participant.shootingtime1 ? formatTime(parseFloat(participant.shootingtime1)) : "";
         const shootingTimeStr2 = participant.shootingtime2 ? formatTime(parseFloat(participant.shootingtime2)) : "";
