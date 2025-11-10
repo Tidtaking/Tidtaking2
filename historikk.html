@@ -250,7 +250,7 @@
           rankInClass++;
         }
         const finishStr = row.finish ? formatTime(parseFloat(row.finish)) : "";
-        const shootingStr = row.shooting ? parseShootingArray(JSON.parse(row.shooting)) : "";
+const shootingStr = row.shooting ? parseShootingArray(row.shooting) : "";
         const shootingTimeStr1 = row.shootingtime1 ? formatTime(parseFloat(row.shootingtime1)) : "";
         const shootingTimeStr2 = row.shootingtime2 ? formatTime(parseFloat(row.shootingtime2)) : "";
         tableHtml += `
