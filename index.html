@@ -420,7 +420,7 @@
       });
       let overallBestFinish = Infinity;
       Object.values(window.participants).forEach(p => { if (p.finish != null && p.finish < overallBestFinish) overallBestFinish = p.finish; });
-s     let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
+      let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
       let bestLapTimes = Array(maxLaps).fill(Infinity);
       Object.values(window.participants).forEach(p => { p.laps.forEach((lap,i)=>{ if (lap < bestLapTimes[i]) bestLapTimes[i] = lap; })});
       let classPlacements = {};
@@ -451,7 +451,7 @@ s     let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p
           timeDisplay = window.formatTime((Date.now()-Date.parse(p.start))/1000);
         } else if (p.finish != null){
           timeDisplay = window.formatTime(p.finish);
-      _ }
+        }
         const lapDiffs = p.laps.map((lap,i)=>{ const diff=(lap - bestLapTimes[i]).toFixed(1); return `${window.formatTime(lap)} (+${diff}s)`; }).join('<br>');
         const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
         const statusTag = p.status==='Venter' ? 'status wait' : p.status==='Planlagt' ? 'status plan' : p.status==='I gang' ? 'status run' : 'status done';
@@ -746,7 +746,7 @@ s     let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p
         const payload = { rawFinish:p.rawFinish, finish:p.finish, status:p.status };
         const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
         if (error) console.error('Feil ved UNDO finish for snr', snr, error);
-      }
+  T   }
 
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     };
@@ -898,7 +898,7 @@ s     let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p
       let csv = 'Klasse,Plass,Startnummer,Navn,Tid,Bom\n';
       let groups = {};
       finishedData.forEach(p => { if (!groups[p.class]) groups[p.class] = []; groups[p.class].push(p); });
-all   for (const cls in groups){
+      for (const cls in groups){
         groups[cls].sort((a,b)=>a.finish-b.finish);
         const bestFinish = groups[cls][0].finish;
         groups[cls].forEach((p,i) => {
@@ -910,7 +910,7 @@ all   for (const cls in groups){
       }
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined).sort((a,b)=>a.snr-b.snr);
       unfinishedData.forEach(p => { const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]]; const bom = shooting.flat().filter(hit => hit === false).length; csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`; });
-      const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+g     const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
     // Lagre markerte til history
@@ -930,7 +930,7 @@ all   for (const cls in groups){
     };
 
     // Delegert knapphåndtering → fungerer på første klikk selv etter re-render
-    document.addEventListener('click', async (e) => {
+  s document.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action]');
       if (!btn) return;
       const action = btn.getAttribute('data-action');
@@ -946,7 +946,7 @@ all   for (const cls in groups){
         if (newSnrStr) { // Hvis brukeren ikke trykket avbryt
           const newSnr = parseInt(newSnrStr);
           await window.changeStartNumber(oldSnr, newSnr);
-f       }
+        }
         return; // Stopp her
       }
 
@@ -971,7 +971,7 @@ f       }
       window.updateTable();
     });
     document.getElementById('btnSaveCSV').addEventListener('click', window.saveCSV);
-t   document.getElementById('btnStartMass').addEventListener('click', window.startMass);
+    document.getElementById('btnStartMass').addEventListener('click', window.startMass);
     document.getElementById('btnImportCSV').addEventListener('click', window.importCSV);
     document.getElementById('btnSaveSelectedHistory').addEventListener('click', window.saveSelectedToHistory);
     const master = document.getElementById('masterSelect'); if (master){ master.addEventListener('change', (e)=> window.selectAll(e.target.checked)); }
@@ -990,7 +990,7 @@ t   document.getElementById('btnStartMass').addEventListener('click', window.st
     // Historikk – initialiser & knapper
     (function(){
       const dateInput = document.getElementById('historyDate'); if (dateInput) { dateInput.value = window.getTodayCompDate(); }
-section       const btnRefr = document.getElementById('btnRefreshHistory');
+      const btnRefr = document.getElementById('btnRefreshHistory');
       if (btnRefr){
         btnRefr.addEventListener('click', ()=> {
           window._historyShowAll = false;
@@ -1025,12 +1025,12 @@ section       const btnRefr = document.getElementById('btnRefreshHistory');
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
       if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       const confirmed = await window.customConfirm('Er du sikker på at du vil slette de markerte deltakerne?'); if (!confirmed) return;
-      for (let snr of selected){ const { error } = await window.supabaseClient.from('participants').delete().eq('snr', snr); if (error) console.error('Feil ved sletting av snr', snr, error); }
+img   for (let snr of selected){ const { error } = await window.supabaseClient.from('participants').delete().eq('snr', snr); if (error) console.error('Feil ved sletting av snr', snr, error); }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     });
 
     document.getElementById('btnToggleSelected').addEventListener('click', async function(){
-      const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
+  g   const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
       if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       for (let snr of selected){
