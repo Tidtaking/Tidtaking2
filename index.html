@@ -6,19 +6,22 @@
   <title>Lørenskog Skiklubb – Tidtaking</title>
 
   <!-- Tailwind-konfig må stå FØR cdn-scriptet -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand:  '#18469a', // Lørenskog blå
-            brand2: '#dbe723', // Lørenskog gul
-          }
+<!-- Tailwind-konfig MÅ komme før cdn-scriptet -->
+<script>
+  window.tailwind = window.tailwind || {};
+  window.tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand:  '#18469a', // Lørenskog blå
+          brand2: '#dbe723', // Lørenskog gul
         }
       }
     }
-  </script>
-  <script src="https://cdn.tailwindcss.com@3.4.10"></script>
+  };
+</script>
+<script src="https://cdn.tailwindcss.com@3.4.10"></script>
+
 
   <style>
     :root{
