@@ -704,7 +704,7 @@
         let raw = (Date.now() - Date.parse(p.start))/1000;
 
         // ikke tillat at mål < siste rundetid
-        const lastLap = (Array.isArray(p.laps) && p.laps.length) ? p.laps[p.laps.length-1] : 0;
+       const lastLap = (Array.isArray(p.laps) && p.laps.length) ? p.laps[p.laps.length-1] : 0;
         if (raw < lastLap) raw = lastLap;
 
         p.rawFinish = raw;
@@ -746,7 +746,7 @@
         const payload = { rawFinish:p.rawFinish, finish:p.finish, status:p.status };
         const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
         if (error) console.error('Feil ved UNDO finish for snr', snr, error);
-  T   }
+      }
 
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     };
@@ -843,7 +843,7 @@
       const savedNameClass = new Set((hist||[]).map(h => `name:${lc(h.name)}|class:${lc(h.class)}`));
       const pending = (parts||[]).filter(p => {
         const bySnr = (p.snr != null) && savedSnr.has(p.snr);
-        const byNC  = savedNameClass.has(`name:${lc(p.name)}|class:${lc(p.class)}`);
+       const byNC  = savedNameClass.has(`name:${lc(p.name)}|class:${lc(p.class)}`);
         return !(bySnr || byNC);
       });
 
@@ -910,7 +910,7 @@
       }
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined).sort((a,b)=>a.snr-b.snr);
       unfinishedData.forEach(p => { const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]]; const bom = shooting.flat().filter(hit => hit === false).length; csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`; });
-g     const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+     const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
     // Lagre markerte til history
@@ -930,7 +930,7 @@ g     const link = document.createElement('a'); link.href = 'data:text/csv;cha
     };
 
     // Delegert knapphåndtering → fungerer på første klikk selv etter re-render
-  s document.addEventListener('click', async (e) => {
+    document.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action]');
       if (!btn) return;
       const action = btn.getAttribute('data-action');
@@ -979,7 +979,7 @@ g     const link = document.createElement('a'); link.href = 'data:text/csv;cha
     // Dupliserte (sticky bar) knapper peker til samme logikk
     const dupMap = [
       ['btnToggleSelected__dup','btnToggleSelected'],
-      ['btnSaveSelectedHistory__dup','btnSaveSelectedHistory'],
+     ['btnSaveSelectedHistory__dup','btnSaveSelectedHistory'],
       ['btnDeleteSelected__dup','btnDeleteSelected']
     ];
     dupMap.forEach(([dup, orig])=>{
@@ -1023,19 +1023,19 @@ g     const link = document.createElement('a'); link.href = 'data:text/csv;cha
     document.getElementById('btnDeleteSelected').addEventListener('click', async function(){
       const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
-      if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
+     if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       const confirmed = await window.customConfirm('Er du sikker på at du vil slette de markerte deltakerne?'); if (!confirmed) return;
-img   for (let snr of selected){ const { error } = await window.supabaseClient.from('participants').delete().eq('snr', snr); if (error) console.error('Feil ved sletting av snr', snr, error); }
+      for (let snr of selected){ const { error } = await window.supabaseClient.from('participants').delete().eq('snr', snr); if (error) console.error('Feil ved sletting av snr', snr, error); }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
     });
 
     document.getElementById('btnToggleSelected').addEventListener('click', async function(){
-  g   const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
+      const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
       if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
       for (let snr of selected){
         let p = window.participants[snr]; if (!p) continue;
-        if (p.status === 'Venter' || p.status === 'Planlagt'){ await window.startIndividual(snr); }
+       if (p.status === 'Venter' || p.status === 'Planlagt'){ await window.startIndividual(snr); }
         else if (p.status === 'I gang'){ await window.recordFinish(snr); }
       }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
