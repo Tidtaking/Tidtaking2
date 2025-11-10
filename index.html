@@ -375,7 +375,6 @@
           const { error } = await window.supabaseClient.from('participants').update(payload).eq('snr', snr);
           if (error) console.error('Feil ved backfill av straff for snr', snr, error);
           else { p.finish = newFinish; if (p.rawFinish == null) p.rawFinish = raw; }
-key
         }
       }
     };
@@ -603,7 +602,6 @@ key
         console.error('Feil ved sletting (endre snr):', deleteError);
         // Dette er en kritisk feil, da vi har duplikater.
         alert('Kritisk feil: Klarte ikke slette det gamle startnummeret. Du har nå duplikater.');
-e
       }
 
       // 7. Overfør lokal-only data til det nye nummeret
@@ -766,7 +764,7 @@ e
       const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
       if (error) console.error('Feil ved toggleTarget for snr', snr, error);
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-    };
+  _ };
 
     window.renderShooting = function(snr, shootIdx){
       let p = window.participants[snr];
@@ -866,7 +864,6 @@ e
       // 6) Oppsummering
       const summaryEl = document.getElementById('historySummary');
       if (summaryEl) summaryEl.textContent = `${(hist||[]).length} lagret${window._historyShowAll ? ' (alle datoer)' : ''} · ${pending.length} ikke lagret`;
-Date
     };
 
     // CSV-import
@@ -887,7 +884,7 @@ Date
         if (newParticipants.length === 0){ alert('Ingen gyldige deltakere funnet i CSV-filen.'); return; }
         const { error } = await window.supabaseClient.from('participants').insert(newParticipants);
         if (error){ console.error('Feil ved CSV-import:', error); alert('Feil ved CSV-import – sjekk konsollen.'); }
-A         else { alert('CSV-import fullført!'); window.updateTable(); }
+        else { alert('CSV-import fullført!'); window.updateTable(); }
       };
       reader.readAsText(file);
     };
@@ -912,7 +909,7 @@ A         else { alert('CSV-import fullført!'); window.updateTable(); }
         })
       }
       const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined).sort((a,b)=>a.snr-b.snr);
-key       unfinishedData.forEach(p => { const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]]; const bom = shooting.flat().filter(hit => hit === false).length; csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`; });
+      unfinishedData.forEach(p => { const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]]; const bom = shooting.flat().filter(hit => hit === false).length; csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`; });
       const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
@@ -949,7 +946,7 @@ key       unfinishedData.forEach(p => { const shooting = (typeof p.shooting =
         if (newSnrStr) { // Hvis brukeren ikke trykket avbryt
           const newSnr = parseInt(newSnrStr);
           await window.changeStartNumber(oldSnr, newSnr);
-Date         }
+        }
         return; // Stopp her
       }
 
@@ -971,7 +968,7 @@ Date         }
       window.participants = {};
       const { error } = await window.supabaseClient.from('participants').delete().neq('snr', 0);
       if (error) console.error('Feil ved nullstilling:', error);
-key       window.updateTable();
+      window.updateTable();
     });
     document.getElementById('btnSaveCSV').addEventListener('click', window.saveCSV);
     document.getElementById('btnStartMass').addEventListener('click', window.startMass);
@@ -993,7 +990,7 @@ key       window.updateTable();
     // Historikk – initialiser & knapper
     (function(){
       const dateInput = document.getElementById('historyDate'); if (dateInput) { dateInput.value = window.getTodayCompDate(); }
-section       const btnRefr = document.getElementById('btnRefreshHistory');
+      const btnRefr = document.getElementById('btnRefreshHistory');
       if (btnRefr){
         btnRefr.addEventListener('click', ()=> {
           window._historyShowAll = false;
@@ -1013,10 +1010,10 @@ section       const btnRefr = document.getElementById('btnRefreshHistory');
     // Når straffetid endres → reberegn og persister
     document.getElementById('penaltyTime').addEventListener('change', async function(){
       for (const [snr,p] of Object.entries(window.participants)){
-key         if (p.rawFinish != null){
+        if (p.rawFinish != null){
           window.updateFinalTime(snr);
           const { error } = await window.supabaseClient.from('participants').update({ finish:p.finish }).eq('snr', snr);
-key           if (error) console.error('Feil ved oppdatering av finish etter straffe-endring for snr', snr, error);
+          if (error) console.error('Feil ved oppdatering av finish etter straffe-endring for snr', snr, error);
         }
       }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
@@ -1036,9 +1033,9 @@ key           if (error) console.error('Feil ved oppdatering av finish ette
       const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
       checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
       if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
-  _     for (let snr of selected){
+      for (let snr of selected){
         let p = window.participants[snr]; if (!p) continue;
-content         if (p.status === 'Venter' || p.status === 'Planlagt'){ await window.startIndividual(snr); }
+        if (p.status === 'Venter' || p.status === 'Planlagt'){ await window.startIndividual(snr); }
         else if (p.status === 'I gang'){ await window.recordFinish(snr); }
       }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
