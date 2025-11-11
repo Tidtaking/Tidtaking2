@@ -52,12 +52,13 @@
     <p>Filen skal ha følgende header (bruk semikolon som skilletegn):</p>
     <p><strong>name;class</strong></p>
     <p><strong>Eksempel:</strong><br>
-       Ola Nordmann;G10 Nybeg og yngre<br>
-       Kari Hansen;G14</p>
-    <p>Alle importerte rader vil få status "Venter" og standardverdier for de andre feltene, og de vil bli knyttet til den valgte konkurransen og datoen.</p>
+        Ola Nordmann;G10 Nybeg og yngre<br>
+        Kari Hansen;G14<br>
+        Per Olsen;G10 Nybeg og yngre</p>
+    <p>Alle importerte rader vil få status "Venter" og startnummer (snr) blir tildelt klassevis (1, 2, 3...) basert på rekkefølgen i filen (etter sortering på klasse).</p>
   </div>
   
-  <label for="competitionInput">Konkurranse:</label>
+  <label for="competitionInput">Konkurranse:</</label>
   <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
   <br>
   <label for="dateInput">Dato:</label>
@@ -67,7 +68,6 @@
   <br>
   <button id="btnImportCSV">Importer CSV</button>
   
-  <!-- Last inn Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     // Konfigurer Supabase – bruk din Supabase URL og nøkkel
@@ -76,37 +76,13 @@
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     console.log("Supabase-klient opprettet:", supabaseClient);
 
-    /**
-     * Henter ALLE deltakere fra databasen med kolonnene name og snr.
-     * Returnerer et objekt med:
-     *   - globalMaxSNR: høyeste snr for ALLE deltakere
-     *   - nameMap: et dictionary der name -> høyeste snr for det navnet
-     */
-    async function fetchParticipantsData() {
-      const { data, error } = await supabaseClient
-        .from("participants")
-        .select("name, snr");
-      if (error) {
-        console.error("Feil ved henting av deltakere:", error);
-        return { globalMaxSNR: 0, nameMap: {} };
-      }
-      let globalMaxSNR = 0;
-      let nameMap = {};
-      data.forEach(row => {
-        const snrNum = parseInt(row.snr, 10) || 0;
-        if (snrNum > globalMaxSNR) globalMaxSNR = snrNum;
-        if (!nameMap[row.name]) {
-          nameMap[row.name] = snrNum;
-        } else {
-          if (snrNum > nameMap[row.name]) {
-            nameMap[row.name] = snrNum;
-          }
-        }
-      });
-      return { globalMaxSNR, nameMap };
-    }
+    // MERK: Funksjonen fetchParticipantsData() er fjernet,
+    // siden vi ikke lenger trenger å sjekke eksisterende startnumre for denne logikken.
 
-    // Funksjon for å lese CSV-filen og importere data
+    /**
+     * Leser CSV-filen, tildeler startnummer (snr) klassevis,
+     * og importerer data til Supabase.
+     */
     async function parseCSVAndImport(file) {
       const competitionVal = document.getElementById("competitionInput").value.trim();
       const dateVal = document.getElementById("dateInput").value.trim();
@@ -115,24 +91,23 @@
         return;
       }
 
-      // Hent eksisterende snr-data fra DB
-      let { globalMaxSNR, nameMap } = await fetchParticipantsData();
-      console.log("globalMaxSNR:", globalMaxSNR, "nameMap:", nameMap);
-
       const reader = new FileReader();
       reader.onload = async function(e) {
         const text = e.target.result;
         console.log("CSV-tekst:", text);
+        
         // Del opp teksten i linjer
         const lines = text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
         if (lines.length < 2) {
           alert("CSV-filen mangler data eller har ikke riktig header.");
           return;
         }
+        
         // Forvent header med semikolon som skilletegn, f.eks.: "name;class"
         const headers = lines[0].split(";").map(h => h.trim().replace(/"/g, "").toLowerCase());
         const allowedFields = ["name", "class"];
         let rows = [];
+        
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(";").map(val => val.trim().replace(/"/g, ""));
           let row = {};
@@ -146,26 +121,38 @@
             rows.push(row);
           }
         }
+        
         if (rows.length === 0) {
           alert("Ingen gyldige deltakere funnet i CSV-filen.");
           return;
         }
-        // Bygg array med nye deltakere
+
+        // --- NY LOGIKK FOR KLASSEVIS STARTNUMMER ---
+
+        // 1. Sorter radene etter klasse. Dette grupperer alle i G10 sammen, G14 sammen, osv.
+        rows.sort((a, b) => a.class.localeCompare(b.class));
+
         let newParticipants = [];
-        for (let i = 0; i < rows.length; i++) {
-          const { name, class: cls } = rows[i];
-          // Sjekk om navnet finnes i nameMap
-          if (!nameMap[name]) {
-            // Navnet finnes ikke i DB -> bruk globalMaxSNR+1 for første gang
-            nameMap[name] = globalMaxSNR + 1;
-            globalMaxSNR = globalMaxSNR + 1;
-          } else {
-            // Navnet finnes i DB -> øk forrige snr for navnet med 100
-            nameMap[name] = nameMap[name] + 100;
+        let classCounters = {}; // Objekt for å holde styr på neste startnummer for hver klasse
+
+        // 2. Gå gjennom de sorterte radene
+        for (const row of rows) {
+          const { name, class: cls } = row; // Bruk "cls" for å unngå konflikt med JS-nøkkelordet "class"
+
+          // 3. Sjekk om vi har en teller for denne klassen. Hvis ikke, start på 1.
+          if (!classCounters[cls]) {
+            classCounters[cls] = 1;
           }
 
+          // 4. Hent det nåværende startnummeret for denne deltakeren
+          const currentSnr = classCounters[cls];
+
+          // 5. Øk telleren for DEN NESTE deltakeren i samme klasse
+          classCounters[cls]++;
+
+          // 6. Bygg det nye deltakerobjektet med riktig 'snr'
           newParticipants.push({
-            snr: nameMap[name],
+            snr: currentSnr, // Her settes det klassevise startnummeret
             name,
             class: cls,
             competition: competitionVal,
@@ -178,16 +165,17 @@
             shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
           });
         }
+        // --- SLUTT PÅ NY LOGIKK ---
 
-        console.log("Nye deltakere fra CSV:", newParticipants);
+        console.log("Nye deltakere som skal importeres (klassevis snr):", newParticipants);
 
-        // Sett dem inn i DB
+        // 7. Sett dem inn i DB (denne delen er lik som før)
         const { error } = await supabaseClient.from("participants").insert(newParticipants);
         if (error) {
           console.error("Feil ved CSV-import:", error);
           alert("CSV-import feilet – sjekk konsollen for detaljer.");
         } else {
-          alert("CSV-import fullført!");
+          alert(`CSV-import fullført! ${newParticipants.length} deltakere ble lagt til.`);
         }
       };
       reader.readAsText(file);
