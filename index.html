@@ -5,37 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lørenskog Skiklubb – Tidtaking</title>
 
-  <!-- Tailwind-konfig MÅ komme før cdn-scriptet -->
+  <!-- For rask oppkobling til CDN/Supabase -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://chzfewhbfkdtcizdxyzk.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="https://chzfewhbfkdtcizdxyzk.supabase.co">
+
+  <!-- Tailwind (CDN) -->
   <script>
+    /* Beholdes for layout-klasser. Ingen spesial-config nødvendig for headerfarge. */
     window.tailwind = window.tailwind || {};
     window.tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand:  '#18469a', // Lørenskog blå
-            brand2: '#dbe723', // Lørenskog gul
-          },
-          boxShadow: {
-            soft: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-            card: '0 8px 24px rgba(15,23,42,0.06)',
-          },
-          borderRadius: {
-            xl: '1rem',
-            '2xl': '1.25rem',
-          }
-        }
-      }
+      theme: { extend: {} }
     };
   </script>
   <script src="https://cdn.tailwindcss.com@3.4.10"></script>
 
   <style>
     :root{
-      --brand:#18469a;   /* Lørenskog blå */
+      --brand:#18469a;   /* Lørenskog blå, brukes ellers i UI */
       --brand2:#dbe723;  /* Lørenskog gul */
     }
 
     body{ background:#f5f7fb; color:#0f172a; }
+
+    /* HEADER – lås nøyaktig blå og logostørrelse */
+    .site-header{
+      background:#18469a !important; /* identisk blå */
+      color:#ffffff !important;
+    }
+    .site-header .logo-img{
+      height:48px;           /* lås høyde */
+      max-width:80px;        /* og maks bredde */
+      width:auto;            /* behold proporsjoner */
+      object-fit:contain;
+      background:#ffffff;
+      border-radius:8px;
+      padding:4px;
+    }
+    .site-header .title{ line-height:1.1; }
+    .site-header .subtitle{ opacity:.9; }
 
     /* Kort */
     .card{
@@ -51,14 +60,8 @@
 
     .subtle{ color:#475569 }
     .soft{ background:#f8fafc }
-.logo-img {
-  height: 48px;
-  width: auto;
-  max-width: 80px;
-  object-fit: contain;
-}
 
-    /* Inputs/selects for “Tailwind Forms”-look uten plugin */
+    /* Inputs/selects (uten Tailwind Forms-plugin) */
     input[type="text"],
     input[type="number"],
     input[type="time"],
@@ -74,7 +77,7 @@
       box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
       transition: box-shadow .15s, border-color .15s;
     }
-    input[type="time"]{ padding-right:2.25rem; } /* plass til klokke-ikonet på noen browsere */
+    input[type="time"]{ padding-right:2.25rem; }
     input:focus, select:focus {
       outline:2px solid transparent;
       border-color:#93c5fd;
@@ -143,6 +146,7 @@
     dialog::backdrop{ background:rgba(0,0,0,.45) }
   </style>
 
+  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script>
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
@@ -152,21 +156,24 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
- <header class="bg-[var(--brand)] text-white p-3 shadow-md sticky top-0 z-50">
-  <div class="max-w-6xl mx-auto flex items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-<img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb"
-     class="logo-img rounded bg-white p-1 object-contain">
-
-      <div>
-        <h1 class="text-xl font-bold leading-tight">Lørenskog Skiklubb</h1>
-        <p class="text-sm opacity-90">Tidtaking for ski-konkurranser</p>
+  <!-- HEADER (låst blå + logo-størrelse) -->
+  <header class="site-header shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
+      <div class="flex items-center gap-3">
+        <!-- Bruk gjerne en komprimert .webp-fil. width/height hindrer layout-jump -->
+        <img
+          src="Logo LSK Klubb farger JPG.jpeg"
+          alt="Lørenskog Skiklubb"
+          width="80" height="48"
+          class="logo-img">
+        <div>
+          <h1 class="title text-xl font-bold">Lørenskog Skiklubb</h1>
+          <p class="subtitle text-sm">Tidtaking for ski-konkurranser</p>
+        </div>
       </div>
+      <div id="liveClock" class="font-bold text-lg"></div>
     </div>
-    <div id="liveClock" class="font-bold text-lg"></div>
-  </div>
-</header>
-
+  </header>
 
   <main class="flex-1 max-w-6xl mx-auto w-full p-4 space-y-6">
 
@@ -322,7 +329,7 @@
       <div class="overflow-x-auto mt-4">
         <table>
           <caption class="text-left font-semibold px-2 py-2">Ikke lagret ennå (fra participants)</caption>
-        <thead>
+          <thead>
             <tr>
               <th>Velg</th>
               <th>#</th>
@@ -365,7 +372,7 @@
     </div>
   </dialog>
 
-  <!-- App-logikk (uendret bortsett fra små kosmetiske ting) -->
+  <!-- ====== APP LOGIKK ====== -->
   <script>
     // Global state
     window.participants = {};
@@ -855,66 +862,24 @@
       if (summaryEl) summaryEl.textContent = `${(hist||[]).length} lagret${window._historyShowAll ? ' (alle datoer)' : ''} · ${pending.length} ikke lagret`;
     };
 
-    window.importCSV = function(){
-      const fileInput = document.getElementById('csvImport');
-      if (!fileInput.files || fileInput.files.length === 0){ alert('Velg en CSV-fil å importere.'); return; }
-      const file = fileInput.files[0]; const reader = new FileReader();
-      reader.onload = async function(e){
-        const text = e.target.result; const lines = text.split('\n').map(line=>line.trim()).filter(line=>line.length>0);
-        let startIdx = 0; if (lines[0]?.toLowerCase().startsWith('snr')) startIdx = 1;
-        let newParticipants = [];
-        for (let i=startIdx;i<lines.length;i++){
-          const parts = lines[i].split(','); if (parts.length < 3) continue;
-          const snr = parseInt(parts[0].trim()); const name = parts[1].trim(); const cls = parts[2].trim();
-          if (isNaN(snr) || !name || !cls) continue;
-          newParticipants.push({ snr, name, class:cls, start:null, status:'Venter', laps:[], finish:null, rawFinish:null, shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)]), selected:false });
-        }
-        if (newParticipants.length === 0){ alert('Ingen gyldige deltakere funnet i CSV-filen.'); return; }
-        const { error } = await window.supabaseClient.from('participants').insert(newParticipants);
-        if (error){ console.error('Feil ved CSV-import:', error); alert('Feil ved CSV-import – sjekk konsollen.'); }
-        else { alert('CSV-import fullført!'); window.updateTable(); }
-      };
-      reader.readAsText(file);
-    };
+    // ---------- YTELSES-FIXER ----------
+    // 1) Kun klokka hvert sekund (ingen nettverk)
+    setInterval(window.updateLiveClock, 1000);
 
-    window.saveCSV = async function(){
-      const { data, error } = await window.supabaseClient.from('participants').select('*');
-      if (error){ console.error('Feil ved CSV-export:', error); return; }
-      if (!data || data.length === 0){ alert('Ingen data funnet for CSV-export!'); return; }
-      const finishedData = data.filter(p => p.finish !== null && p.finish !== undefined).sort((a,b)=>a.finish-b.finish);
-      let csv = 'Klasse,Plass,Startnummer,Navn,Tid,Bom\n';
-      let groups = {};
-      finishedData.forEach(p => { if (!groups[p.class]) groups[p.class] = []; groups[p.class].push(p); });
-      for (const cls in groups){
-        groups[cls].sort((a,b)=>a.finish-b.finish);
-        const bestFinish = groups[cls][0].finish;
-        groups[cls].forEach((p,i) => {
-          const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]];
-          const bom = shooting.flat().filter(hit => hit === false).length;
-          const diff = p.finish - bestFinish;
-          csv += `${cls},${i+1},${p.snr},${p.name},${window.formatTime(p.finish)} (+${diff.toFixed(1)}s),${bom}\n`;
-        })
-      }
-      const unfinishedData = data.filter(p => p.finish === null || p.finish === undefined).sort((a,b)=>a.snr-b.snr);
-      unfinishedData.forEach(p => { const shooting = (typeof p.shooting === 'string') ? JSON.parse(p.shooting) : p.shooting || [[],[]]; const bom = shooting.flat().filter(hit => hit === false).length; csv += `-,${p.snr},${p.name},${p.class},-,${bom}\n`; });
-      const link = document.createElement('a'); link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); link.download = 'resultater.csv'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    };
+    // 2) Kun lokal DOM-oppdatering hvert sekund (til tider/labels)
+    setInterval(window.updateLocalDisplay, 1000);
 
-    window.saveSelectedToHistory = async function(){
-      const checkboxes = document.querySelectorAll('.select-participant');
-      let selected = []; checkboxes.forEach(cb => { if (cb.checked) selected.push(parseInt(cb.getAttribute('data-snr'))); });
-      if (selected.length === 0){ alert('Ingen deltakere er markert.'); return; }
-      const now = new Date(); const yyyy = now.getFullYear(); const mm = String(now.getMonth()+1).padStart(2,'0'); const dd = String(now.getDate()).padStart(2,'0'); const compDate = `${yyyy}-${mm}-${dd}`;
-      const rows = selected.map((snr)=>{
-        const p = window.participants[snr]; if (!p) return null;
-        const shootingArr = window.getShootingArray(p);
-        return { comp_date:compDate, name:p.name, class:p.class, start:p.start ? p.start : null, status:p.status, laps:p.laps, finish:p.finish ?? null, rawFinish:p.rawFinish ?? null, shooting:shootingArr, penalty: Number(document.getElementById('penaltyTime').value) || null };
-      }).filter(Boolean);
-      const { error } = await window.supabaseClient.from('history').insert(rows);
-      if (error){ console.error('Feil ved lagring til history:', error); alert('Feil ved lagring til history – sjekk konsollen.'); }
-      else { alert(`Lagret ${rows.length} markerte til history for ${compDate}.`); if (window.updateHistoryView){ window.updateHistoryView(); } }
-    };
+    // 3) Poll Supabase sjeldnere (5s) og bare når siden er synlig
+    const POLL_MS = 5000;
+    async function smartPoll(){
+      if (document.hidden) return;
+      await window.updateTable();
+    }
+    setInterval(smartPoll, POLL_MS);
+    window.addEventListener('load', smartPoll);
+    document.addEventListener('visibilitychange', ()=> { if (!document.hidden) smartPoll(); });
 
+    // ---------- LYTTERE ----------
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action]');
       if (!btn) return;
@@ -938,8 +903,6 @@
       if (action === 'finish'){ await window.recordFinish(snr); }
       if (action === 'undo')  { await window.undoLast(snr); }
     });
-
-    setInterval(()=>{ window.updateLiveClock(); window.updateTable(); }, 1000);
 
     document.getElementById('btnAddParticipant').addEventListener('click', window.addParticipant);
     document.getElementById('btnAssignStartTimes').addEventListener('click', window.assignStartTimes);
@@ -979,17 +942,6 @@
       }
       if (dateInput || btnRefr || btnAll){ window.updateHistoryView(); }
     })();
-
-    document.getElementById('penaltyTime').addEventListener('change', async function(){
-      for (const [snr,p] of Object.entries(window.participants)){
-        if (p.rawFinish != null){
-          window.updateFinalTime(snr);
-          const { error } = await window.supabaseClient.from('participants').update({ finish:p.finish }).eq('snr', snr);
-          if (error) console.error('Feil ved oppdatering av finish etter straffe-endring for snr', snr, error);
-        }
-      }
-      window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-    });
 
     document.getElementById('btnDeleteSelected').addEventListener('click', async function(){
       const checkboxes = document.querySelectorAll('.select-participant'); let selected = [];
