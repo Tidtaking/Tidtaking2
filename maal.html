@@ -1,281 +1,293 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Målregistrering (offline-first)</title>
-  <style>
-    :root{ --bg:#ffffff; --fg:#111; --muted:#555; --accent:#0a7cff; --ok:#28a745; --warn:#cc8a00; --err:#cc1d1d; --card:#f2f7ff; }
-    html,body{height:100%}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-    header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;z-index:10}
-    .bar{display:flex;gap:.5rem;align-items:center;justify-content:space-between;padding:.75rem 1rem}
-    h1{font-size:1.3rem;margin:0}
-    .status{font-size:.9rem}
-    .pill{border:1px solid #e5e5e5;border-radius:999px;padding:.25rem .6rem}
-    .pill.online{background:#eaffea;border-color:#b8e5b8;color:#1a7d1a}
-    .pill.offline{background:#fff6d6;border-color:#f0d082;color:#7a5a00}
-    .pill.syncing{background:#eef5ff;border-color:#cfe0ff;color:#20509e}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Målregistrering (offline-first)</title>
+  <style>
+    :root{ --bg:#ffffff; --fg:#111; --muted:#555; --accent:#0a7cff; --ok:#28a745; --warn:#cc8a00; --err:#cc1d1d; --card:#f2f7ff; }
+    html,body{height:100%}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
+    header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e5e5;z-index:10}
+    .bar{display:flex;gap:.5rem;align-items:center;justify-content:space-between;padding:.75rem 1rem}
+    h1{font-size:1.3rem;margin:0}
+    .status{font-size:.9rem}
+    .pill{border:1px solid #e5e5e5;border-radius:999px;padding:.25rem .6rem}
+    .pill.online{background:#eaffea;border-color:#b8e5b8;color:#1a7d1a}
+    .pill.offline{background:#fff6d6;border-color:#f0d082;color:#7a5a00}
+    .pill.syncing{background:#eef5ff;border-color:#cfe0ff;color:#20509e}
 
-    .controls{display:flex;gap:.5rem}
-    button{appearance:none;border:1px solid #d6d6d6;border-radius:.8rem;padding:.6rem .9rem;font-size:1rem;background:#fff}
-    button:active{transform:scale(.98)}
-    .primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .controls{display:flex;gap:.5rem}
+    button{appearance:none;border:1px solid #d6d6d6;border-radius:.8rem;padding:.6rem .9rem;font-size:1rem;background:#fff}
+    button:active{transform:scale(.98)}
+    .primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-    main{padding:1rem;max-width:720px;margin:0 auto}
-    .grid{display:grid;grid-template-columns:1fr;gap:.8rem}
+    main{padding:1rem;max-width:720px;margin:0 auto}
+    .grid{display:grid;grid-template-columns:1fr;gap:.8rem}
 
-    .card{border:1px solid #e5eefc;border-radius:1rem;padding:1rem;background:var(--card)}
-    .title{display:flex;justify-content:space-between;align-items:center}
-    .snr{font-weight:700;font-size:1.3rem;color:var(--accent)}
-    .name{font-size:1.1rem}
-    .meta{display:flex;gap:1rem;margin:.4rem 0;color:var(--muted);font-size:.95rem}
-    .distance{color:#d00;font-weight:600}
+    .card{border:1px solid #e5eefc;border-radius:1rem;padding:1rem;background:var(--card)}
+    .title{display:flex;justify-content:space-between;align-items:center}
+    .snr{font-weight:700;font-size:1.3rem;color:var(--accent)}
+    .name{font-size:1.1rem}
+    .meta{display:flex;gap:1rem;margin:.4rem 0;color:var(--muted);font-size:.95rem}
+    .distance{color:#d00;font-weight:600}
 
-    .finish{width:100%;background:var(--ok);border-color:var(--ok);color:#fff;font-size:1.15rem;padding:0.9rem;border-radius:.9rem}
-    .finish.pending{background:#8fbf94;border-color:#8fbf94}
-    .badge{font-size:.8rem;border:1px dashed #bbb;border-radius:.5rem;padding:.1rem .4rem;color:#666}
+    .finish{width:100%;background:var(--ok);border-color:var(--ok);color:#fff;font-size:1.15rem;padding:0.9rem;border-radius:.9rem}
+    .finish.pending{background:#8fbf94;border-color:#8fbf94}
+    .badge{font-size:.8rem;border:1px dashed #bbb;border-radius:.5rem;padding:.1rem .4rem;color:#666}
 
-    .row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
-    .row input{padding:.5rem .6rem;border:1px solid #d6d6d6;border-radius:.6rem;font-size:1rem;width:8.5rem}
-    .ghost{opacity:.8}
+    .row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+    .row input{padding:.5rem .6rem;border:1px solid #d6d6d6;border-radius:.6rem;font-size:1rem;width:8.5rem}
+    .ghost{opacity:.8}
 
-    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;padding:.7rem 1rem;border-radius:.7rem;font-size:.95rem;opacity:0;pointer-events:none;transition:opacity .2s}
-    .toast.show{opacity:1}
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#111;color:#fff;padding:.7rem 1rem;border-radius:.7rem;font-size:.95rem;opacity:0;pointer-events:none;transition:opacity .2s}
+    .toast.show{opacity:1}
 
-    @media (min-width:540px){ .grid{grid-template-columns:1fr 1fr} }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    @media (min-width:540px){ .grid{grid-template-columns:1fr 1fr} }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 <body>
-  <header>
-    <div class="bar">
-      <h1>Målregistrering</h1>
-      <div class="controls">
-        <button id="refreshBtn" title="Synk nå">⟳ Synk</button>
-        <button id="toggleSortBtn" title="Sorter">⇅ Sort</button>
-        <span id="netBadge" class="pill">Sjekker…</span>
-      </div>
-    </div>
-  </header>
+  <header>
+    <div class="bar">
+      <h1>Målregistrering</h1>
+      <div class="controls">
+        <button id="refreshBtn" title="Synk nå">⟳ Synk</button>
+        <button id="toggleSortBtn" title="Sorter">⇅ Sort</button>
+        <span id="netBadge" class="pill">Sjekker…</span>
+      </div>
+    </div>
+  </header>
 
-  <main>
-    <div class="status">
-      <span id="syncBadge" class="pill syncing">Klar</span>
-      <span id="queueBadge" class="pill" title="Antall ventende oppdateringer">Kø: 0</span>
-      <span class="pill" id="tsBadge">–</span>
-    </div>
+  <main>
+    <div class="status">
+      <span id="syncBadge" class="pill syncing">Klar</span>
+      <span id="queueBadge" class="pill" title="Antall ventende oppdateringer">Kø: 0</span>
+      <span class="pill" id="tsBadge">–</span>
+    </div>
 
-    <section class="grid" id="participantGrid"></section>
-  </main>
+    <section class="grid" id="participantGrid"></section>
+  </main>
 
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast"></div>
 
-  <script>
-  /********************* CONFIG *********************/
-  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-  const sb = supabase.createClient(supabaseUrl, supabaseKey);
-  const TABLE = "participants";
+  <script>
+  /********************* CONFIG *********************/
+  const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
+  const sb = supabase.createClient(supabaseUrl, supabaseKey);
+  const TABLE = "participants";
 
-  /********************* STATE *********************/
-  let cache = { active: [], finished: [], finishedByClass: {} };
-  let sortMode = localStorage.getItem("sortMode") || "snr"; // snr | name
-  let pollingMs = 15000; // reduser nett-bruk
-  let backoff = 0; let tickTimer = null; let pollTimer = null;
+  /********************* STATE *********************/
+  let cache = { active: [], finished: [], finishedByClass: {} };
+  let sortMode = localStorage.getItem("sortMode") || "snr"; // snr | name
+  let pollingMs = 15000; // reduser nett-bruk
+  let backoff = 0; let tickTimer = null; let pollTimer = null;
 
-  // Lokal manuell start (lagres offline pr. løper)
-  const LSTART_KEY = "manual_starts_v1";
-  function lstarts(){ try{return JSON.parse(localStorage.getItem(LSTART_KEY)||"{}");}catch{return {}} }
-  function setLStart(snr, iso){ const m=lstarts(); m[snr]=iso; localStorage.setItem(LSTART_KEY, JSON.stringify(m)); }
-  function getStartIso(pOrSnr){
-    const snr = (typeof pOrSnr === 'object' && pOrSnr) ? pOrSnr.snr : pOrSnr;
-    const startFromObj = (typeof pOrSnr === 'object' && pOrSnr) ? pOrSnr.start : null;
-    return startFromObj || (snr!=null ? lstarts()[snr] : null) || null;
-  }
+  // Lokal manuell start (lagres offline pr. løper)
+  const LSTART_KEY = "manual_starts_v1";
+  function lstarts(){ try{return JSON.parse(localStorage.getItem(LSTART_KEY)||"{}");}catch{return {}} }
+  function setLStart(snr, iso){ const m=lstarts(); m[snr]=iso; localStorage.setItem(LSTART_KEY, JSON.stringify(m)); }
+  function getStartIso(pOrSnr){
+    const snr = (typeof pOrSnr === 'object' && pOrSnr) ? pOrSnr.snr : pOrSnr;
+    const startFromObj = (typeof pOrSnr === 'object' && pOrSnr) ? pOrSnr.start : null;
+    return startFromObj || (snr!=null ? lstarts()[snr] : null) || null;
+  }
 
-  /********************* UTIL *********************/
-  const $ = sel => document.querySelector(sel);
-  function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 1800); }
-  function formatTime(timeSec){ if (timeSec == null || isNaN(timeSec)) return ""; const total = Math.max(0, Math.floor(timeSec)); const mm = Math.floor(total/60); const ss = total%60; return `${mm}:${ss.toString().padStart(2,"0")}`; }
-  function nowIso(){ return new Date().toISOString(); }
-  function isOnline(){ return navigator.onLine; }
-  function setNetBadge(){ const b=$("#netBadge"); b.classList.remove("online","offline"); if(isOnline()){ b.textContent="Online"; b.classList.add("online"); } else { b.textContent="Offline"; b.classList.add("offline"); } }
-  function setSyncBadge(text, cls){ const s=$("#syncBadge"); s.textContent=text; s.className=`pill ${cls||""}`; }
-  function setQueueBadge(){ const q = outboxLoad(); $("#queueBadge").textContent = `Kø: ${q.length}`; }
+  /********************* UTIL *********************/
+  const $ = sel => document.querySelector(sel);
+  function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 1800); }
+  function formatTime(timeSec){ if (timeSec == null || isNaN(timeSec)) return ""; const total = Math.max(0, Math.floor(timeSec)); const mm = Math.floor(total/60); const ss = total%60; return `${mm}:${ss.toString().padStart(2,"0")}`; }
+  function nowIso(){ return new Date().toISOString(); }
+  function isOnline(){ return navigator.onLine; }
+  function setNetBadge(){ const b=$("#netBadge"); b.classList.remove("online","offline"); if(isOnline()){ b.textContent="Online"; b.classList.add("online"); } else { b.textContent="Offline"; b.classList.add("offline"); } }
+  function setSyncBadge(text, cls){ const s=$("#syncBadge"); s.textContent=text; s.className=`pill ${cls||""}`; }
+  function setQueueBadge(){ const q = outboxLoad(); $("#queueBadge").textContent = `Kø: ${q.length}`; }
 
-  /********************* OUTBOX *********************/
-  const OUTBOX_KEY = "finish_outbox_v1";
-  function outboxLoad(){ try{ return JSON.parse(localStorage.getItem(OUTBOX_KEY)||"[]"); }catch{ return []; } }
-  function outboxSave(items){ localStorage.setItem(OUTBOX_KEY, JSON.stringify(items)); setQueueBadge(); }
-  function outboxAdd(item){ const q = outboxLoad(); q.push(item); outboxSave(q); }
-  function outboxRemoveById(id){ const q = outboxLoad().filter(x=>x.id!==id); outboxSave(q); }
+  /********************* OUTBOX *********************/
+  const OUTBOX_KEY = "finish_outbox_v1";
+  function outboxLoad(){ try{ return JSON.parse(localStorage.getItem(OUTBOX_KEY)||"[]"); }catch{ return []; } }
+  function outboxSave(items){ localStorage.setItem(OUTBOX_KEY, JSON.stringify(items)); setQueueBadge(); }
+  function outboxAdd(item){ const q = outboxLoad(); q.push(item); outboxSave(q); }
+  function outboxRemoveById(id){ const q = outboxLoad().filter(x=>x.id!==id); outboxSave(q); }
 
-  /********************* CACHE *********************/
-  const CACHE_KEY = "participants_cache_v1";
-  function cacheSave(){ localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); $("#tsBadge").textContent = `Sist oppdatert: ${new Date().toLocaleTimeString()}`; }
-  function cacheLoad(){ try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); if(c){ cache=c; } }catch{} }
+  /********************* CACHE *********************/
+  const CACHE_KEY = "participants_cache_v1";
+  function cacheSave(){ localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); $("#tsBadge").textContent = `Sist oppdatert: ${new Date().toLocaleTimeString()}`; }
+  function cacheLoad(){ try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); if(c){ cache=c; } }catch{} }
 
-  /********************* RENDER *********************/
-  function computeFinishedByClass(){
-    const map = {};
-    for(const p of cache.finished){ const cls = p.class || "Ukjent"; const t = parseFloat(p.finish)||0; if(!map[cls] || t < map[cls]) map[cls] = t; }
-    cache.finishedByClass = map;
-  }
-  function sortParticipants(list){ if (sortMode === "name") return list.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"")); return list.slice().sort((a,b)=> (a.snr||0)-(b.snr||0)); }
+  /********************* RENDER *********************/
+  function computeFinishedByClass(){
+    const map = {};
+    for(const p of cache.finished){ const cls = p.class || "Ukjent"; const t = parseFloat(p.finish)||0; if(!map[cls] || t < map[cls]) map[cls] = t; }
+    cache.finishedByClass = map;
+  }
+  function sortParticipants(list){ if (sortMode === "name") return list.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||"")); return list.slice().sort((a,b)=> (a.snr||0)-(b.snr||0)); }
 
-  function render(){
-    const grid = $("#participantGrid");
-    if (!cache.active.length){ grid.innerHTML = `<div class=card><div>Ingen aktive deltakere.</div></div>`; return; }
-    const H = [];
-    for (const p of sortParticipants(cache.active)){
-      const startIso = getStartIso(p);
-      let elapsed = 0; if (startIso) elapsed = (Date.now() - Date.parse(startIso)) / 1000;
-      const cls = p.class || "Ukjent"; const leader = cache.finishedByClass[cls];
-      const diff = (leader!=null && elapsed>leader) ? `+${formatTime(elapsed - leader)}` : (leader==null?"":"Leder");
-      const pending = outboxLoad().some(x=>x.snr===p.snr);
+  function render(){
+    const grid = $("#participantGrid");
+    if (!cache.active.length){ grid.innerHTML = `<div class=card><div>Ingen aktive deltakere.</div></div>`; return; }
+    const H = [];
+    for (const p of sortParticipants(cache.active)){
+      const startIso = getStartIso(p);
+      let elapsed = 0; if (startIso) elapsed = (Date.now() - Date.parse(startIso)) / 1000;
+      const cls = p.class || "Ukjent"; const leader = cache.finishedByClass[cls];
+      const diff = (leader!=null && elapsed>leader) ? `+${formatTime(elapsed - leader)}` : (leader==null?"":"Leder");
+      const pending = outboxLoad().some(x=>x.snr===p.snr);
 
-      const needsStart = !startIso;
-      const startUi = needsStart ? `
-        <div class="row ghost" style="margin:.4rem 0 .6rem">
-          <button onclick="startNow(${p.snr})">Start nå</button>
-          <input id="mmss-${p.snr}" placeholder="mm:ss" inputmode="numeric" />
-          <button onclick="startFromMmss(${p.snr})">Sett mm:ss siden</button>
-        </div>` : '';
+      const needsStart = !startIso;
+      const startUi = needsStart ? `
+        <div class="row ghost" style="margin:.4rem 0 .6rem">
+          <button onclick="startNow(${p.snr})">Start nå</button>
+          <input id="mmss-${p.snr}" placeholder="mm:ss" inputmode="numeric" />
+          <button onclick="startFromMmss(${p.snr})">Sett mm:ss siden</button>
+        </div>` : '';
 
-      H.push(`
-        <article class="card">
-          <div class="title">
-            <div class="snr">Startnr ${p.snr}</div>
-            <div class="badge">${cls}</div>
-          </div>
-          <div class="name">${p.name||"(uten navn)"}</div>
-          ${startUi}
-          <div class="meta">
-            <div>Tid: <strong>${formatTime(elapsed)}</strong></div>
-            <div class="distance">${diff||""}</div>
-          </div>
-          <button class="finish ${pending?"pending":""}" ${pending?"disabled":""} onclick="finishClick(${p.snr})">${pending?"I kø – synkes":"Mål"}</button>
-        </article>
-      `);
-    }
-    grid.innerHTML = H.join("");
-  }
+      H.push(`
+        <article class="card">
+          <div class="title">
+            <div class="snr">Startnr ${p.snr}</div>
+            <div class="badge">${cls}</div>
+          </div>
+          <div class="name">${p.name||"(uten navn)"}</div>
+          ${startUi}
+          <div class="meta">
+            <div>Tid: <strong>${formatTime(elapsed)}</strong></div>
+            <div class="distance">${diff||""}</div>
+          </div>
+          <button class="finish ${pending?"pending":""}" ${pending?"disabled":""} onclick="finishClick(${p.snr})">${pending?"I kø – synkes":"Mål"}</button>
+        </article>
+      `);
+    }
+    grid.innerHTML = H.join("");
+  }
 
-  function startTick(){ if (tickTimer) return; tickTimer = setInterval(render, 1000); }
-  function stopTick(){ clearInterval(tickTimer); tickTimer=null; }
+  function startTick(){ if (tickTimer) return; tickTimer = setInterval(render, 1000); }
+  function stopTick(){ clearInterval(tickTimer); tickTimer=null; }
 
-  /********************* DATA (nett) *********************/
-  async function fetchLists(){
-    setSyncBadge("Henter…","syncing");
-    try{
-      const [{ data:active, error:e1 }, { data:finished, error:e2 }] = await Promise.all([
-        sb.from(TABLE).select("*").eq("status","I gang"),
-        sb.from(TABLE).select("*").eq("status","Fullført")
-      ]);
-      if (e1||e2) throw e1||e2;
-      cache.active = active||[]; cache.finished = finished||[]; computeFinishedByClass(); cacheSave(); render(); setSyncBadge("Synkret","online"); backoff = 0;
-    }catch(err){ setSyncBadge("Feil – viser cache","offline"); console.warn("Nettfeil:", err); backoff = Math.min(60000, (backoff||0) + 5000); }
-  }
-  function schedulePoll(){ clearInterval(pollTimer); pollTimer = setInterval(fetchLists, pollingMs + backoff); }
+  /********************* DATA (nett) *********************/
+  async function fetchLists(){
+    setSyncBadge("Henter…","syncing");
+    try{
+      const [{ data:active, error:e1 }, { data:finished, error:e2 }] = await Promise.all([
+        sb.from(TABLE).select("*").eq("status","I gang"),
+        sb.from(TABLE).select("*").eq("status","Fullført")
+      ]);
+      if (e1||e2) throw e1||e2;
+      cache.active = active||[]; cache.finished = finished||[]; computeFinishedByClass(); cacheSave(); render(); setSyncBadge("Synkret","online"); backoff = 0;
+    }catch(err){ setSyncBadge("Feil – viser cache","offline"); console.warn("Nettfeil:", err); backoff = Math.min(60000, (backoff||0) + 5000); }
+  }
+  function schedulePoll(){ clearInterval(pollTimer); pollTimer = setInterval(fetchLists, pollingMs + backoff); }
 
-  /********************* MANUELL START *********************/
-  function mmssToSeconds(mmss){
-    const m = (mmss||"").trim(); if(!m) return null;
-    const parts = m.split(":"); if(parts.length!==2) return null;
-    const mm = parseInt(parts[0],10); const ss = parseInt(parts[1],10);
-    if (isNaN(mm)||isNaN(ss)) return null; return Math.max(0, mm*60 + ss);
-  }
-  async function startNow(snr){
-    const iso = nowIso(); setLStart(snr, iso); toast(`Start satt (nå) for #${snr}`);
-    // legg i outbox: oppdater start på server når vi får nett
-    outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso: iso, createdAt: nowIso() });
-    render(); processOutbox();
-  }
-  async function startFromMmss(snr){
-    const el = document.getElementById(`mmss-${snr}`); const sec = mmssToSeconds(el && el.value);
-    if (sec==null){ toast("Ugyldig mm:ss"); return; }
-    const iso = new Date(Date.now() - sec*1000).toISOString();
-    setLStart(snr, iso); toast(`Start satt (${el.value}) for #${snr}`);
-    outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso: iso, createdAt: nowIso() });
-    render(); processOutbox();
-  }
+  /********************* MANUELL START *********************/
+  function mmssToSeconds(mmss){
+    const m = (mmss||"").trim(); if(!m) return null;
+    const parts = m.split(":"); if(parts.length!==2) return null;
+    const mm = parseInt(parts[0],10); const ss = parseInt(parts[1],10);
+    if (isNaN(mm)||isNaN(ss)) return null; return Math.max(0, mm*60 + ss);
+  }
+  async function startNow(snr){
+    const iso = nowIso(); setLStart(snr, iso); toast(`Start satt (nå) for #${snr}`);
+    // legg i outbox: oppdater start på server når vi får nett
+    outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso: iso, createdAt: nowIso() });
+    render(); processOutbox();
+  }
+  async function startFromMmss(snr){
+    const el = document.getElementById(`mmss-${snr}`); const sec = mmssToSeconds(el && el.value);
+    if (sec==null){ toast("Ugyldig mm:ss"); return; }
+    const iso = new Date(Date.now() - sec*1000).toISOString();
+    setLStart(snr, iso); toast(`Start satt (${el.value}) for #${snr}`);
+    outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso: iso, createdAt: nowIso() });
+    render(); processOutbox();
+  }
 
-  /********************* FINISH FLOW *********************/
-  async function finishClick(snr){
-    try{
-      // hent deltaker (kan være undefined hvis ikke i cache akkurat nå)
-      const p = cache.active.find(x=>x.snr===snr);
-      let startIso = getStartIso(p || snr);
+  /********************* FINISH FLOW *********************/
+  async function finishClick(snr){
+    try{
+      // hent deltaker (kan være undefined hvis ikke i cache akkurat nå)
+      const p = cache.active.find(x=>x.snr===snr);
+      let startIso = getStartIso(p || snr);
 
-      // hvis mangler start: sett start nå (fallback) og informer
-      if (!startIso){
-        startIso = nowIso();
-        setLStart(snr, startIso);
-        outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso, createdAt: nowIso() });
-        toast("Start manglet – satt til nå");
-      }
+      // hvis mangler start: sett start nå (fallback) og informer
+      if (!startIso){
+        startIso = nowIso();
+        setLStart(snr, startIso);
+        outboxAdd({ id:`start-${snr}-${Date.now()}`, type:'start', snr, startIso, createdAt: nowIso() });
+        toast("Start manglet – satt til nå");
+      }
 
-      const finishSec = (Date.now() - Date.parse(startIso)) / 1000;
-      const id = `${snr}-${Date.now()}`;
-      outboxAdd({ id, type:'finish', snr, finish: finishSec, createdAt: nowIso() });
-      render();
-      processOutbox();
-    }catch(err){
-      console.error('finishClick feil', err);
-      toast('Klarte ikke å registrere mål (se konsoll)');
-    }
-  }
+      const finishSec = (Date.now() - Date.parse(startIso)) / 1000;
+      const id = `${snr}-${Date.now()}`;
+      outboxAdd({ id, type:'finish', snr, finish: finishSec, createdAt: nowIso() });
+      render();
+      processOutbox();
+    }catch(err){
+      console.error('finishClick feil', err);
+      toast('Klarte ikke å registrere mål (se konsoll)');
+    }
+  }
 
-  async function processOutbox(){
-    const q = outboxLoad(); if (!q.length) return; if (!isOnline()){ setSyncBadge("Venter på nett","offline"); return; }
-    setSyncBadge("Sender…","syncing");
-    for (const job of q){
-      try{
-        if (job.type === 'start'){
-          const { error:up1 } = await sb.from(TABLE).update({ start: job.startIso }).eq("snr", job.snr);
-          if (up1) throw up1; outboxRemoveById(job.id);
-        } else if (job.type === 'finish'){
-          // Unngå duplikat
-          const { data:exists, error:e0 } = await sb.from(TABLE).select("status,finish").eq("snr", job.snr).single();
-          if (e0) throw e0;
-          if (exists && exists.status === "Fullført") { outboxRemoveById(job.id); continue; }
-          const { error:up2 } = await sb.from(TABLE).update({ status:"Fullført", finish: job.finish }).eq("snr", job.snr);
-          if (up2) throw up2; outboxRemoveById(job.id); toast(`Mål registrert for #${job.snr}`);
-        }
-      }catch(err){ console.warn("Synk-feil", job, err); setSyncBadge("Feil – prøver igjen","offline"); break; }
-    }
-    fetchLists();
-  }
+  async function processOutbox(){
+    const q = outboxLoad(); if (!q.length) return; if (!isOnline()){ setSyncBadge("Venter på nett","offline"); return; }
+    setSyncBadge("Sender…","syncing");
+    for (const job of q){
+      try{
+        if (job.type === 'start'){
+          const { error:up1 } = await sb.from(TABLE).update({ start: job.startIso }).eq("snr", job.snr);
+          if (up1) throw up1; outboxRemoveById(job.id);
+        } else if (job.type === 'finish'){
+          // Unngå duplikat
+          const { data:exists, error:e0 } = await sb.from(TABLE).select("status,finish").eq("snr", job.snr).single();
+          if (e0) throw e0;
+          if (exists && exists.status === "Fullført") { outboxRemoveById(job.id); continue; }
+          
+          // --- START RETTELSE (for kompatibilitet med Tidtaking-app) ---
+          // Lagre tiden (job.finish) til BÅDE 'rawFinish' og 'finish'.
+          // 'rawFinish' er den korrekte råtiden.
+          // 'finish' settes midlertidig lik råtiden, frem til Tidtaking-appen legger til bomtillegg.
+          const payload = { 
+            status: "Fullført", 
+            rawFinish: job.finish, // <-- Lagre råtid her
+            finish: job.finish     // <-- Og sett totaltid lik råtid inntil videre
+          };
+          const { error:up2 } = await sb.from(TABLE).update(payload).eq("snr", job.snr);
+          // --- SLUTT RETTELSE ---
 
-  /********************* EVENTS *********************/
-  window.finishClick = finishClick; window.startNow = startNow; window.startFromMmss = startFromMmss;
-  window.addEventListener('online', ()=>{ setNetBadge(); processOutbox(); fetchLists(); });
-  window.addEventListener('offline', ()=>{ setNetBadge(); setSyncBadge("Offline – viser cache","offline"); });
-  document.addEventListener('visibilitychange', ()=>{ if (document.hidden){ stopTick(); } else { startTick(); } });
-  $("#refreshBtn").addEventListener('click', ()=>{ fetchLists(); processOutbox(); });
-  $("#toggleSortBtn").addEventListener('click', ()=>{ sortMode = (sortMode==="snr")?"name":"snr"; localStorage.setItem("sortMode", sortMode); render(); });
+          if (up2) throw up2; outboxRemoveById(job.id); toast(`Mål registrert for #${job.snr}`);
+        }
+      }catch(err){ console.warn("Synk-feil", job, err); setSyncBadge("Feil – prøver igjen","offline"); break; }
+    }
+    fetchLists();
+  }
 
-  /********************* SERVICE WORKER *********************/
-  if ('serviceWorker' in navigator){
-    const swCode = `
-      const CACHE_NAME = 'malreg-offline-v2';
-      const ASSETS = [self.location.href, 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js'];
-      self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
-      self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
-      self.addEventListener('fetch', e=>{
-        const req=e.request; if(req.method==='GET'){
-          e.respondWith(caches.match(req).then(cached=>{ const fetchPromise=fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE_NAME).then(c=>c.put(req, copy)); return res; }).catch(()=>cached); return cached||fetchPromise; }));
-        }
-      });
-    `;
-    const blob = new Blob([swCode], { type:'text/javascript' });
-    const swUrl = URL.createObjectURL(blob); navigator.serviceWorker.register(swUrl).catch(()=>{});
-  }
+  /********************* EVENTS *********************/
+  window.finishClick = finishClick; window.startNow = startNow; window.startFromMmss = startFromMmss;
+  window.addEventListener('online', ()=>{ setNetBadge(); processOutbox(); fetchLists(); });
+  window.addEventListener('offline', ()=>{ setNetBadge(); setSyncBadge("Offline – viser cache","offline"); });
+  document.addEventListener('visibilitychange', ()=>{ if (document.hidden){ stopTick(); } else { startTick(); } });
+  $("#refreshBtn").addEventListener('click', ()=>{ fetchLists(); processOutbox(); });
+  $("#toggleSortBtn").addEventListener('click', ()=>{ sortMode = (sortMode==="snr")?"name":"snr"; localStorage.setItem("sortMode", sortMode); render(); });
 
-  /********************* BOOT *********************/
-  function boot(){ setNetBadge(); setQueueBadge(); cacheLoad(); computeFinishedByClass(); render(); startTick(); fetchLists().then(()=>{ schedulePoll(); processOutbox(); }); }
-  boot();
-  </script>
+  /********************* SERVICE WORKER *********************/
+  if ('serviceWorker' in navigator){
+    const swCode = `
+      const CACHE_NAME = 'malreg-offline-v2';
+      const ASSETS = [self.location.href, 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js'];
+      self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
+      self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });
+      self.addEventListener('fetch', e=>{
+        const req=e.request; if(req.method==='GET'){
+          e.respondWith(caches.match(req).then(cached=>{ const fetchPromise=fetch(req).then(res=>{ const copy=res.clone(); caches.open(CACHE_NAME).then(c=>c.put(req, copy)); return res; }).catch(()=>cached); return cached||fetchPromise; }));
+        }
+      });
+    `;
+    const blob = new Blob([swCode], { type:'text/javascript' });
+    const swUrl = URL.createObjectURL(blob); navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+
+  /********************* BOOT *********************/
+  function boot(){ setNetBadge(); setQueueBadge(); cacheLoad(); computeFinishedByClass(); render(); startTick(); fetchLists().then(()=>{ schedulePoll(); processOutbox(); }); }
+  boot();
+  </script>
 </body>
 </html>
