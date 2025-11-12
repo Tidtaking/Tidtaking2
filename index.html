@@ -438,13 +438,19 @@
       })
     };
 
-    window.updateFinalTime = function(snr){
-      let p = window.participants[snr];
-      const penaltyPerMiss = Number(document.getElementById('penaltyTime').value) || 0;
-      const shootingArr = window.getShootingArray(p);
-      const totalMisses = shootingArr.flat().filter(hit => hit === false).length;
-      p.finish = Number(p.rawFinish || 0) + (totalMisses * penaltyPerMiss);
-    };
+window.updateFinalTime = function(snr){
+      let p = window.participants[snr];
+      
+      // VIKTIG: Ikke gjør noe med 'finish' hvis 'rawFinish' ikke har en gyldig verdi.
+      if (p.rawFinish == null || isNaN(Number(p.rawFinish))) return; 
+
+      const penaltyPerMiss = Number(document.getElementById('penaltyTime').value) || 0;
+      const shootingArr = window.getShootingArray(p);
+      const totalMisses = shootingArr.flat().filter(hit => hit === false).length;
+      
+      // Nå er 'p.rawFinish' garantert et tall, så den farlige '|| 0' er fjernet.
+      p.finish = Number(p.rawFinish) + (totalMisses * penaltyPerMiss);
+    };
 
     window.recomputeAndPersistAllFinished = async function(){
       const penaltyPerMiss = Number(document.getElementById('penaltyTime').value) || 0;
@@ -781,17 +787,14 @@
       p.shooting = JSON.stringify(shootingArr);
      const updatePayload = { shooting:p.shooting };
 
-      // --- RETTET LOGIKK ---
-      // Vi MÅ sjekke om p.rawFinish (råtiden) faktisk har en verdi.
-      // Den gamle sjekken feilet hvis status var 'Fullført' men p.rawFinish var null.
-      if (p.rawFinish != null){ 
-        window.updateFinalTime(snr); // Denne setter p.finish = p.rawFinish + (bom * tillegg)
-        updatePayload.finish = p.finish; // Legg til den nye totaltiden i lagringen
+      // VIKTIG: Bytt '||' (eller) til '&&' (og).
+      // Vi må ha BÅDE 'Fullført' status OG en gyldig 'rawFinish' for å regne ut ny tid.
+      if (p.status === 'Fullført' && p.rawFinish != null){ 
+        window.updateFinalTime(snr); // Denne vil nå kun regne ut hvis rawFinish er et tall
+        updatePayload.finish = p.finish; // Lagre den nylig beregnede totaltiden
       }
-      // --- SLUTT PÅ RETTET LOGIKK ---
-
       const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
-    }
+      }
     window.renderShooting = function(snr, shootIdx){
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
