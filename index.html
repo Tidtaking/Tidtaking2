@@ -19,7 +19,8 @@
       theme: { extend: {} }
     };
   </script>
-  <script src="https://cdn.tailwindcss.com@3.4.10"></script>
+  <!-- FIX: riktig Tailwind-CDN URL (forrige brukte @3.4.10, som ikke lastes). -->
+  <script src="https://cdn.tailwindcss.com?v=3.4.10"></script>
 
   <style>
     :root{
@@ -556,7 +557,7 @@
           <td>${startBtn}</td>
           <td>${snr} <button class="btn btn-ghost p-1" data-action="edit-snr" data-snr="${snr}" title="Endre startnummer">✏️</button></td>
           <td>${p.name}</td>
-          <td>${p.class}</td>
+          <td>${p.class || '-'} <button class="btn btn-ghost p-1" data-action="edit-class" data-snr="${snr}" title="Endre klasse">✏️</button></td>
           <td><span class='${statusTag}'>${p.status}</span></td>
           <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
           <td class="shooting">${window.renderShooting(snr,0)}</td>
@@ -662,6 +663,21 @@
       await window.updateTable();
       if (window.participants[newSnr]) { window.participants[newSnr].selected = selectedState; }
       window.updateLocalDisplay();
+    };
+
+    // NEW: endre klasse for deltaker
+    window.changeClassFor = async function(snr, newClass){
+      const p = window.participants[snr];
+      if (!p) return;
+      const cls = (newClass || '').trim();
+      if (!cls){ alert('Klasse kan ikke være tom.'); return; }
+      // lagre i DB
+      const { error } = await window.supabaseClient.from('participants').update({ class: cls }).eq('snr', snr);
+      if (error){ console.error('Feil ved oppdatering av klasse for snr', snr, error); return; }
+      // oppdater lokalt og rerender
+      p.class = cls;
+      window.updateLocalDisplay();
+      if (window.updateHistoryView) window.updateHistoryView();
     };
 
     window.startMass = async function(){
@@ -811,7 +827,7 @@
           <td><input type='checkbox' class='select-participant' data-snr='${wp.snr}' onchange='updateSelection(${wp.snr}, this.checked)' ${selectedAttr}></td>
           <td>${wp.snr}</td>
           <td>${wp.name}</td>
-          <td>${wp.class}</td>
+          <td>${wp.class || '-'} <button class="btn btn-ghost p-1" data-action="edit-class" data-snr="${wp.snr}" title="Endre klasse">✏️</button></td>
           <td>${wp.status}</td>
           <td>${tid}</td>
           <td class='shooting'>${window.renderShooting(wp.snr,0)}</td>
@@ -894,6 +910,16 @@
         if (newSnrStr) {
           const newSnr = parseInt(newSnrStr);
           await window.changeStartNumber(oldSnr, newSnr);
+        }
+        return;
+      }
+
+      if (action === 'edit-class') {
+        const s = parseInt(snr);
+        const curr = window.participants[s]?.class || '';
+        const val = prompt(`Endre klasse for ${window.participants[s]?.name || 'deltaker'} (nå "${curr}"):",`, curr);
+        if (val !== null) {
+          await window.changeClassFor(s, val);
         }
         return;
       }
