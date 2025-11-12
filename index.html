@@ -779,13 +779,18 @@
       let shootingArr = window.getShootingArray(p);
       shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
       p.shooting = JSON.stringify(shootingArr);
-      const updatePayload = { shooting:p.shooting };
-      if (p.status === 'Fullført' || p.rawFinish != null){ window.updateFinalTime(snr); updatePayload.finish = p.finish; }
-      const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
-      if (error) console.error('Feil ved toggleTarget for snr', snr, error);
-      window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-    };
+     const updatePayload = { shooting:p.shooting };
 
+      // --- RETTET LOGIKK ---
+      // Vi MÅ sjekke om p.rawFinish (råtiden) faktisk har en verdi.
+      // Den gamle sjekken feilet hvis status var 'Fullført' men p.rawFinish var null.
+      if (p.rawFinish != null){ 
+        window.updateFinalTime(snr); // Denne setter p.finish = p.rawFinish + (bom * tillegg)
+        updatePayload.finish = p.finish; // Legg til den nye totaltiden i lagringen
+      }
+      // --- SLUTT PÅ RETTET LOGIKK ---
+
+      const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
     window.renderShooting = function(snr, shootIdx){
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
