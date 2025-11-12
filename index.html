@@ -791,6 +791,7 @@
       // --- SLUTT PÅ RETTET LOGIKK ---
 
       const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
+    }
     window.renderShooting = function(snr, shootIdx){
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
@@ -993,7 +994,6 @@
         else if (p.status === 'I gang'){ await window.recordFinish(snr); }
       }
       window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-        }
     });
   </script>
 </body>
