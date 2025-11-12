@@ -2,61 +2,187 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Import CSV Deltakere</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lørenskog Skiklubb – Import</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://chzfewhbfkdtcizdxyzk.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="https://chzfewhbfkdtcizdxyzk.supabase.co">
+
+  <script src="https://cdn.tailwindcss.com@3.4.10"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f9f9f9; }
-    h1 { font-size: 32px; margin-bottom: 20px; color: #333; }
-    .instructions { background: #e9e9e9; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto; font-size: 18px; }
-    label { font-size: 18px; margin-top: 10px; display: block; }
-    input, button { font-size: 18px; padding: 8px; margin: 10px; max-width: 300px; }
-    @media (max-width: 480px) {
-      h1 { font-size: 28px; }
-      .instructions { font-size: 16px; }
-      input, button { font-size: 16px; }
+    :root{
+      --brand:#18469a;    /* Lørenskog blå */
+      --brand2:#dbe723;   /* Lørenskog gul */
     }
+
+    body{ background:#f5f7fb; color:#0f172a; }
+
+    /* HEADER */
+    .site-header{
+      background:#18469a !important; 
+      color:#ffffff !important;
+    }
+    .site-header .logo-img{
+      height:48px; max-width:80px; width:auto;
+      object-fit:contain; background:#ffffff;
+      border-radius:8px; padding:4px;
+    }
+    .site-header .title{ line-height:1.1; }
+    .site-header .subtitle{ opacity:.9; }
+
+    /* Kort */
+    .card{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:1rem;
+      padding:1rem;
+      box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+    @media (min-width:768px){
+      .card{ padding:1.25rem; }
+    }
+
+    .subtle{ color:#475569 }
+    .soft{ background:#f8fafc; border: 1px solid #e2e8f0; } /* Lagt til border */
+
+    /* Inputs/selects */
+    input[type="text"],
+    input[type="number"],
+    input[type="time"],
+    input[type="date"],
+    input[type="file"],
+    select {
+      width: 100%; /* Gjør input-felt responsive */
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:0.75rem;
+      padding:0.5rem 0.75rem;
+      font-size:0.95rem;
+      line-height:1.4;
+      box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
+      transition: box-shadow .15s, border-color .15s;
+    }
+    input:focus, select:focus {
+      outline:2px solid transparent;
+      border-color:#93c5fd;
+      box-shadow: 0 0 0 3px rgba(24,70,154,.18);
+    }
+    /* Stil for fil-input */
+    input[type="file"] { 
+        padding: 0; 
+        font-size: 14px;
+    }
+    input[type="file"]::file-selector-button {
+        font-weight: 600;
+        color: var(--brand);
+        padding: 0.5rem 0.75rem;
+        border: none;
+        border-right: 1px solid #e2e8f0;
+        background-color: #f8fafc;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+
+    /* Knapper */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      padding:8px 12px; border-radius:9999px; font-size:14px; font-weight:600;
+      border:1px solid #e2e8f0; cursor:pointer; transition: background .15s, transform .04s, box-shadow .15s;
+      background:#fff;
+    }
+    .btn:hover{ background:#f1f5f9; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ color:var(--brand); border-color:#cbd5e1; }
+    .btn-danger{ background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
   </style>
 </head>
-<body>
-  <h1>Import CSV Deltakere</h1>
-  <div class="instructions">
-    <p><strong>CSV-format:</strong></p>
-    <p>Filen skal ha header: <strong>name;class</strong> (med semikolon)</p>
-    <p><strong>Eksempel:</strong><br>
-        Ola Nordmann;G10<br>
-        Kari Hansen;G14<br>
-        Per Olsen;G10</p>
-    <p>Koden vil finne høyeste 'snr' i databasen og tildele nye, unike 'snr' fortløpende, sortert etter klasse.</p>
-  </div>
-  
-  <label for="competitionInput">Konkurranse:</</label>
-  <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
-  <br>
-  <label for="dateInput">Dato:</label>
-  <input type="date" id="dateInput">
-  <br>
-  <input type="file" id="csvImport" accept=".csv">
-  <br>
-  <button id="btnImportCSV">Importer CSV</button>
+<body class="min-h-screen flex flex-col">
+
+  <header class="site-header shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
+      <div class="flex items-center gap-3">
+        <img
+          src="lsk_logo.jpg"
+          alt="Lørenskog Skiklubb"
+          width="80" height="48"
+          class="logo-img">
+        <div>
+          <h1 class="title text-xl font-bold">Lørenskog Skiklubb</h1>
+          <p class="subtitle text-sm">Import av deltakere</p>
+        </div>
+      </div>
+      </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl mx-auto w-full p-4">
+
+    <section class="card max-w-2xl mx-auto">
+      
+      <h3 class="font-semibold text-lg mb-4">Importer deltakere fra CSV</h3>
+      
+      <div class="soft p-3 rounded-lg mb-4">
+        <p class="font-medium">Instruksjoner:</p>
+        <ul class="list-disc list-inside text-sm subtle mt-1 space-y-1">
+            <li>Filen må være en `.csv`-fil.</li>
+            <li>Første rad (header) må være: <strong>name;class</strong></li>
+            <li>Data må være separert med semikolon (`;`).</li>
+            <li>Systemet tildeler unike startnumre automatisk.</li>
+            <li>Importen sorteres etter **eldste klasse først**.</li>
+        </ul>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label for="competitionInput" class="block text-sm subtle mb-1">Konkurranse:</label>
+          <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
+        </div>
+        
+        <div>
+          <label for="dateInput" class="block text-sm subtle mb-1">Dato:</label>
+          <input type="date" id="dateInput">
+        </div>
+
+        <div>
+            <label for="csvImport" class="block text-sm subtle mb-1">Velg CSV-fil:</label>
+            <input type="file" id="csvImport" accept=".csv">
+        </div>
+        
+        <div class="pt-2">
+          <button id="btnImportCSV" class="btn btn-primary w-full md:w-auto">Start Import</button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="text-center text-sm text-gray-500 py-5">
+    © 2025 Lørenskog Skiklubb – Tidtaking
+  </footer>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
   <script>
     // Konfigurer Supabase
     const supabaseUrl = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log("Supabase-klient opprettet:", supabaseClient);
+
+    // Sett dato til i dag som standard
+    document.getElementById("dateInput").value = new Date().toISOString().split('T')[0];
 
     /**
      * Henter det høyeste 'snr' (startnummeret) som er i bruk i HELE databasen.
-     * Returnerer 0 hvis tabellen er tom eller en feil oppstår.
      */
     async function fetchHighestSnr() {
       const { data, error } = await supabaseClient
         .from("participants")
         .select("snr")
-        .order("snr", { ascending: false }) // Sorter synkende
-        .limit(1); // Bare hent den øverste (høyeste)
+        .order("snr", { ascending: false })
+        .limit(1); 
 
       if (error) {
         console.error("Feil ved henting av høyeste snr:", error);
@@ -72,6 +198,16 @@
     }
 
     /**
+     * NY HJELPEFUNKSJON:
+     * Henter ut alderen (tallet) fra en klassestreng, f.eks. "G16" -> 16
+     */
+    function getClassAge(className) {
+        if (!className) return 0;
+        const match = className.match(/\d+/); // Finner første tallrekke
+        return match ? parseInt(match[0], 10) : 0;
+    }
+
+    /**
      * Leser CSV-filen, tildeler globalt unike startnumre sortert etter klasse,
      * og importerer data til Supabase.
      */
@@ -83,9 +219,8 @@
         return;
       }
 
-      // 1. HENT HØYESTE EKSISTERENDE SNR
       const highestExistingSnr = await fetchHighestSnr();
-      let nextSnr = highestExistingSnr + 1; // Start tildeling fra neste nummer
+      let nextSnr = highestExistingSnr + 1;
       console.log(`Høyeste snr i DB: ${highestExistingSnr}. Starter tildeling fra: ${nextSnr}`);
 
       const reader = new FileReader();
@@ -118,26 +253,32 @@
           return;
         }
 
-        // --- NY LOGIKK FOR UNIKT OG GRUPPERT SNR ---
+        // --- OPPDATERT SORTERINGSLOGIKK ---
+        // Sorterer etter "eldste klasse først" (høyest tall)
+        rows.sort((a, b) => {
+            const ageA = getClassAge(a.class);
+            const ageB = getClassAge(b.class);
 
-        // 2. Sorter radene etter klasse.
-        rows.sort((a, b) => a.class.localeCompare(b.class));
+            // Sorter eldst (høyest tall) først
+            if (ageA !== ageB) {
+                return ageB - ageA; // Sorter synkende
+            }
+            
+            // Hvis lik alder (f.eks. G10 vs J10), sorter alfabetisk på klasse
+            return a.class.localeCompare(b.class);
+        });
+        // --- SLUTT PÅ NY LOGIKK ---
 
         let newParticipants = [];
 
-        // 3. Gå gjennom de sorterte radene og tildel UNIKE, fortløpende numre
+        // Gå gjennom de sorterte radene og tildel UNIKE, fortløpende numre
         for (const row of rows) {
           const { name, class: cls } = row;
-
-          // 4. Hent det neste globale startnummeret
           const snrToAssign = nextSnr;
+          nextSnr++; // Øk telleren for NESTE deltaker
 
-          // 5. Øk telleren for NESTE deltaker
-          nextSnr++;
-
-          // 6. Bygg det nye deltakerobjektet
           newParticipants.push({
-            snr: snrToAssign, // Her settes det unike, fortløpende nummeret
+            snr: snrToAssign,
             name,
             class: cls,
             competition: competitionVal,
@@ -150,17 +291,18 @@
             shooting: JSON.stringify([Array(5).fill(false), Array(5).fill(false)])
           });
         }
-        // --- SLUTT PÅ NY LOGIKK ---
 
-        console.log("Nye deltakere som skal importeres (unikt/gruppert snr):", newParticipants);
+        console.log("Nye deltakere som skal importeres (sortert):", newParticipants);
 
-        // 7. Sett dem inn i DB
+        // Sett dem inn i DB
         const { error } = await supabaseClient.from("participants").insert(newParticipants);
         if (error) {
           console.error("Feil ved CSV-import:", error);
-          alert("CSV-import feilet – sjekk konsollen for detaljer. (Sannsynligvis 409-feil)");
+          alert("CSV-import feilet – sjekk konsollen for detaljer. (Sannsynligvis 409-feil pga. duplikat snr hvis du kjører to ganger)");
         } else {
           alert(`CSV-import fullført! ${newParticipants.length} deltakere ble lagt til.`);
+          // Send brukeren tilbake til startsiden
+          window.location.href = 'index.html'; 
         }
       };
       reader.readAsText(file);
