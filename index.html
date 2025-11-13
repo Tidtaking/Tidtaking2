@@ -581,52 +581,61 @@ window.updateFinalTime = function(snr){
     };
 
    window.updateLocalDisplay = function(){
+      // Kjører den lokale kalkuleringen av totaltid (raw + bom)
       Object.keys(window.participants).forEach(snr => {
         const p = window.participants[snr];
         if (p.status === 'Fullført' && p.rawFinish != null) window.updateFinalTime(snr);
       });
-      let overallBestFinish = Infinity;
-      Object.values(window.participants).forEach(p => { if (p.finish != null && p.finish < overallBestFinish) overallBestFinish = p.finish; });
 
-      // --- RETTELSE 1: Beregn beste rundetider PER KLASSE ---
+      // --- BEREGN BESTE RUNDETIDER PER KLASSE ---
       let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
       let bestLapTimesByClass = {};
-
       Object.values(window.participants).forEach(p => {
         const cls = p.class || 'Ukjent'; // Bruk 'Ukjent' hvis klasse mangler
         if (!bestLapTimesByClass[cls]) {
-          // Opprett en liste for denne klassen hvis den ikke finnes
           bestLapTimesByClass[cls] = Array(maxLaps).fill(Infinity);
         }
-        // Finn beste tid for hver runde i denne klassen
         p.laps.forEach((lap, i) => {
           if (lap < bestLapTimesByClass[cls][i]) {
             bestLapTimesByClass[cls][i] = lap;
           }
         });
       });
-      // --- SLUTT RETTELSE 1 ---
 
+      // --- BEREGN PLASSERING OG BESTE MÅLTID PER KLASSE ---
       let classPlacements = {};
       Object.entries(window.participants).forEach(([snr,p]) => {
         if (p.finish != null){
-          if (!classPlacements[p.class]) classPlacements[p.class] = [];
-          classPlacements[p.class].push({ snr, finish:p.finish });
+          const cls = p.class || 'Ukjent'; // Sørg for at 'Ukjent' brukes konsekvent
+          if (!classPlacements[cls]) classPlacements[cls] = [];
+          classPlacements[cls].push({ snr, finish:p.finish });
         }
       });
+
+      let bestFinishByClass = {};
       for (const cls in classPlacements){
+        // Sorter etter tid for å finne plassering OG beste tid
         classPlacements[cls].sort((a,b)=>a.finish-b.finish);
         classPlacements[cls].forEach((entry,i)=> entry.rank = i+1);
+        // Lagre den beste tiden (den første i den sorterte listen)
+        if (classPlacements[cls].length > 0) {
+          bestFinishByClass[cls] = classPlacements[cls][0].finish;
+        }
       }
 
       let rows = [];
       for (const [snr,p] of Object.entries(window.participants)){
+        const p_class = p.class || 'Ukjent'; // Hent klassen til denne løperen
         const checkbox = `<input type="checkbox" class="select-participant" data-snr="${snr}" id="select-${snr}" name="select-participant" onchange="updateSelection(${snr}, this.checked)" ${p.selected ? 'checked' : ''}>`;
+        
+        // Finn plassering
         let placement = '-';
-        if (p.finish != null && classPlacements[p.class]){
-          const found = classPlacements[p.class].find(entry => entry.snr === snr);
+        if (p.finish != null && classPlacements[p_class]){
+          const found = classPlacements[p_class].find(entry => entry.snr === snr);
           placement = found ? found.rank : '-';
         }
+        
+        // Formater tid (pågående eller total)
         let timeDisplay = '-';
         if (p.status === 'Planlagt'){
           let remainingSec = (Date.parse(p.start) - Date.now())/1000; if (remainingSec < 0) remainingSec = 0;
@@ -637,22 +646,29 @@ window.updateFinalTime = function(snr){
           timeDisplay = window.formatTime(p.finish);
         }
 
-        // --- RETTELSE 2: Bruk de klassespesifikke tidene ---
-        const p_class = p.class || 'Ukjent';
-        const classBestLaps = bestLapTimesByClass[p_class] || []; // Hent beste tider for DENNE klassen
-
+        // FIKS 1: Rundetid-diff (basert på klasse)
+        const classBestLaps = bestLapTimesByClass[p_class] || [];
         const lapDiffs = p.laps.map((lap,i)=>{
-          const best = classBestLaps[i]; // Klassens beste tid for denne runden
-          let diffStr = '-';
-          // Vis kun positive differanser
+          const best = classBestLaps[i];
+          let diffStr = '–';
           if (best != null && best !== Infinity && lap > best) {
             diffStr = `+${(lap - best).toFixed(1)}s`;
           }
           return `${window.formatTime(lap)} (${diffStr})`;
         }).join('<br>');
-        // --- SLUTT RETTELSE 2 ---
 
-        const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
+        // FIKS 2: Måltid-diff (basert på klasse)
+        const classBestFinish = bestFinishByClass[p_class];
+        let finishDiff = '-';
+        if (p.finish != null) {
+          let diffStr = '–'; // Viser '–' for vinneren
+          // Vis kun positive differanser
+          if (classBestFinish != null && p.finish > classBestFinish && p.finish !== classBestFinish) {
+            diffStr = `+${(p.finish - classBestFinish).toFixed(1)}s`;
+          }
+          finishDiff = `${window.formatTime(p.finish)} (${diffStr})`;
+        }
+        
         const statusTag = p.status==='Venter' ? 'status wait' : p.status==='Planlagt' ? 'status plan' : p.status==='I gang' ? 'status run' : 'status done';
 
         const startBtn = (p.status === 'Planlagt' || p.status === 'Venter') && !p.timer
@@ -674,8 +690,8 @@ window.updateFinalTime = function(snr){
           <td>${p.class || '-'} <button class="btn btn-ghost p-1" data-action="edit-class" data-snr="${snr}" title="Endre klasse">✏️</button></td>
           <td><span class='${statusTag}'>${p.status}</span></td>
           <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
-          <td class="shooting">${window.renderShooting(snr,0)}</td>
-          <td class="shooting">${window.renderShooting(snr,1)}</td>
+->          <td class="shooting" data-snr="${snr}" data-shooting-idx="0">${window.renderShooting(snr,0)}</td>
+          <td class="shooting" data-snr="${snr}" data-shooting-idx="1">${window.renderShooting(snr,1)}</td>
           <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
           <td class="col-laps">${lapDiffs || '-'}</td>
           <td class="col-finishdiff">${finishDiff}</td>
