@@ -580,78 +580,110 @@ window.updateFinalTime = function(snr){
       window.updateLocalDisplay();
     };
 
-    window.updateLocalDisplay = function(){
-      Object.keys(window.participants).forEach(snr => {
-        const p = window.participants[snr];
-        if (p.status === 'Fullført' && p.rawFinish != null) window.updateFinalTime(snr);
-      });
-      let overallBestFinish = Infinity;
-      Object.values(window.participants).forEach(p => { if (p.finish != null && p.finish < overallBestFinish) overallBestFinish = p.finish; });
-      let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
-      let bestLapTimes = Array(maxLaps).fill(Infinity);
-      Object.values(window.participants).forEach(p => { p.laps.forEach((lap,i)=>{ if (lap < bestLapTimes[i]) bestLapTimes[i] = lap; })});
-      let classPlacements = {};
-      Object.entries(window.participants).forEach(([snr,p]) => {
-        if (p.finish != null){
-          if (!classPlacements[p.class]) classPlacements[p.class] = [];
-          classPlacements[p.class].push({ snr, finish:p.finish });
-        }
-      });
-      for (const cls in classPlacements){
-        classPlacements[cls].sort((a,b)=>a.finish-b.finish);
-        classPlacements[cls].forEach((entry,i)=> entry.rank = i+1);
-      }
+   window.updateLocalDisplay = function(){
+      Object.keys(window.participants).forEach(snr => {
+        const p = window.participants[snr];
+        if (p.status === 'Fullført' && p.rawFinish != null) window.updateFinalTime(snr);
+      });
+      let overallBestFinish = Infinity;
+      Object.values(window.participants).forEach(p => { if (p.finish != null && p.finish < overallBestFinish) overallBestFinish = p.finish; });
 
-      let rows = [];
-      for (const [snr,p] of Object.entries(window.participants)){
-        const checkbox = `<input type="checkbox" class="select-participant" data-snr="${snr}" id="select-${snr}" name="select-participant" onchange="updateSelection(${snr}, this.checked)" ${p.selected ? 'checked' : ''}>`;
-        let placement = '-';
-        if (p.finish != null && classPlacements[p.class]){
-          const found = classPlacements[p.class].find(entry => entry.snr === snr);
-          placement = found ? found.rank : '-';
-        }
-        let timeDisplay = '-';
-        if (p.status === 'Planlagt'){
-          let remainingSec = (Date.parse(p.start) - Date.now())/1000; if (remainingSec < 0) remainingSec = 0;
-          timeDisplay = window.formatClockTimeFull(Date.parse(p.start)) + ` (${window.formatTime(remainingSec)} til start)`;
-        } else if (p.timer){
-          timeDisplay = window.formatTime((Date.now()-Date.parse(p.start))/1000);
-        } else if (p.finish != null){
-          timeDisplay = window.formatTime(p.finish);
-        }
-        const lapDiffs = p.laps.map((lap,i)=>{ const diff=(lap - bestLapTimes[i]).toFixed(1); return `${window.formatTime(lap)} (+${diff}s)`; }).join('<br>');
-        const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
-        const statusTag = p.status==='Venter' ? 'status wait' : p.status==='Planlagt' ? 'status plan' : p.status==='I gang' ? 'status run' : 'status done';
+      // --- RETTELSE 1: Beregn beste rundetider PER KLASSE ---
+      let maxLaps = 0; Object.values(window.participants).forEach(p => { if (p.laps.length > maxLaps) maxLaps = p.laps.length; });
+      let bestLapTimesByClass = {};
 
-        const startBtn = (p.status === 'Planlagt' || p.status === 'Venter') && !p.timer
-          ? `<button class='btn btn-primary' data-action="start" data-snr="${snr}">Start</button>`
-          : '-';
+      Object.values(window.participants).forEach(p => {
+        const cls = p.class || 'Ukjent'; // Bruk 'Ukjent' hvis klasse mangler
+        if (!bestLapTimesByClass[cls]) {
+          // Opprett en liste for denne klassen hvis den ikke finnes
+          bestLapTimesByClass[cls] = Array(maxLaps).fill(Infinity);
+        }
+        // Finn beste tid for hver runde i denne klassen
+        p.laps.forEach((lap, i) => {
+          if (lap < bestLapTimesByClass[cls][i]) {
+            bestLapTimesByClass[cls][i] = lap;
+          }
+        });
+      });
+      // --- SLUTT RETTELSE 1 ---
 
-        const actionBtns = p.timer
-          ? `<button class='btn btn-primary' data-action="lap" data-snr="${snr}">Rundetid</button>
-             <button class='btn btn-primary' data-action="finish" data-snr="${snr}">Mål</button>
-             ${hasUndo(snr) ? `<button class='btn' data-action="undo" data-snr="${snr}">Angre</button>` : ''}`
-          : `${hasUndo(snr) ? `<button class='btn' data-action="undo" data-snr="${snr}">Angre</button>` : '-'}`;
+      let classPlacements = {};
+      Object.entries(window.participants).forEach(([snr,p]) => {
+        if (p.finish != null){
+          if (!classPlacements[p.class]) classPlacements[p.class] = [];
+          classPlacements[p.class].push({ snr, finish:p.finish });
+        }
+      });
+      for (const cls in classPlacements){
+        classPlacements[cls].sort((a,b)=>a.finish-b.finish);
+        classPlacements[cls].forEach((entry,i)=> entry.rank = i+1);
+      }
 
-        rows.push(`<tr>
-          <td>${checkbox}</td>
-          <td>${placement}</td>
-          <td>${startBtn}</td>
-          <td>${snr} <button class="btn btn-ghost p-1" data-action="edit-snr" data-snr="${snr}" title="Endre startnummer">✏️</button></td>
-          <td>${p.name}</td>
-          <td>${p.class || '-'} <button class="btn btn-ghost p-1" data-action="edit-class" data-snr="${snr}" title="Endre klasse">✏️</button></td>
-          <td><span class='${statusTag}'>${p.status}</span></td>
-          <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
-          <td class="shooting">${window.renderShooting(snr,0)}</td>
-          <td class="shooting">${window.renderShooting(snr,1)}</td>
-          <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
-          <td class="col-laps">${lapDiffs || '-'}</td>
-          <td class="col-finishdiff">${finishDiff}</td>
-          <td>${actionBtns}</td>
-        </tr>`);
-      }
-      document.getElementById('results').innerHTML = rows.join('');
-    };
+      let rows = [];
+      for (const [snr,p] of Object.entries(window.participants)){
+        const checkbox = `<input type="checkbox" class="select-participant" data-snr="${snr}" id="select-${snr}" name="select-participant" onchange="updateSelection(${snr}, this.checked)" ${p.selected ? 'checked' : ''}>`;
+        let placement = '-';
+        if (p.finish != null && classPlacements[p.class]){
+          const found = classPlacements[p.class].find(entry => entry.snr === snr);
+          placement = found ? found.rank : '-';
+        }
+        let timeDisplay = '-';
+        if (p.status === 'Planlagt'){
+          let remainingSec = (Date.parse(p.start) - Date.now())/1000; if (remainingSec < 0) remainingSec = 0;
+          timeDisplay = window.formatClockTimeFull(Date.parse(p.start)) + ` (${window.formatTime(remainingSec)} til start)`;
+        } else if (p.timer){
+          timeDisplay = window.formatTime((Date.now()-Date.parse(p.start))/1000);
+        } else if (p.finish != null){
+          timeDisplay = window.formatTime(p.finish);
+        }
+
+        // --- RETTELSE 2: Bruk de klassespesifikke tidene ---
+        const p_class = p.class || 'Ukjent';
+        const classBestLaps = bestLapTimesByClass[p_class] || []; // Hent beste tider for DENNE klassen
+
+        const lapDiffs = p.laps.map((lap,i)=>{
+          const best = classBestLaps[i]; // Klassens beste tid for denne runden
+          let diffStr = '-';
+          // Vis kun positive differanser
+          if (best != null && best !== Infinity && lap > best) {
+            diffStr = `+${(lap - best).toFixed(1)}s`;
+          }
+          return `${window.formatTime(lap)} (${diffStr})`;
+        }).join('<br>');
+        // --- SLUTT RETTELSE 2 ---
+
+        const finishDiff = p.finish != null ? `${window.formatTime(p.finish)} (+${(p.finish - overallBestFinish).toFixed(1)}s)` : '-';
+        const statusTag = p.status==='Venter' ? 'status wait' : p.status==='Planlagt' ? 'status plan' : p.status==='I gang' ? 'status run' : 'status done';
+
+        const startBtn = (p.status === 'Planlagt' || p.status === 'Venter') && !p.timer
+          ? `<button class='btn btn-primary' data-action="start" data-snr="${snr}">Start</button>`
+          : '-';
+
+        const actionBtns = p.timer
+          ? `<button class='btn btn-primary' data-action="lap" data-snr="${snr}">Rundetid</button>
+             <button class='btn btn-primary' data-action="finish" data-snr="${snr}">Mål</button>
+             ${hasUndo(snr) ? `<button class='btn' data-action="undo" data-snr="${snr}">Angre</button>` : ''}`
+          : `${hasUndo(snr) ? `<button class='btn' data-action="undo" data-snr="${snr}">Angre</button>` : '-'}`;
+
+        rows.push(`<tr>
+          <td>${checkbox}</td>
+          <td>${placement}</td>
+          <td>${startBtn}</td>
+          <td>${snr} <button class="btn btn-ghost p-1" data-action="edit-snr" data-snr="${snr}" title="Endre startnummer">✏️</button></td>
+          <td>${p.name}</td>
+          <td>${p.class || '-'} <button class="btn btn-ghost p-1" data-action="edit-class" data-snr="${snr}" title="Endre klasse">✏️</button></td>
+          <td><span class='${statusTag}'>${p.status}</span></td>
+          <td>${p.timer ? window.formatTime((Date.now()-Date.parse(p.start))/1000) : timeDisplay}</td>
+          <td class="shooting">${window.renderShooting(snr,0)}</td>
+          <td class="shooting">${window.renderShooting(snr,1)}</td>
+          <td>${window.getShootingArray(p).flat().filter(h => h === false).length}</td>
+          <td class="col-laps">${lapDiffs || '-'}</td>
+          <td class="col-finishdiff">${finishDiff}</td>
+          <td>${actionBtns}</td>
+        </tr>`);
+      }
+      document.getElementById('results').innerHTML = rows.join('');
+    };
 
     window.updateLiveClock = function(){
       const now = new Date();
