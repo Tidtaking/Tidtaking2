@@ -438,15 +438,28 @@
       })
     };
     // L IM INN DENNE NYE FUNKSJONEN (f.eks. etter window.customConfirm)
-   window.saveSelectedToHistory = async function() {
-  // 1. Hent datoen fra datovelgeren – MÅ være valgt
-  const dateInput = document.getElementById('historyDate');
-  const compDate = dateInput?.value || '';
+  window.saveSelectedToHistory = async function() {
+  // 1. La bruker velge dato i et vindu (prompt)
+  const defaultDate =
+    document.getElementById('historyDate')?.value || window.getTodayCompDate();
 
-  if (!compDate) {
-    alert('Vennligst velg hvilken dato resultatene skal lagres for.');
+  const inputDate = prompt(
+    'Hvilken dato skal resultatene lagres for? (YYYY-MM-DD)',
+    defaultDate
+  );
+
+  // Avbrutt
+  if (inputDate === null) return;
+
+  const compDate = inputDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(compDate)) {
+    alert('Dato må være på formatet ÅÅÅÅ-MM-DD (f.eks. 2025-02-01).');
     return;
   }
+
+  // Oppdater også feltet i UI så alt henger sammen
+  const dateInput = document.getElementById('historyDate');
+  if (dateInput) dateInput.value = compDate;
 
   // 2. Finn alle deltakere som er markert
   const selectedParticipants = [];
@@ -462,18 +475,21 @@
     return;
   }
 
-  // 4. Be om bekreftelse – viser hvilken dato som brukes
+  // 4. Bekreft med valgt dato
   const confirmed = await window.customConfirm(
     `Vil du lagre ${selectedParticipants.length} markerte deltakere til historikken for datoen ${compDate}?`
   );
   if (!confirmed) return;
 
-  console.log(`Lagrer ${selectedParticipants.length} deltakere til historikk for ${compDate}...`);
+  console.log(
+    `Lagrer ${selectedParticipants.length} deltakere til historikk for ${compDate}...`
+  );
 
-  // 5. Klargjør data for Supabase
+  // 5. Klargjør data for Supabase – inkludert skyteresultat 🔫
   const toInsert = selectedParticipants.map(p => {
     let shootingData = p.shooting;
     if (Array.isArray(p.shooting)) {
+      // f.eks. [[true,false,...],[...]]
       shootingData = JSON.stringify(p.shooting);
     } else if (typeof p.shooting !== 'string') {
       shootingData = JSON.stringify(window.getShootingArray(p));
@@ -488,12 +504,15 @@
       finish: p.finish,
       rawFinish: p.rawFinish,
       laps: p.laps,
-      shooting: shootingData
+      shooting: shootingData   // <–– SKYTERESULTAT LAGRES HER
     };
   });
 
   // 6. Slett eksisterende rader for samme dato og snr (simulert upsert)
-  const snrs = toInsert.map(r => r.snr).filter(v => v !== null && v !== undefined);
+  const snrs = toInsert
+    .map(r => r.snr)
+    .filter(v => v !== null && v !== undefined);
+
   if (snrs.length > 0) {
     const { error: delError } = await window.supabaseClient
       .from('history')
@@ -503,15 +522,15 @@
 
     if (delError) {
       console.error('Feil ved sletting før lagring til historikk:', delError);
-      alert(`En feil oppstod ved forberedelse til lagring: ${delError.message}`);
+      alert(
+        `En feil oppstod ved forberedelse til lagring: ${delError.message}`
+      );
       return;
     }
   }
 
   // 7. Sett inn på nytt (ren INSERT)
-  const { error } = await window.supabaseClient
-    .from('history')
-    .insert(toInsert);
+  const { error } = await window.supabaseClient.from('history').insert(toInsert);
 
   // 8. Håndter resultat
   if (error) {
@@ -519,7 +538,9 @@
     alert(`En feil oppstod: ${error.message}`);
   } else {
     console.log('Lagring til historikk vellykket!');
-    alert(`${toInsert.length} deltakere ble lagret/oppdatert i historikken for ${compDate}.`);
+    alert(
+      `${toInsert.length} deltakere ble lagret/oppdatert i historikken for ${compDate}.`
+    );
 
     selectedParticipants.forEach(p => {
       if (window.participants[p.snr]) window.participants[p.snr].selected = false;
@@ -529,6 +550,7 @@
     window.updateLocalDisplay();
   }
 };
+
 
 
 
