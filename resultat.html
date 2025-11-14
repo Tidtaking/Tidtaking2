@@ -330,8 +330,42 @@
     doc.save("resultater.pdf");
   }
 
-  document.getElementById("pdfBtn").addEventListener("click", saveResultsAsPDF);
-  document.addEventListener("DOMContentLoaded", fetchAndDisplayResults);
+document.getElementById("pdfBtn").addEventListener("click", saveResultsAsPDF);
+
+  // === START PÅ RETTELSE ===
+
+  // 1. Funksjon for å starte sanntids-lytting
+  function subscribeToChanges() {
+    try {
+      supabaseClient
+        .channel('public:resultater') // Gi lytteren et unikt navn
+        .on(
+          'postgres_changes', 
+          { 
+            event: '*', // Lytt til INSERT, UPDATE, DELETE
+            schema: 'public', 
+            table: 'participants' // På 'participants'-tabellen
+          },
+          (payload) => {
+            // Når en endring skjer, kjør hele hente-funksjonen på nytt
+            console.log('Database-endring oppdaget, henter resultater...', payload);
+            fetchAndDisplayResults(); 
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("Feil ved oppretting av sanntids-kanal:", e);
+      // Fallback: Hent data hvert 15. sekund hvis sanntid feiler
+      setInterval(fetchAndDisplayResults, 15000);
+    }
+  }
+
+  // 2. Hent data ved første last, og start lytteren
+  document.addEventListener("DOMContentLoaded", () => {
+    fetchAndDisplayResults();
+    subscribeToChanges();
+  });
+  // === SLUTT PÅ RETTELSE ===
 </script>
 </body>
 </html>
