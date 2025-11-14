@@ -405,14 +405,36 @@
     };
 
     window.getShootingArray = function(p) {
-      if (!p || !p.shooting) return [Array(5).fill(false), Array(5).fill(false)];
-      if (Array.isArray(p.shooting)) return (p.shooting.length >= 2) ? p.shooting : [Array(5).fill(false), Array(5).fill(false)];
-      if (typeof p.shooting === 'string') {
-        try { const parsed = JSON.parse(p.shooting); return (Array.isArray(parsed) && parsed.length >= 2) ? parsed : [Array(5).fill(false), Array(5).fill(false)]; }
-        catch { return [Array(5).fill(false), Array(5).fill(false)]; }
+  const fallback = [Array(5).fill(false), Array(5).fill(false)];
+  if (!p || p.shooting == null) return fallback;
+
+  let s = p.shooting;
+
+  // Hvis det allerede er et array -> bruk det
+  if (Array.isArray(s)) {
+    return (s.length >= 2 && Array.isArray(s[0])) ? s : fallback;
+  }
+
+  // Hvis det er en streng, prøv å JSON-parse 1–2 ganger (håndterer "dobbel JSON")
+  if (typeof s === 'string') {
+    let parsed = s;
+    for (let i = 0; i < 2; i++) {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        break;
       }
-      return [Array(5).fill(false), Array(5).fill(false)];
-    };
+    }
+    if (Array.isArray(parsed) && parsed.length >= 2 && Array.isArray(parsed[0])) {
+      return parsed;
+    }
+    return fallback;
+  }
+
+  // Alt annet -> fallback
+  return fallback;
+};
+
 
     window.formatTime = function(sec){
       const sTot = Number(sec) || 0;
@@ -907,19 +929,61 @@ window.updateFinalTime = function(snr){
     };
 
     window.recordFinish = async function(snr){
-      let p = window.participants[snr];
-      if (p && p.start){
-        pushUndo(snr, { type:'finish', prev:{ rawFinish: p.rawFinish ?? null, status: p.status, finish: p.finish ?? null, hadTimer: !!window.localTimers[snr] }});
-        if (window.localTimers[snr]){ clearInterval(window.localTimers[snr]); delete window.localTimers[snr]; }
-        let raw = (Date.now() - Date.parse(p.start))/1000;
-        const lastLap = (Array.isArray(p.laps) && p.laps.length) ? p.laps[p.laps.length-1] : 0;
-        if (raw < lastLap) raw = lastLap;
-        p.rawFinish = raw; p.status = 'Fullført'; window.updateFinalTime(snr);
-        const { error } = await window.supabaseClient.from('participants').update({ rawFinish:p.rawFinish, status:p.status, finish:p.finish }).eq('snr', snr);
-        if (error) console.error('Feil ved recordFinish for snr', snr, error);
-        window.updateTable(); if (window.updateHistoryView) window.updateHistoryView();
-      }
-    };
+  let p = window.participants[snr];
+  if (!p || !p.start) return;
+
+  // Lagre til UNDO
+  pushUndo(snr, { 
+    type: 'finish',
+    prev: {
+      rawFinish: p.rawFinish ?? null,
+      finish: p.finish ?? null,
+      status: p.status,
+      hadTimer: !!window.localTimers[snr]
+    }
+  });
+
+  // Stopp lokal timer
+  if (window.localTimers[snr]) {
+    clearInterval(window.localTimers[snr]);
+    delete window.localTimers[snr];
+  }
+
+  // Rå måltid i sekunder
+  let raw = (Date.now() - Date.parse(p.start)) / 1000;
+  const lastLap = (Array.isArray(p.laps) && p.laps.length)
+    ? p.laps[p.laps.length - 1]
+    : 0;
+  if (raw < lastLap) raw = lastLap;
+
+  p.rawFinish = raw;
+  p.status = 'Fullført';
+
+  // === NY DEL: legg til skytestraff ===
+  const penaltyPerMiss = Number(document.getElementById('penaltyTime').value) || 0;
+  const shootingArr = window.getShootingArray(p);
+  const totalMisses = shootingArr.flat().filter(hit => hit === false).length;
+  p.finish = raw + totalMisses * penaltyPerMiss;
+  // ================================
+
+  // Lagre til Supabase
+  const { error } = await window.supabaseClient
+    .from('participants')
+    .update({
+      rawFinish: p.rawFinish,
+      finish: p.finish,
+      status: p.status
+    })
+    .eq('snr', snr);
+
+  if (error) {
+    console.error('Feil ved recordFinish for snr', snr, error);
+  }
+
+  window.updateTable();
+  if (window.updateHistoryView) window.updateHistoryView();
+};
+
 
     window.undoLast = async function(snr){
       const stack = window.undoStack[snr];
@@ -945,20 +1009,35 @@ window.updateFinalTime = function(snr){
     };
 
     window.toggleTarget = async function(snr, shootIdx, idx){
-      let p = window.participants[snr];
-      let shootingArr = window.getShootingArray(p);
-      shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
-      p.shooting = JSON.stringify(shootingArr);
-     const updatePayload = { shooting:p.shooting };
+  let p = window.participants[snr];
 
-      // VIKTIG: Bytt '||' (eller) til '&&' (og).
-      // Vi må ha BÅDE 'Fullført' status OG en gyldig 'rawFinish' for å regne ut ny tid.
-      if (p.status === 'Fullført' && p.rawFinish != null){ 
-        window.updateFinalTime(snr); // Denne vil nå kun regne ut hvis rawFinish er et tall
-        updatePayload.finish = p.finish; // Lagre den nylig beregnede totaltiden
-      }
-      const { error } = await window.supabaseClient.from('participants').update(updatePayload).eq('snr', snr);
-      }
+  // Hent skyteseriene
+  let shootingArr = window.getShootingArray(p);
+  shootingArr[shootIdx][idx] = !shootingArr[shootIdx][idx];
+
+  // Lagre tilbake som JSON-streng (passer din eksisterende lagring)
+  p.shooting = JSON.stringify(shootingArr);
+
+  const updatePayload = { shooting: p.shooting };
+
+  // Hvis løperen er ferdig og har råtid → oppdater finish med ny straff
+  if (p.status === 'Fullført' && p.rawFinish != null) {
+    const penaltyPerMiss = Number(document.getElementById('penaltyTime').value) || 0;
+    const totalMisses = shootingArr.flat().filter(hit => hit === false).length;
+    p.finish = Number(p.rawFinish) + totalMisses * penaltyPerMiss;
+    updatePayload.finish = p.finish;
+  }
+
+  const { error } = await window.supabaseClient
+    .from('participants')
+    .update(updatePayload)
+    .eq('snr', snr);
+
+  if (error) {
+    console.error('Feil ved oppdatering av skyting/finish for snr', snr, error);
+  }
+};
+
     window.renderShooting = function(snr, shootIdx){
       let p = window.participants[snr];
       let shootingArr = window.getShootingArray(p);
