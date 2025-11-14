@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dagens Deltakere - Tidtaking</title>
+  <title>LSK Tidtaking - Velkommen</title>
   <style>
     :root {
       --brand: #18469a;
@@ -29,7 +29,8 @@
       height: 60px;
       width: auto;
       border-radius: 8px;
-      background: white;
+      /* La til hvit bakgrunn for logoen slik den ser bedre ut */
+      background: white; 
       padding: 4px;
     }
     header h1 {
@@ -48,7 +49,9 @@
     }
     h2 {
       text-align: center;
+      margin-top: 30px;
       margin-bottom: 20px;
+      color: var(--brand-dark);
     }
     .filter-container {
       margin: 0 auto 20px;
@@ -104,22 +107,22 @@
     th {
       background-color: #f2f2f2;
     }
-    /* Nav-linker som dashboard */
+
+    /* === NYTT DESIGN FOR NAVIGASJON === */
     .nav-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      /* Justert minmax for å gi kortene litt mer plass */
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
       gap: 16px;
-      margin-top: 40px;
+      margin-top: 20px;
     }
     .navlink {
       display: block;
-      text-align: center;
+      text-align: left; /* Endret fra center */
       background-color: var(--brand);
       color: white;
       padding: 16px;
       border-radius: 12px;
-      font-size: 18px;
-      font-weight: 600;
       text-decoration: none;
       transition: all 0.2s ease;
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
@@ -129,6 +132,22 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(0,0,0,0.25);
     }
+    /* Nye stiler for innholdet i kortene */
+    .navlink strong {
+        font-size: 18px;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 5px;
+    }
+    .navlink p {
+        font-size: 14px;
+        font-weight: normal;
+        margin: 0;
+        opacity: 0.9;
+        line-height: 1.4;
+    }
+    /* === SLUTT PÅ NY CSS === */
+
     @media (max-width: 480px) {
       header h1 {
         font-size: 22px;
@@ -141,20 +160,28 @@
         font-size: 16px;
         padding: 12px;
       }
+      /* Sørger for at kort-innholdet skalerer */
+      .navlink strong {
+        font-size: 16px;
+      }
+      .navlink p {
+        font-size: 13px;
+      }
     }
   </style>
 </head>
 <body>
+  
   <header>
-    <img src="Logo LSK Klubb farger JPG.jpeg" alt="Lørenskog Skiklubb logo" onerror="this.style.display='none'">
+    <img src="lsk_logo.jpg" alt="Lørenskog Skiklubb Logo" onerror="this.style.display='none'">
     <div>
       <h1>Lørenskog Skiklubb</h1>
-      <p>Dagens Deltakere – Tidtaking</p>
+      <p>Velkommen til Tidtaking</p>
     </div>
   </header>
 
   <main>
-    <h2>Finn deltakere</h2>
+    <h2>Finn dagens deltakere</h2>
     <div class="filter-container">
       <label for="competitionInput">Konkurransenavn:</label>
       <input type="text" id="competitionInput" placeholder="F.eks. Klubbløp-2025">
@@ -169,25 +196,67 @@
       <p style="text-align:center;">Laster deltakere...</p>
     </div>
     
+    <h2>Verktøykasse for Tidtaking</h2>
     <div class="nav-grid">
-      <a href="https://tidtaking.github.io/Tidtaking2/" class="navlink">Oppsett</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/live.html" class="navlink">Livevisning</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html" class="navlink">Rundetider</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/skyting.html" class="navlink">Skyting</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/maal.html" class="navlink">Mål</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html" class="navlink">Strafferunder</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/starter.html" class="navlink">Starter</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/import" class="navlink">Import</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/resultat" class="navlink">Resultater</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/sim" class="navlink">Simulator</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/historikk" class="navlink">Historikk</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/huskeliste" class="navlink">Huskeliste</a>
-      <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" class="navlink">Selvanviser</a>
-      <a href="https://minavis.no/hurtigkomb.html" class="navlink">Hurtigkombinasjon tidtaking</a>
+      <a href="https://tidtaking.github.io/Tidtaking2/import" class="navlink">
+        <strong>Import</strong>
+        <p>Last opp startlister og deltakere før løpet.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/" class="navlink">
+        <strong>Oppsett</strong>
+        <p>Konfigurer innstillinger for dagens løp.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/starter.html" class="navlink">
+        <strong>Starter</strong>
+        <p>Registrer manuelle eller automatiske starttider.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/rundetider.html" class="navlink">
+        <strong>Rundetider</strong>
+        <p>Registrer mellomtider og rundepasseringer.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/skyting.html" class="navlink">
+        <strong>Skyting</strong>
+        <p>Registrer treff/bom for skiskyting.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/strafferunder.html" class="navlink">
+        <strong>Strafferunder</strong>
+        <p>Registrer løpere som går strafferunder.</p>
+      </a>
+       <a href="https://tidtaking.github.io/Tidtaking2/selvanviser" class="navlink">
+        <strong>Selvanviser</strong>
+        <p>Kobling mot system for selvanvisere.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/maal.html" class="navlink">
+        <strong>Mål</strong>
+        <p>Registrer målgang og sluttider.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/live.html" class="navlink">
+        <strong>Livevisning</strong>
+        <p>Viser resultater i sanntid for publikum.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/resultat" class="navlink">
+        <strong>Resultater</strong>
+        <p>Generer og vis offisielle resultatlister.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/sim" class="navlink">
+        <strong>Simulator</strong>
+        <p>Test systemet med simulerte løpsdata.</p>
+      </a>
+      <a href="https://tidtaking.github.io/Tidtaking2/historikk" class="navlink">
+        <strong>Historikk</strong>
+        <p>Se logger og data fra tidligere økter.</p>
+      </a>
+       <a href="https://tidtaking.github.io/Tidtaking2/huskeliste" class="navlink">
+        <strong>Huskeliste</strong>
+        <p>Sjekkliste for arrangører før og under løp.</p>
+      </a>
+      <a href="https://minavis.no/hurtigkomb.html" class="navlink">
+        <strong>Hurtigkombinasjon</strong>
+        <p>Eksternt verktøy for å kombinere tider.</p>
+      </a>
     </div>
   </main>
 
-  <!-- Supabase -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.3/+esm';
     
