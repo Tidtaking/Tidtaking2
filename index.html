@@ -438,11 +438,13 @@
       })
     };
     // L IM INN DENNE NYE FUNKSJONEN (f.eks. etter window.customConfirm)
-    window.saveSelectedToHistory = async function() {
-  // 1. Hent datoen fra datovelgeren
-  const compDate = document.getElementById('historyDate')?.value || window.getTodayCompDate();
+   window.saveSelectedToHistory = async function() {
+  // 1. Hent datoen fra datovelgeren – MÅ være valgt
+  const dateInput = document.getElementById('historyDate');
+  const compDate = dateInput?.value || '';
+
   if (!compDate) {
-    alert('Vennligst velg en dato for historikken.');
+    alert('Vennligst velg hvilken dato resultatene skal lagres for.');
     return;
   }
 
@@ -460,13 +462,13 @@
     return;
   }
 
-  // 4. Be om bekreftelse
+  // 4. Be om bekreftelse – viser hvilken dato som brukes
   const confirmed = await window.customConfirm(
     `Vil du lagre ${selectedParticipants.length} markerte deltakere til historikken for datoen ${compDate}?`
   );
   if (!confirmed) return;
 
-  console.log(`Lagrer ${selectedParticipants.length} deltakere til historikk...`);
+  console.log(`Lagrer ${selectedParticipants.length} deltakere til historikk for ${compDate}...`);
 
   // 5. Klargjør data for Supabase
   const toInsert = selectedParticipants.map(p => {
@@ -517,7 +519,7 @@
     alert(`En feil oppstod: ${error.message}`);
   } else {
     console.log('Lagring til historikk vellykket!');
-    alert(`${toInsert.length} deltakere ble lagret/oppdatert i historikken.`);
+    alert(`${toInsert.length} deltakere ble lagret/oppdatert i historikken for ${compDate}.`);
 
     selectedParticipants.forEach(p => {
       if (window.participants[p.snr]) window.participants[p.snr].selected = false;
@@ -527,6 +529,7 @@
     window.updateLocalDisplay();
   }
 };
+
 
 
 window.updateFinalTime = function(snr){
