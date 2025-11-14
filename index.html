@@ -439,80 +439,95 @@
     };
     // L IM INN DENNE NYE FUNKSJONEN (f.eks. etter window.customConfirm)
     window.saveSelectedToHistory = async function() {
-      // 1. Hent datoen fra datovelgeren
-      const compDate = document.getElementById('historyDate')?.value || window.getTodayCompDate();
-      if (!compDate) {
-        alert('Vennligst velg en dato for historikken.');
-        return;
-      }
+  // 1. Hent datoen fra datovelgeren
+  const compDate = document.getElementById('historyDate')?.value || window.getTodayCompDate();
+  if (!compDate) {
+    alert('Vennligst velg en dato for historikken.');
+    return;
+  }
 
-      // 2. Finn alle deltakere som er markert
-      const selectedParticipants = [];
-      for (const [snr, p] of Object.entries(window.participants)) {
-        if (p.selected) {
-          selectedParticipants.push(p);
-        }
-      }
+  // 2. Finn alle deltakere som er markert
+  const selectedParticipants = [];
+  for (const [snr, p] of Object.entries(window.participants)) {
+    if (p.selected) {
+      selectedParticipants.push(p);
+    }
+  }
 
-      // 3. Sjekk om noen er valgt
-      if (selectedParticipants.length === 0) {
-        alert('Ingen deltakere er markert for lagring.');
-        return;
-      }
+  // 3. Sjekk om noen er valgt
+  if (selectedParticipants.length === 0) {
+    alert('Ingen deltakere er markert for lagring.');
+    return;
+  }
 
-      // 4. Be om bekreftelse
-      const confirmed = await window.customConfirm(`Vil du lagre ${selectedParticipants.length} markerte deltakere til historikken for datoen ${compDate}?`);
-      if (!confirmed) return;
+  // 4. Be om bekreftelse
+  const confirmed = await window.customConfirm(
+    `Vil du lagre ${selectedParticipants.length} markerte deltakere til historikken for datoen ${compDate}?`
+  );
+  if (!confirmed) return;
 
-      console.log(`Lagrer ${selectedParticipants.length} deltakere til historikk...`);
+  console.log(`Lagrer ${selectedParticipants.length} deltakere til historikk...`);
 
-      // 5. Klargjør data for Supabase
-      const toInsert = selectedParticipants.map(p => {
-        // Sørg for at skyting er en gyldig JSON-streng
-        let shootingData = p.shooting;
-        if (Array.isArray(p.shooting)) {
-          shootingData = JSON.stringify(p.shooting);
-        } else if (typeof p.shooting !== 'string') {
-          shootingData = JSON.stringify(window.getShootingArray(p));
-        }
+  // 5. Klargjør data for Supabase
+  const toInsert = selectedParticipants.map(p => {
+    let shootingData = p.shooting;
+    if (Array.isArray(p.shooting)) {
+      shootingData = JSON.stringify(p.shooting);
+    } else if (typeof p.shooting !== 'string') {
+      shootingData = JSON.stringify(window.getShootingArray(p));
+    }
 
-        return {
-          comp_date: compDate,
-          snr: p.snr,
-          name: p.name,
-          class: p.class,
-          status: p.status,
-          finish: p.finish,
-          rawFinish: p.rawFinish, // Greit å lagre råtiden også
-          laps: p.laps,
-          shooting: shootingData
-        };
-      });
+    return {
+      comp_date: compDate,
+      snr: p.snr,
+      name: p.name,
+      class: p.class,
+      status: p.status,
+      finish: p.finish,
+      rawFinish: p.rawFinish,
+      laps: p.laps,
+      shooting: shootingData
+    };
+  });
 
-      // 6. Lagre til 'history'-tabellen
-      // Vi bruker 'upsert' for å oppdatere hvis de allerede finnes (basert på snr+dato),
-      // i stedet for å lage duplikater.
-      const { error } = await window.supabaseClient
-        .from('history')
-        .upsert(toInsert, { onConflict: 'snr, comp_date' }); // VIKTIG: Antar at (snr, comp_date) er PRIMARY KEY i 'history'-tabellen
+  // 6. Slett eksisterende rader for samme dato og snr (simulert upsert)
+  const snrs = toInsert.map(r => r.snr).filter(v => v !== null && v !== undefined);
+  if (snrs.length > 0) {
+    const { error: delError } = await window.supabaseClient
+      .from('history')
+      .delete()
+      .eq('comp_date', compDate)
+      .in('snr', snrs);
 
-      // 7. Håndter resultat
-      if (error) {
-        console.error('Feil ved lagring til historikk:', error);
-        alert(`En feil oppstod: ${error.message}`);
-      } else {
-        console.log('Lagring til historikk vellykket!');
-        alert(`${toInsert.length} deltakere ble lagret/oppdatert i historikken.`);
-        
-        // Nullstill markering og oppdater visning
-        selectedParticipants.forEach(p => {
-          if (window.participants[p.snr]) window.participants[p.snr].selected = false;
-        });
-        window.selectAll(false); // Fjern hake fra master-checkbox
-        window.updateHistoryView(); // Oppdater historikk-visningen
-        window.updateLocalDisplay(); // Oppdater hovedtabellen (for å fjerne avhaking)
-      }
-    };
+    if (delError) {
+      console.error('Feil ved sletting før lagring til historikk:', delError);
+      alert(`En feil oppstod ved forberedelse til lagring: ${delError.message}`);
+      return;
+    }
+  }
+
+  // 7. Sett inn på nytt (ren INSERT)
+  const { error } = await window.supabaseClient
+    .from('history')
+    .insert(toInsert);
+
+  // 8. Håndter resultat
+  if (error) {
+    console.error('Feil ved lagring til historikk:', error);
+    alert(`En feil oppstod: ${error.message}`);
+  } else {
+    console.log('Lagring til historikk vellykket!');
+    alert(`${toInsert.length} deltakere ble lagret/oppdatert i historikken.`);
+
+    selectedParticipants.forEach(p => {
+      if (window.participants[p.snr]) window.participants[p.snr].selected = false;
+    });
+    window.selectAll(false);
+    window.updateHistoryView();
+    window.updateLocalDisplay();
+  }
+};
+
 
 window.updateFinalTime = function(snr){
       let p = window.participants[snr];
