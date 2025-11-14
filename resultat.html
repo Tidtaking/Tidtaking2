@@ -332,40 +332,56 @@
 
 document.getElementById("pdfBtn").addEventListener("click", saveResultsAsPDF);
 
-  // === START PÅ RETTELSE ===
+  // === START PÅ NY RETTELSE (med debounce) ===
 
-  // 1. Funksjon for å starte sanntids-lytting
+  // Global variabel for å hindre overflødige kall
+  let refreshQueued = false;
+  let pollTimer;
+
+  // 1. "Debounce"-funksjon (hentet fra live.html)
+  function scheduleRefresh() {
+    if (refreshQueued) return; // Ikke gjør noe hvis en oppdatering allerede er i kø
+    refreshQueued = true;
+    
+    // Vent 300ms før vi henter. Hvis 10 endringer skjer, venter vi 300ms og henter kun én gang.
+    setTimeout(() => {
+      console.log('Kjører planlagt oppdatering...');
+      fetchAndDisplayResults();
+      refreshQueued = false;
+    }, 300); 
+  }
+
+  // 2. Funksjon for å starte sanntids-lytting
   function subscribeToChanges() {
     try {
       supabaseClient
         .channel('public:resultater') // Gi lytteren et unikt navn
         .on(
           'postgres_changes', 
-          { 
-            event: '*', // Lytt til INSERT, UPDATE, DELETE
-            schema: 'public', 
-            table: 'participants' // På 'participants'-tabellen
-          },
+          { event: '*', schema: 'public', table: 'participants' },
           (payload) => {
-            // Når en endring skjer, kjør hele hente-funksjonen på nytt
-            console.log('Database-endring oppdaget, henter resultater...', payload);
-            fetchAndDisplayResults(); 
+            // Når en endring skjer, be om en planlagt oppdatering
+            console.log('Database-endring oppdaget, planlegger oppdatering...', payload.eventType);
+            scheduleRefresh(); // <-- Kaller "debounce"-funksjonen
           }
         )
         .subscribe();
     } catch (e) {
       console.error("Feil ved oppretting av sanntids-kanal:", e);
-      // Fallback: Hent data hvert 15. sekund hvis sanntid feiler
-      setInterval(fetchAndDisplayResults, 15000);
     }
   }
 
-  // 2. Hent data ved første last, og start lytteren
+  // 3. Hent data ved første last, start lytter, OG start en fallback-timer
   document.addEventListener("DOMContentLoaded", () => {
-    fetchAndDisplayResults();
-    subscribeToChanges();
+    fetchAndDisplayResults(); // Hent med en gang
+    subscribeToChanges();     // Start sanntid
+    
+    // Start en 10-sekunders polling-timer som en backup
+    // (Hvis sanntids-koblingen feiler, henter denne fortsatt oppdateringer)
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(fetchAndDisplayResults, 10000); 
   });
-  // === SLUTT PÅ RETTELSE ===
+  // === SLUTT PÅ NY RETTELSE ===
 </script>
 </body>
 </html>
