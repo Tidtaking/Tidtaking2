@@ -765,12 +765,12 @@ async function notifyPerChange(eventId, change = 'upsert'){
 function mapResultToDb(r){
   return {
     id: r.id,
-    date: r.date,                 // YYYY-MM-DD
+    date: r.date,
     athlete: r.athlete || null,
     exercise: r.exercise || null,
     points_prone: r.pointsProne ?? 0,
-    points_stand: r.pointsStand ?? 0,
-    points_total: (r.pointsProne||0) + (r.pointsStand||0)
+    points_stand: r.pointsStand ?? 0
+    // points_total fjernet fordi databasen regner det ut selv
   };
 }
 function mapResultFromDb(r){
