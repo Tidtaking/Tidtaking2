@@ -504,6 +504,7 @@ l.setPopupContent(`
   const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
   const matchedPostnr = new Set();
 
+  // Første pass: Finn postnumre som matcher kriteriene i minst ETT lag
   Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
     Object.entries(mapData).forEach(([pRaw, info]) => {
       const p = pRaw.padStart(4, '0');
@@ -535,7 +536,7 @@ l.setPopupContent(`
     return;
   }
 
-  // Oppsummering med unike og duplikatsummer (som tidligere)
+  // Oppsummering med unike og duplikatsummer
   let totalSum = 0;
   let samletFrekvenserTotal = new Set();
   let samletAviserTotal = new Set();
@@ -549,8 +550,12 @@ l.setPopupContent(`
     let samletFrekvenser = new Set();
 
     keys.forEach(p => {
-      const avisMap = mapData[p]?.avis;
-      if (avisMap) {
+      const info = mapData[p];
+      if(!info) return;
+      const avisMap = info.avis;
+      
+      // Sjekk om datasettet har spesifikke avisdata
+      if (avisMap && avisMap.size > 0) {
         for (const [avisId, avisData] of avisMap.entries()) {
           const navn = avisNavnMap[avisId] || avisId;
           const avisMatch = avisSok.length === 0 || avisSok.some(sokStr => avisId === sokStr || navn.toLowerCase().includes(sokStr));
@@ -568,7 +573,7 @@ l.setPopupContent(`
             });
           }
 
-          // Sum unik som tidligere
+          // Sum unik
           const frekMatch = frekvensSok.size === 0 || Array.from(avisData.frekvenser).some(f => frekvensSok.has(f.toString()));
           if (frekMatch) {
             sumCount += avisData.count;
@@ -579,6 +584,13 @@ l.setPopupContent(`
             samletAviserTotal.add(navn);
           }
         }
+      } else {
+        // --- ENDRING HER: Håndtering av generiske data (uten avisnavn, f.eks. Anbud/Brukt) ---
+        // Hvis postnummeret er i matchedPostnr (dvs. det matchet kriteriene i et annet lag, eller vi søkte kun postnummer),
+        // og dette laget (f.eks. Anbud) har data for postnummeret men ingen avis-detaljer:
+        // Da legger vi til totalantallet for dette laget i summen.
+        sumCount += info.count;
+        sumAlleDager += info.count;
       }
     });
 
@@ -615,7 +627,7 @@ l.setPopupContent(`
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  // Bygg lastMatches med alle filtre (som tidligere)
+  // Bygg lastMatches med alle filtre
   lastMatches = [];
   matches.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
@@ -623,18 +635,19 @@ l.setPopupContent(`
 
     ['Anbud', 'Brukt', 'Innenfor', 'Utenfor'].forEach(filt => {
       const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
-      if (!mapData[p]) return;
+      const info = mapData[p];
+      if (!info) return;
 
       const filterNavn = filterKeys[filt] || '';
-      const avisMap = mapData[p]?.avis || new Map();
+      const avisMap = info.avis || new Map();
 
       if (avisMap.size === 0) {
         lastMatches.push({
           filter: filterNavn,
           postnummer: p,
           antall_total: antallTotal,
-          avis: '',
-          antall_avis: 0
+          avis: '', // Generisk treff
+          antall_avis: info.count // Bruk total count her
         });
       } else {
         avisMap.forEach((avisData, avisId) => {
