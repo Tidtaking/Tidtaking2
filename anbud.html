@@ -261,7 +261,7 @@ function enrich(arr,mapData){
     const p = f.properties.postnummer.trim().padStart(4,'0');
     const info = mapData[p] || {count:0, avis:new Map()};
     f.properties.antall = info.count;
-    f.properties.avisMap = info.avis;  // <-- Legger til avisMap her
+    f.properties.avisMap = info.avis;
     if(kanSokeNavn){
       f.properties.avis = Array.from(info.avis.entries())
                               .map(([avisId,ant]) => `${avisNavnMap[avisId] || avisId}: ${ant.count}`)
@@ -302,7 +302,6 @@ l.setPopupContent(`
     });
   }
 
-  // Parsing av søk: postnummer (4 siffer), avis (tekst/id) og frekvensdager (1-7)
  function parseSearchInput(input) {
   const dagMap = {
     'man': '1',
@@ -353,7 +352,7 @@ l.setPopupContent(`
   }
 
   function frekvensMatcher(avisMap, frekvensSok) {
-    if(frekvensSok.size === 0) return true; // ikke filter på frekvens
+    if(frekvensSok.size === 0) return true;
     for(const [avisId, avisData] of avisMap.entries()) {
       for(const f of avisData.frekvenser) {
         if(typeof f === 'string' && frekvensSok.has(f)) return true;
@@ -486,6 +485,21 @@ l.setPopupContent(`
     return;
   }
 
+  // --- Hent filter-status ---
+  const isChecked = {
+    Anbud: document.getElementById('toggleAnbud').checked,
+    Brukt: document.getElementById('toggleBrukt').checked,
+    Innenfor: document.getElementById('toggleInnenfor').checked,
+    Utenfor: document.getElementById('toggleUtenfor').checked
+  };
+
+  // --- Filtrer datasettene basert på checkboxes ---
+  const activeDatasets = {};
+  if(isChecked.Anbud) activeDatasets.Anbud = dC;
+  if(isChecked.Brukt) activeDatasets.Brukt = dD;
+  if(isChecked.Innenfor) activeDatasets.Innenfor = dInnenfor;
+  if(isChecked.Utenfor) activeDatasets.Utenfor = dUtenfor;
+
   // --- Vanlig søk ---
 
   Object.values(layers).forEach(l => map.removeLayer(l));
@@ -504,8 +518,8 @@ l.setPopupContent(`
   const { postnummerSok, avisSok, frekvensSok } = parseSearchInput(qRawInput);
   const matchedPostnr = new Set();
 
-  // Første pass: Finn postnumre som matcher kriteriene i minst ETT lag
-  Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+  // Første pass: Finn postnumre som matcher kriteriene i minst ETT av de AKTIVE lagene
+  Object.entries(activeDatasets).forEach(([filterKey, mapData]) => {
     Object.entries(mapData).forEach(([pRaw, info]) => {
       const p = pRaw.padStart(4, '0');
       if (postnummerSok) {
@@ -522,7 +536,13 @@ l.setPopupContent(`
     });
   });
 
-  const allFeatures = [...fC, ...fD, ...fInnenfor, ...fUtenfor];
+  // Samle features kun for de aktive filtrene
+  const allFeatures = [];
+  if(isChecked.Anbud) allFeatures.push(...fC);
+  if(isChecked.Brukt) allFeatures.push(...fD);
+  if(isChecked.Innenfor) allFeatures.push(...fInnenfor);
+  if(isChecked.Utenfor) allFeatures.push(...fUtenfor);
+
   const matches = allFeatures.filter(f =>
     matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0'))
   );
@@ -531,7 +551,7 @@ l.setPopupContent(`
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
-    alert(`Ingen treff for "${qRawInput}"`);
+    alert(`Ingen treff for "${qRawInput}" i de aktive filtrene.`);
     document.getElementById('search-timer').innerText = '';
     return;
   }
@@ -543,7 +563,8 @@ l.setPopupContent(`
 
   let html = '<table><thead><tr><th>Filter</th><th>Farge</th><th>Postnumre</th><th>Antall for søk (unik)</th><th>Frekvensdager</th></tr></thead><tbody>';
 
-  Object.entries({ Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }).forEach(([filterKey, mapData]) => {
+  // Iterer kun over aktive datasett
+  Object.entries(activeDatasets).forEach(([filterKey, mapData]) => {
     const keys = Object.keys(mapData).filter(p => matchedPostnr.has(p));
     let sumCount = 0;
     let sumAlleDager = 0;
@@ -585,10 +606,7 @@ l.setPopupContent(`
           }
         }
       } else {
-        // --- ENDRING HER: Håndtering av generiske data (uten avisnavn, f.eks. Anbud/Brukt) ---
-        // Hvis postnummeret er i matchedPostnr (dvs. det matchet kriteriene i et annet lag, eller vi søkte kun postnummer),
-        // og dette laget (f.eks. Anbud) har data for postnummeret men ingen avis-detaljer:
-        // Da legger vi til totalantallet for dette laget i summen.
+        // Håndtering av generiske data (uten avisnavn) - kun hvis filteret er aktivt (hvilket det er, siden vi itererer over activeDatasets)
         sumCount += info.count;
         sumAlleDager += info.count;
       }
@@ -627,14 +645,15 @@ l.setPopupContent(`
   html += '</tbody></table>';
   document.getElementById('search-summary').innerHTML = html;
 
-  // Bygg lastMatches med alle filtre
+  // Bygg lastMatches med alle aktive filtre
   lastMatches = [];
   matches.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
     const antallTotal = f.properties.antall;
 
-    ['Anbud', 'Brukt', 'Innenfor', 'Utenfor'].forEach(filt => {
-      const mapData = { Anbud: dC, Brukt: dD, Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
+    // Sjekk kun mot de datasettene som er aktive
+    Object.keys(activeDatasets).forEach(filt => {
+      const mapData = activeDatasets[filt];
       const info = mapData[p];
       if (!info) return;
 
@@ -647,7 +666,7 @@ l.setPopupContent(`
           postnummer: p,
           antall_total: antallTotal,
           avis: '', // Generisk treff
-          antall_avis: info.count // Bruk total count her
+          antall_avis: info.count
         });
       } else {
         avisMap.forEach((avisData, avisId) => {
@@ -672,44 +691,48 @@ l.setPopupContent(`
     const [lat, lng] = getPolygonCentroid(f);
     return [lat, lng, (f.properties.antall || 1) * intensitetFaktor];
   });
-  const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
-  const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
+  if(heatPointsRaw.length > 0) {
+    const maxAntall = Math.max(...heatPointsRaw.map(p => p[2]));
+    const heatPoints = heatPointsRaw.map(p => [p[0], p[1], p[2] / maxAntall]);
 
-  heatmapBtn.disabled = false;
-  showingHeatmap = false;
-  heatmapBtn.innerText = 'Vis heatmap';
+    heatmapBtn.disabled = false;
+    showingHeatmap = false;
+    heatmapBtn.innerText = 'Vis heatmap';
 
-  heatmapBtn.onclick = () => {
-    if (showingHeatmap) {
-      if (heatLayer) {
-        map.removeLayer(heatLayer);
-        heatLayer = null;
-      }
-      if (searchLayer) {
-        map.addLayer(searchLayer);
-      }
-      heatmapBtn.innerText = 'Vis heatmap';
-      showingHeatmap = false;
-    } else {
-      if (searchLayer) {
-        map.removeLayer(searchLayer);
-      }
-      heatLayer = L.heatLayer(heatPoints, {
-        radius: 15,
-        blur: 10,
-        maxZoom: 17,
-        gradient: {
-          0.0: 'rgba(255,0,0,1.0)',
-          0.2: 'rgba(255,0,0,0.8)',
-          0.4: 'rgba(255,0,0,0.6)',
-          0.6: 'rgba(255,0,0,0.4)',
-          1.0: 'rgba(255,0,0,0.2)'
+    heatmapBtn.onclick = () => {
+      if (showingHeatmap) {
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+          heatLayer = null;
         }
-      }).addTo(map);
-      heatmapBtn.innerText = 'Vis polygon';
-      showingHeatmap = true;
-    }
-  };
+        if (searchLayer) {
+          map.addLayer(searchLayer);
+        }
+        heatmapBtn.innerText = 'Vis heatmap';
+        showingHeatmap = false;
+      } else {
+        if (searchLayer) {
+          map.removeLayer(searchLayer);
+        }
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: 15,
+          blur: 10,
+          maxZoom: 17,
+          gradient: {
+            0.0: 'rgba(255,0,0,1.0)',
+            0.2: 'rgba(255,0,0,0.8)',
+            0.4: 'rgba(255,0,0,0.6)',
+            0.6: 'rgba(255,0,0,0.4)',
+            1.0: 'rgba(255,0,0,0.2)'
+          }
+        }).addTo(map);
+        heatmapBtn.innerText = 'Vis polygon';
+        showingHeatmap = true;
+      }
+    };
+  } else {
+    heatmapBtn.disabled = true;
+  }
 
   searchLayer = L.geoJSON(matches, {
     coordsToLatLng: coords3035tilLatLng,
@@ -726,7 +749,9 @@ l.setPopupContent(`
     l.openPopup();
   });
 
-  map.fitBounds(searchLayer.getBounds().pad(0.05));
+  if(searchLayer.getLayers().length > 0) {
+      map.fitBounds(searchLayer.getBounds().pad(0.05));
+  }
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
@@ -738,14 +763,36 @@ l.setPopupContent(`
 function searchExactDayFrequency(antallDager) {
   const startTime = performance.now();
 
-  const allFeatures = [...fInnenfor, ...fUtenfor];
+  const isChecked = {
+    Anbud: document.getElementById('toggleAnbud').checked,
+    Brukt: document.getElementById('toggleBrukt').checked,
+    Innenfor: document.getElementById('toggleInnenfor').checked,
+    Utenfor: document.getElementById('toggleUtenfor').checked
+  };
+
+  // Filtrer features basert på aktive sjekk-bokser
+  // Merk: Denne funksjonen bruker bare Innenfor og Utenfor for avis-analyse i den opprinnelige koden,
+  // men vi bør nå respektere om brukeren har skrudd dem av.
+  let relevantFeatures = [];
+  if(isChecked.Innenfor) relevantFeatures.push(...fInnenfor);
+  if(isChecked.Utenfor) relevantFeatures.push(...fUtenfor);
+
   const matchedPostnr = new Set();
 
-  allFeatures.forEach(f => {
+  relevantFeatures.forEach(f => {
     const p = f.properties.postnummer.trim().padStart(4, '0');
-    const innenforData = dInnenfor[p];
-    const utenforData = dUtenfor[p];
-    const avisMap = innenforData?.avis || utenforData?.avis || new Map();
+    // Sjekk data kun for aktive lag
+    let avisMap = new Map();
+    if(isChecked.Innenfor && dInnenfor[p]) {
+        dInnenfor[p].avis.forEach((v,k) => avisMap.set(k, v));
+    }
+    if(isChecked.Utenfor && dUtenfor[p]) {
+        dUtenfor[p].avis.forEach((v,k) => {
+             // Slå sammen hvis den finnes fra før? (Enkel merge for søket)
+             if(avisMap.has(k)) { /* Allerede lagt til, logikk kan utvides */ }
+             else avisMap.set(k, v);
+        });
+    }
 
     for (const avisData of avisMap.values()) {
       if (avisData.frekvenser.size === antallDager) {
@@ -759,7 +806,7 @@ function searchExactDayFrequency(antallDager) {
     document.getElementById('search-summary').innerHTML = '';
     exportBtn.disabled = true;
     heatmapBtn.disabled = true;
-    alert(`Ingen treff for "${antallDager} dag frekvens"`);
+    alert(`Ingen treff for "${antallDager} dag frekvens" i aktive filtre`);
     document.getElementById('search-timer').innerText = '';
     return;
   }
@@ -780,6 +827,9 @@ function searchExactDayFrequency(antallDager) {
 
   matchedPostnr.forEach(p => {
     ['Innenfor', 'Utenfor'].forEach(filt => {
+      // Hopp over hvis filteret er avskrudd
+      if(!isChecked[filt]) return;
+
       const mapData = { Innenfor: dInnenfor, Utenfor: dUtenfor }[filt] || {};
       if (!mapData[p]) return;
 
@@ -877,7 +927,7 @@ html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
     heatmapBtn.innerText = 'Vis heatmap';
   }
 
-  const matches = allFeatures.filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
+  const matches = relevantFeatures.filter(f => matchedPostnr.has(f.properties.postnummer.trim().padStart(4, '0')));
 
   searchLayer = L.geoJSON(matches, {
     coordsToLatLng: coords3035tilLatLng,
@@ -893,7 +943,9 @@ html += `<p style="font-style: italic; font-size: 12px; margin-top: 8px;">
     `);
   });
 
-  map.fitBounds(searchLayer.getBounds().pad(0.05));
+  if(searchLayer.getLayers().length > 0) {
+     map.fitBounds(searchLayer.getBounds().pad(0.05));
+  }
 
   const endTime = performance.now();
   const elapsed = endTime - startTime;
