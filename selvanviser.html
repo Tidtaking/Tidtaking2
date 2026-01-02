@@ -2,453 +2,633 @@
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Utvidet analyse av skyting – mobilvennlig full bredde</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Utvidet analyse av skyting – v2.0</title>
   <meta name="color-scheme" content="light dark" />
   <style>
-    :root { --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; --border:#d0d0d0; --accent:#0a7; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#151821; --ink:#e9eef5; --muted:#a3afc2; --border:#2a2f3a; } }
-    * { box-sizing: border-box; }
-    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 12px; }
-    h1 { margin: 8px 0 4px; font-size: clamp(1.3rem, 2.5vw + .6rem, 2rem); }
-    h2 { font-size: 1.25rem; margin: 14px 0 8px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; box-shadow: 0 1px 4px rgb(0 0 0 / 6%); }
+    :root { --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; --border:#d0d0d0; --accent:#007aff; --danger:#ff3b30; --success:#34c759; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#1c1e26; --ink:#e9eef5; --muted:#a3afc2; --border:#2a2f3a; --accent:#0a84ff; } }
+    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, sans-serif; height: 100%; }
+    
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 12px; padding-bottom: 40px; }
+    h1 { margin: 8px 0 12px; font-size: clamp(1.4rem, 4vw, 2rem); text-align: center; }
+    h2 { font-size: 1.2rem; margin: 0 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgb(0 0 0 / 5%); }
 
-    /* Full-bredde skive på mobil */
-    #targetCanvas { display:block; background: var(--card); border: 2px solid #333; border-radius: 12px; aspect-ratio: 1 / 1; width: min(90vw, 640px); margin: 10px auto; touch-action: none; }
-    @media (max-width: 768px) {
-      .wrap { padding: 0; }
-      .card.skive-card { border-radius: 0; border-left: 0; border-right: 0; }
-      /* full-bleed canvas på mobil */
-      #targetCanvas { width: 100vw; max-width: 100vw; margin-left: 50%; transform: translateX(-50%); }
+    /* Input & Grid */
+    #competitionInfo { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 8px; }
+    input, button { font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--ink); width: 100%; }
+    input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    
+    /* Buttons */
+    button { cursor: pointer; font-weight: 600; transition: filter 0.2s, transform 0.1s; touch-action: manipulation; }
+    button:active { transform: scale(0.98); }
+    button.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    /* Canvas Area */
+    .canvas-container { display: flex; flex-direction: column; align-items: center; }
+    #targetCanvas { 
+      display: block; 
+      background: var(--card); 
+      border: 2px solid #333; 
+      border-radius: 50%; /* Rund skive */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: crosshair; 
+      touch-action: none; /* VIKTIG: Hindrer scrolling når man drar skudd */
+      max-width: 100%;
+      height: auto;
     }
 
-    #competitionInfo, #controls, #timerControls, #adjustmentControls { display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items:center; margin: 10px 0; }
-    button, input { font-size: 1rem; padding: .75em 1em; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--ink); }
-    button { cursor: pointer; }
-    button.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .95rem; overflow-x: auto; display: block; }
-    th, td { padding: 8px 10px; border: 1px solid var(--border); text-align: center; }
-    thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
-    .wind-arrow { display:inline-block; width:0; height:0; border-top:10px solid red; border-left:4px solid transparent; border-right:4px solid transparent; margin-left:6px; transform-origin:center; }
-    .muted { color: var(--muted); font-size: .9rem; }
-    .nav-links { margin-top: 12px; }
-    .nav-links a { color: inherit; text-decoration: none; }
+    /* Live Overlay (boble over fingeren) */
+    #liveOverlay { 
+      position: absolute; left: 0; top: 0; 
+      transform: translate(-50%, -180%); /* Flyttet høyere opp */
+      padding: 6px 10px; border-radius: 20px; 
+      background: var(--accent); color: #fff; 
+      font-weight: bold; font-size: 14px; 
+      pointer-events: none; opacity: 0; transition: opacity 0.1s; 
+      white-space: nowrap; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .canvas-wrap { position: relative; width: fit-content; margin: 0 auto; }
 
-    /* Tester */
-    #testPanel { margin-top: 16px; }
-    #testResults { list-style: none; padding: 0; margin: 6px 0 0; }
-    #testResults li { padding: 6px 10px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); }
-    .pass { background: #e8f7ed; }
-    .fail { background: #fdeaea; }
-    .skip { background: #f4f4f4; }
+    /* Controls Grid */
+    #controls, #adjustmentControls { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
+    #adjustmentControls button { height: 44px; } /* Større trykkflate */
+    
+    /* Timer */
+    #timerControls { display: flex; align-items: center; gap: 12px; background: var(--bg); padding: 8px; border-radius: 12px; margin-top: 12px; border: 1px solid var(--border); }
+    #timerDisplay { font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: bold; margin-left: auto; }
 
-    /* Live overlay */
-    .canvas-wrap { position: relative; display: block; width: 100%; }
-    #liveOverlay { position:absolute; left:0; top:0; transform:translate(-50%, -140%); padding:4px 6px; border-radius:8px; background:rgba(0,0,0,.75); color:#fff; font-size:12px; line-height:1; pointer-events:none; opacity:0; transition:opacity .08s ease; white-space:nowrap; }
+    /* Table */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; }
+    th, td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); }
+    th { background: var(--bg); font-weight: 600; position: sticky; top: 0; }
+    tr:last-child td { border-bottom: none; }
+
+    .wind-arrow { display: inline-block; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 12px solid var(--danger); }
+    .muted { color: var(--muted); font-size: 0.85rem; }
+    
+    /* Mobil-tilpasninger */
+    @media (max-width: 600px) {
+      .wrap { padding: 8px; }
+      .card { border-radius: 12px; padding: 12px; }
+      h1 { font-size: 1.5rem; }
+      #targetCanvas { width: 90vw; height: 90vw; }
+      #controls { grid-template-columns: 1fr; } /* Stable knapper på liten skjerm */
+    }
+
+    /* Testing */
+    #testPanel details { margin-top: 8px; cursor: pointer; }
+    #testResults li { padding: 4px 8px; margin-bottom: 4px; border-radius: 4px; font-size: 0.85rem; }
+    .pass { background: rgba(52, 199, 89, 0.2); color: var(--ink); }
+    .fail { background: rgba(255, 59, 48, 0.2); color: var(--ink); }
   </style>
-  <!-- UMD Supabase før app-koden -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Utvidet analyse av skyting</h1>
 
-    <section class="card">
-      <div id="competitionInfo">
-        <input id="nameInput" placeholder="Navn på utøver" />
-        <input id="shootingDate" type="date" />
-        <input id="shootingLocation" placeholder="Sted/Konkurranse" />
-        <button id="fetchWeatherBtn" class="primary">Hent værdata</button>
+<div class="wrap">
+  <h1>🎯 Utvidet Analyse</h1>
+
+  <section class="card">
+    <div id="competitionInfo">
+      <input id="nameInput" placeholder="Navn på utøver" aria-label="Navn" />
+      <input id="shootingDate" type="date" aria-label="Dato" />
+      <input id="shootingLocation" placeholder="Sted/Bane" aria-label="Sted" />
+      <button id="fetchWeatherBtn" class="primary">☁️ Hent vær</button>
+    </div>
+    <div class="muted">
+      <div id="weatherData" style="margin-top: 8px;">Værdata ikke hentet.</div>
+      <div id="hourlyForecast" style="margin-top: 6px; line-height: 1.4;"></div>
+    </div>
+    <div style="text-align: right; margin-top: 4px;">
+      <small id="dbStatus" class="muted">DB: Sjekker...</small>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Skive & Anvisning</h2>
+    
+    <div class="canvas-container">
+      <div class="canvas-wrap">
+        <canvas id="targetCanvas" width="600" height="600" aria-label="Skyteskive. Dra for å plassere skudd."></canvas>
+        <div id="liveOverlay">10.0</div>
       </div>
-      <div class="muted" style="display:flex;gap:10px;align-items:center">
-        Vær: <span id="weatherData">–</span>
-        <span id="dbStatus" style="margin-left:auto">DB: ukjent</span>
-      </div>
-      <div id="hourlyForecast" class="muted" style="margin-top:4px"></div>
-    </section>
-
-    <div class="row" style="display:grid; gap:12px; grid-template-columns: 1fr; margin-top: 12px;">
-      <section class="card skive-card">
-        <h2>Skive</h2>
-        <div class="canvas-wrap">
-          <canvas id="targetCanvas"></canvas>
-          <div id="liveOverlay" aria-hidden="true">Poeng: 10</div>
-        </div>
-        <div id="timerControls" style="margin-top:10px; display:flex; gap:10px; align-items:center; justify-content:flex-start; flex-wrap:wrap">
-          <button id="startStopTimerBtn">Start skytetid</button>
-          <div id="timerDisplay">Tid: 00:00</div>
-          <div id="liveReadout" class="muted" style="margin-left:auto;">Live: –</div>
-        </div>
-
-        <section id="adjustmentControls" aria-label="Manuell skrumelding">
-          <h3 style="grid-column: 1 / -1; margin:6px 0">Manuell skrumelding</h3>
-          <button id="adjUp">↑ Opp</button>
-          <button id="adjLeft">← Venstre</button>
-          <button id="adjRight">Høyre →</button>
-          <button id="adjDown">↓ Ned</button>
-          <div id="manualAdjustmentDisplay" style="grid-column: 1 / -1;">Opp: 0 | Ned: 0 | Venstre: 0 | Høyre: 0</div>
-        </section>
-      </section>
-
-      <section class="card">
-        <h2>Resultater</h2>
-        <div id="controls">
-          <button id="undoShotBtn" disabled>Angre skudd</button>
-          <button id="saveSeriesBtn" class="primary" disabled>Lagre serie</button>
-          <button id="exportCsvBtn" type="button">Eksporter CSV</button>
-        </div>
-        <table id="resultTable">
-          <thead>
-            <tr><th>Dato</th><th>Serie</th><th>Sted</th><th>Skudd</th><th>Poeng</th><th>Tid</th><th>Retning</th><th>Skrudd</th><th>Miniatyr</th><th>Gruppe</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </section>
+      <div id="liveReadout" class="muted" style="margin-top: 6px;">Klar til anvisning</div>
     </div>
 
-    <div id="historyLinkContainer" class="nav-links">
-      <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk">Selvanviser historikk →</a>
+    <div id="timerControls">
+      <button id="startStopTimerBtn">⏱️ Start</button>
+      <div id="timerDisplay">00:00</div>
     </div>
 
-    <section id="testPanel" class="card">
-      <details>
-        <summary>Tester (åpne for å se)</summary>
-        <ul id="testResults"></ul>
-        <button id="runTestsBtn" type="button">Kjør tester på nytt</button>
-      </details>
-    </section>
-  </div>
+    <div style="margin-top: 16px;">
+      <h3 style="font-size: 1rem; margin-bottom: 8px; text-align: center;">Skrumelding</h3>
+      <div id="manualAdjustmentDisplay" style="text-align: center; font-family: monospace; margin-bottom: 8px;">Opp: 0 | Ned: 0 | V: 0 | H: 0</div>
+      <div id="adjustmentControls">
+        <button id="adjUp">Opp</button>
+        <button id="adjDown">Ned</button>
+        <button id="adjLeft">Venstre</button>
+        <button id="adjRight">Høyre</button>
+      </div>
+    </div>
+  </section>
 
-  <script>
-    // --- Supabase ---
-    const SB_URL = 'https://chzfewhbfkdtcizdxyzk.supabase.co';
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA';
-    const supabase = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SB_URL, SB_ANON) : null;
+  <section class="card">
+    <h2>Serie & Historikk</h2>
+    <div id="controls">
+      <button id="undoShotBtn" disabled>↩️ Angre siste</button>
+      <button id="saveSeriesBtn" class="primary" disabled>💾 Lagre serie</button>
+      <button id="exportCsvBtn" type="button">📥 Eksporter CSV</button>
+    </div>
 
-    // --- State ---
-    const DRAG_RADIUS = 14; // lettere å gripe på mobil
-    const state = {
-      currentShots: [],
-      seriesCount: 0,
-      timerRunning: false,
-      startMs: null,
-      elapsedMs: 0,
-      lastWindDir: null,
-      adjustment: { up: 0, down: 0, left: 0, right: 0 },
-      dragging: { index: -1, offsetX: 0, offsetY: 0 }
-    };
+    <div class="table-scroll">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Tid</th><th>Skudd</th><th>Sum</th><th>Retning</th><th>Skrudd</th><th>Gruppe</th><th>Bilde</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    
+    <div style="margin-top: 12px; text-align: center;">
+        <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk" style="color: var(--accent); text-decoration: none;">Gå til full historikk →</a>
+    </div>
+  </section>
 
-    const els = {
-      canvas: document.getElementById('targetCanvas'),
-      timerBtn: document.getElementById('startStopTimerBtn'),
-      timerDisplay: document.getElementById('timerDisplay'),
-      saveBtn: document.getElementById('saveSeriesBtn'),
-      undoBtn: document.getElementById('undoShotBtn'),
-      exportBtn: document.getElementById('exportCsvBtn'),
-      weatherBox: document.getElementById('weatherData'),
-      forecastBox: document.getElementById('hourlyForecast'),
-      date: document.getElementById('shootingDate'),
-      loc: document.getElementById('shootingLocation'),
-      name: document.getElementById('nameInput'),
-      adjDisp: document.getElementById('manualAdjustmentDisplay'),
-      dbStatus: document.getElementById('dbStatus'),
-      testList: document.getElementById('testResults'),
-      runTestsBtn: document.getElementById('runTestsBtn'),
-      liveOverlay: document.getElementById('liveOverlay'),
-      liveReadout: document.getElementById('liveReadout'),
-    };
+  <section id="testPanel" class="card" style="border: 1px dashed var(--muted);">
+    <details>
+      <summary style="font-size: 0.9rem; color: var(--muted);">Systemstatus & Tester</summary>
+      <button id="runTestsBtn" style="margin-top: 8px; font-size: 0.8rem;">Kjør tester</button>
+      <ul id="testResults" style="list-style: none; padding: 0; margin-top: 8px;"></ul>
+    </details>
+  </section>
+</div>
 
-    // Dato = i dag
-    els.date.value = new Date().toISOString().split('T')[0];
+<script>
+/**
+ * 1. KONFIGURASJON & GLOBALE VARIABLER
+ */
+const SB_URL = 'https://chzfewhbfkdtcizdxyzk.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA';
 
-    // --- Canvas / HiDPI ---
-    const ctx = els.canvas.getContext('2d');
-    function resizeCanvas() {
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const cssW = els.canvas.getBoundingClientRect().width; // 100vw på mobil
-      els.canvas.width = Math.round(cssW * dpr);
-      els.canvas.height = els.canvas.width; // kvadratisk
-      ctx.setTransform(1,0,0,1,0,0);
-      ctx.scale(dpr, dpr);
-      draw();
+// VIKTIG: Endret variabelnavn til 'sb' for å unngå konflikt
+const sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SB_URL, SB_ANON) : null;
+
+const DRAG_RADIUS = 20; // Større treffsone for finger (pixel units på canvas)
+const DRAFT_KEY = 'selvanviser_draft_v2';
+
+const state = {
+  currentShots: [], // {x, y, score, ts}
+  seriesCount: 0,
+  timerRunning: false,
+  startMs: null,
+  elapsedMs: 0,
+  lastWindDir: null,
+  adjustment: { up: 0, down: 0, left: 0, right: 0 },
+  dragging: { index: -1, offsetX: 0, offsetY: 0 }
+};
+
+const els = {
+  canvas: document.getElementById('targetCanvas'),
+  timerBtn: document.getElementById('startStopTimerBtn'),
+  timerDisplay: document.getElementById('timerDisplay'),
+  saveBtn: document.getElementById('saveSeriesBtn'),
+  undoBtn: document.getElementById('undoShotBtn'),
+  exportBtn: document.getElementById('exportCsvBtn'),
+  weatherBox: document.getElementById('weatherData'),
+  forecastBox: document.getElementById('hourlyForecast'),
+  date: document.getElementById('shootingDate'),
+  loc: document.getElementById('shootingLocation'),
+  name: document.getElementById('nameInput'),
+  adjDisp: document.getElementById('manualAdjustmentDisplay'),
+  dbStatus: document.getElementById('dbStatus'),
+  testList: document.getElementById('testResults'),
+  runTestsBtn: document.getElementById('runTestsBtn'),
+  liveOverlay: document.getElementById('liveOverlay'),
+  liveReadout: document.getElementById('liveReadout'),
+  tableBody: document.querySelector('#resultTable tbody')
+};
+
+// Sett dagens dato
+els.date.value = new Date().toISOString().split('T')[0];
+const ctx = els.canvas.getContext('2d');
+
+/**
+ * 2. CANVAS & TEGNING
+ */
+function resizeCanvas() {
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const rect = els.canvas.getBoundingClientRect();
+  els.canvas.width = Math.round(rect.width * dpr);
+  els.canvas.height = Math.round(rect.width * dpr); // Kvadratisk
+  
+  // Normaliser koordinatsystemet slik at vi tegner i "CSS piksler"
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function getGeom() {
+  const w = els.canvas.getBoundingClientRect().width;
+  const center = w / 2;
+  const ringWidth = center / 10;
+  return { w, center, R: center, ringWidth };
+}
+
+function computeScore(x, y) {
+  const { center, R, ringWidth } = getGeom();
+  const dx = x - center;
+  const dy = y - center;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  
+  if (dist > R) return 0;
+  // DFS (Desimal) beregning kunne vært her, men vi bruker heltall 0-10
+  let score = 10 - Math.floor(dist / ringWidth);
+  return Math.max(0, Math.min(10, score));
+}
+
+function computeDecimal(x, y) {
+    // Enkel desimaltilnærming for visning
+    const { center, ringWidth } = getGeom();
+    const dist = Math.hypot(x - center, y - center);
+    const val = 10.9 - (dist / ringWidth);
+    return Math.max(0, val).toFixed(1);
+}
+
+function drawTarget() {
+  const { w, center, ringWidth } = getGeom();
+  ctx.clearRect(0, 0, w, w);
+  
+  // Tegn ringer
+  for (let val = 1; val <= 10; val++) {
+    const r = (11 - val) * ringWidth; // 10er innerst
+    ctx.beginPath();
+    ctx.arc(center, center, r, 0, Math.PI*2);
+    
+    // Farger: 1-6 hvit, 7-10 svart (standard DFS 200m/300m logikk, forenklet)
+    // Her bruker vi en lys/grå stil for appen
+    ctx.fillStyle = (val % 2 !== 0) ? '#fff' : '#eef'; 
+    ctx.fill();
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Tykk strek mellom svart og hvitt (mellom 6 og 7 i DFS grovfelt, her bare visuelt)
+    if (val === 4) { ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke(); }
+  }
+  
+  // Senterkryss
+  ctx.beginPath(); ctx.moveTo(center-4, center); ctx.lineTo(center+4, center); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(center, center-4); ctx.lineTo(center, center+4); ctx.stroke();
+}
+
+function drawShots() {
+  state.currentShots.forEach((s, i) => {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 6, 0, Math.PI*2);
+    ctx.fillStyle = s.score >= 9 ? '#28a745' : (s.score >= 7 ? '#ffc107' : '#dc3545'); // Grønn/Gul/Rød
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Skuddnummer
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center'; 
+    ctx.textBaseline = 'middle';
+    // Tegn nummer ved siden av, ikke oppå
+    ctx.fillText(i+1, s.x, s.y - 12);
+  });
+}
+
+function drawStats() {
+  if (state.currentShots.length < 2) return;
+  const n = state.currentShots.length;
+  const cx = state.currentShots.reduce((a,s)=>a+s.x,0)/n;
+  const cy = state.currentShots.reduce((a,s)=>a+s.y,0)/n;
+  
+  // Middeltreffpunkt (blått kryss)
+  ctx.strokeStyle = 'blue'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx-5, cy); ctx.lineTo(cx+5, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy-5); ctx.lineTo(cx, cy+5); ctx.stroke();
+}
+
+function draw() {
+  drawTarget();
+  drawShots();
+  drawStats();
+}
+
+/**
+ * 3. INPUT & INTERAKSJON (Pointer Events)
+ */
+function getCanvasPoint(e) {
+  const r = els.canvas.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  // Bruk første touch point eller mus
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  
+  // Map til CSS-piksler internt i logikken vår
+  const x = (clientX - r.left); 
+  const y = (clientY - r.top);
+  return { x, y, clientX, clientY };
+}
+
+function hitTest(x, y) {
+  // Søk baklengs for å ta det øverste skuddet først
+  for (let i = state.currentShots.length - 1; i >= 0; i--) {
+    const s = state.currentShots[i];
+    if (Math.hypot(s.x - x, s.y - y) <= DRAG_RADIUS) return i;
+  }
+  return -1;
+}
+
+function updateLiveUI(x, y, score) {
+  const dec = computeDecimal(x, y);
+  els.liveOverlay.textContent = dec;
+  els.liveReadout.textContent = `Siktepunkt: ${score} (${dec})`;
+}
+
+function moveOverlay(clientX, clientY) {
+  const r = els.canvas.getBoundingClientRect();
+  els.liveOverlay.style.left = (clientX - r.left) + 'px';
+  els.liveOverlay.style.top = (clientY - r.top) + 'px';
+  els.liveOverlay.style.opacity = '1';
+}
+
+// Handlers
+let isDragging = false;
+
+els.canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); // Hindre scroll
+  els.canvas.setPointerCapture(e.pointerId);
+  
+  const {x, y, clientX, clientY} = getCanvasPoint(e);
+  const idx = hitTest(x, y);
+  
+  if (idx >= 0) {
+    state.dragging.index = idx;
+    state.dragging.offsetX = x - state.currentShots[idx].x;
+    state.dragging.offsetY = y - state.currentShots[idx].y;
+    isDragging = true;
+  } else {
+    state.dragging.index = -1;
+    isDragging = false;
+  }
+  
+  moveOverlay(clientX, clientY);
+  updateLiveUI(x, y, computeScore(x,y));
+});
+
+els.canvas.addEventListener('pointermove', (e) => {
+  e.preventDefault();
+  const {x, y, clientX, clientY} = getCanvasPoint(e);
+  moveOverlay(clientX, clientY);
+  
+  // Begrens til innenfor canvas
+  const { w } = getGeom();
+  const safeX = Math.max(0, Math.min(w, x));
+  const safeY = Math.max(0, Math.min(w, y));
+  
+  const score = computeScore(safeX, safeY);
+  updateLiveUI(safeX, safeY, score);
+
+  if (state.dragging.index >= 0) {
+    // Flytt eksisterende skudd
+    const s = state.currentShots[state.dragging.index];
+    s.x = safeX - state.dragging.offsetX; // Forenklet, fjerner offset for "snappier" følelse
+    s.x = safeX; 
+    s.y = safeY;
+    s.score = score;
+    draw();
+  }
+});
+
+els.canvas.addEventListener('pointerup', (e) => {
+  els.canvas.releasePointerCapture(e.pointerId);
+  const {x, y} = getCanvasPoint(e);
+  els.liveOverlay.style.opacity = '0';
+  
+  if (state.dragging.index >= 0) {
+    // Ferdig med å dra
+    state.dragging.index = -1;
+  } else if (!isDragging) {
+    // Nytt skudd (hvis vi ikke dro)
+    const score = computeScore(x, y);
+    state.currentShots.push({ x, y, score, ts: Date.now() });
+  }
+  
+  isDragging = false;
+  updateButtons();
+  draw();
+  saveDraft();
+});
+
+function updateButtons() {
+  const hasShots = state.currentShots.length > 0;
+  els.undoBtn.disabled = !hasShots;
+  els.saveBtn.disabled = !hasShots;
+}
+
+els.undoBtn.addEventListener('click', () => {
+  state.currentShots.pop();
+  updateButtons();
+  draw();
+  saveDraft();
+});
+
+/**
+ * 4. TIDTAKER & LOGIKK
+ */
+function fmtTime(ms) {
+  const s = Math.floor(ms/1000);
+  const m = Math.floor(s/60);
+  const rs = s % 60;
+  return `${String(m).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
+}
+
+let timerReq;
+function tick() {
+  if (!state.timerRunning) return;
+  const now = Date.now();
+  const currentTotal = state.elapsedMs + (now - state.startMs);
+  els.timerDisplay.textContent = fmtTime(currentTotal);
+  timerReq = requestAnimationFrame(tick);
+}
+
+els.timerBtn.addEventListener('click', () => {
+  if (!state.timerRunning) {
+    state.timerRunning = true;
+    state.startMs = Date.now();
+    els.timerBtn.textContent = '⏹️ Stopp';
+    els.timerBtn.classList.add('active'); // CSS hook
+    tick();
+  } else {
+    state.timerRunning = false;
+    state.elapsedMs += Date.now() - state.startMs;
+    els.timerBtn.textContent = '⏱️ Fortsett';
+    els.timerBtn.classList.remove('active');
+    cancelAnimationFrame(timerReq);
+    saveDraft();
+  }
+});
+
+/**
+ * 5. SKRUMELDING
+ */
+function updateAdjDisplay() {
+  const a = state.adjustment;
+  els.adjDisp.textContent = `Opp: ${a.up} | Ned: ${a.down} | V: ${a.left} | H: ${a.right}`;
+  saveDraft();
+}
+// Helpers for buttons
+const adjClick = (keyAdd, keySub) => {
+  if (state.adjustment[keySub] > 0) state.adjustment[keySub]--;
+  else state.adjustment[keyAdd]++;
+  updateAdjDisplay();
+};
+document.getElementById('adjUp').onclick = () => adjClick('up', 'down');
+document.getElementById('adjDown').onclick = () => adjClick('down', 'up');
+document.getElementById('adjLeft').onclick = () => adjClick('left', 'right');
+document.getElementById('adjRight').onclick = () => adjClick('right', 'left');
+
+/**
+ * 6. VÆRDATA (API)
+ */
+function getDirText(deg) {
+  const dirs=['Nord','NØ','Øst','SØ','Sør','SV','Vest','NV'];
+  return dirs[Math.round(deg/45)%8];
+}
+
+els.fetchWeatherBtn.addEventListener('click', async () => {
+  const loc = els.loc.value.trim();
+  const dateStr = els.date.value;
+  if (!loc) return alert('Du må skrive inn et sted.');
+
+  els.weatherBox.textContent = 'Laster vær...';
+  try {
+    // 1. Geocoding
+    const gRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(loc)}`);
+    const gData = await gRes.json();
+    if (!gData.length) throw new Error('Fant ikke sted');
+    const {lat, lon} = gData[0];
+
+    // 2. Met.no
+    const mRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, 
+      { headers: { 'User-Agent': 'SelvanviserApp/2.0 kontakt@ukjent.no' } }
+    );
+    if (!mRes.ok) throw new Error('Met.no feil');
+    const mData = await mRes.json();
+    
+    // 3. Finn riktig tid
+    const series = mData.properties.timeseries.filter(t => t.time.startsWith(dateStr));
+    if (!series.length) {
+      els.weatherBox.textContent = 'Ingen data for denne datoen.';
+      return;
     }
-    window.addEventListener('resize', resizeCanvas);
+    
+    const nowData = series[0].data.instant.details;
+    state.lastWindDir = nowData.wind_from_direction;
+    
+    els.weatherBox.innerHTML = `
+      <strong>${nowData.air_temperature}°C</strong>, Vind: ${nowData.wind_speed} m/s 
+      <span class="wind-arrow" style="transform: rotate(${state.lastWindDir}deg)"></span> 
+      (${getDirText(state.lastWindDir)})
+    `;
+    
+    // Vis neste par timer
+    const forecastHtml = series.slice(0, 3).map(s => {
+      const time = s.time.split('T')[1].substring(0,5);
+      const d = s.data.instant.details;
+      return `${time}: ${d.air_temperature}°C, ${d.wind_speed}m/s`;
+    }).join(' | ');
+    els.forecastBox.textContent = forecastHtml;
+    
+    saveDraft();
+  } catch (err) {
+    els.weatherBox.textContent = 'Feil: ' + err.message;
+  }
+});
 
-    function geom() {
-      const cssW = els.canvas.getBoundingClientRect().width;
-      const center = cssW/2; return { center, R:center, ringWidth:center/10, cssW };
-    }
+/**
+ * 7. LAGRING & DATABASE
+ */
+function getMiniatureUrl() {
+  const mCan = document.createElement('canvas');
+  mCan.width = 100; mCan.height = 100;
+  const mc = mCan.getContext('2d');
+  
+  // Hvit bakgrunn
+  mc.fillStyle = '#fff'; mc.fillRect(0,0,100,100);
+  
+  // Mini skive
+  for (let j=1; j<=10; j+=3) {
+      mc.beginPath(); mc.arc(50,50, (11-j)*5, 0, Math.PI*2); mc.stroke();
+  }
+  
+  // Skudd
+  const { w } = getGeom();
+  const scale = 100 / w;
+  state.currentShots.forEach(s => {
+    mc.beginPath(); mc.arc(s.x*scale, s.y*scale, 2, 0, Math.PI*2);
+    mc.fillStyle = s.score >= 8 ? 'green' : 'red'; mc.fill();
+  });
+  
+  return mCan.toDataURL('image/png');
+}
 
-    function drawTarget(){
-      const {center,R,ringWidth,cssW} = geom();
-      ctx.clearRect(0,0,cssW,cssW);
-      for(let j=10;j>=1;j--){
-        ctx.beginPath(); ctx.arc(center,center,j*ringWidth,0,Math.PI*2);
-        ctx.fillStyle = (j%2===0)? '#eee':'#fff'; ctx.fill();
-        ctx.strokeStyle='#333'; ctx.lineWidth=(j===3)?2:1; ctx.stroke();
-        ctx.fillStyle='#000'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(11-j, center, center - j*ringWidth + ringWidth/2);
-      }
-    }
+function calculateGroup() {
+  if (state.currentShots.length < 2) return null;
+  const cx = state.currentShots.reduce((a,s)=>a+s.x,0) / state.currentShots.length;
+  const cy = state.currentShots.reduce((a,s)=>a+s.y,0) / state.currentShots.length;
+  // Extreme Spread (Diameter)
+  const dists = state.currentShots.map(s => Math.hypot(s.x-cx, s.y-cy));
+  const maxR = Math.max(...dists);
+  return (maxR * 2).toFixed(1); // px
+}
 
-    function drawShots(){
-      state.currentShots.forEach((s,i)=>{
-        ctx.beginPath(); ctx.arc(s.x,s.y,5,0,Math.PI*2);
-        ctx.fillStyle = s.score>=8? 'green':'red'; ctx.fill();
-        ctx.strokeStyle='#000'; ctx.lineWidth=1; ctx.stroke();
-        ctx.font='bold 12px Arial'; ctx.fillStyle='#000'; ctx.textAlign='center';
-        ctx.fillText(i+1, s.x, s.y-10);
-      });
-    }
+els.saveBtn.addEventListener('click', async () => {
+  els.saveBtn.disabled = true;
+  els.saveBtn.textContent = 'Lagrer...';
 
-    function computeScore(x,y){
-      const {center,R,ringWidth}=geom();
-      const dx=x-center, dy=y-center; const dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist>R) return 0; return 10 - Math.floor(dist / ringWidth);
-    }
+  const navn = els.name.value || 'Ukjent';
+  const serieNr = ++state.seriesCount;
+  const sum = state.currentShots.reduce((a,b)=>a+b.score, 0);
+  const tidStr = fmtTime(state.timerRunning ? state.elapsedMs + (Date.now()-state.startMs) : state.elapsedMs);
+  const grp = calculateGroup();
+  const imgData = getMiniatureUrl();
+  const windTxt = state.lastWindDir ? getDirText(state.lastWindDir) : '-';
+  const skruTxt = `O:${state.adjustment.up} N:${state.adjustment.down} V:${state.adjustment.left} H:${state.adjustment.right}`;
 
-    function computeStats(shots){
-      if(!shots.length) return null;
-      const n=shots.length; const cx=shots.reduce((a,s)=>a+s.x,0)/n; const cy=shots.reduce((a,s)=>a+s.y,0)/n;
-      const d=shots.map(s=>Math.hypot(s.x-cx,s.y-cy));
-      const extreme=d.length?(Math.max(...d)*2):0; // diameter
-      const meanR=d.reduce((a,b)=>a+b,0)/n;
-      return {cx,cy,extreme,meanR};
-    }
+  // 1. Legg til i tabell
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${serieNr}</td>
+    <td>${tidStr}</td>
+    <td>${state.currentShots.length}</td>
+    <td><strong>${sum}</strong></td>
+    <td>${windTxt}</td>
+    <td><small>${skruTxt}</small></td>
+    <td>${grp ? grp + 'px' : '-'}</td>
+    <td><img src="${imgData}" style="width:40px;height:40px;border-radius:50%;border:1px solid #ccc"></td>
+  `;
+  els.tableBody.insertBefore(row, els.tableBody.firstChild);
 
-    function drawStats(){
-      const st=computeStats(state.currentShots); if(!st) return;
-      ctx.save(); ctx.strokeStyle= getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0a7'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.arc(st.cx, st.cy, 4, 0, Math.PI*2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(st.cx, st.cy, st.extreme/2, 0, Math.PI*2); ctx.stroke();
-      ctx.restore();
-    }
-
-    function draw(){ drawTarget(); drawShots(); drawStats(); }
-
-    // --- Posisjon & hit-test + live-UI ---
-    function pointFromEvt(e){
-      const r=els.canvas.getBoundingClientRect(); const dpr=Math.max(1,window.devicePixelRatio||1);
-      const clientX=(e.touches?e.touches[0].clientX:e.clientX);
-      const clientY=(e.touches?e.touches[0].clientY:e.clientY);
-      const x=(clientX-r.left)*dpr; const y=(clientY-r.top)*dpr;
-      return { x:x/dpr, y:y/dpr, clientX, clientY };
-    }
-    function hitShot(x,y){ for(let i=state.currentShots.length-1;i>=0;i--){ const s=state.currentShots[i]; if(Math.hypot(s.x-x,s.y-y)<=DRAG_RADIUS) return i; } return -1; }
-
-    function liveInfo(x,y){
-      const {center}=geom();
-      const dx=(x-center); const dy=(y-center);
-      const dist=Math.hypot(dx,dy); const score=computeScore(x,y);
-      return {dx,dy,dist,score};
-    }
-    function updateLiveUI(x,y){
-      const info=liveInfo(x,y);
-      els.liveOverlay.textContent = `Poeng: ${info.score}`;
-      els.liveReadout.textContent = `Live: x=${info.dx.toFixed(0)}, y=${(-info.dy).toFixed(0)} · r=${info.dist.toFixed(1)}px · Poeng=${info.score}`;
-    }
-    function placeOverlay(clientX, clientY){
-      const r=els.canvas.getBoundingClientRect();
-      const ox = clientX - r.left; const oy = clientY - r.top;
-      els.liveOverlay.style.left = `${ox}px`;
-      els.liveOverlay.style.top  = `${oy}px`;
-      els.liveOverlay.style.opacity = '1';
-    }
-    function hideOverlay(){ els.liveOverlay.style.opacity='0'; els.liveReadout.textContent='Live: –'; }
-
-    // --- Drag & drop ---
-    let justDragged=false;
-    els.canvas.addEventListener('pointerdown', (e)=>{
-      els.canvas.setPointerCapture(e.pointerId);
-      const {x,y,clientX,clientY}=pointFromEvt(e);
-      placeOverlay(clientX, clientY); updateLiveUI(x,y);
-      const idx=hitShot(x,y);
-      if(idx>=0){ const s=state.currentShots[idx]; state.dragging.index=idx; state.dragging.offsetX=x-s.x; state.dragging.offsetY=y-s.y; justDragged=false; }
-      else { state.dragging.index=-1; }
-    });
-    els.canvas.addEventListener('pointermove', (e)=>{
-      const {x,y,clientX,clientY}=pointFromEvt(e);
-      placeOverlay(clientX, clientY); updateLiveUI(x,y);
-      if(state.dragging.index<0) return;
-      const {cssW}=geom();
-      const nx=Math.max(0,Math.min(cssW,x-state.dragging.offsetX));
-      const ny=Math.max(0,Math.min(cssW,y-state.dragging.offsetY));
-      const s=state.currentShots[state.dragging.index]; s.x=nx; s.y=ny; s.score=computeScore(nx,ny);
-      draw(); justDragged=true;
-      updateLiveUI(nx,ny);
-    });
-    els.canvas.addEventListener('pointerup', (e)=>{
-      els.canvas.releasePointerCapture(e.pointerId);
-      const {x,y}=pointFromEvt(e);
-      if(state.dragging.index>=0){
-        // Siste posisjon gjelder; skuddet er allerede oppdatert i pointermove
-        state.dragging.index=-1; justDragged=false; persistDraft(); hideOverlay(); return;
-      }
-      const score=computeScore(x,y);
-      state.currentShots.push({x,y,score,ts:Date.now()});
-      els.saveBtn.disabled=false; els.undoBtn.disabled=false; draw(); persistDraft(); hideOverlay();
-    });
-    els.canvas.addEventListener('pointerleave', hideOverlay);
-
-    // --- Angre ---
-    els.undoBtn.addEventListener('click', ()=>{ state.currentShots.pop(); els.undoBtn.disabled = state.currentShots.length===0; els.saveBtn.disabled = state.currentShots.length===0; draw(); persistDraft(); });
-
-    // --- Tidtaker ---
-    function fmt(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); const r=s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}` }
-    let rafId=null; function tick(){ if(!state.timerRunning) return; const now=Date.now(); const ms=state.elapsedMs+(now-state.startMs); els.timerDisplay.textContent=`Tid: ${fmt(ms)}`; rafId=requestAnimationFrame(tick); }
-    els.timerBtn.addEventListener('click', ()=>{ if(!state.timerRunning){ state.timerRunning=true; state.startMs=Date.now(); els.timerBtn.textContent='Stopp tidtaking'; tick(); } else { state.timerRunning=false; state.elapsedMs+=Date.now()-state.startMs; els.timerBtn.textContent='Start skytetid'; cancelAnimationFrame(rafId); rafId=null; } });
-
-    // --- Skrumelding ---
-    function updateAdjustmentDisplay(){ els.adjDisp.textContent = `Opp: ${state.adjustment.up} | Ned: ${state.adjustment.down} | Venstre: ${state.adjustment.left} | Høyre: ${state.adjustment.right}`; persistDraft(); }
-    document.getElementById('adjUp').addEventListener('click', ()=>{ if(state.adjustment.down>0) state.adjustment.down--; else state.adjustment.up++; updateAdjustmentDisplay(); });
-    document.getElementById('adjDown').addEventListener('click', ()=>{ if(state.adjustment.up>0) state.adjustment.up--; else state.adjustment.down++; updateAdjustmentDisplay(); });
-    document.getElementById('adjLeft').addEventListener('click', ()=>{ if(state.adjustment.right>0) state.adjustment.right--; else state.adjustment.left++; updateAdjustmentDisplay(); });
-    document.getElementById('adjRight').addEventListener('click', ()=>{ if(state.adjustment.left>0) state.adjustment.left--; else state.adjustment.right++; updateAdjustmentDisplay(); });
-
-    // --- Vær ---
-    function getCompassDirection(deg){ const dirs=['nord','nordøst','øst','sørøst','sør','sørvest','vest','nordvest']; return dirs[Math.round(deg/45)%8]; }
-    document.getElementById('fetchWeatherBtn').addEventListener('click', async ()=>{
-      const loc=els.loc.value.trim(); const date=els.date.value; if(!loc||!date) return alert('Fyll inn sted og dato');
-      els.weatherBox.textContent='Henter værdata…'; els.forecastBox.textContent='';
-      try{
-        const geoRes=await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(loc)}`);
-        const geoJson=await geoRes.json(); if(!Array.isArray(geoJson)||!geoJson.length) throw new Error('Fant ikke sted.');
-        const {lat,lon}=geoJson[0];
-        const metRes=await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`,{headers:{'User-Agent':'skyteapp/1.0 kontakt@example.com'}});
-        if(!metRes.ok) throw new Error('Feil fra MET.no');
-        const data=await metRes.json();
-        const series=(data.properties?.timeseries||[]).filter(e=>e.time.startsWith(date));
-        if(!series.length){ els.weatherBox.textContent='Ingen værdata for valgt dato.'; return; }
-        const now=series[0].data.instant.details; state.lastWindDir=now.wind_from_direction;
-        els.weatherBox.innerHTML = `Temp: ${now.air_temperature}°C, Vind: ${now.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${state.lastWindDir}deg);"></span> (${getCompassDirection(state.lastWindDir)})`;
-        els.forecastBox.innerHTML = series.map(f=>{ const h=new Date(f.time).getHours(); const d=f.data.instant.details; return `${String(h).padStart(2,'0')}:00 – ${d.air_temperature}°C, ${d.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${d.wind_from_direction}deg);"></span>`; }).join('<br>');
-        persistDraft();
-      } catch(err){ els.weatherBox.textContent='Klarte ikke hente værdata'; els.forecastBox.textContent=''; }
-    });
-
-    // --- Lagre serie ---
-    els.saveBtn.addEventListener('click', async ()=>{
-      if(!state.currentShots.length) return;
-      const navn=els.name.value.trim()||'Ukjent';
-      const dato=els.date.value; const sted=els.loc.value.trim()||'Ukjent';
-      const totalMs=state.timerRunning ? (state.elapsedMs+(Date.now()-state.startMs)) : state.elapsedMs;
-      const tid=(function(ms){ const s=Math.floor(ms/1000), m=Math.floor(s/60), r=s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`})(totalMs);
-      const skrumelding=`Opp: ${state.adjustment.up} | Ned: ${state.adjustment.down} | Venstre: ${state.adjustment.left} | Høyre: ${state.adjustment.right}`;
-      const treff=state.currentShots.filter(s=>s.score>=8).length;
-      const poeng=state.currentShots.reduce((sum,s)=>sum+s.score,0);
-      state.seriesCount++;
-
-      // Miniatyr
-      const prev=document.createElement('canvas'); prev.width=100; prev.height=100; const pctx=prev.getContext('2d');
-      pctx.fillStyle='#fff'; pctx.fillRect(0,0,100,100);
-      for(let j=10;j>=1;j--){ pctx.beginPath(); pctx.arc(50,50,j*5,0,Math.PI*2); pctx.strokeStyle=j===3?'#000':'#ccc'; pctx.lineWidth=j===3?2:.5; pctx.stroke(); }
-      const scale=100/els.canvas.getBoundingClientRect().width;
-      state.currentShots.forEach(s=>{ pctx.beginPath(); pctx.arc(s.x*scale, s.y*scale, 2, 0, Math.PI*2); pctx.fillStyle=s.score>=8?'green':'red'; pctx.fill(); });
-      const dataUrl=prev.toDataURL('image/png');
-
-      const stats=computeStats(state.currentShots);
-      const gruppeStr = stats? `ES: ${stats.extreme.toFixed(1)}px, MR: ${stats.meanR.toFixed(1)}px` : '';
-
-      const row=document.createElement('tr');
-      const dirDeg=state.lastWindDir??0; const dirText=getCompassDirection(dirDeg);
-      row.innerHTML = `<td>${dato}</td><td>${state.seriesCount}</td><td>${sted}</td><td>${state.currentShots.length}</td><td>${poeng} (${treff})</td><td>${tid}</td><td><span class='wind-arrow' style='transform: rotate(${dirDeg}deg);'></span> ${dirText}</td><td>${skrumelding}</td><td><img src="${dataUrl}" width="80" alt="miniatur"/></td><td>${gruppeStr}</td>`;
-      document.querySelector('#resultTable tbody').appendChild(row);
-
-      els.saveBtn.disabled=true;
-
-      try{
-        if(supabase && typeof supabase.from==='function'){
-          let payload={
-            navn,dato,sted,serie:state.seriesCount,skudd:state.currentShots.length,
-            poeng,treff,tid,vindretning:dirText,vindgrader:dirDeg,skrumelding,
-            skudddata:state.currentShots, miniatur_dataurl:dataUrl,
-            gruppe_es_px:stats?.extreme??null, gruppe_mr_px:stats?.meanR??null,
-          };
-          const missingColRe=/Could not find the '([^']+)' column/i;
-          let attempts=0;
-          while(attempts<6){
-            const { error } = await supabase.from('selvanviser').insert(payload);
-            if(!error){ alert('Serie lagret til DB!'); break; }
-            const m=(error.message||'').match(missingColRe);
-            if(m && m[1] && Object.prototype.hasOwnProperty.call(payload,m[1])){ delete payload[m[1]]; attempts++; continue; }
-            throw error;
-          }
-        } else {
-          alert('Ingen DB-tilkobling: lagret kun i minnet/CSV.');
-        }
-      } catch(e){
-        console.error(e);
-        alert('Feil ved lagring til DB: '+(e?.message||e));
-        els.saveBtn.disabled=false;
-      }
-
-      // reset
-      state.currentShots=[]; state.adjustment={up:0,down:0,left:0,right:0};
-      state.timerRunning=false; state.startMs=null; state.elapsedMs=0; els.timerBtn.textContent='Start skytetid';
-      els.timerDisplay.textContent='Tid: 00:00';
-      els.undoBtn.disabled=true; updateAdjustmentDisplay();
-      draw(); clearDraft();
-    });
-
-    // --- CSV-eksport --- (riktig \n og regex)
-    els.exportBtn.addEventListener('click', ()=>{
-      const rows = [["Dato","Serie","Sted","Skudd","Poeng","Tid","Retning","Skrudd","Gruppe"]];
-      document.querySelectorAll('#resultTable tbody tr').forEach(tr=>{
-        const cols = Array.from(tr.children).map(td=>td.innerText.replace(/\n/g,' ').trim());
-        rows.push(cols.slice(0,9));
-      });
-      const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='serier.csv'; a.click(); URL.revokeObjectURL(a.href);
-    });
-
-    // --- Draft ---
-    const DRAFT_KEY='selvanviser_draft_v1';
-    function persistDraft(){ const d={shots:state.currentShots, adjustment:state.adjustment, lastWindDir:state.lastWindDir, name:els.name.value, date:els.date.value, loc:els.loc.value, elapsedMs: state.timerRunning ? (state.elapsedMs+(Date.now()-state.startMs)) : state.elapsedMs}; localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); }
-    function restoreDraft(){ try{ const raw=localStorage.getItem(DRAFT_KEY); if(!raw) return; const d=JSON.parse(raw); state.currentShots=d.shots||[]; state.adjustment=d.adjustment||state.adjustment; state.lastWindDir=d.lastWindDir??null; els.name.value=d.name||''; els.date.value=d.date||els.date.value; els.loc.value=d.loc||''; els.timerDisplay.textContent=`Tid: ${fmt(d.elapsedMs||0)}`; state.elapsedMs=d.elapsedMs||0; els.undoBtn.disabled=state.currentShots.length===0; els.saveBtn.disabled=state.currentShots.length===0; updateAdjustmentDisplay(); draw(); } catch{} }
-    function clearDraft(){ localStorage.removeItem(DRAFT_KEY); }
-
-    // --- DB-status ---
-    async function checkDb(){ if(!els.dbStatus) return false; if(!supabase){ els.dbStatus.textContent='DB: ingen tilkobling'; return false; } try{ const {error}=await supabase.from('selvanviser').select('*',{head:true,count:'exact'}).limit(1); if(error) throw error; els.dbStatus.textContent='DB: tilkoblet'; return true; } catch(e){ console.error('DB-sjekk feilet:',e); els.dbStatus.textContent='DB: ikke tilgang/feil'; return false; } }
-
-    // --- Tester ---
-    function addResult(ok, msg){ const li=document.createElement('li'); li.textContent=msg; li.className = ok===true? 'pass' : ok===false? 'fail' : 'skip'; els.testList.appendChild(li); }
-    function runTests(){
-      els.testList.innerHTML='';
-      addResult(!!(supabase && typeof supabase.from==='function'), 'Supabase-klient initialisert');
-      const g=geom();
-      addResult(computeScore(g.center, g.center) === 10, 'computeScore: sentrum gir 10');
-      const almostEdgeX=g.center + (g.R - 1);
-      addResult(computeScore(almostEdgeX, g.center) === 1, 'computeScore: nesten ytterkant gir 1');
-      addResult(computeScore(g.center + g.R + 5, g.center) === 0, 'computeScore: utenfor skive gir 0');
-      const shots=[{x:g.center-10,y:g.center},{x:g.center+10,y:g.center}];
-      const st=computeStats(shots);
-      addResult(Math.abs(st.cx - g.center) < 0.01 && Math.abs(st.cy - g.center) < 0.01, 'computeStats: senter beregnes korrekt');
-      const adj={up:0,down:0,left:0,right:0}; if(adj.down>0) adj.down--; else adj.up++; if(adj.up>0) adj.up--; else adj.down++; addResult(adj.up===0 && adj.down===0, 'Justering opp/ned kansellerer');
-      addResult((function(){ const t = fmt(61000); return t==='01:01'; })(), 'Tidsformat 61000ms = 01:01');
-      // CSV/regex tester
-      addResult('a\nb'.replace(/\n/g,' ') === 'a b', 'Regex: newline erstattes i CSV-eksport');
-      addResult(['x','y'].join('\n') === 'x\ny', 'CSV: join med \\n');
-      // PostgREST-feilparser
-      const missingColRe=/Could not find the '([^']+)' column/i; const sample="Could not find the 'gruppe_es_px' column of 'selvanviser' in the schema cache"; const m=sample.match(missingColRe); addResult(!!m && m[1]==='gruppe_es_px', 'Feilparser: finner manglende kolonnenavn');
-      const shotA={x:g.center, y:g.center}; state.currentShots=[shotA]; const hitIdx=hitShot(g.center, g.center); addResult(hitIdx===0, 'hitTest: treffer skudd i sentrum'); const before=computeScore(shotA.x, shotA.y); shotA.x=g.center+g.R-2; shotA.y=g.center; const after=computeScore(shotA.x, shotA.y); addResult(before!==after, 'Dra: score oppdateres ved flytting'); state.currentShots=[];
-      // Ekstra tester
-      addResult(DRAG_RADIUS === 14, 'Konfig: drag-radius er 14px');
-      addResult(typeof window.supabase !== 'undefined', 'UMD: supabase global er definert');
-      // Live-informasjon: verdi gyldig
-      const liveOK = (function(){ const p={x:g.center, y:g.center - g.ringWidth*2}; const sc=computeScore(p.x,p.y); return sc>=0 && sc<=10; })();
-      addResult(liveOK, 'Live: computeScore returnerer gyldig verdi');
-    }
-
-    // --- Init ---
-    resizeCanvas();
-    restoreDraft();
-    checkDb();
-    runTests();
-    els.runTestsBtn?.addEventListener('click', runTests);
-  </script>
-</body>
-</html>
+  // 2. Send til Supabase
+  if (sb) {
+    const payload = {
+      navn: navn,
+      dato: els.date.value,
+      sted: els.loc.value,
+      serie: serieNr
