@@ -414,8 +414,6 @@
           }
           
           // --- SPESIAL: Uthevet linje for SKISKYTING LIGGENDE (7.8 poeng) ---
-          // Radius beregnes som: (11 - poengsum) * ringWidth
-          // 7.8 poeng tilsvarer radien for liggende blink i dette systemet.
           const biathlonProneRadius = (11 - 7.8) * ringWidth;
           
           ctx.beginPath();
@@ -655,13 +653,59 @@
 
         /** * 8. LAGRING & DATABASE
          */
+        
+        // --- NY OG FORBEDRET MINIATYRFUNKSJON (Høyere oppløsning + Hele blinken) ---
         function getMiniatureUrl() {
-          const m = document.createElement('canvas'); m.width=100; m.height=100; const c=m.getContext('2d');
-          c.fillStyle='#fff'; c.fillRect(0,0,100,100);
-          for (let j=1; j<=10; j+=3) { c.beginPath(); c.arc(50,50,(11-j)*5,0,Math.PI*2); c.stroke(); }
-          const {w}=getGeom(); const scale=100/w;
-          state.currentShots.forEach(s=>{ c.beginPath(); c.arc(s.x*scale,s.y*scale,2,0,Math.PI*2); c.fillStyle=s.score>=8?'green':'red'; c.fill(); });
-          return m.toDataURL();
+          const size = 300; // Økt oppløsning for bedre kvalitet
+          const m = document.createElement('canvas'); 
+          m.width = size; 
+          m.height = size; 
+          const c = m.getContext('2d');
+          
+          const center = size / 2;
+          const margin = 10;
+          const R = center - margin;
+          const ringWidth = R / 10;
+          
+          // Hvit bakgrunn
+          c.fillStyle = '#fff'; 
+          c.fillRect(0, 0, size, size);
+          
+          // 1. Tegn ALLE ringer (1-10) slik at hele blinken vises
+          for (let val = 1; val <= 10; val++) {
+            const r = (11 - val) * ringWidth; 
+            c.beginPath();
+            c.arc(center, center, r, 0, Math.PI*2);
+            c.fillStyle = (val % 2 !== 0) ? '#fff' : '#f0f0f0'; 
+            c.fill();
+            c.strokeStyle = '#e0e0e0'; 
+            c.lineWidth = 1;
+            c.stroke();
+          }
+
+          // 2. Tegn 7.8 (Liggende) grensen tydelig
+          const biathlonRadius = (11 - 7.8) * ringWidth;
+          c.beginPath();
+          c.arc(center, center, biathlonRadius, 0, Math.PI*2);
+          c.strokeStyle = '#000';
+          c.lineWidth = 2; // Tydelig strek i miniatyren
+          c.stroke();
+
+          // 3. Tegn skuddene (Skaler fra hoved-canvas til miniatyr-størrelse)
+          const { w: srcW } = getGeom(); // Bredden på hovedskiva
+          const scale = size / srcW;     // Skaleringsfaktor
+          
+          state.currentShots.forEach(s => {
+            const nx = s.x * scale;
+            const ny = s.y * scale;
+            
+            c.beginPath(); 
+            c.arc(nx, ny, 4, 0, Math.PI*2); // Punktstørrelse i miniatyr
+            c.fillStyle = s.score >= 9 ? '#28a745' : (s.score >= 7 ? '#ffc107' : '#dc3545'); 
+            c.fill();
+          });
+          
+          return m.toDataURL('image/png');
         }
 
         els.saveBtn.addEventListener('click', async () => {
@@ -686,7 +730,7 @@
           const tid = els.timerDisplay.textContent;
           const vind = state.lastWindDir ? getDirText(state.lastWindDir) : '-';
           
-          row.innerHTML = `<td>${serieNr}</td><td>${tid}</td><td><strong>${sum}</strong></td><td>${vind}</td><td>${state.adjustment.up}/${state.adjustment.left}</td><td>${grp}</td><td><img src="${img}" style="width:30px;border-radius:50%"></td>`;
+          row.innerHTML = `<td>${serieNr}</td><td>${tid}</td><td><strong>${sum}</strong></td><td>${vind}</td><td>${state.adjustment.up}/${state.adjustment.left}</td><td>${grp}</td><td><img src="${img}" style="width:50px;border-radius:50%;border:1px solid #ccc"></td>`;
           els.tableBody.insertBefore(row, els.tableBody.firstChild);
 
           // Lagre til Cloud (Supabase)
@@ -707,7 +751,6 @@
                // Forsøk lagring
                let { error } = await sb.from('selvanviser').insert(payload);
                
-               // Hvis database mangler kolonner, fjern de problematiske feltene og prøv igjen
                if (error && error.message.includes('column')) {
                    const match = error.message.match(/'([^']+)' column/);
                    if (match) {
