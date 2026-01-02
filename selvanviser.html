@@ -3,37 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Utvidet analyse av skyting – v2.1</title>
+  <title>Skiskyting Analyse – Liggende (7.8)</title>
   <meta name="color-scheme" content="light dark" />
+  
   <style>
-    /* --- 1. GRUNNLEGGENDE STILER --- */
+    /* --- 1. GRUNNLEGGENDE STILER & FARGER --- */
     :root { 
-      --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; 
-      --border:#d0d0d0; --accent:#007aff; --danger:#ff3b30; --success:#34c759; 
+      --bg: #f5f5f5; 
+      --card: #ffffff; 
+      --ink: #111111; 
+      --muted: #666666; 
+      --border: #d0d0d0; 
+      --accent: #007aff; 
+      --danger: #ff3b30; 
+      --success: #34c759; 
     }
+
+    /* Mørk modus støtte */
     @media (prefers-color-scheme: dark) { 
-      :root { --bg:#0f1115; --card:#1c1e26; --ink:#e9eef5; --muted:#a3afc2; --border:#2a2f3a; --accent:#0a84ff; } 
+      :root { 
+        --bg: #0f1115; 
+        --card: #1c1e26; 
+        --ink: #e9eef5; 
+        --muted: #a3afc2; 
+        --border: #2a2f3a; 
+        --accent: #0a84ff; 
+      } 
     }
     
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, sans-serif; height: 100%; }
     
-    .wrap { max-width: 800px; margin: 0 auto; padding: 12px; padding-bottom: 60px; }
+    html, body { 
+      margin: 0; 
+      padding: 0; 
+      background: var(--bg); 
+      color: var(--ink); 
+      font-family: system-ui, -apple-system, sans-serif; 
+      height: 100%; 
+    }
+    
+    /* Hovedcontainer */
+    .wrap { 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 12px; 
+      padding-bottom: 80px; /* Plass til scrolling på bunnen */
+    }
+    
     h1 { margin: 10px 0 16px; font-size: 1.5rem; text-align: center; }
     h2 { font-size: 1.1rem; margin: 0 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
     
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgb(0 0 0 / 5%); }
+    .card { 
+      background: var(--card); 
+      border: 1px solid var(--border); 
+      border-radius: 16px; 
+      padding: 16px; 
+      margin-bottom: 16px; 
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); 
+    }
 
-    /* --- 2. INPUT & GRID --- */
-    #competitionInfo { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 8px; }
-    input, button { font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--ink); width: 100%; }
+    /* --- 2. SKJEMAELEMENTER --- */
+    #competitionInfo { 
+      display: grid; 
+      gap: 10px; 
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+      margin-bottom: 8px; 
+    }
+    
+    input, button { 
+      font-size: 16px; 
+      padding: 10px; 
+      border-radius: 10px; 
+      border: 1px solid var(--border); 
+      background: var(--card); 
+      color: var(--ink); 
+      width: 100%; 
+    }
+    
     input:focus { outline: 2px solid var(--accent); border-color: transparent; }
     
-    button { cursor: pointer; font-weight: 600; touch-action: manipulation; }
+    button { 
+      cursor: pointer; 
+      font-weight: 600; 
+      touch-action: manipulation; 
+      transition: transform 0.1s;
+    }
     button:active { transform: scale(0.98); }
-    button.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
     
+    button.primary { 
+      background: var(--ink); 
+      color: var(--card); 
+      border-color: var(--ink); 
+    }
+    
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
     /* --- 3. SKIVE & CANVAS (LAYOUT FIX) --- */
     .canvas-container { 
       display: flex; 
@@ -66,54 +130,94 @@
       touch-action: none; /* Hindrer scrolling når man drar på skiva */
     }
 
-    /* Boble over fingeren */
+    /* Boble over fingeren som viser poeng */
     #liveOverlay { 
       position: absolute; left: 0; top: 0; 
       transform: translate(-50%, -160%); 
-      padding: 4px 8px; border-radius: 12px; 
-      background: var(--accent); color: #fff; 
-      font-weight: bold; font-size: 13px; 
-      pointer-events: none; opacity: 0; transition: opacity 0.1s; 
-      white-space: nowrap; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      padding: 4px 8px; 
+      border-radius: 12px; 
+      background: var(--accent); 
+      color: #fff; 
+      font-weight: bold; 
+      font-size: 13px; 
+      pointer-events: none; 
+      opacity: 0; 
+      transition: opacity 0.1s; 
+      white-space: nowrap; 
+      z-index: 100; 
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     
+    /* Mobil-tilpasning */
     @media (max-width: 600px) {
-      /* På mobil: Bruk 90% av bredden, sentrert */
       .canvas-wrap { max-width: 90vw; } 
     }
 
-    /* --- 4. KNAPPER & TABELL --- */
-    #controls, #adjustmentControls { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-top: 10px; }
+    /* --- 4. KNAPPER, TIDTAKER & TABELL --- */
+    #controls, #adjustmentControls { 
+      display: grid; 
+      gap: 8px; 
+      grid-template-columns: 1fr 1fr; 
+      margin-top: 10px; 
+    }
     #adjustmentControls button { height: 44px; }
     
-    #timerControls { display: flex; align-items: center; gap: 12px; background: var(--bg); padding: 8px 12px; border-radius: 12px; margin-top: 16px; border: 1px solid var(--border); }
-    #timerDisplay { font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: bold; margin-left: auto; }
+    #timerControls { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      background: var(--bg); 
+      padding: 8px 12px; 
+      border-radius: 12px; 
+      margin-top: 16px; 
+      border: 1px solid var(--border); 
+    }
+    #timerDisplay { 
+      font-variant-numeric: tabular-nums; 
+      font-size: 1.2rem; 
+      font-weight: bold; 
+      margin-left: auto; 
+    }
 
-    .table-scroll { overflow-x: auto; margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; }
+    /* Tabell scrollbar */
+    .table-scroll { 
+      overflow-x: auto; 
+      margin-top: 10px; 
+      border: 1px solid var(--border); 
+      border-radius: 8px; 
+    }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; }
     th, td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); }
-    th { background: var(--bg); position: sticky; top: 0; }
-
-    .wind-arrow { display: inline-block; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 12px solid var(--danger); }
+    th { background: var(--bg); position: sticky; top: 0; font-weight: 600; }
+    
+    .wind-arrow { 
+      display: inline-block; 
+      width: 0; height: 0; 
+      border-left: 5px solid transparent; 
+      border-right: 5px solid transparent; 
+      border-top: 12px solid var(--danger); 
+    }
     .muted { color: var(--muted); font-size: 0.85rem; }
 
     /* Testpanel */
     #testPanel details { margin-top: 8px; cursor: pointer; color: var(--muted); }
     #testResults li { margin-bottom: 4px; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
-    .pass { background: rgba(52, 199, 89, 0.2); } .fail { background: rgba(255, 59, 48, 0.2); }
+    .pass { background: rgba(52, 199, 89, 0.2); border: 1px solid var(--success); } 
+    .fail { background: rgba(255, 59, 48, 0.2); border: 1px solid var(--danger); }
   </style>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
 <div class="wrap">
-  <h1>🎯 Utvidet Analyse</h1>
+  <h1>🎯 Skiskyting Analyse</h1>
 
   <section class="card">
     <div id="competitionInfo">
-      <input id="nameInput" placeholder="Navn" />
-      <input id="shootingDate" type="date" />
-      <input id="shootingLocation" placeholder="Sted" />
+      <input id="nameInput" placeholder="Navn" aria-label="Navn" />
+      <input id="shootingDate" type="date" aria-label="Dato" />
+      <input id="shootingLocation" placeholder="Sted" aria-label="Sted" />
       <button id="fetchWeatherBtn">☁️ Hent vær</button>
     </div>
     <div class="muted">
@@ -125,7 +229,7 @@
   </section>
 
   <section class="card">
-    <h2>Skive & Anvisning</h2>
+    <h2>Skive & Anvisning (Liggende)</h2>
     
     <div class="canvas-container">
       <div class="canvas-wrap">
@@ -180,30 +284,37 @@
 </div>
 
 <script>
-  // Vent til hele siden er lastet før vi kjører koden
+  // DOMContentLoaded sikrer at HTML-en er ferdig tegnet før skriptet kjører
   document.addEventListener('DOMContentLoaded', () => {
     console.log("App starter...");
 
     try {
-        /** 1. KONFIGURASJON **/
+        /** * 1. KONFIGURASJON & VARIABLER 
+         */
         const SB_URL = 'https://chzfewhbfkdtcizdxyzk.supabase.co';
         const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA';
 
-        // Sjekk om Supabase er lastet - kaller den 'sb' for å unngå konflikt
+        // Vi kaller klienten 'sb' for å unngå konflikt med selve biblioteket
         const sb = (typeof window.supabase !== 'undefined' && window.supabase.createClient) 
                    ? window.supabase.createClient(SB_URL, SB_ANON) 
                    : null;
 
-        const DRAG_RADIUS = 20; 
-        const DRAFT_KEY = 'selvanviser_draft_v2';
+        const DRAG_RADIUS = 20; // Hvor lett det er å gripe et skudd (piksler)
+        const DRAFT_KEY = 'selvanviser_draft_v2'; // Nøkkel for lokal lagring
 
+        // Appens tilstand (State)
         const state = {
-          currentShots: [], seriesCount: 0, timerRunning: false,
-          startMs: null, elapsedMs: 0, lastWindDir: null,
+          currentShots: [], 
+          seriesCount: 0, 
+          timerRunning: false,
+          startMs: null, 
+          elapsedMs: 0, 
+          lastWindDir: null,
           adjustment: { up: 0, down: 0, left: 0, right: 0 },
           dragging: { index: -1, offsetX: 0, offsetY: 0 }
         };
 
+        // Referanser til HTML-elementer
         const els = {
           canvas: document.getElementById('targetCanvas'),
           timerBtn: document.getElementById('startStopTimerBtn'),
@@ -225,17 +336,25 @@
           fetchWeatherBtn: document.getElementById('fetchWeatherBtn')
         };
 
-        if (!els.canvas || !els.date) throw new Error("Mangler HTML-elementer.");
+        // Sikkerhetssjekk
+        if (!els.canvas || !els.date) throw new Error("Kritiske HTML-elementer mangler.");
+        
+        // Sett dagens dato automatisk
         els.date.value = new Date().toISOString().split('T')[0];
         const ctx = els.canvas.getContext('2d');
 
-        /** 2. CANVAS LOGIKK (SENTRERING & SKALERING) **/
+        /** * 2. CANVAS LOGIKK (SENTRERING & GEOMETRI) 
+         */
+        
+        // Denne funksjonen sørger for at tegningen er skarp på alle skjermer
         function resizeCanvas() {
           const dpr = Math.max(1, window.devicePixelRatio || 1);
-          // Hent størrelsen fra CSS (som styres av aspect-ratio og max-width)
           const rect = els.canvas.getBoundingClientRect();
           
-          if (rect.width === 0) { requestAnimationFrame(resizeCanvas); return; }
+          if (rect.width === 0) { 
+              requestAnimationFrame(resizeCanvas); 
+              return; 
+          }
 
           els.canvas.width = Math.round(rect.width * dpr);
           els.canvas.height = Math.round(rect.height * dpr); 
@@ -246,8 +365,8 @@
         }
         window.addEventListener('resize', resizeCanvas);
 
+        // Hjelpefunksjon for å finne midtpunkt og radius
         function getGeom() {
-          // Bruk bredden som er definert av CSS
           const w = els.canvas.getBoundingClientRect().width;
           const center = w / 2;
           // Legg inn margin (2px) så vi ikke tegner på borderen
@@ -256,6 +375,7 @@
           return { w, center, R, ringWidth };
         }
 
+        // Beregner heltallspoeng (0-10)
         function computeScore(x, y) {
           const { center, R, ringWidth } = getGeom();
           const dist = Math.hypot(x - center, y - center);
@@ -264,6 +384,7 @@
           return Math.max(0, Math.min(10, score));
         }
 
+        // Beregner desimalpoeng for visning (f.eks 10.4)
         function computeDecimal(x, y) {
             const { ringWidth } = getGeom();
             const dist = Math.hypot(x - getGeom().center, y - getGeom().center);
@@ -271,28 +392,61 @@
             return Math.max(0, val).toFixed(1);
         }
 
+        /** * 3. TEGNEFUNKSJONER
+         */
         function drawTarget() {
           const { w, center, ringWidth } = getGeom();
           ctx.clearRect(0, 0, w, w);
+          
+          // Tegn ringer fra 1 til 10
           for (let val = 1; val <= 10; val++) {
             const r = (11 - val) * ringWidth; 
             ctx.beginPath();
             ctx.arc(center, center, r, 0, Math.PI*2);
-            ctx.fillStyle = (val % 2 !== 0) ? '#fff' : '#eef'; ctx.fill();
-            ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.stroke();
-            if (val === 4) { ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke(); }
+            
+            // Farger: Annenhver hvit og lys grå
+            ctx.fillStyle = (val % 2 !== 0) ? '#fff' : '#f0f0f0'; 
+            ctx.fill();
+            // Svake hjelpelinjer for 1-10
+            ctx.strokeStyle = '#e0e0e0'; 
+            ctx.lineWidth = 1; 
+            ctx.stroke();
           }
+          
+          // --- SPESIAL: Uthevet linje for SKISKYTING LIGGENDE (7.8 poeng) ---
+          // Radius beregnes som: (11 - poengsum) * ringWidth
+          // 7.8 poeng tilsvarer radien for liggende blink i dette systemet.
+          const biathlonProneRadius = (11 - 7.8) * ringWidth;
+          
+          ctx.beginPath();
+          ctx.arc(center, center, biathlonProneRadius, 0, Math.PI*2);
+          ctx.strokeStyle = '#000'; // Svart
+          ctx.lineWidth = 3;        // Tykk og tydelig strek
+          ctx.stroke();
+
+          // Senterkryss
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#000';
           ctx.beginPath(); ctx.moveTo(center-4, center); ctx.lineTo(center+4, center); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(center, center-4); ctx.lineTo(center, center+4); ctx.stroke();
         }
 
         function drawShots() {
           state.currentShots.forEach((s, i) => {
-            ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI*2);
+            ctx.beginPath(); 
+            ctx.arc(s.x, s.y, 6, 0, Math.PI*2);
+            // Farge basert på poengverdi
             ctx.fillStyle = s.score >= 9 ? '#28a745' : (s.score >= 7 ? '#ffc107' : '#dc3545'); 
-            ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fill(); 
+            ctx.strokeStyle = '#fff'; 
+            ctx.lineWidth = 2; 
+            ctx.stroke();
+            
+            // Skuddnummer
+            ctx.fillStyle = '#000'; 
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center'; 
+            ctx.textBaseline = 'middle';
             ctx.fillText(i+1, s.x, s.y - 12);
           });
         }
@@ -302,23 +456,30 @@
           const n = state.currentShots.length;
           const cx = state.currentShots.reduce((a,s)=>a+s.x,0)/n;
           const cy = state.currentShots.reduce((a,s)=>a+s.y,0)/n;
+          
+          // Tegn middeltreffpunkt (blått kryss)
           ctx.strokeStyle = 'blue'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(cx-5, cy); ctx.lineTo(cx+5, cy); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(cx, cy-5); ctx.lineTo(cx, cy+5); ctx.stroke();
         }
 
-        function draw() { drawTarget(); drawShots(); drawStats(); }
+        function draw() { 
+          drawTarget(); 
+          drawShots(); 
+          drawStats(); 
+        }
 
-        /** 3. TOUCH & INTERAKSJON **/
+        /** * 4. TOUCH & INTERAKSJON (KLIKK & DRA)
+         */
         function getCanvasPoint(e) {
           const r = els.canvas.getBoundingClientRect();
-          // Henter touch-punkt relativt til canvas elementet
           const clientX = e.touches ? e.touches[0].clientX : e.clientX;
           const clientY = e.touches ? e.touches[0].clientY : e.clientY;
           return { x: clientX - r.left, y: clientY - r.top, clientX, clientY };
         }
 
         function hitTest(x, y) {
+          // Sjekk om vi trykker på et eksisterende skudd (baklengs for å ta øverste)
           for (let i = state.currentShots.length - 1; i >= 0; i--) {
             if (Math.hypot(state.currentShots[i].x - x, state.currentShots[i].y - y) <= DRAG_RADIUS) return i;
           }
@@ -339,25 +500,32 @@
         }
 
         let isDragging = false;
+
+        // Start trykk
         els.canvas.addEventListener('pointerdown', (e) => {
-          e.preventDefault(); els.canvas.setPointerCapture(e.pointerId);
+          e.preventDefault(); 
+          els.canvas.setPointerCapture(e.pointerId);
           const {x, y, clientX, clientY} = getCanvasPoint(e);
           const idx = hitTest(x, y);
+          
           if (idx >= 0) {
             state.dragging = { index: idx, offsetX: x - state.currentShots[idx].x, offsetY: y - state.currentShots[idx].y };
             isDragging = true;
           } else {
             state.dragging.index = -1;
           }
-          moveOverlay(clientX, clientY); updateLiveUI(x, y, computeScore(x,y));
+          moveOverlay(clientX, clientY); 
+          updateLiveUI(x, y, computeScore(x,y));
         });
 
+        // Bevegelse
         els.canvas.addEventListener('pointermove', (e) => {
           e.preventDefault();
           const {x, y, clientX, clientY} = getCanvasPoint(e);
           moveOverlay(clientX, clientY);
-          const { w } = getGeom();
+          
           // Hold markøren innenfor canvas
+          const { w } = getGeom();
           const safeX = Math.max(0, Math.min(w, x)); 
           const safeY = Math.max(0, Math.min(w, y));
           const score = computeScore(safeX, safeY);
@@ -365,11 +533,14 @@
 
           if (state.dragging.index >= 0) {
             const s = state.currentShots[state.dragging.index];
-            s.x = safeX; s.y = safeY; s.score = score;
+            s.x = safeX; 
+            s.y = safeY; 
+            s.score = score;
             draw();
           }
         });
 
+        // Slipp
         els.canvas.addEventListener('pointerup', (e) => {
           els.canvas.releasePointerCapture(e.pointerId);
           const {x, y} = getCanvasPoint(e);
@@ -378,79 +549,112 @@
           if (state.dragging.index >= 0) {
             state.dragging.index = -1;
           } else if (!isDragging) {
+            // Legg til nytt skudd
             state.currentShots.push({ x, y, score: computeScore(x,y), ts: Date.now() });
           }
+          
           isDragging = false;
-          updateButtons(); draw(); saveDraft();
+          updateButtons(); 
+          draw(); 
+          saveDraft();
         });
 
         function updateButtons() {
           const has = state.currentShots.length > 0;
-          els.undoBtn.disabled = !has; els.saveBtn.disabled = !has;
+          els.undoBtn.disabled = !has; 
+          els.saveBtn.disabled = !has;
         }
 
         els.undoBtn.addEventListener('click', () => {
-          state.currentShots.pop(); updateButtons(); draw(); saveDraft();
+          state.currentShots.pop(); 
+          updateButtons(); 
+          draw(); 
+          saveDraft();
         });
 
-        /** 4. TIDTAKER **/
+        /** * 5. TIDTAKER
+         */
         function fmtTime(ms) {
           const s = Math.floor(ms/1000), m = Math.floor(s/60), rs = s % 60;
           return `${String(m).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
         }
+        
         let timerReq;
         function tick() {
           if (!state.timerRunning) return;
           els.timerDisplay.textContent = fmtTime(state.elapsedMs + (Date.now() - state.startMs));
           timerReq = requestAnimationFrame(tick);
         }
+        
         els.timerBtn.addEventListener('click', () => {
           if (!state.timerRunning) {
-            state.timerRunning = true; state.startMs = Date.now();
-            els.timerBtn.textContent = '⏹️ Stopp'; tick();
+            state.timerRunning = true; 
+            state.startMs = Date.now();
+            els.timerBtn.textContent = '⏹️ Stopp'; 
+            tick();
           } else {
-            state.timerRunning = false; state.elapsedMs += Date.now() - state.startMs;
-            els.timerBtn.textContent = '⏱️ Fortsett'; cancelAnimationFrame(timerReq); saveDraft();
+            state.timerRunning = false; 
+            state.elapsedMs += Date.now() - state.startMs;
+            els.timerBtn.textContent = '⏱️ Fortsett'; 
+            cancelAnimationFrame(timerReq); 
+            saveDraft();
           }
         });
 
-        /** 5. SKRUMELDING **/
+        /** * 6. SKRUMELDING
+         */
         function updateAdjDisplay() {
           const a = state.adjustment;
           els.adjDisp.textContent = `Opp: ${a.up} | Ned: ${a.down} | V: ${a.left} | H: ${a.right}`;
           saveDraft();
         }
+        
         const adjClick = (add, sub) => {
-          if (state.adjustment[sub] > 0) state.adjustment[sub]--; else state.adjustment[add]++;
+          if (state.adjustment[sub] > 0) state.adjustment[sub]--; 
+          else state.adjustment[add]++;
           updateAdjDisplay();
         };
+        
         document.getElementById('adjUp').onclick = () => adjClick('up', 'down');
         document.getElementById('adjDown').onclick = () => adjClick('down', 'up');
         document.getElementById('adjLeft').onclick = () => adjClick('left', 'right');
         document.getElementById('adjRight').onclick = () => adjClick('right', 'left');
 
-        /** 6. VÆRDATA **/
-        function getDirText(deg) { return ['Nord','NØ','Øst','SØ','Sør','SV','Vest','NV'][Math.round(deg/45)%8]; }
+        /** * 7. VÆRDATA (API)
+         */
+        function getDirText(deg) { 
+            return ['Nord','NØ','Øst','SØ','Sør','SV','Vest','NV'][Math.round(deg/45)%8]; 
+        }
+        
         els.fetchWeatherBtn.addEventListener('click', async () => {
           const loc = els.loc.value.trim();
           if (!loc) return alert('Mangler sted');
           els.weatherBox.textContent = 'Laster...';
+          
           try {
+            // Geocoding
             const gRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(loc)}`);
             const gData = await gRes.json();
             if (!gData.length) throw new Error('Fant ikke sted');
+            
+            // Met.no
             const {lat, lon} = gData[0];
             const mRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, 
                {headers:{'User-Agent':'Selvanviser/2.1 kontakt@ukjent.no'}});
             const mData = await mRes.json();
+            
             const nowData = mData.properties.timeseries[0].data.instant.details;
             state.lastWindDir = nowData.wind_from_direction;
+            
             els.weatherBox.innerHTML = `<strong>${nowData.air_temperature}°C</strong>, Vind: ${nowData.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${state.lastWindDir}deg)"></span>`;
             saveDraft();
-          } catch (err) { els.weatherBox.textContent = 'Feil: ' + err.message; }
+          } catch (err) { 
+            els.weatherBox.textContent = 'Feil: ' + err.message; 
+          }
         });
 
-        /** 7. LAGRING **/
+        /** * 8. LAGRING & DATABASE
+         */
         function getMiniatureUrl() {
           const m = document.createElement('canvas'); m.width=100; m.height=100; const c=m.getContext('2d');
           c.fillStyle='#fff'; c.fillRect(0,0,100,100);
@@ -461,46 +665,108 @@
         }
 
         els.saveBtn.addEventListener('click', async () => {
-          els.saveBtn.disabled = true; els.saveBtn.textContent = 'Lagrer...';
+          els.saveBtn.disabled = true; 
+          els.saveBtn.textContent = 'Lagrer...';
+          
           const serieNr = ++state.seriesCount;
           const sum = state.currentShots.reduce((a,b)=>a+b.score, 0);
-          const grp = (state.currentShots.length > 1) ? (Math.max(...state.currentShots.map(s=>Math.hypot(s.x-(state.currentShots.reduce((a,x)=>a+x.x,0)/state.currentShots.length), s.y-(state.currentShots.reduce((a,x)=>a+x.y,0)/state.currentShots.length))))*2).toFixed(1) : '-';
           
-          const row = document.createElement('tr');
-          const img = getMiniatureUrl();
-          row.innerHTML = `<td>${serieNr}</td><td>${els.timerDisplay.textContent}</td><td><strong>${sum}</strong></td><td>${state.lastWindDir?getDirText(state.lastWindDir):'-'}</td><td>${state.adjustment.up}/${state.adjustment.left}</td><td>${grp}</td><td><img src="${img}" style="width:30px;border-radius:50%"></td>`;
-          els.tableBody.insertBefore(row, els.tableBody.firstChild);
-
-          if (sb) {
-             const payload = { 
-               navn: els.name.value, dato: els.date.value, sted: els.loc.value, serie: serieNr,
-               skudd: state.currentShots.length, poeng: sum, tid: els.timerDisplay.textContent,
-               skudddata: state.currentShots, miniatur_dataurl: img
-             };
-             try { 
-               const {error} = await sb.from('selvanviser').insert(payload);
-               if(error) throw error; 
-               alert('Lagret!');
-             } catch(e) { alert('Feil ved DB-lagring: '+e.message); }
+          // Beregn gruppe (Extreme Spread)
+          let grp = '-';
+          if (state.currentShots.length > 1) {
+              const meanX = state.currentShots.reduce((a,x)=>a+x.x,0)/state.currentShots.length;
+              const meanY = state.currentShots.reduce((a,x)=>a+x.y,0)/state.currentShots.length;
+              const maxDist = Math.max(...state.currentShots.map(s=>Math.hypot(s.x-meanX, s.y-meanY)));
+              grp = (maxDist * 2).toFixed(1);
           }
           
-          state.currentShots=[]; state.timerRunning=false; state.elapsedMs=0;
-          cancelAnimationFrame(timerReq); els.timerBtn.textContent='⏱️ Start'; els.timerDisplay.textContent='00:00';
+          // Oppdater tabell
+          const row = document.createElement('tr');
+          const img = getMiniatureUrl();
+          const tid = els.timerDisplay.textContent;
+          const vind = state.lastWindDir ? getDirText(state.lastWindDir) : '-';
+          
+          row.innerHTML = `<td>${serieNr}</td><td>${tid}</td><td><strong>${sum}</strong></td><td>${vind}</td><td>${state.adjustment.up}/${state.adjustment.left}</td><td>${grp}</td><td><img src="${img}" style="width:30px;border-radius:50%"></td>`;
+          els.tableBody.insertBefore(row, els.tableBody.firstChild);
+
+          // Lagre til Cloud (Supabase)
+          if (sb) {
+             const payload = { 
+               navn: els.name.value, 
+               dato: els.date.value, 
+               sted: els.loc.value, 
+               serie: serieNr,
+               skudd: state.currentShots.length, 
+               poeng: sum, 
+               tid: tid,
+               skudddata: state.currentShots, 
+               miniatur_dataurl: img
+             };
+             
+             try { 
+               // Forsøk lagring
+               let { error } = await sb.from('selvanviser').insert(payload);
+               
+               // Hvis database mangler kolonner, fjern de problematiske feltene og prøv igjen
+               if (error && error.message.includes('column')) {
+                   const match = error.message.match(/'([^']+)' column/);
+                   if (match) {
+                       console.warn("Database mangler kolonne:", match[1]);
+                       delete payload[match[1]];
+                       await sb.from('selvanviser').insert(payload);
+                   }
+               } else if (error) {
+                   throw error;
+               }
+               
+               alert('Lagret!');
+             } catch(e) { 
+               alert('Feil ved DB-lagring: '+e.message); 
+             }
+          }
+          
+          // Nullstill
+          state.currentShots=[]; 
+          state.timerRunning=false; 
+          state.elapsedMs=0;
+          cancelAnimationFrame(timerReq); 
+          els.timerBtn.textContent='⏱️ Start'; 
+          els.timerDisplay.textContent='00:00';
           els.saveBtn.textContent='💾 Lagre serie';
-          updateButtons(); draw(); localStorage.removeItem(DRAFT_KEY);
+          updateButtons(); 
+          draw(); 
+          localStorage.removeItem(DRAFT_KEY);
         });
 
-        /** 8. INIT **/
-        function saveDraft() { localStorage.setItem(DRAFT_KEY, JSON.stringify({shots:state.currentShots, adj:state.adjustment, ms:state.elapsedMs})); }
-        function loadDraft() {
-          try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); if(!d) return;
-            state.currentShots=d.shots||[]; state.adjustment=d.adj||state.adjustment; state.elapsedMs=d.ms||0;
-            els.timerDisplay.textContent = fmtTime(state.elapsedMs);
-            updateAdjDisplay(); updateButtons();
-          } catch{}
+        /** * 9. INITIALISERING OG DIVERSE
+         */
+        function saveDraft() { 
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                shots:state.currentShots, 
+                adj:state.adjustment, 
+                ms:state.elapsedMs,
+                name: els.name.value,
+                loc: els.loc.value
+            })); 
         }
         
-        // CSV Eksport fix
+        function loadDraft() {
+          try { 
+            const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); 
+            if(!d) return;
+            state.currentShots = d.shots || []; 
+            state.adjustment = d.adj || state.adjustment; 
+            state.elapsedMs = d.ms || 0;
+            if (d.name) els.name.value = d.name;
+            if (d.loc) els.loc.value = d.loc;
+            
+            els.timerDisplay.textContent = fmtTime(state.elapsedMs);
+            updateAdjDisplay(); 
+            updateButtons();
+          } catch(e) { console.warn("Kunne ikke laste kladd", e); }
+        }
+        
+        // CSV Eksport
         els.exportBtn.onclick = () => {
             let csv = "Nr,Tid,Sum,Vind,Skru,Gruppe\n";
             els.tableBody.querySelectorAll('tr').forEach(tr => {
@@ -509,24 +775,37 @@
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = 'skyting.csv'; a.click();
+            a.href = URL.createObjectURL(blob); 
+            a.download = 'skyting.csv'; 
+            a.click();
         };
 
+        // Sjekk DB-status ved start
         async function checkDb() {
-          if (!sb) { els.dbStatus.textContent = 'DB: Frakoblet'; return; }
+          if (!sb) { 
+              els.dbStatus.textContent = 'DB: Frakoblet'; 
+              return; 
+          }
           const { error } = await sb.from('selvanviser').select('id', { count: 'exact', head: true });
           els.dbStatus.textContent = error ? 'DB: Feil' : 'DB: OK 🟢';
           els.dbStatus.style.color = error ? 'red' : 'green';
         }
 
         els.runTestsBtn.addEventListener('click', () => {
-           els.testList.innerHTML = `<li class="${!!sb?'pass':'fail'}">DB klient</li><li class="pass">Canvas: ${els.canvas.width}px</li>`;
+           els.testList.innerHTML = `
+             <li class="${!!sb?'pass':'fail'}">DB klient</li>
+             <li class="pass">Canvas: ${els.canvas.width}px</li>
+           `;
         });
 
-        loadDraft(); resizeCanvas(); checkDb();
+        // Start appen
+        loadDraft(); 
+        resizeCanvas(); 
+        checkDb();
 
     } catch (err) {
-        console.error(err); alert("Feil under lasting: " + err.message);
+        console.error(err); 
+        alert("Feil under lasting: " + err.message);
     }
   });
 </script>
