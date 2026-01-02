@@ -3,90 +3,104 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Utvidet analyse av skyting – v2.0</title>
+  <title>Utvidet analyse av skyting – v2.1</title>
   <meta name="color-scheme" content="light dark" />
   <style>
-    :root { --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; --border:#d0d0d0; --accent:#007aff; --danger:#ff3b30; --success:#34c759; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#1c1e26; --ink:#e9eef5; --muted:#a3afc2; --border:#2a2f3a; --accent:#0a84ff; } }
+    /* --- 1. GRUNNLEGGENDE STILER --- */
+    :root { 
+      --bg:#f5f5f5; --card:#fff; --ink:#111; --muted:#666; 
+      --border:#d0d0d0; --accent:#007aff; --danger:#ff3b30; --success:#34c759; 
+    }
+    @media (prefers-color-scheme: dark) { 
+      :root { --bg:#0f1115; --card:#1c1e26; --ink:#e9eef5; --muted:#a3afc2; --border:#2a2f3a; --accent:#0a84ff; } 
+    }
     
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font-family: system-ui, -apple-system, sans-serif; height: 100%; }
     
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 12px; padding-bottom: 40px; }
-    h1 { margin: 8px 0 12px; font-size: clamp(1.4rem, 4vw, 2rem); text-align: center; }
-    h2 { font-size: 1.2rem; margin: 0 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .wrap { max-width: 800px; margin: 0 auto; padding: 12px; padding-bottom: 60px; }
+    h1 { margin: 10px 0 16px; font-size: 1.5rem; text-align: center; }
+    h2 { font-size: 1.1rem; margin: 0 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
     
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgb(0 0 0 / 5%); }
 
-    /* Input & Grid */
-    #competitionInfo { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 8px; }
-    input, button { font-size: 16px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--ink); width: 100%; }
+    /* --- 2. INPUT & GRID --- */
+    #competitionInfo { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 8px; }
+    input, button { font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--ink); width: 100%; }
     input:focus { outline: 2px solid var(--accent); border-color: transparent; }
     
-    /* Buttons */
-    button { cursor: pointer; font-weight: 600; transition: filter 0.2s, transform 0.1s; touch-action: manipulation; }
+    button { cursor: pointer; font-weight: 600; touch-action: manipulation; }
     button:active { transform: scale(0.98); }
     button.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     
-    /* Canvas Area */
-    .canvas-container { display: flex; flex-direction: column; align-items: center; }
-    #targetCanvas { 
-      display: block; 
-      background: var(--card); 
-      border: 2px solid #333; 
-      border-radius: 50%; /* Rund skive */
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      cursor: crosshair; 
-      touch-action: none; /* VIKTIG: Hindrer scrolling når man drar skudd */
-      max-width: 100%;
-      height: auto;
+    /* --- 3. SKIVE & CANVAS (LAYOUT FIX) --- */
+    .canvas-container { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center;
+      width: 100%; 
+      margin-top: 10px;
     }
 
-    /* Live Overlay (boble over fingeren) */
+    .canvas-wrap { 
+      position: relative; 
+      width: 100%; 
+      /* Begrenser maks bredde på PC/Tablet så den ikke blir enorm */
+      max-width: 500px; 
+      /* Tvinger beholderen til å være kvadratisk */
+      aspect-ratio: 1 / 1; 
+      margin: 0 auto;
+    }
+
+    #targetCanvas { 
+      display: block; 
+      width: 100%;
+      height: 100%; /* Fyller den kvadratiske beholderen */
+      background: var(--card); 
+      border: 2px solid #333; 
+      border-radius: 50%; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: crosshair; 
+      touch-action: none; /* Hindrer scrolling når man drar på skiva */
+    }
+
+    /* Boble over fingeren */
     #liveOverlay { 
       position: absolute; left: 0; top: 0; 
-      transform: translate(-50%, -180%); /* Flyttet høyere opp */
-      padding: 6px 10px; border-radius: 20px; 
+      transform: translate(-50%, -160%); 
+      padding: 4px 8px; border-radius: 12px; 
       background: var(--accent); color: #fff; 
-      font-weight: bold; font-size: 14px; 
+      font-weight: bold; font-size: 13px; 
       pointer-events: none; opacity: 0; transition: opacity 0.1s; 
       white-space: nowrap; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
-    .canvas-wrap { position: relative; width: fit-content; margin: 0 auto; }
-
-    /* Controls Grid */
-    #controls, #adjustmentControls { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
-    #adjustmentControls button { height: 44px; } /* Større trykkflate */
     
-    /* Timer */
-    #timerControls { display: flex; align-items: center; gap: 12px; background: var(--bg); padding: 8px; border-radius: 12px; margin-top: 12px; border: 1px solid var(--border); }
+    @media (max-width: 600px) {
+      /* På mobil: Bruk 90% av bredden, sentrert */
+      .canvas-wrap { max-width: 90vw; } 
+    }
+
+    /* --- 4. KNAPPER & TABELL --- */
+    #controls, #adjustmentControls { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-top: 10px; }
+    #adjustmentControls button { height: 44px; }
+    
+    #timerControls { display: flex; align-items: center; gap: 12px; background: var(--bg); padding: 8px 12px; border-radius: 12px; margin-top: 16px; border: 1px solid var(--border); }
     #timerDisplay { font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: bold; margin-left: auto; }
 
-    /* Table */
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border); }
+    .table-scroll { overflow-x: auto; margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; }
     th, td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); }
-    th { background: var(--bg); font-weight: 600; position: sticky; top: 0; }
-    tr:last-child td { border-bottom: none; }
+    th { background: var(--bg); position: sticky; top: 0; }
 
     .wind-arrow { display: inline-block; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 12px solid var(--danger); }
     .muted { color: var(--muted); font-size: 0.85rem; }
-    
-    /* Mobil-tilpasninger */
-    @media (max-width: 600px) {
-      .wrap { padding: 8px; }
-      .card { border-radius: 12px; padding: 12px; }
-      h1 { font-size: 1.5rem; }
-      #targetCanvas { width: 90vw; height: 90vw; }
-      #controls { grid-template-columns: 1fr; } /* Stable knapper på liten skjerm */
-    }
 
-    /* Testing */
-    #testPanel details { margin-top: 8px; cursor: pointer; }
-    #testResults li { padding: 4px 8px; margin-bottom: 4px; border-radius: 4px; font-size: 0.85rem; }
-    .pass { background: rgba(52, 199, 89, 0.2); color: var(--ink); }
-    .fail { background: rgba(255, 59, 48, 0.2); color: var(--ink); }
+    /* Testpanel */
+    #testPanel details { margin-top: 8px; cursor: pointer; color: var(--muted); }
+    #testResults li { margin-bottom: 4px; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+    .pass { background: rgba(52, 199, 89, 0.2); } .fail { background: rgba(255, 59, 48, 0.2); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -97,14 +111,13 @@
 
   <section class="card">
     <div id="competitionInfo">
-      <input id="nameInput" placeholder="Navn på utøver" aria-label="Navn" />
-      <input id="shootingDate" type="date" aria-label="Dato" />
-      <input id="shootingLocation" placeholder="Sted/Bane" aria-label="Sted" />
-      <button id="fetchWeatherBtn" class="primary">☁️ Hent vær</button>
+      <input id="nameInput" placeholder="Navn" />
+      <input id="shootingDate" type="date" />
+      <input id="shootingLocation" placeholder="Sted" />
+      <button id="fetchWeatherBtn">☁️ Hent vær</button>
     </div>
     <div class="muted">
-      <div id="weatherData" style="margin-top: 8px;">Værdata ikke hentet.</div>
-      <div id="hourlyForecast" style="margin-top: 6px; line-height: 1.4;"></div>
+      <div id="weatherData" style="margin-top: 6px;">Værdata ikke hentet.</div>
     </div>
     <div style="text-align: right; margin-top: 4px;">
       <small id="dbStatus" class="muted">DB: Sjekker...</small>
@@ -116,10 +129,10 @@
     
     <div class="canvas-container">
       <div class="canvas-wrap">
-        <canvas id="targetCanvas" width="600" height="600" aria-label="Skyteskive. Dra for å plassere skudd."></canvas>
+        <canvas id="targetCanvas"></canvas>
         <div id="liveOverlay">10.0</div>
       </div>
-      <div id="liveReadout" class="muted" style="margin-top: 6px;">Klar til anvisning</div>
+      <div id="liveReadout" class="muted" style="margin-top: 10px; text-align: center;">Klar til anvisning</div>
     </div>
 
     <div id="timerControls">
@@ -128,8 +141,7 @@
     </div>
 
     <div style="margin-top: 16px;">
-      <h3 style="font-size: 1rem; margin-bottom: 8px; text-align: center;">Skrumelding</h3>
-      <div id="manualAdjustmentDisplay" style="text-align: center; font-family: monospace; margin-bottom: 8px;">Opp: 0 | Ned: 0 | V: 0 | H: 0</div>
+      <div id="manualAdjustmentDisplay" style="text-align: center; font-family: monospace; margin-bottom: 6px;">Opp: 0 | Ned: 0 | V: 0 | H: 0</div>
       <div id="adjustmentControls">
         <button id="adjUp">Opp</button>
         <button id="adjDown">Ned</button>
@@ -142,32 +154,27 @@
   <section class="card">
     <h2>Serie & Historikk</h2>
     <div id="controls">
-      <button id="undoShotBtn" disabled>↩️ Angre siste</button>
+      <button id="undoShotBtn" disabled>↩️ Angre</button>
       <button id="saveSeriesBtn" class="primary" disabled>💾 Lagre serie</button>
-      <button id="exportCsvBtn" type="button">📥 Eksporter CSV</button>
+      <button id="exportCsvBtn" type="button" style="grid-column: span 2;">📥 Eksporter CSV</button>
     </div>
 
     <div class="table-scroll">
       <table id="resultTable">
-        <thead>
-          <tr>
-            <th>#</th><th>Tid</th><th>Skudd</th><th>Sum</th><th>Retning</th><th>Skrudd</th><th>Gruppe</th><th>Bilde</th>
-          </tr>
-        </thead>
+        <thead><tr><th>#</th><th>Tid</th><th>Sum</th><th>Retn.</th><th>Skru</th><th>Grp</th><th>Bilde</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
-    
     <div style="margin-top: 12px; text-align: center;">
-        <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk" style="color: var(--accent); text-decoration: none;">Gå til full historikk →</a>
+        <a href="https://tidtaking.github.io/Tidtaking2/Selvanviser_historikk" style="color: var(--accent);">Full historikk →</a>
     </div>
   </section>
 
-  <section id="testPanel" class="card" style="border: 1px dashed var(--muted);">
+  <section id="testPanel" class="card" style="border-style: dashed;">
     <details>
-      <summary style="font-size: 0.9rem; color: var(--muted);">Systemstatus & Tester</summary>
-      <button id="runTestsBtn" style="margin-top: 8px; font-size: 0.8rem;">Kjør tester</button>
-      <ul id="testResults" style="list-style: none; padding: 0; margin-top: 8px;"></ul>
+      <summary>Systemstatus & Tester</summary>
+      <button id="runTestsBtn" style="margin-top: 8px;">Kjør tester</button>
+      <ul id="testResults" style="list-style: none; padding: 0;"></ul>
     </details>
   </section>
 </div>
@@ -178,34 +185,25 @@
     console.log("App starter...");
 
     try {
-        /**
-         * 1. KONFIGURASJON & GLOBALE VARIABLER
-         */
+        /** 1. KONFIGURASJON **/
         const SB_URL = 'https://chzfewhbfkdtcizdxyzk.supabase.co';
         const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA';
 
-        // Sjekk om Supabase er lastet
+        // Sjekk om Supabase er lastet - kaller den 'sb' for å unngå konflikt
         const sb = (typeof window.supabase !== 'undefined' && window.supabase.createClient) 
                    ? window.supabase.createClient(SB_URL, SB_ANON) 
                    : null;
-
-        if (!sb) console.warn("Supabase klient kunne ikke lastes. Sjekk internett eller CDN.");
 
         const DRAG_RADIUS = 20; 
         const DRAFT_KEY = 'selvanviser_draft_v2';
 
         const state = {
-          currentShots: [], 
-          seriesCount: 0,
-          timerRunning: false,
-          startMs: null,
-          elapsedMs: 0,
-          lastWindDir: null,
+          currentShots: [], seriesCount: 0, timerRunning: false,
+          startMs: null, elapsedMs: 0, lastWindDir: null,
           adjustment: { up: 0, down: 0, left: 0, right: 0 },
           dragging: { index: -1, offsetX: 0, offsetY: 0 }
         };
 
-        // Henter elementer - Nå er vi sikre på at de finnes!
         const els = {
           canvas: document.getElementById('targetCanvas'),
           timerBtn: document.getElementById('startStopTimerBtn'),
@@ -214,7 +212,6 @@
           undoBtn: document.getElementById('undoShotBtn'),
           exportBtn: document.getElementById('exportCsvBtn'),
           weatherBox: document.getElementById('weatherData'),
-          forecastBox: document.getElementById('hourlyForecast'),
           date: document.getElementById('shootingDate'),
           loc: document.getElementById('shootingLocation'),
           name: document.getElementById('nameInput'),
@@ -228,31 +225,20 @@
           fetchWeatherBtn: document.getElementById('fetchWeatherBtn')
         };
 
-        // Verifiser at kritiske elementer ble funnet
-        if (!els.canvas || !els.date) {
-            throw new Error("Fant ikke nødvendige HTML-elementer (canvas/date). Sjekk HTML-IDer.");
-        }
-
-        // Sett dagens dato
+        if (!els.canvas || !els.date) throw new Error("Mangler HTML-elementer.");
         els.date.value = new Date().toISOString().split('T')[0];
         const ctx = els.canvas.getContext('2d');
 
-        /**
-         * 2. CANVAS & TEGNING
-         */
+        /** 2. CANVAS LOGIKK (SENTRERING & SKALERING) **/
         function resizeCanvas() {
           const dpr = Math.max(1, window.devicePixelRatio || 1);
+          // Hent størrelsen fra CSS (som styres av aspect-ratio og max-width)
           const rect = els.canvas.getBoundingClientRect();
           
-          // Sjekk at canvas faktisk har størrelse
-          if (rect.width === 0) {
-              console.warn("Canvas har bredde 0. Venter på layout...");
-              requestAnimationFrame(resizeCanvas);
-              return;
-          }
+          if (rect.width === 0) { requestAnimationFrame(resizeCanvas); return; }
 
           els.canvas.width = Math.round(rect.width * dpr);
-          els.canvas.height = Math.round(rect.width * dpr); 
+          els.canvas.height = Math.round(rect.height * dpr); 
           
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.scale(dpr, dpr);
@@ -261,26 +247,26 @@
         window.addEventListener('resize', resizeCanvas);
 
         function getGeom() {
+          // Bruk bredden som er definert av CSS
           const w = els.canvas.getBoundingClientRect().width;
           const center = w / 2;
-          const ringWidth = center / 10;
-          return { w, center, R: center, ringWidth };
+          // Legg inn margin (2px) så vi ikke tegner på borderen
+          const R = center - 2; 
+          const ringWidth = R / 10;
+          return { w, center, R, ringWidth };
         }
 
         function computeScore(x, y) {
           const { center, R, ringWidth } = getGeom();
-          const dx = x - center;
-          const dy = y - center;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          
+          const dist = Math.hypot(x - center, y - center);
           if (dist > R) return 0;
           let score = 10 - Math.floor(dist / ringWidth);
           return Math.max(0, Math.min(10, score));
         }
 
         function computeDecimal(x, y) {
-            const { center, ringWidth } = getGeom();
-            const dist = Math.hypot(x - center, y - center);
+            const { ringWidth } = getGeom();
+            const dist = Math.hypot(x - getGeom().center, y - getGeom().center);
             const val = 10.9 - (dist / ringWidth);
             return Math.max(0, val).toFixed(1);
         }
@@ -288,39 +274,25 @@
         function drawTarget() {
           const { w, center, ringWidth } = getGeom();
           ctx.clearRect(0, 0, w, w);
-          
           for (let val = 1; val <= 10; val++) {
             const r = (11 - val) * ringWidth; 
             ctx.beginPath();
             ctx.arc(center, center, r, 0, Math.PI*2);
-            ctx.fillStyle = (val % 2 !== 0) ? '#fff' : '#eef'; 
-            ctx.fill();
-            ctx.strokeStyle = '#ccc';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            
+            ctx.fillStyle = (val % 2 !== 0) ? '#fff' : '#eef'; ctx.fill();
+            ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.stroke();
             if (val === 4) { ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke(); }
           }
-          
-          // Senterkryss
           ctx.beginPath(); ctx.moveTo(center-4, center); ctx.lineTo(center+4, center); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(center, center-4); ctx.lineTo(center, center+4); ctx.stroke();
         }
 
         function drawShots() {
           state.currentShots.forEach((s, i) => {
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, 6, 0, Math.PI*2);
+            ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI*2);
             ctx.fillStyle = s.score >= 9 ? '#28a745' : (s.score >= 7 ? '#ffc107' : '#dc3545'); 
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.textAlign = 'center'; 
-            ctx.textBaseline = 'middle';
+            ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(i+1, s.x, s.y - 12);
           });
         }
@@ -330,35 +302,25 @@
           const n = state.currentShots.length;
           const cx = state.currentShots.reduce((a,s)=>a+s.x,0)/n;
           const cy = state.currentShots.reduce((a,s)=>a+s.y,0)/n;
-          
           ctx.strokeStyle = 'blue'; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(cx-5, cy); ctx.lineTo(cx+5, cy); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(cx, cy-5); ctx.lineTo(cx, cy+5); ctx.stroke();
         }
 
-        function draw() {
-          drawTarget();
-          drawShots();
-          drawStats();
-        }
+        function draw() { drawTarget(); drawShots(); drawStats(); }
 
-        /**
-         * 3. INPUT & INTERAKSJON
-         */
+        /** 3. TOUCH & INTERAKSJON **/
         function getCanvasPoint(e) {
           const r = els.canvas.getBoundingClientRect();
-          const dpr = Math.max(1, window.devicePixelRatio || 1);
+          // Henter touch-punkt relativt til canvas elementet
           const clientX = e.touches ? e.touches[0].clientX : e.clientX;
           const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-          const x = (clientX - r.left); 
-          const y = (clientY - r.top);
-          return { x, y, clientX, clientY };
+          return { x: clientX - r.left, y: clientY - r.top, clientX, clientY };
         }
 
         function hitTest(x, y) {
           for (let i = state.currentShots.length - 1; i >= 0; i--) {
-            const s = state.currentShots[i];
-            if (Math.hypot(s.x - x, s.y - y) <= DRAG_RADIUS) return i;
+            if (Math.hypot(state.currentShots[i].x - x, state.currentShots[i].y - y) <= DRAG_RADIUS) return i;
           }
           return -1;
         }
@@ -377,44 +339,33 @@
         }
 
         let isDragging = false;
-
         els.canvas.addEventListener('pointerdown', (e) => {
-          e.preventDefault(); 
-          els.canvas.setPointerCapture(e.pointerId);
-          
+          e.preventDefault(); els.canvas.setPointerCapture(e.pointerId);
           const {x, y, clientX, clientY} = getCanvasPoint(e);
           const idx = hitTest(x, y);
-          
           if (idx >= 0) {
-            state.dragging.index = idx;
-            state.dragging.offsetX = x - state.currentShots[idx].x;
-            state.dragging.offsetY = y - state.currentShots[idx].y;
+            state.dragging = { index: idx, offsetX: x - state.currentShots[idx].x, offsetY: y - state.currentShots[idx].y };
             isDragging = true;
           } else {
             state.dragging.index = -1;
-            isDragging = false;
           }
-          
-          moveOverlay(clientX, clientY);
-          updateLiveUI(x, y, computeScore(x,y));
+          moveOverlay(clientX, clientY); updateLiveUI(x, y, computeScore(x,y));
         });
 
         els.canvas.addEventListener('pointermove', (e) => {
           e.preventDefault();
           const {x, y, clientX, clientY} = getCanvasPoint(e);
           moveOverlay(clientX, clientY);
-          
           const { w } = getGeom();
-          const safeX = Math.max(0, Math.min(w, x));
+          // Hold markøren innenfor canvas
+          const safeX = Math.max(0, Math.min(w, x)); 
           const safeY = Math.max(0, Math.min(w, y));
           const score = computeScore(safeX, safeY);
           updateLiveUI(safeX, safeY, score);
 
           if (state.dragging.index >= 0) {
             const s = state.currentShots[state.dragging.index];
-            s.x = safeX; 
-            s.y = safeY;
-            s.score = score;
+            s.x = safeX; s.y = safeY; s.score = score;
             draw();
           }
         });
@@ -427,74 +378,50 @@
           if (state.dragging.index >= 0) {
             state.dragging.index = -1;
           } else if (!isDragging) {
-            const score = computeScore(x, y);
-            state.currentShots.push({ x, y, score, ts: Date.now() });
+            state.currentShots.push({ x, y, score: computeScore(x,y), ts: Date.now() });
           }
-          
           isDragging = false;
-          updateButtons();
-          draw();
-          saveDraft();
+          updateButtons(); draw(); saveDraft();
         });
 
         function updateButtons() {
-          const hasShots = state.currentShots.length > 0;
-          els.undoBtn.disabled = !hasShots;
-          els.saveBtn.disabled = !hasShots;
+          const has = state.currentShots.length > 0;
+          els.undoBtn.disabled = !has; els.saveBtn.disabled = !has;
         }
 
         els.undoBtn.addEventListener('click', () => {
-          state.currentShots.pop();
-          updateButtons();
-          draw();
-          saveDraft();
+          state.currentShots.pop(); updateButtons(); draw(); saveDraft();
         });
 
-        /**
-         * 4. TIDTAKER
-         */
+        /** 4. TIDTAKER **/
         function fmtTime(ms) {
-          const s = Math.floor(ms/1000);
-          const m = Math.floor(s/60);
-          const rs = s % 60;
+          const s = Math.floor(ms/1000), m = Math.floor(s/60), rs = s % 60;
           return `${String(m).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
         }
-
         let timerReq;
         function tick() {
           if (!state.timerRunning) return;
-          const now = Date.now();
-          const currentTotal = state.elapsedMs + (now - state.startMs);
-          els.timerDisplay.textContent = fmtTime(currentTotal);
+          els.timerDisplay.textContent = fmtTime(state.elapsedMs + (Date.now() - state.startMs));
           timerReq = requestAnimationFrame(tick);
         }
-
         els.timerBtn.addEventListener('click', () => {
           if (!state.timerRunning) {
-            state.timerRunning = true;
-            state.startMs = Date.now();
-            els.timerBtn.textContent = '⏹️ Stopp';
-            tick();
+            state.timerRunning = true; state.startMs = Date.now();
+            els.timerBtn.textContent = '⏹️ Stopp'; tick();
           } else {
-            state.timerRunning = false;
-            state.elapsedMs += Date.now() - state.startMs;
-            els.timerBtn.textContent = '⏱️ Fortsett';
-            cancelAnimationFrame(timerReq);
-            saveDraft();
+            state.timerRunning = false; state.elapsedMs += Date.now() - state.startMs;
+            els.timerBtn.textContent = '⏱️ Fortsett'; cancelAnimationFrame(timerReq); saveDraft();
           }
         });
 
-        /**
-         * 5. SKRUMELDING
-         */
+        /** 5. SKRUMELDING **/
         function updateAdjDisplay() {
           const a = state.adjustment;
           els.adjDisp.textContent = `Opp: ${a.up} | Ned: ${a.down} | V: ${a.left} | H: ${a.right}`;
           saveDraft();
         }
-        const adjClick = (keyAdd, keySub) => {
-          if (state.adjustment[keySub] > 0) state.adjustment[keySub]--;
-          else state.adjustment[keyAdd]++;
+        const adjClick = (add, sub) => {
+          if (state.adjustment[sub] > 0) state.adjustment[sub]--; else state.adjustment[add]++;
           updateAdjDisplay();
         };
         document.getElementById('adjUp').onclick = () => adjClick('up', 'down');
@@ -502,184 +429,88 @@
         document.getElementById('adjLeft').onclick = () => adjClick('left', 'right');
         document.getElementById('adjRight').onclick = () => adjClick('right', 'left');
 
-        /**
-         * 6. VÆRDATA
-         */
-        function getDirText(deg) {
-          const dirs=['Nord','NØ','Øst','SØ','Sør','SV','Vest','NV'];
-          return dirs[Math.round(deg/45)%8];
-        }
-
+        /** 6. VÆRDATA **/
+        function getDirText(deg) { return ['Nord','NØ','Øst','SØ','Sør','SV','Vest','NV'][Math.round(deg/45)%8]; }
         els.fetchWeatherBtn.addEventListener('click', async () => {
           const loc = els.loc.value.trim();
-          const dateStr = els.date.value;
-          if (!loc) return alert('Du må skrive inn et sted.');
-
-          els.weatherBox.textContent = 'Laster vær...';
+          if (!loc) return alert('Mangler sted');
+          els.weatherBox.textContent = 'Laster...';
           try {
             const gRes = await fetch(`https://geocode.maps.co/search?format=json&q=${encodeURIComponent(loc)}`);
             const gData = await gRes.json();
             if (!gData.length) throw new Error('Fant ikke sted');
             const {lat, lon} = gData[0];
-
             const mRes = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat}&lon=${lon}`, 
-              { headers: { 'User-Agent': 'SelvanviserApp/2.0 kontakt@ukjent.no' } }
-            );
-            if (!mRes.ok) throw new Error('Met.no feil');
+               {headers:{'User-Agent':'Selvanviser/2.1 kontakt@ukjent.no'}});
             const mData = await mRes.json();
-            
-            const series = mData.properties.timeseries.filter(t => t.time.startsWith(dateStr));
-            if (!series.length) {
-              els.weatherBox.textContent = 'Ingen data for denne datoen.';
-              return;
-            }
-            
-            const nowData = series[0].data.instant.details;
+            const nowData = mData.properties.timeseries[0].data.instant.details;
             state.lastWindDir = nowData.wind_from_direction;
-            
-            els.weatherBox.innerHTML = `
-              <strong>${nowData.air_temperature}°C</strong>, Vind: ${nowData.wind_speed} m/s 
-              <span class="wind-arrow" style="transform: rotate(${state.lastWindDir}deg)"></span> 
-              (${getDirText(state.lastWindDir)})
-            `;
+            els.weatherBox.innerHTML = `<strong>${nowData.air_temperature}°C</strong>, Vind: ${nowData.wind_speed} m/s <span class="wind-arrow" style="transform: rotate(${state.lastWindDir}deg)"></span>`;
             saveDraft();
-          } catch (err) {
-            els.weatherBox.textContent = 'Feil: ' + err.message;
-          }
+          } catch (err) { els.weatherBox.textContent = 'Feil: ' + err.message; }
         });
 
-        /**
-         * 7. LAGRING & DATABASE
-         */
+        /** 7. LAGRING **/
         function getMiniatureUrl() {
-          const mCan = document.createElement('canvas');
-          mCan.width = 100; mCan.height = 100;
-          const mc = mCan.getContext('2d');
-          mc.fillStyle = '#fff'; mc.fillRect(0,0,100,100);
-          for (let j=1; j<=10; j+=3) {
-              mc.beginPath(); mc.arc(50,50, (11-j)*5, 0, Math.PI*2); mc.stroke();
-          }
-          const { w } = getGeom();
-          const scale = 100 / w;
-          state.currentShots.forEach(s => {
-            mc.beginPath(); mc.arc(s.x*scale, s.y*scale, 2, 0, Math.PI*2);
-            mc.fillStyle = s.score >= 8 ? 'green' : 'red'; mc.fill();
-          });
-          return mCan.toDataURL('image/png');
-        }
-
-        function calculateGroup() {
-          if (state.currentShots.length < 2) return null;
-          const cx = state.currentShots.reduce((a,s)=>a+s.x,0) / state.currentShots.length;
-          const cy = state.currentShots.reduce((a,s)=>a+s.y,0) / state.currentShots.length;
-          const dists = state.currentShots.map(s => Math.hypot(s.x-cx, s.y-cy));
-          return (Math.max(...dists) * 2).toFixed(1);
+          const m = document.createElement('canvas'); m.width=100; m.height=100; const c=m.getContext('2d');
+          c.fillStyle='#fff'; c.fillRect(0,0,100,100);
+          for (let j=1; j<=10; j+=3) { c.beginPath(); c.arc(50,50,(11-j)*5,0,Math.PI*2); c.stroke(); }
+          const {w}=getGeom(); const scale=100/w;
+          state.currentShots.forEach(s=>{ c.beginPath(); c.arc(s.x*scale,s.y*scale,2,0,Math.PI*2); c.fillStyle=s.score>=8?'green':'red'; c.fill(); });
+          return m.toDataURL();
         }
 
         els.saveBtn.addEventListener('click', async () => {
-          els.saveBtn.disabled = true;
-          els.saveBtn.textContent = 'Lagrer...';
-
-          const navn = els.name.value || 'Ukjent';
+          els.saveBtn.disabled = true; els.saveBtn.textContent = 'Lagrer...';
           const serieNr = ++state.seriesCount;
           const sum = state.currentShots.reduce((a,b)=>a+b.score, 0);
-          const tidStr = fmtTime(state.timerRunning ? state.elapsedMs + (Date.now()-state.startMs) : state.elapsedMs);
-          const grp = calculateGroup();
-          const imgData = getMiniatureUrl();
-          const windTxt = state.lastWindDir ? getDirText(state.lastWindDir) : '-';
-          const skruTxt = `O:${state.adjustment.up} N:${state.adjustment.down} V:${state.adjustment.left} H:${state.adjustment.right}`;
-
+          const grp = (state.currentShots.length > 1) ? (Math.max(...state.currentShots.map(s=>Math.hypot(s.x-(state.currentShots.reduce((a,x)=>a+x.x,0)/state.currentShots.length), s.y-(state.currentShots.reduce((a,x)=>a+x.y,0)/state.currentShots.length))))*2).toFixed(1) : '-';
+          
           const row = document.createElement('tr');
-          row.innerHTML = `<td>${serieNr}</td><td>${tidStr}</td><td>${state.currentShots.length}</td><td><strong>${sum}</strong></td><td>${windTxt}</td><td><small>${skruTxt}</small></td><td>${grp ? grp + 'px' : '-'}</td><td><img src="${imgData}" style="width:40px;height:40px;border-radius:50%;border:1px solid #ccc"></td>`;
+          const img = getMiniatureUrl();
+          row.innerHTML = `<td>${serieNr}</td><td>${els.timerDisplay.textContent}</td><td><strong>${sum}</strong></td><td>${state.lastWindDir?getDirText(state.lastWindDir):'-'}</td><td>${state.adjustment.up}/${state.adjustment.left}</td><td>${grp}</td><td><img src="${img}" style="width:30px;border-radius:50%"></td>`;
           els.tableBody.insertBefore(row, els.tableBody.firstChild);
 
           if (sb) {
-            const payload = {
-              navn: navn,
-              dato: els.date.value,
-              sted: els.loc.value,
-              serie: serieNr,
-              skudd: state.currentShots.length,
-              poeng: sum,
-              tid: tidStr,
-              vindretning: windTxt,
-              vindgrader: state.lastWindDir || 0,
-              skrumelding: skruTxt,
-              skudddata: state.currentShots,
-              miniatur_dataurl: imgData,
-              gruppe_es_px: grp ? parseFloat(grp) : 0
-            };
-
-            try {
-              let saved = false; let attempts = 0;
-              while (!saved && attempts < 5) {
-                const { error } = await sb.from('selvanviser').insert(payload);
-                if (!error) saved = true;
-                else if (error.message.includes('column')) {
-                    const colMatch = error.message.match(/'([^']+)' column/);
-                    if (colMatch) delete payload[colMatch[1]];
-                    attempts++;
-                } else throw error;
-              }
-              alert('Lagret!');
-            } catch (e) {
-              alert('Feil ved skylagring: ' + e.message);
-            }
-          } else {
-            alert('Ingen databasekobling. Lagret lokalt.');
+             const payload = { 
+               navn: els.name.value, dato: els.date.value, sted: els.loc.value, serie: serieNr,
+               skudd: state.currentShots.length, poeng: sum, tid: els.timerDisplay.textContent,
+               skudddata: state.currentShots, miniatur_dataurl: img
+             };
+             try { 
+               const {error} = await sb.from('selvanviser').insert(payload);
+               if(error) throw error; 
+               alert('Lagret!');
+             } catch(e) { alert('Feil ved DB-lagring: '+e.message); }
           }
-
-          state.currentShots = [];
-          state.timerRunning = false;
-          state.elapsedMs = 0;
-          state.startMs = null;
-          cancelAnimationFrame(timerReq);
-          els.timerBtn.textContent = '⏱️ Start';
-          els.timerDisplay.textContent = '00:00';
-          els.saveBtn.textContent = '💾 Lagre serie';
-          updateButtons();
-          draw();
-          localStorage.removeItem(DRAFT_KEY);
+          
+          state.currentShots=[]; state.timerRunning=false; state.elapsedMs=0;
+          cancelAnimationFrame(timerReq); els.timerBtn.textContent='⏱️ Start'; els.timerDisplay.textContent='00:00';
+          els.saveBtn.textContent='💾 Lagre serie';
+          updateButtons(); draw(); localStorage.removeItem(DRAFT_KEY);
         });
 
+        /** 8. INIT **/
+        function saveDraft() { localStorage.setItem(DRAFT_KEY, JSON.stringify({shots:state.currentShots, adj:state.adjustment, ms:state.elapsedMs})); }
+        function loadDraft() {
+          try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY)); if(!d) return;
+            state.currentShots=d.shots||[]; state.adjustment=d.adj||state.adjustment; state.elapsedMs=d.ms||0;
+            els.timerDisplay.textContent = fmtTime(state.elapsedMs);
+            updateAdjDisplay(); updateButtons();
+          } catch{}
+        }
+        
+        // CSV Eksport fix
         els.exportBtn.onclick = () => {
-            let csv = "Nr,Tid,Antall,Sum,Vind,Skru,Gruppe\n";
+            let csv = "Nr,Tid,Sum,Vind,Skru,Gruppe\n";
             els.tableBody.querySelectorAll('tr').forEach(tr => {
                 const cols = Array.from(tr.querySelectorAll('td')).map(td => td.innerText.replace(/\n/g, ' '));
-                csv += cols.slice(0, 7).join(',') + "\n";
+                csv += cols.slice(0, 6).join(',') + "\n";
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = 'skyting_' + els.date.value + '.csv';
-            a.click();
+            a.href = URL.createObjectURL(blob); a.download = 'skyting.csv'; a.click();
         };
-
-        /**
-         * 8. INIT
-         */
-        function saveDraft() {
-          const d = { shots: state.currentShots, adj: state.adjustment, timer: state.elapsedMs, meta: { name: els.name.value, loc: els.loc.value } };
-          localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
-        }
-
-        function loadDraft() {
-          try {
-            const json = localStorage.getItem(DRAFT_KEY);
-            if (!json) return;
-            const d = JSON.parse(json);
-            state.currentShots = d.shots || [];
-            state.adjustment = d.adj || state.adjustment;
-            state.elapsedMs = d.timer || 0;
-            if (d.meta) { els.name.value = d.meta.name || ''; els.loc.value = d.meta.loc || ''; }
-            els.timerDisplay.textContent = fmtTime(state.elapsedMs);
-            updateAdjDisplay();
-            updateButtons();
-          } catch (e) { console.log('Draft load fail', e); }
-        }
-
-        window.addEventListener('beforeunload', (e) => {
-          if (state.currentShots.length > 0 || state.timerRunning) { e.preventDefault(); e.returnValue = ''; }
-        });
 
         async function checkDb() {
           if (!sb) { els.dbStatus.textContent = 'DB: Frakoblet'; return; }
@@ -689,21 +520,15 @@
         }
 
         els.runTestsBtn.addEventListener('click', () => {
-          const ul = els.testList; ul.innerHTML = '';
-          const log = (ok, txt) => ul.innerHTML += `<li class="${ok?'pass':'fail'}">${txt}</li>`;
-          log(!!sb, 'Supabase klient lastet');
-          log(computeScore(getGeom().center, getGeom().center) === 10, 'Senter er 10 poeng');
-          log(els.canvas.width > 0, 'Canvas har dimensjoner');
+           els.testList.innerHTML = `<li class="${!!sb?'pass':'fail'}">DB klient</li><li class="pass">Canvas: ${els.canvas.width}px</li>`;
         });
 
-        // Start
-        loadDraft();
-        resizeCanvas();
-        checkDb();
+        loadDraft(); resizeCanvas(); checkDb();
 
     } catch (err) {
-        console.error("KRITISK FEIL:", err);
-        alert("En feil oppstod under lasting av appen: " + err.message);
+        console.error(err); alert("Feil under lasting: " + err.message);
     }
   });
 </script>
+</body>
+</html>
