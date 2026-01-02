@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Utvidet analyse av skyting</title>
+  <title>Utvidet analyse av skyting - Historikk</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
@@ -112,44 +112,37 @@
     #hitStatsContent h2 {
       margin-top: 0;
     }
-  @media screen and (max-width: 768px) {
-  #searchControls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  #searchControls input,
-  #searchControls button {
-    width: 100%;
-    font-size: 1.1em;
-  }
-
-  #exportCSV,
-  #exportPDF {
-    width: 100%;
-    font-size: 1.1em;
-    margin-bottom: 10px;
-  }
-
-  #searchResults {
-    overflow-x: auto;
-  }
-
-  table {
-    min-width: 900px; /* behold bredde slik at scroll trengs */
-  }
-
-  th, td {
-    font-size: 0.95em;
-    padding: 8px;
-  }
-
-  .modal button {
-    font-size: 1.2em;
-    padding: 6px 12px;
-  }
-}
-
+    @media screen and (max-width: 768px) {
+      #searchControls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #searchControls input,
+      #searchControls button {
+        width: 100%;
+        font-size: 1.1em;
+      }
+      #exportCSV,
+      #exportPDF {
+        width: 100%;
+        font-size: 1.1em;
+        margin-bottom: 10px;
+      }
+      #searchResults {
+        overflow-x: auto;
+      }
+      table {
+        min-width: 900px; /* behold bredde slik at scroll trengs */
+      }
+      th, td {
+        font-size: 0.95em;
+        padding: 8px;
+      }
+      .modal button {
+        font-size: 1.2em;
+        padding: 6px 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -182,18 +175,19 @@
   <div id="hitStatsModal" class="modal" onclick="this.style.display='none'">
     <div id="hitStatsContent" onclick="event.stopPropagation()"></div>
   </div>
-  <div id="historyLinkContainer" style="margin-top: 20px;">
-  <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/selvanviser'">
-    Selvanviser
-  </button>
-</div>
+  
+  <div id="historyLinkContainer" style="margin-top: 20px; text-align: center;">
+    <button onclick="window.location.href='https://tidtaking.github.io/Tidtaking2/selvanviser'">
+      Tilbake til Selvanviser
+    </button>
+  </div>
 
-  <script>
-const supabase = window.supabase.createClient(
-  "https://chzfewhbfkdtcizdxyzk.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
-);
-
+<script>
+    // ENDRING: Vi bruker 'sb' istedenfor 'supabase' for å unngå navnekonflikt
+    const sb = window.supabase.createClient(
+      "https://chzfewhbfkdtcizdxyzk.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA"
+    );
 
     function parseTidTilSekunder(tidStr) {
       if (!tidStr || typeof tidStr !== 'string') return null;
@@ -225,7 +219,8 @@ const supabase = window.supabase.createClient(
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
 
-        let query = supabase.from('selvanviser').select('*').order('dato', { ascending: false });
+        // ENDRING: Bruker 'sb'
+        let query = sb.from('selvanviser').select('*').order('dato', { ascending: false });
         if (name) query = query.ilike('navn', `%${name}%`);
         if (location) query = query.ilike('sted', `%${location}%`);
         if (startDate && endDate) {
@@ -265,8 +260,10 @@ const supabase = window.supabase.createClient(
         `).join('');
 
         resultsContainer.innerHTML = `
-          <button id="selectAllBtn">Merk alle</button>
-          <button id="deleteBtn">Slett valgte</button>
+          <div style="margin-bottom: 10px;">
+             <button id="selectAllBtn">Merk alle</button>
+             <button id="deleteBtn" style="background-color: #ff3b30; color: white; border: none;">Slett valgte</button>
+          </div>
           <table>
             <thead>
               <tr>
@@ -292,7 +289,9 @@ const supabase = window.supabase.createClient(
           const ids = Array.from(document.querySelectorAll('.selectRow:checked')).map(cb => cb.dataset.id);
           if (ids.length === 0) return alert('Ingen rader valgt.');
           if (!confirm(`Er du sikker på at du vil slette ${ids.length} rad(er)?`)) return;
-          const { error } = await supabase.from('selvanviser').delete().in('id', ids);
+          
+          // ENDRING: Bruker 'sb'
+          const { error } = await sb.from('selvanviser').delete().in('id', ids);
           if (error) alert('Feil ved sletting: ' + error.message);
           else {
             alert(`${ids.length} rad(er) slettet.`);
@@ -336,18 +335,21 @@ const supabase = window.supabase.createClient(
             const visProsent = visSkudd > 0 ? Math.round((visTreff / visSkudd) * 100) : null;
             const visSnittTid = visTider.length > 0 ? (visTider.reduce((a, b) => a + b, 0) / visTider.length).toFixed(1) : null;
 
-            const { data: allRecords } = await supabase
+            // ENDRING: Bruker 'sb'
+            const { data: allRecords } = await sb
               .from('selvanviser')
               .select('skudd, treff, tid')
               .ilike('navn', clickedName);
 
             let totalSkudd = 0, totalTreff = 0, totalTider = [];
-            allRecords.forEach(r => {
-              if (!isNaN(r.skudd)) totalSkudd += r.skudd;
-              if (!isNaN(r.treff)) totalTreff += r.treff;
-              const sekunder = parseTidTilSekunder(r.tid);
-              if (sekunder !== null) totalTider.push(sekunder);
-            });
+            if (allRecords) {
+                allRecords.forEach(r => {
+                  if (!isNaN(r.skudd)) totalSkudd += r.skudd;
+                  if (!isNaN(r.treff)) totalTreff += r.treff;
+                  const sekunder = parseTidTilSekunder(r.tid);
+                  if (sekunder !== null) totalTider.push(sekunder);
+                });
+            }
 
             const totalProsent = totalSkudd > 0 ? Math.round((totalTreff / totalSkudd) * 100) : null;
             const totalSnittTid = totalTider.length > 0 ? (totalTider.reduce((a, b) => a + b, 0) / totalTider.length).toFixed(1) : null;
@@ -360,65 +362,82 @@ const supabase = window.supabase.createClient(
         });
       }
 
-document.getElementById('exportPDF').addEventListener('click', () => {
-  const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
-  if (rows.length === 0) return alert('Ingen data å eksportere.');
+      document.getElementById('exportPDF').addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('#searchResults table tbody tr'));
+        if (rows.length === 0) return alert('Ingen data å eksportere.');
 
-  const headers = Array.from(document.querySelectorAll('#searchResults table thead th'))
-    .slice(1) // Fjern første kolonne (checkbox)
-    .map(th => th.innerText);
+        const headers = Array.from(document.querySelectorAll('#searchResults table thead th'))
+          .slice(1) // Fjern checkbox
+          .map(th => th.innerText);
 
-  const data = rows.map(row => {
-    const cells = Array.from(row.cells).slice(1); // Fjern første kolonne (checkbox)
-    return cells.map((td, i) => {
-      if (i === headers.length - 1) {
-        // Siste kolonne er bildet
-        const img = td.querySelector('img');
-        return { image: img?.src || '', content: '' };
-      }
-      return td.innerText.replace(/\n/g, ' ');
-    });
-  });
+        const data = rows.map(row => {
+          const cells = Array.from(row.cells).slice(1);
+          return cells.map((td, i) => {
+            if (i === headers.length - 1) {
+              const img = td.querySelector('img');
+              return { image: img?.src || '', content: '' };
+            }
+            return td.innerText.replace(/\n/g, ' ');
+          });
+        });
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'landscape' });
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape' });
 
-  doc.setFontSize(12);
-  doc.text("Skytestatistikk", 14, 15);
+        doc.setFontSize(12);
+        doc.text("Skytestatistikk", 14, 15);
 
-  doc.autoTable({
-    head: [headers],
-    body: data,
-    startY: 20,
-    styles: { fontSize: 8 },
-    didDrawCell: function (data) {
-      const cell = data.cell;
-      const value = data.row.raw[data.column.index];
+        doc.autoTable({
+          head: [headers],
+          body: data,
+          startY: 20,
+          styles: { fontSize: 8 },
+          didDrawCell: function (data) {
+            const cell = data.cell;
+            const value = data.row.raw[data.column.index];
 
-      if (typeof value === 'object' && value.image) {
-        const imgProps = doc.getImageProperties(value.image);
-        const ratio = imgProps.width / imgProps.height;
-        const cellWidth = cell.width;
-        const cellHeight = cell.height;
-        let w = cellHeight * ratio;
-        let h = cellHeight;
-
-        if (w > cellWidth) {
-          w = cellWidth;
-          h = w / ratio;
-        }
-
-        const x = cell.x + (cell.width - w) / 2;
-        const y = cell.y + (cell.height - h) / 2;
-
-        doc.addImage(value.image, 'PNG', x, y, w, h);
-      }
-    }
-  });
-
-  doc.save('skytestatistikk_med_bilder.pdf');
-});
-
+            if (typeof value === 'object' && value.image) {
+              const imgProps = doc.getImageProperties(value.image);
+              const ratio = imgProps.width / imgProps.height;
+              const cellWidth = cell.width;
+              const cellHeight = cell.height;
+              let w = cellHeight * ratio;
+              let h = cellHeight;
+              if (w > cellWidth) { w = cellWidth; h = w / ratio; }
+              const x = cell.x + (cell.width - w) / 2;
+              const y = cell.y + (cell.height - h) / 2;
+              doc.addImage(value.image, 'PNG', x, y, w, h);
+            }
+          }
+        });
+        doc.save('skytestatistikk_med_bilder.pdf');
+      });
+      
+      // CSV Eksport
+      document.getElementById('exportCSV').addEventListener('click', () => {
+         const rows = document.querySelectorAll('#searchResults table tbody tr');
+         if(rows.length === 0) return alert('Ingen data.');
+         
+         let csv = [];
+         // Header
+         const headerCols = Array.from(document.querySelectorAll('#searchResults table thead th')).slice(1).map(th => th.innerText);
+         csv.push(headerCols.join(','));
+         
+         rows.forEach(row => {
+             const cols = Array.from(row.querySelectorAll('td')).slice(1).map(td => {
+                 let text = td.innerText.replace(/\n/g, ' ').replace(/,/g, '');
+                 return text;
+             });
+             csv.push(cols.join(','));
+         });
+         
+         const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+         const url = window.URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = 'historikk.csv';
+         a.click();
+      });
     });
 
     function showImage(src) {
@@ -430,134 +449,119 @@ document.getElementById('exportPDF').addEventListener('click', () => {
       modal.style.display = 'flex';
     }
 
-function drawCombinedShots(skudddata) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 300;  // Redusert størrelse på canvas
-  canvas.height = 300;  // Redusert størrelse på canvas
-  const ctx = canvas.getContext('2d');
+    function drawCombinedShots(skudddata) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 300; 
+      canvas.height = 300; 
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const R = canvas.width / 2;
+      const ringWidth = R / 10;
 
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
-  const R = canvas.width / 2;
-  const ringWidth = R / 10;
+      // Tegn ringene 
+      for (let j = 1; j <= 10; j++) {
+        const score = 11 - j;
+        const radius = j * ringWidth;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = 'transparent';
+        ctx.strokeStyle = (score === 8) ? '#000' : '#ccc';
+        ctx.lineWidth = (score === 8) ? 3 : 1;
+        ctx.stroke();
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(score, centerX, centerY - radius + ringWidth / 2);
+      }
+      
+      // Tegn skudd
+      ctx.fillStyle = 'red'; 
+      const scale = 300 / 600; // Antatt original 600px
 
+      skudddata.forEach(({ x, y }) => {
+        const offsetX = (x - 600 / 2) * scale; 
+        const offsetY = (y - 600 / 2) * scale; 
+        const drawX = centerX + offsetX;
+        const drawY = centerY + offsetY;
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
-// Tegn ringene med riktig rekkefølge og nummerering
-for (let j = 1; j <= 10; j++) {
-  const score = 11 - j; // 10 innerst, 1 ytterst
-  const radius = j * ringWidth;
-
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-
-  // Ingen fyll – bare ringkant
-  ctx.fillStyle = 'transparent';
-
-  // Kantstrek – uthev 8’eren
-  ctx.strokeStyle = (score === 8) ? '#000' : '#ccc';
-  ctx.lineWidth = (score === 8) ? 3 : 1;
-  ctx.stroke();
-
-  // Tekst midt i hver ring – litt *inni* ringen
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 12px Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(score, centerX, centerY - radius + ringWidth / 2);
-}
-  
-  // Tegn skudd (justert for plassering)
-  ctx.fillStyle = 'red'; 
-
-  const scale = 300 / 600; // Skalering fra 600px til 300px
-
-  skudddata.forEach(({ x, y }) => {
-    const offsetX = (x - 600 / 2) * scale;  // Skalering av x
-    const offsetY = (y - 600 / 2) * scale;  // Skalering av y
-
-    const drawX = centerX + offsetX;
-    const drawY = centerY + offsetY;
-
-    ctx.beginPath();
-    ctx.arc(drawX, drawY, 4, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  return canvas;
-}
-
-
-
-async function showHitStatsModal(navn, stats) {
-  const {
-    visTreff, visSkudd, visProsent, visSnittTid,
-    totalTreff, totalSkudd, totalProsent, totalSnittTid
-  } = stats;
-
-  const { data: skuddRecords } = await supabase
-    .from('selvanviser')
-    .select('skudddata')
-    .ilike('navn', navn);
-
-  let alleSkudd = [];
-  skuddRecords.forEach(record => {
-    try {
-      let parsed = Array.isArray(record.skudddata)
-        ? record.skudddata
-        : JSON.parse(record.skudddata);
-
-      // Filtrer bort eventuelle ugyldige punkt
-      parsed = parsed.filter(p => typeof p.x === 'number' && typeof p.y === 'number');
-
-      alleSkudd = alleSkudd.concat(parsed);
-    } catch (e) {
-      console.warn("Feil ved parsing av skudddata:", record.skudddata);
+      return canvas;
     }
-  });
 
-  const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
-  const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+    async function showHitStatsModal(navn, stats) {
+      const {
+        visTreff, visSkudd, visProsent, visSnittTid,
+        totalTreff, totalSkudd, totalProsent, totalSnittTid
+      } = stats;
 
-  const content = document.getElementById('hitStatsContent');
-  content.innerHTML = `
-    <h2>Statistikk for ${navn}</h2>
-    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 30px;">
-      <div style="text-align:center;">
-        <h3>Viste rader</h3>
-        <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${visColor} ${visProsent ?? 0}%, #ddd ${visProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
-          ${visProsent ?? '–'}%
+      // ENDRING: Bruker 'sb'
+      const { data: skuddRecords } = await sb
+        .from('selvanviser')
+        .select('skudddata')
+        .ilike('navn', navn);
+
+      let alleSkudd = [];
+      if (skuddRecords) {
+          skuddRecords.forEach(record => {
+            try {
+              let parsed = Array.isArray(record.skudddata)
+                ? record.skudddata
+                : JSON.parse(record.skudddata);
+              parsed = parsed.filter(p => typeof p.x === 'number' && typeof p.y === 'number');
+              alleSkudd = alleSkudd.concat(parsed);
+            } catch (e) {
+              console.warn("Feil ved parsing av skudddata:", record.skudddata);
+            }
+          });
+      }
+
+      const totalColor = totalProsent >= 85 ? 'green' : totalProsent >= 70 ? 'goldenrod' : 'red';
+      const visColor = visProsent >= 85 ? 'green' : visProsent >= 70 ? 'goldenrod' : 'red';
+
+      const content = document.getElementById('hitStatsContent');
+      content.innerHTML = `
+        <h2>Statistikk for ${navn}</h2>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 30px;">
+          <div style="text-align:center;">
+            <h3>Viste rader</h3>
+            <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${visColor} ${visProsent ?? 0}%, #ddd ${visProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+              ${visProsent ?? '–'}%
+            </div>
+            <p>${visTreff} treff av ${visSkudd} skudd</p>
+            ${visSnittTid !== null ? `<p>Snittid: ${visSnittTid} sek</p>` : '<p>Ingen tider</p>'}
+          </div>
+          <div style="text-align:center;">
+            <h3>Totalt</h3>
+            <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent ?? 0}%, #ddd ${totalProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
+              ${totalProsent ?? '–'}%
+            </div>
+            <p>${totalTreff} treff av ${totalSkudd} skudd</p>
+            ${totalSnittTid !== null ? `<p>Snittid: ${totalSnittTid} sek</p>` : '<p>Ingen tider</p>'}
+          </div>
+          <div style="text-align:center;">
+            <h3>Alle skudd</h3>
+            <div id="skuddCanvasContainer" style="width: 100%; display: flex; justify-content: center; align-items: center; min-height: 300px;"></div>
+          </div>
         </div>
-        <p>${visTreff} treff av ${visSkudd} skudd</p>
-        ${visSnittTid !== null ? `<p>Snittid: ${visSnittTid} sek</p>` : '<p>Ingen tider</p>'}
-      </div>
-      <div style="text-align:center;">
-        <h3>Totalt</h3>
-        <div style="margin: 10px auto; width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(${totalColor} ${totalProsent ?? 0}%, #ddd ${totalProsent ?? 0}%); display: flex; align-items: center; justify-content: center; font-weight: bold;">
-          ${totalProsent ?? '–'}%
-        </div>
-        <p>${totalTreff} treff av ${totalSkudd} skudd</p>
-        ${totalSnittTid !== null ? `<p>Snittid: ${totalSnittTid} sek</p>` : '<p>Ingen tider</p>'}
-      </div>
-      <div style="text-align:center;">
-        <h3>Alle skudd</h3>
-        <div id="skuddCanvasContainer" style="width: 100%; display: flex; justify-content: center; align-items: center; min-height: 300px;"></div>
-      </div>
-    </div>
-    <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
-  `;
+        <button onclick="document.getElementById('hitStatsModal').style.display='none'" style="margin-top: 20px; padding: 8px 12px;">Lukk</button>
+      `;
 
-  if (alleSkudd.length > 0) {
-    const canvas = drawCombinedShots(alleSkudd);
-    const container = document.getElementById('skuddCanvasContainer');
-    container.innerHTML = '';
-    container.appendChild(canvas);
-  } else {
-    console.log("Ingen skudddata funnet for", navn);
-  }
+      if (alleSkudd.length > 0) {
+        const canvas = drawCombinedShots(alleSkudd);
+        const container = document.getElementById('skuddCanvasContainer');
+        container.innerHTML = '';
+        container.appendChild(canvas);
+      } else {
+        console.log("Ingen skudddata funnet for", navn);
+      }
 
-  document.getElementById('hitStatsModal').style.display = 'flex';
-}
-
+      document.getElementById('hitStatsModal').style.display = 'flex';
+    }
   </script>
 </body>
 </html>
