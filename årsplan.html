@@ -2261,29 +2261,38 @@ async function copyTextToClipboard(text, btn){
       alert(`La til ${toAdd.length} mal(er) i Øktbank.`);
     }
 
-    // ---------- Varslinger (Admin) ----------
+   // ---------- Varslinger (Admin) ----------
     async function nfLoadSender(){
-      const { data } = await supabase.from(TBL.settings).select('value').eq('key','notify_sender').maybeSingle();
+      // ENDRET: supabase -> sb
+      const { data } = await sb.from(TBL.settings).select('value').eq('key','notify_sender').maybeSingle();
       $('#nf-from-name').value  = data?.value?.from_name  || 'Lørenskog Skiskyting';
       $('#nf-from-email').value = data?.value?.from_email || 'noreply@din-domene.no';
     }
+
     async function nfSaveSender(){
       const from_name  = $('#nf-from-name').value.trim();
       const from_email = $('#nf-from-email').value.trim();
-      await supabase.from(TBL.settings).upsert({ key:'notify_sender', value: { from_name, from_email } });
+      // ENDRET: supabase -> sb
+      await sb.from(TBL.settings).upsert({ key:'notify_sender', value: { from_name, from_email } });
       alert('Avsender lagret.');
     }
+
     function nfGetSelectedOptions(sel){ return Array.from(sel.options).filter(o=>o.selected).map(o=>o.value); }
+
     async function nfLoadAgesIntoSelect(){
       const sel = $('#nf-ages'); if(!sel) return;
-      const { data } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      // ENDRET: supabase -> sb (Dette var linjen som feilet: 2279)
+      const { data } = await sb.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
       const list = Array.isArray(data?.value) ? data.value : state.ageGroups;
       sel.innerHTML = (list||[]).map(g=>`<option value="${escapeHTML(g.id)}">${escapeHTML(g.label)}</option>`).join('');
     }
+
     async function nfLoadSubs(){
-      const { data, error } = await supabase.from('notify_subscribers').select('*').order('email');
+      // ENDRET: supabase -> sb
+      const { data, error } = await sb.from('notify_subscribers').select('*').order('email');
       const tb = $('#nf-table');
       if (error) { console.warn(error); tb.innerHTML = `<tr><td colspan="6" class="p-3 text-slate-500">Kunne ikke hente.</td></tr>`; return; }
+      
       tb.innerHTML = (data||[]).map(s=>`
         <tr class="border-t">
           <td class="p-2">${escapeHTML(s.email)}</td>
@@ -2310,85 +2319,95 @@ async function copyTextToClipboard(text, btn){
           const selA = $('#nf-ages');  Array.from(selA.options).forEach(o=> o.selected = (s.ages||[]).includes(o.value));
         };
       });
+
       tb.querySelectorAll('[data-nf-del]').forEach(btn=>{
         btn.onclick = async ()=>{
           const email = btn.getAttribute('data-nf-del');
           if(!confirm(`Slette ${email}?`)) return;
-          await supabase.from('notify_subscribers').delete().eq('email', email);
+          // ENDRET: supabase -> sb
+          await sb.from('notify_subscribers').delete().eq('email', email);
           nfLoadSubs();
         };
       });
+
       tb.querySelectorAll('[data-nf-toggle]').forEach(btn=>{
         btn.onclick = async ()=>{
           const email = btn.getAttribute('data-nf-toggle');
           const row = (data||[]).find(x=>x.email===email);
           if(!row) return;
-          await supabase.from('notify_subscribers').update({ active: !row.active }).eq('email', email);
+          // ENDRET: supabase -> sb
+          await sb.from('notify_subscribers').update({ active: !row.active }).eq('email', email);
           nfLoadSubs();
         };
       });
     }
+
     async function nfAddOrUpdate(){
       const email = $('#nf-email').value.trim().toLowerCase();
       if(!email){ alert('Skriv inn e-post.'); return; }
       const frequency = $('#nf-frequency').value;
       const types = nfGetSelectedOptions($('#nf-types'));
       const ages  = nfGetSelectedOptions($('#nf-ages'));
-      await supabase.from('notify_subscribers').upsert({ email, frequency, types, ages, active:true });
+      
+      // ENDRET: supabase -> sb
+      await sb.from('notify_subscribers').upsert({ email, frequency, types, ages, active:true });
+      
       $('#nf-email').value = '';
       Array.from($('#nf-types').options).forEach(o=>o.selected=false);
       Array.from($('#nf-ages').options).forEach(o=>o.selected=false);
       nfLoadSubs();
     }
-function nfBindUI(){
-  $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
-  $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
 
-  // Drain per-change kø (venterader)
-  $('#nf-drain')?.addEventListener('click', async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
-        body: { mode: 'per_change', drain: true, batchSize: 50 }
+    function nfBindUI(){
+      $('#nf-save-sender')?.addEventListener('click', nfSaveSender);
+      $('#nf-add')?.addEventListener('click', nfAddOrUpdate);
+
+      // Drain per-change kø (venterader)
+      $('#nf-drain')?.addEventListener('click', async () => {
+        try {
+          // ENDRET: supabase -> sb
+          const { data, error } = await sb.functions.invoke('notify-dispatch', {
+            body: { mode: 'per_change', drain: true, batchSize: 50 }
+          });
+          if (error) throw error;
+          alert(`Per-endring drain: ${JSON.stringify(data)}`);
+          nfLoadSubs();
+        } catch (e) {
+          console.error('[notify drain] FEIL', e);
+          alert('Feil ved utsending (per-change). Se konsoll.');
+        }
       });
-      if (error) throw error;
-      alert(`Per-endring drain: ${JSON.stringify(data)}`);
-      // Oppdater tabellen så du ser status-oppdateringer (sent/skipped/error)
-      nfLoadSubs();
-    } catch (e) {
-      console.error('[notify drain] FEIL', e);
-      alert('Feil ved utsending (per-change). Se konsoll.');
-    }
-  });
 
-  // Tving DAGLIG digest nå (siste 24h)
-  $('#nf-send-daily')?.addEventListener('click', async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
-        body: { mode: 'digest', digest: { frequency: 'daily' } }
+      // Tving DAGLIG digest nå (siste 24h)
+      $('#nf-send-daily')?.addEventListener('click', async () => {
+        try {
+          // ENDRET: supabase -> sb
+          const { data, error } = await sb.functions.invoke('notify-dispatch', {
+            body: { mode: 'digest', digest: { frequency: 'daily' } }
+          });
+          if (error) throw error;
+          alert(`Daglig digest: ${JSON.stringify(data)}`);
+        } catch (e) {
+          console.error('[notify daily] FEIL', e);
+          alert('Feil ved daglig oppsummering. Se konsoll.');
+        }
       });
-      if (error) throw error;
-      alert(`Daglig digest: ${JSON.stringify(data)}`);
-    } catch (e) {
-      console.error('[notify daily] FEIL', e);
-      alert('Feil ved daglig oppsummering. Se konsoll.');
-    }
-  });
 
-  // Tving UKENTLIG digest nå (siste 7 dager)
-  $('#nf-send-weekly')?.addEventListener('click', async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('notify-dispatch', {
-        body: { mode: 'digest', digest: { frequency: 'weekly' } }
+      // Tving UKENTLIG digest nå (siste 7 dager)
+      $('#nf-send-weekly')?.addEventListener('click', async () => {
+        try {
+          // ENDRET: supabase -> sb
+          const { data, error } = await sb.functions.invoke('notify-dispatch', {
+            body: { mode: 'digest', digest: { frequency: 'weekly' } }
+          });
+          if (error) throw error;
+          alert(`Ukentlig digest: ${JSON.stringify(data)}`);
+        } catch (e) {
+          console.error('[notify weekly] FEIL', e);
+          alert('Feil ved ukentlig oppsummering. Se konsoll.');
+        }
       });
-      if (error) throw error;
-      alert(`Ukentlig digest: ${JSON.stringify(data)}`);
-    } catch (e) {
-      console.error('[notify weekly] FEIL', e);
-      alert('Feil ved ukentlig oppsummering. Se konsoll.');
     }
-  });
-}
-
 
     // ---------- Tabs / UI-hendelser ----------
     function switchTab(name){
