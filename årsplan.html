@@ -2490,7 +2490,8 @@ function bindYearLabel(){
 // --- SKYTERESULTAT: last + filtrer + «historiske beste» ---
 
 async function supaLoadResults(limit = 1000){
-  const { data, error } = await supabase
+  // ENDRET: supabase -> sb
+  const { data, error } = await sb
     .from(TBL.results)
     .select('*')
     .order('date', { ascending: false })
