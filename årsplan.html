@@ -1,10 +1,11 @@
+<!DOCTYPE html>
 <html lang="no">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lørenskog Skiskyting – Årsplan & Øktbank</title>
+  <link rel="icon" href="data:,">
 
-  <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
@@ -28,24 +29,19 @@
     }
   </style>
 
-  <!-- Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isoWeek.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/weekday.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/localizedFormat.min.js"></script>
-  <!-- Norsk locale for Dayjs -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/nb.min.js"></script>
 
-  <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- SheetJS (XLSX) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body class="bg-gray-100 min-h-screen">
 
-  <!-- ========= HEADER ========= -->
   <header class="mb-4 flex flex-wrap items-center justify-between gap-4 bg-[var(--brand)] text-white p-3 rounded-2xl">
     <div class="flex items-center gap-3">
       <img id="club-logo" src="Logo LSK Klubb farger JPG.jpeg" class="h-14 w-20 rounded-xl bg-white p-1 object-contain" alt="Lørenskog Skiskyting" onerror="this.replaceWith(fallbackLogo())">
@@ -64,10 +60,8 @@
     </div>
   </header>
 
-  <!-- ========= PAGE CONTAINER ========= -->
   <div class="mx-auto max-w-[96rem] px-3">
 
-    <!-- Toolbar -->
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
       <div class="flex items-center gap-2">
         <button id="year-prev" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">◀</button>
@@ -93,18 +87,13 @@
            class="rounded-2xl border bg-white px-3 py-2 shadow-sm hover:bg-slate-50">
           View-Only
         </a>
-        <!-- Ny knapp for å vise/skjule sidepanel -->
         <button id="btn-toggle-sidebar" class="rounded-2xl border bg-white px-3 py-2 shadow-sm">Sidepanel</button>
       </nav>
     </div>
 
-    <!-- To-kolonne layout: hovedinnhold + valgfritt sidepanel -->
     <div id="page-grid" class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <!-- Main -->
       <main id="main-content" class="space-y-4">
-        <!-- Calendar Tab -->
         <section id="tab-calendar" class="tab-section">
-          <!-- Kalendergrid -->
           <div id="calendar-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3"></div>
 
           <div class="rounded-2xl border bg-white shadow-sm card">
@@ -125,13 +114,11 @@
           </div>
         </section>
 
-        <!-- Bank Tab -->
         <section id="tab-bank" class="tab-section hidden">
           <div class="rounded-2xl border bg-white shadow-sm card">
             <div class="border-b p-4"><h3 class="text-lg font-semibold">Øktbank</h3></div>
             <div class="p-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <!-- under filter-grid'en i Bank-seksjonen -->
-<div class="p-4 pt-0">
+              <div class="p-4 pt-0">
   <button id="bank-new" class="rounded-xl border bg-white px-3 py-2 shadow-sm">
     Ny mal i Øktbank
   </button>
@@ -159,12 +146,10 @@
         </section>
 
 
-        <!-- Admin Tab -->
         <section id="tab-admin" class="tab-section hidden">
           <div class="rounded-2xl border bg-white shadow-sm card">
             <div class="border-b p-4"><h3 class="text-lg font-semibold">Admin</h3></div>
             <div class="p-4 grid grid-cols-1 gap-6">
-              <!-- A: Rediger hendelser -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Rediger hendelser</h4>
                 <div class="flex flex-wrap items-end gap-2">
@@ -194,7 +179,6 @@
                 </div>
               </div>
 
-              <!-- B: Årsklasser -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Årsklasser (målgrupper)</h4>
                 <p class="text-xs text-slate-600 mb-2">Endre etikett/ID eller legg til nye.</p>
@@ -205,7 +189,6 @@
                 </div>
               </div>
 
-              <!-- C: Ukekoder -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Ukekoder (BAS/OPP/KONK/RES/EKS)</h4>
                 <div class="max-h-72 overflow-auto rounded-xl border">
@@ -216,13 +199,11 @@
                 </div>
               </div>
 
-              <!-- D: ICS -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Kalender</h4>
                 <button id="btn-ics" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">Last ned .ics</button>
               </div>
 
-              <!-- E: Øktbank (seed) -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Øktbank</h4>
                 <button id="btn-seed-bank" class="rounded-xl border bg-white px-3 py-1.5 shadow-sm">
@@ -231,7 +212,6 @@
                 <p class="text-xs text-slate-500 mt-1">Trygg å kjøre flere ganger – hopper over maler som allerede finnes (matcher på navn).</p>
               </div>
 
-              <!-- F: Varslinger (NY) -->
               <div class="rounded-2xl border bg-white shadow-sm card p-4">
                 <h4 class="font-semibold mb-2">Varslinger</h4>
                 <p class="text-xs text-slate-600 mb-3">
@@ -252,7 +232,6 @@
 
    
 
-                <!-- Avsender -->
                 <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label class="text-sm font-medium">Avsender navn</label>
@@ -267,7 +246,6 @@
                   </div>
                 </div>
 
-                <!-- Abonnenter -->
                 <div class="flex flex-wrap items-end gap-2 mb-2">
                   <div>
                     <label class="text-sm font-medium">E-post</label>
@@ -308,38 +286,31 @@
                   </table>
                 </div>
               </div>
-              <!-- /Varslinger -->
-            </div>
+              </div>
             </section> 
-        <!-- 1) 🔄 HTML: Bytt ut hele "Results Tab"-seksjonen med denne -->
-<section id="tab-results" class="tab-section hidden">
+        <section id="tab-results" class="tab-section hidden">
   <div class="rounded-2xl border bg-white shadow-sm card">
     <div class="border-b p-4 flex justify-between items-center">
       <h3 class="text-lg font-semibold">Registrer skyteresultat</h3>
       <div class="text-xs text-slate-500"><span id="res-best-meta"></span></div>
     </div>
 
-   <!-- Historiske beste -->
-<div class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-  <!-- Topp 5 – totalsum -->
+   <div class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
   <div class="rounded-xl border bg-white">
     <div class="p-3 font-semibold">Topp 5 – totalsum</div>
     <ul id="res-best-top5" class="p-3 space-y-1 text-sm"></ul>
   </div>
 
-  <!-- Topp 5 – liggende -->
   <div class="rounded-xl border bg-white">
     <div class="p-3 font-semibold">Topp 5 – liggende</div>
     <ul id="res-best-top5-prone" class="p-3 space-y-1 text-sm"></ul>
   </div>
 
-  <!-- Topp 5 – stående -->
   <div class="rounded-xl border bg-white">
     <div class="p-3 font-semibold">Topp 5 – stående</div>
     <ul id="res-best-top5-stand" class="p-3 space-y-1 text-sm"></ul>
   </div>
 
-  <!-- PB per øvelse (bredt kort) -->
   <div class="rounded-xl border bg-white lg:col-span-2">
     <div class="p-3 font-semibold">PB per øvelse</div>
     <table class="w-full text-sm">
@@ -350,7 +321,6 @@
     </table>
   </div>
 
-  <!-- PB-søk (smalt kort) -->
   <div class="rounded-xl border bg-white">
     <div class="p-3 font-semibold flex items-center justify-between gap-2">
       <span>Personlige rekorder (PB)</span>
@@ -368,7 +338,6 @@
 </div>
 
 
-    <!-- Skjema: legg inn resultat -->
     <div class="border-t p-4 grid grid-cols-1 gap-3">
       <div>
         <label class="text-sm font-medium">Utøver</label>
@@ -405,7 +374,6 @@
       </div>
     </div>
 
-    <!-- Filter + liste -->
     <div class="border-t p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
       <div class="md:col-span-2">
         <label class="text-sm font-medium">Filtrer på utøver</label>
@@ -467,7 +435,6 @@
 </section>
       </main>
 
-      <!-- Sidepanel -->
       <aside id="sidebar" class="space-y-4 hidden">
         <div class="rounded-2xl border bg-white shadow-sm card">
           <div class="border-b p-4"><h3 class="text-lg font-semibold">Fargekode</h3></div>
@@ -485,7 +452,6 @@
           </div>
         </div>
 
-        <!-- Intensitetssoner -->
         <div class="rounded-2xl border bg-white shadow-sm card">
           <div class="border-b p-4">
             <h3 class="text-lg font-semibold">Intensitetssoner (I1–I5) for barn</h3>
@@ -559,10 +525,7 @@
         </div>
       </aside>
     </div>
-  </div><!-- /container -->
-
-  <!-- Dialog -->
-  <div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  </div><div id="dialog" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <div class="dialog-card w-full max-w-2xl rounded-2xl bg-white shadow-xl">
       <div class="flex items-center justify-between border-b p-4">
         <h3 id="dlg-title" class="text-lg font-semibold">Ny hendelse</h3>
@@ -577,7 +540,6 @@
     </div>
   </div>
 
-  <!-- Tooltip -->
   <div id="lss-tooltip" class="hidden rounded-xl border bg-white shadow-lg p-3 text-xs text-slate-700"></div>
 
   <script>
@@ -649,7 +611,7 @@ const KEY = {
   YEAR:     'lss:year:v1',
   DAYORDER: 'lss:dayorder:v2',
   AGES:     'lss:ages:v1',
-  VIEW:     'lss:view:v1'      // lagrer visningsmodus
+  VIEW:     'lss:view:v1'       // lagrer visningsmodus
 };
 
 
@@ -681,9 +643,10 @@ const KEY = {
     }
 
     // ---------- Supabase ----------
+    // FIX: Endret variabelnavn fra 'supabase' til 'sb' for å unngå kollisjon med CDN-biblioteket
     const SUPA_URL = "https://chzfewhbfkdtcizdxyzk.supabase.co";
     const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoemZld2hiZmtkdGNpemR4eXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2NDE1ODgsImV4cCI6MjA1ODIxNzU4OH0.RKgK8b1PHl9ZbFj57u_rD34e53Zlk3sGPHUru9KmuqA";
-    const supabase = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_ANON);
     const TBL = { events:'events', bank:'bank_templates', weeks:'weeks', dayOrder:'day_order', settings:'settings', results:'shoot_results' };
 
 
@@ -697,7 +660,7 @@ let state = {
   weeks:     {},
   dayOrder:  lsGet(KEY.DAYORDER, {}),
   ageGroups: lsGet(KEY.AGES, DEFAULT_AGE_GROUPS),
-  results:   []   // ← lagt til for skyteresultat
+  results:   []    // ← lagt til for skyteresultat
 };
 
 
@@ -713,17 +676,17 @@ if (!['rolling','full'].includes(state.viewMode)) state.viewMode = 'rolling'; //
     // ---------- I/O ----------
     async function supaLoadAll(year = state.year){
       // Events
-      const { data: ev, error: evErr } = await supabase.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
+      const { data: ev, error: evErr } = await sb.from(TBL.events).select('*').eq('year', year).order('date', { ascending: true });
       if(!evErr && ev){ state.events = ev.map(mapEventFromDb); lsSet(KEY.EVENTS, state.events); }
       else { state.events = lsGet(KEY.EVENTS, state.events); }
 
       // Bank
-      const { data: bk, error: bkErr } = await supabase.from(TBL.bank).select('*').order('created_at', { ascending: false });
+      const { data: bk, error: bkErr } = await sb.from(TBL.bank).select('*').order('created_at', { ascending: false });
       if(!bkErr && bk){ state.bank = bk.map(mapBankFromDb); if(state.bank.length===0){ state.bank=getDefaultTemplates(); } lsSet(KEY.BANK, state.bank); }
       else { state.bank = lsGet(KEY.BANK, getDefaultTemplates()); }
 
       // Weeks
-      const { data: wks, error: wErr } = await supabase.from(TBL.weeks).select('*').eq('year', year);
+      const { data: wks, error: wErr } = await sb.from(TBL.weeks).select('*').eq('year', year);
       if(!wErr && wks){
         const dict={}; for(const r of wks){ dict[r.week] = { code: r.code || 'BAS', note: r.note || '' }; }
         state.weeks = dict;
@@ -742,18 +705,18 @@ if (!['rolling','full'].includes(state.viewMode)) state.viewMode = 'rolling'; //
     }
 
     async function supaLoadAgeGroups(){
-      const { data, error } = await supabase.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
+      const { data, error } = await sb.from(TBL.settings).select('value').eq('key','age_groups').maybeSingle();
       if(!error && data && Array.isArray(data.value)){ state.ageGroups = data.value; }
-      else { state.ageGroups = DEFAULT_AGE_GROUPS; await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups }); }
+      else { state.ageGroups = DEFAULT_AGE_GROUPS; await sb.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups }); }
       lsSet(KEY.AGES, state.ageGroups);
     }
     async function supaSaveAgeGroups(){
-      const { error } = await supabase.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups });
+      const { error } = await sb.from(TBL.settings).upsert({ key:'age_groups', value: state.ageGroups });
       if(error){ console.warn('Lagre age_groups feilet', error); alert('Kunne ikke lagre grupper til skyen.'); }
     }
 async function notifyPerChange(eventId, change = 'upsert'){
   try {
-    const { data, error } = await supabase.functions.invoke('notify-dispatch', {
+    const { data, error } = await sb.functions.invoke('notify-dispatch', {
       body: { mode: 'per_change', change, eventId }
     });
     if (error) throw error;
@@ -789,7 +752,7 @@ function mapResultFromDb(r){
 
 async function supaInsertResult(row){
   const dbRow = mapResultToDb(row);
-  const { data, error } = await supabase.from(TBL.results).insert(dbRow).select('*').single();
+  const { data, error } = await sb.from(TBL.results).insert(dbRow).select('*').single();
   if(error) throw error;
   return mapResultFromDb(data);
 }
@@ -819,7 +782,7 @@ async function supaUpsertEvent(model){
   const row = mapEventToDb(model);
   try{
     // Hent tilbake raden som ble skrevet – inkludert serverens id
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from(TBL.events)
       .upsert(row, { onConflict: 'id' })
       .select('id, date')   // hent minst id (og gjerne date for dayOrder)
@@ -850,7 +813,7 @@ async function supaUpsertEvent(model){
 
   // Primær: eksakt match på mange felt
   {
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from(TBL.events)
       .select('id, title, type, date, modality, location, intensity, duration_min, race_subtype, shooting, notes, updated_at, created_at')
       .eq('date', ev.date)
@@ -866,7 +829,7 @@ async function supaUpsertEvent(model){
 
   // Sekundær: eksakt på (date,title,type), sorter nyest oppdatert øverst
   {
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from(TBL.events)
       .select('id, title, type, date, modality, location, updated_at, created_at')
       .eq('date', ev.date)
@@ -879,7 +842,7 @@ async function supaUpsertEvent(model){
 
   // Tertiær: bare på (date,title~ilike)
   if (title.length >= 3){
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from(TBL.events)
       .select('id, title, type, date, updated_at, created_at')
       .eq('date', ev.date)
@@ -891,7 +854,7 @@ async function supaUpsertEvent(model){
 
   // Siste utvei: nyeste rad på datoen
   {
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from(TBL.events)
       .select('id, title, type, date, updated_at, created_at')
       .eq('date', ev.date)
@@ -907,7 +870,7 @@ async function supaUpsertEvent(model){
 async function supaDeleteEvent(ev){
   try{
     // 1) Forsøk direkte på klient-ID
-    let { data, error } = await supabase
+    let { data, error } = await sb
       .from(TBL.events)
       .delete()
       .eq('id', ev.id)
@@ -927,7 +890,7 @@ async function supaDeleteEvent(ev){
     // Velg kandidat: eksakt title+type først, ellers første
     const chosen = candidates.find(r => (r.title||'') === (ev.title||'') && (r.type||'') === (ev.type||'')) || candidates[0];
 
-    const res2 = await supabase
+    const res2 = await sb
       .from(TBL.events)
       .delete()
       .eq('id', chosen.id)
@@ -951,7 +914,7 @@ async function supaDeleteEvent(ev){
 }
 async function verifyDeletion(ev){
   const title = (ev.title || '').trim();
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from(TBL.events)
     .select('id, title, type, date, location, modality')
     .eq('date', ev.date)
@@ -975,23 +938,23 @@ async function verifyDeletion(ev){
 
 
     async function supaUpsertWeek(year, week, code, note){
-      const { error } = await supabase.from(TBL.weeks).upsert({ year, week, code, note });
+      const { error } = await sb.from(TBL.weeks).upsert({ year, week, code, note });
       if(error){ console.warn('Upsert week feilet', error); }
     }
     async function supaUpsertBankTemplate(t){
       const row = mapBankToDb(t);
-      const { error } = await supabase.from(TBL.bank).upsert(row);
+      const { error } = await sb.from(TBL.bank).upsert(row);
       if(error){ console.warn('Upsert bank feilet', error); }
     }
     async function supaDeleteBankTemplate(id){
-      const { error } = await supabase.from(TBL.bank).delete().eq('id', id);
+      const { error } = await sb.from(TBL.bank).delete().eq('id', id);
       if(error){ console.warn('Slett bank feilet', error); }
     }
 
     async function supaLoadDayOrderForYear(year){
       const from = `${year}-01-01`;
       const to   = `${year+1}-01-01`;
-      const { data, error } = await supabase.from(TBL.dayOrder).select('*').gte('date', from).lt('date', to);
+      const { data, error } = await sb.from(TBL.dayOrder).select('*').gte('date', from).lt('date', to);
       if(error){ console.warn('Henting day_order feilet', error); return; }
       const map = {};
       for(const r of data||[]){ map[r.date] = Array.isArray(r.ids) ? r.ids : []; }
@@ -999,26 +962,26 @@ async function verifyDeletion(ev){
       lsSet(KEY.DAYORDER, state.dayOrder);
     }
     async function supaUpsertDayOrder(dateISO, ids){
-      const { error } = await supabase.from(TBL.dayOrder).upsert({ date: dateISO, ids });
+      const { error } = await sb.from(TBL.dayOrder).upsert({ date: dateISO, ids });
       if(error){ console.warn('Upsert day_order feilet', error); }
     }
 
     function supaRealtimeInit(){
-      supabase.channel('events-rt')
+      sb.channel('events-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.events }, payload => {
           if(payload.new?.year === state.year || payload.old?.year === state.year){ supaLoadAll(state.year); }
         }).subscribe();
 
-      supabase.channel('weeks-rt')
+      sb.channel('weeks-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.weeks }, payload => {
           if((payload.new?.year||payload.old?.year) === state.year){ supaLoadAll(state.year); }
         }).subscribe();
 
-      supabase.channel('bank-rt')
+      sb.channel('bank-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.bank }, () => supaLoadAll(state.year))
         .subscribe();
 
-      supabase.channel('dayorder-rt')
+      sb.channel('dayorder-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.dayOrder }, payload => {
           const d = (payload.new?.date || payload.old?.date);
           if(!d) return;
@@ -1031,7 +994,7 @@ async function verifyDeletion(ev){
         })
         .subscribe();
 
-      supabase.channel('settings-rt')
+      sb.channel('settings-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: TBL.settings }, payload => {
           if(payload.new?.key === 'age_groups'){
             state.ageGroups = payload.new?.value || DEFAULT_AGE_GROUPS;
@@ -1040,7 +1003,7 @@ async function verifyDeletion(ev){
           }
         })
         .subscribe();
-      supabase.channel('results-rt')
+      sb.channel('results-rt')
   .on('postgres_changes', { event:'*', schema:'public', table: TBL.results }, () => supaLoadResults(50))
   .subscribe();
     }
@@ -1790,9 +1753,9 @@ function openBankDialog(data = {}){
   const field=(label,inputHTML)=>`<div><label class='text-sm font-medium'>${label}</label>${inputHTML}</div>`;
   const ageChks = (state.ageGroups||[])
     .map(g=>`<label class='inline-flex items-center gap-2 rounded-xl border px-2 py-1'>
-               <input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/>
-               <span class='text-sm'>${g.label}</span>
-             </label>`).join('');
+                <input data-age='${g.id}' type='checkbox' ${model.age.includes(g.id)?'checked':''}/>
+                <span class='text-sm'>${g.label}</span>
+              </label>`).join('');
 
   body.innerHTML = `
     ${field('Navn', `<input id='bk-name' class='mt-1 w-full rounded-xl border px-3 py-2' value="${escapeHTML(model.name)}" placeholder='F.eks. I3 bakkedrag + styrke'/>`)}
@@ -2138,7 +2101,7 @@ async function copyTextToClipboard(text, btn){
       let from = 0, to = pageSize - 1;
       let all = [];
       while(true){
-        const { data, error } = await supabase
+        const { data, error } = await sb
           .from(table)
           .select('*')
           .order('created_at', { ascending: true })
@@ -2156,7 +2119,7 @@ async function copyTextToClipboard(text, btn){
       let from = 0, to = pageSize - 1;
       let all = [];
       while(true){
-        const { data, error } = await supabase
+        const { data, error } = await sb
           .from(TBL.events)
           .select('*')
           .order('date', { ascending: true })
